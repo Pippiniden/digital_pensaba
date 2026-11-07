@@ -9,10 +9,24 @@ const TERMS = { unit:'サーヴァント', player:'マスター', gauge:'NP', ul
   R:'Buster', B:'Arts', G:'Quick', W:'特殊' };
 
 // ---------- 画像 ----------
-// 各ユニットの img に、キャラクター画像(face)と Buster(R)・Arts(B)・Quick(G) のカード画像のパスを書きます
-// 空欄や読み込めないときは IMG_PLACEHOLDER の仮画像を表示します
-const IMG_KEYS = { face:'キャラクター画像', R:'Busterカード', B:'Artsカード', G:'Quickカード' };
-const IMG_PLACEHOLDER = { face:'img/placeholder/face.svg', R:'img/placeholder/buster.svg', B:'img/placeholder/arts.svg', G:'img/placeholder/quick.svg' };
+// 各サーヴァントの img に書くもの
+//   face: キャラクター画像（必須。空欄・読み込めないときは IMG_PLACEHOLDER.face の仮画像）
+//   card: コマンドカードに載せるキャラ画像（空欄なら face を使う。背景を透過したPNG/WebPだと映えます）
+const IMG_KEYS = { face:'キャラクター画像', card:'カード用キャラ画像' };
+const IMG_PLACEHOLDER = { face:'img/placeholder/face.svg', card:'img/placeholder/card.svg' }; // card は背景透過の仮画像
+
+// コマンドカードは3枚の重ね合わせ： 背景（bg） → キャラ画像 → 枠と種別名（frame）
+// bg と frame は全サーヴァント共通の素材です。空欄の間は CSS で描いた背景・枠・文字を使います
+// frame の画像に種別名（BUSTER など）を描き込んだ場合は、文字の表示は自動で消えます
+const CARD_LAYERS = {
+  R:   { bg:'', frame:'' },   // Buster
+  B:   { bg:'', frame:'' },   // Arts
+  G:   { bg:'', frame:'' },   // Quick
+  ULT: { bg:'', frame:'' },   // 宝具（空欄なら宝具の色の bg を使い、CSS の金枠を付ける）
+};
+
+// 画面の飾り
+const UI_IMG = { circleOut:'img/ui/mcircleo.webp', circleIn:'img/ui/mcirclei.webp' };
 
 // ---------- ルール定数 ----------
 const RULES = {

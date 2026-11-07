@@ -1,13 +1,13 @@
 'use strict';
 // ユニットデータ（ペンシルエディタで書き出し）
-// img: キャラクター画像(face)・カード画像(R/B/G) のパス
+// img: キャラクター画像(face)・カード用キャラ画像(card、空欄ならfaceを使う) のパス
 // lines: 場面ごとのセリフ
 // faces: 出目1〜6の面 / acts: 行動回数 / pre・post: 覚醒前・後のコマンド
 // c: R=Buster B=Arts G=Quick W=特殊 ASC=覚醒
 const DEFAULT_UNITS = [
   {
     "id":"minamo", "name":"鉄扇のミナモ", "cls":"セイバー", "cost":5, "hp":120,
-    "img":{"face":"img/placeholder/face.svg","R":"img/placeholder/buster.svg","B":"img/placeholder/arts.svg","G":"img/placeholder/quick.svg"},
+    "img":{"face":"img/placeholder/face.svg","card":""},
     "lines":{
       "start":["鉄扇のミナモ、参ります。"],
       "attack":["はっ！", "凪いで――断つ！", "この扇、ただの飾りではありませんよ。"],
@@ -35,7 +35,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"rio", "name":"灯火のリオ", "cls":"キャスター", "cost":3, "hp":90,
-    "img":{"face":"img/placeholder/face.svg","R":"img/placeholder/buster.svg","B":"img/placeholder/arts.svg","G":"img/placeholder/quick.svg"},
+    "img":{"face":"img/placeholder/face.svg","card":""},
     "lines":{
       "start":["灯りを絶やさずにいきましょう！"],
       "attack":["えいっ！", "灯よ、走って！", "燃えて！"],
@@ -63,7 +63,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"kagari", "name":"影縫いのカガリ", "cls":"アサシン", "cost":3, "hp":80,
-    "img":{"face":"img/placeholder/face.svg","R":"img/placeholder/buster.svg","B":"img/placeholder/arts.svg","G":"img/placeholder/quick.svg"},
+    "img":{"face":"img/placeholder/face.svg","card":""},
     "lines":{
       "start":["……影は既に、お前の足元だ。"],
       "attack":["遅い。", "そこだ。", "縫い止める。"],
@@ -91,7 +91,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"selen", "name":"流星射手セレン", "cls":"アーチャー", "cost":4, "hp":100,
-    "img":{"face":"img/placeholder/face.svg","R":"img/placeholder/buster.svg","B":"img/placeholder/arts.svg","G":"img/placeholder/quick.svg"},
+    "img":{"face":"img/placeholder/face.svg","card":""},
     "lines":{
       "start":["星の巡りは良好。始めましょう。"],
       "attack":["射抜きます！", "流れ星、一つ！", "狙いは外さない。"],
@@ -119,7 +119,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"tsubaki", "name":"槍兵ツバキ", "cls":"ランサー", "cost":2, "hp":90,
-    "img":{"face":"img/placeholder/face.svg","R":"img/placeholder/buster.svg","B":"img/placeholder/arts.svg","G":"img/placeholder/quick.svg"},
+    "img":{"face":"img/placeholder/face.svg","card":""},
     "lines":{
       "start":["槍兵ツバキ、推参！"],
       "attack":["せいっ！", "穿つ！", "まだまだぁ！"],
@@ -147,7 +147,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"bard", "name":"狂嵐のバルド", "cls":"バーサーカー", "cost":1, "hp":110,
-    "img":{"face":"img/placeholder/face.svg","R":"img/placeholder/buster.svg","B":"img/placeholder/arts.svg","G":"img/placeholder/quick.svg"},
+    "img":{"face":"img/placeholder/face.svg","card":""},
     "lines":{
       "start":["オオオオオッ！"],
       "attack":["ガアッ！", "砕けろォ！", "ウオオオッ！"],
@@ -175,7 +175,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"nono", "name":"見習い騎兵ノノ", "cls":"ライダー", "cost":0, "hp":70,
-    "img":{"face":"img/placeholder/face.svg","R":"img/placeholder/buster.svg","B":"img/placeholder/arts.svg","G":"img/placeholder/quick.svg"},
+    "img":{"face":"img/placeholder/face.svg","card":""},
     "lines":{
       "start":["が、がんばります！"],
       "attack":["えーいっ！", "いっけー！", "とりゃあ！"],

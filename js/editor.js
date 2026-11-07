@@ -41,7 +41,7 @@ function uniqueId(base){
 }
 const C=(c,dmg,np=0,star=0)=>({c,dmg,np,star});
 function newUnit(){
-  return { id:uniqueId('unit'), name:'新しいサーヴァント', cls:CLASSES[0], cost:2, hp:100, img:{...IMG_PLACEHOLDER}, lines:Object.fromEntries(Object.keys(LINE_KEYS).map(k=>[k,[]])),
+  return { id:uniqueId('unit'), name:'新しいサーヴァント', cls:CLASSES[0], cost:2, hp:100, img:{face:IMG_PLACEHOLDER.face, card:''}, lines:Object.fromEntries(Object.keys(LINE_KEYS).map(k=>[k,[]])),
     faces:[ {acts:1,pre:C('R',20),post:C('R',30)}, {acts:2,pre:C('B',15,20),post:C('B',20,30)}, {acts:1,pre:C('G',10,0,3),post:C('G',15,0,5)},
             {acts:2,pre:C('R',20),post:C('R',30)}, {acts:3,pre:{c:'ASC'},post:C('R',45)}, {acts:1,pre:C('B',15,20),post:C('B',20,30)} ],
     skills:[ {name:'スキル1',eff:[{k:'atk',t:'self',v:10,turns:3}]},
@@ -127,11 +127,16 @@ function renderForm(){
     </div>
   </section>
   <section class="sec"><h2>画像</h2>
-    <p class="sub small nm">画像ファイルのパス（例：img/units/${esc(u.id||'unit')}/face.png）か URL を入力します。空欄・読み込めないときは仮画像を表示します。</p>
-    <div class="imged">${Object.entries(IMG_KEYS).map(([k,lab])=>`<label class="imgfield ${k==='face'?'isface':'iscard'}">
-      <span class="imgprev" data-imgprev="${k}">${k==='face'?faceImg(u,'face lg'):cmdCardHTML(u,{c:k})}</span>
-      <span class="imglab">${lab}</span>
-      <input data-p="img.${k}" value="${esc(u.img[k])}" placeholder="${esc(IMG_PLACEHOLDER[k])}"></label>`).join('')}</div>
+    <p class="sub small nm">画像ファイルのパス（例：img/units/${esc(u.id||'unit')}/face.png）か URL を入力します。
+      コマンドカードは「共通の背景」＋「カード用キャラ画像」＋「共通の枠と種別名」の重ね合わせなので、サーヴァントごとに用意するのは最大2枚です（共通素材は rules.js の CARD_LAYERS）。</p>
+    <div class="imged">
+      <label class="imgfield isface"><span class="imgprev" data-imgprev="face">${faceImg(u,'face lg')}</span>
+        <span class="imglab">${IMG_KEYS.face}</span>
+        <input data-p="img.face" value="${esc(u.img.face)}" placeholder="${esc(IMG_PLACEHOLDER.face)}"><small class="sub">空欄なら仮画像</small></label>
+      <label class="imgfield iscards"><span class="imgprev" data-imgprev="cards">${cardPreviewHTML(u)}</span>
+        <span class="imglab">${IMG_KEYS.card}</span>
+        <input data-p="img.card" value="${esc(u.img.card)}" placeholder="空欄ならキャラクター画像を使う"><small class="sub">背景を透過した画像だと、共通背景が見えて映えます</small></label>
+    </div>
   </section>
   <section class="sec"><h2>セリフ</h2>
     <p class="sub small nm">1行に1つずつ書きます。複数あるときは、その場面でランダムに1つを吹き出しで表示します。</p>
@@ -209,6 +214,8 @@ function effRow(path,j,e,ctx,n){
     <div class="effprev">${esc(fxText(e))}</div>
   </div>`;
 }
+// 3種のカードを並べたプレビュー（画像欄用）
+const cardPreviewHTML=u=>`<span class="ccrow">${['R','B','G'].map(k=>cmdCardHTML(u,{c:k})).join('')}</span>`;
 // 入力中は再描画せず、説明文だけ更新する（入力欄のフォーカスを保つため）
 function updatePreviews(){
   const u=cur(); if(!u) return;
@@ -217,8 +224,11 @@ function updatePreviews(){
   document.querySelectorAll('[data-prev="ult"]').forEach(el=>el.textContent=effsText(u.ult.eff));
   document.querySelectorAll('[data-linecount]').forEach(el=>el.textContent=`${u.lines[el.dataset.linecount].length}件`);
   document.querySelectorAll('[data-clsprev] img').forEach(im=>{ const src=classIcon(u.cls); if(im.getAttribute('src')!==src){ im.onerror=()=>{ im.onerror=null; im.src=CLASS_ICON_EXTRA; }; im.src=src; } });
-  document.querySelectorAll('[data-imgprev]').forEach(el=>{ const im=el.querySelector('img'), src=imgSrc(u,el.dataset.imgprev);
-    if(im && im.getAttribute('src')!==src){ im.onerror=()=>{ im.onerror=null; im.src=IMG_PLACEHOLDER[el.dataset.imgprev]; }; im.src=src; } });
+  // 画像のパスが変わったときだけプレビューを作り直す（同じパスなら読み込み直さない）
+  document.querySelectorAll('[data-imgprev]').forEach(el=>{
+    const key=`${u.img.face}|${u.img.card}|${u.cls}`; if(el.dataset.key===key) return; el.dataset.key=key;
+    el.innerHTML = el.dataset.imgprev==='face' ? faceImg(u,'face lg') : cardPreviewHTML(u);
+  });
 }
 
 // ---------- 右側：プレビュー・検証・数値 ----------

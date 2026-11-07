@@ -146,7 +146,7 @@ function unitsToJS(units){
     '  }'].join('\n')).join(',\n');
   return `'use strict';
 // ${TERMS.unit}データ（ペンシルエディタで書き出し）
-// img: キャラクター画像(face)・カード画像(R/B/G) のパス
+// img: キャラクター画像(face)・カード用キャラ画像(card、空欄ならfaceを使う) のパス
 // lines: 場面ごとのセリフ
 // faces: 出目1〜6の面 / acts: 行動回数 / pre・post: ${TERMS.asc}前・後のコマンド
 // c: R=${TERMS.R} B=${TERMS.B} G=${TERMS.G} W=${TERMS.W} ASC=${TERMS.asc}
@@ -173,26 +173,41 @@ function downloadText(name,text,type='text/plain'){
 function pickLine(d,key){ const a=(d&&d.lines&&d.lines[key])||[]; return a.length?a[Math.floor(Math.random()*a.length)]:''; }
 
 // ---------- 画像 ----------
-// d: ユニット定義 / k: 'face' | 'R' | 'B' | 'G'
 // クラス表示（アイコン＋名前）。iconOnly ならアイコンだけ
 function clsIconTag(cls,cls2='clsicon'){ return imgTag(classIcon(cls),CLASS_ICON_EXTRA,cls2,cls); }
 function clsBadge(cls,iconOnly){ return `<span class="cls${iconOnly?' only':''}" title="${esc(cls)}">${clsIconTag(cls)}${iconOnly?'':`<span>${esc(cls)}</span>`}</span>`; }
-const imgSrc=(d,k)=>(d&&d.img&&d.img[k])||IMG_PLACEHOLDER[k]||'';
+// d: サーヴァント定義 / k: 'face' | 'card'（card が空欄なら face を使う）
+function imgSrc(d,k){
+  const im=(d&&d.img)||{};
+  // キャラクター画像も仮画像のままなら、カードには背景透過の仮画像を使う
+  if(k==='card') return im.card || (im.face&&im.face!==IMG_PLACEHOLDER.face ? im.face : IMG_PLACEHOLDER.card);
+  return im[k]||IMG_PLACEHOLDER[k]||'';
+}
 const imgTag=(src,fallback,cls,alt='')=>`<img class="${cls}" src="${esc(src)}" alt="${esc(alt)}" loading="lazy" onerror="this.onerror=null;this.src='${esc(fallback)}'">`;
 function faceImg(d,cls='face'){ return `<span class="${cls}">${imgTag(imgSrc(d,'face'),IMG_PLACEHOLDER.face,'',d?d.name:'')}</span>`; }
-// コマンドカード（Buster/Arts/Quick はそのユニットのカード画像、特殊・覚醒は文字だけのカード）
+// コマンドカードの共通素材（rules.js の CARD_LAYERS）。宝具は bg が空なら宝具の色の bg を借りる
+function cardLayers(kind,col){
+  const L=CARD_LAYERS[kind]||{}, base=CARD_LAYERS[col]||{};
+  return { bg:L.bg||(kind==='ULT'?base.bg:'')||'', frame:L.frame||'' };
+}
+// コマンドカード
+//   Buster/Arts/Quick・宝具：背景(共通) → キャラ画像(サーヴァントごと) → 枠と種別名(共通) の3層
+//   特殊・覚醒：文字だけのカード
 function cmdCardHTML(d,c,opt={}){
   if(!c) return '';
   const sz=opt.small?' sm':'';
-  if(['R','B','G'].includes(c.c)){
+  const isUlt=c.c==='ULT';
+  if(isUlt||['R','B','G'].includes(c.c)){
+    const col=isUlt?(c.col||'R'):c.c, L=cardLayers(isUlt?'ULT':col,col);
+    const label=isUlt?TERMS.ult:TERMS[col];
     const ex=[c.np?`${TERMS.gauge}+${c.np}`:'', c.star?`★${c.star}`:''].filter(Boolean).join(' ');
-    return `<div class="ccard ${c.c}${sz}" title="${esc(TERMS[c.c])}${c.dmg!=null?` ${c.dmg}`:''}">
-      ${imgTag(imgSrc(d,c.c),IMG_PLACEHOLDER[c.c],'ccimg')}
+    return `<div class="ccard ${col}${isUlt?' ULT':''}${L.frame?' hasframe':''}${sz}" title="${esc(label)}${c.dmg!=null?` ${c.dmg}`:''}">
+      ${L.bg?`<img class="cc-bg" src="${esc(L.bg)}" alt="">`:''}
+      ${imgTag(imgSrc(d,'card'),IMG_PLACEHOLDER.card,'ccimg',d?d.name:'')}
+      ${L.frame?`<img class="cc-frame" src="${esc(L.frame)}" alt="${esc(label)}">`:`<span class="ccname">${label}</span>`}
       ${d?clsIconTag(d.cls,'ccicon'):''}
-      <span class="ccname">${TERMS[c.c]}</span>
       ${c.dmg!=null?`<span class="ccdmg">${c.dmg}</span>`:''}${ex&&!opt.small?`<span class="ccex">${ex}</span>`:''}</div>`;
   }
-  if(c.c==='ULT') return `<div class="ccard ULT ${esc(c.col||'R')}${sz}">${imgTag(imgSrc(d,c.col||'R'),IMG_PLACEHOLDER[c.col||'R'],'ccimg')}${d?clsIconTag(d.cls,'ccicon'):''}<span class="ccname">${TERMS.ult}</span></div>`;
   const label=c.c==='ASC'?TERMS.asc:(c.label||TERMS.W);
   return `<div class="ccard ${esc(c.c)} plain${sz}"><span class="ccname">${esc(label)}</span></div>`;
 }

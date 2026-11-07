@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 300">
+  <!-- カード用の仮キャラ画像：背景は透明（共通の背景レイヤーが透けて見える） -->
+  <g fill="#ffffff" opacity=".42">
+    <circle cx="100" cy="98" r="40"/>
+    <path d="M22 300c6-78 38-140 78-140s72 62 78 140z"/>
+  </g>
+</svg>

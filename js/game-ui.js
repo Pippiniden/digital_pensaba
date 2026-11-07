@@ -113,16 +113,15 @@ function laneHTML(){
   if(badges.length) s+=`<div class="chains">${badges.map(b=>`<span class="badge">${b}</span>`).join('')}</div>`;
   return s;
 }
-// 中央の魔法陣（飾り）
-const MAGIC_CIRCLE=(()=>{
-  const ticks=Array.from({length:48},(_,i)=>{ const a=i*7.5*Math.PI/180, r1=i%4?84:80, r2=88;
-    return `<line x1="${(Math.cos(a)*r1).toFixed(1)}" y1="${(Math.sin(a)*r1).toFixed(1)}" x2="${(Math.cos(a)*r2).toFixed(1)}" y2="${(Math.sin(a)*r2).toFixed(1)}"/>`; }).join('');
-  return `<svg class="circle" viewBox="-100 -100 200 200" aria-hidden="true"><g fill="none" stroke="currentColor">
-    <circle r="96" stroke-width="1"/><circle r="92" stroke-width=".4" stroke-dasharray="1.5 2.5"/><g stroke-width=".6">${ticks}</g>
-    <circle r="74" stroke-width=".9"/><circle r="70" stroke-width=".35"/>
-    <polygon points="0,-70 60.6,35 -60.6,35" stroke-width=".7"/><polygon points="0,70 -60.6,-35 60.6,-35" stroke-width=".7"/>
-    <circle r="35" stroke-width=".6"/><circle r="30" stroke-width=".3" stroke-dasharray="1 2"/></g></svg>`;
-})();
+// 中央の魔法陣（飾り）：外側と内側を逆向きに回す
+// 画面を描き直しても回転が最初に戻らないよう、経過時間ぶん animation-delay をずらす
+const MC_SPIN = { out:120, in:80 }; // 1周の秒数（CSS と合わせる）
+function magicCircleHTML(){
+  const t=performance.now()/1000;
+  return `<div class="circle" aria-hidden="true">
+    <img class="mc-o" src="${UI_IMG.circleOut}" alt="" style="animation-delay:-${(t%MC_SPIN.out).toFixed(2)}s">
+    <img class="mc-i" src="${UI_IMG.circleIn}" alt="" style="animation-delay:-${(t%MC_SPIN.in).toFixed(2)}s"></div>`;
+}
 function stageHTML(){
   const ph=G.phase, me=G.players[G.cur];
   const stepNo={actRoll:2,skill:3,action:4,target:5,end:7,over:8}[ph]||1;
@@ -130,7 +129,7 @@ function stageHTML(){
   const steps=names.map((s,i)=>`<span class="${i+1===stepNo?'on':i+1<stepNo?'done':''}">${s}</span>`).join('');
   const stars=me.stars, th=critThreshold(stars);
   return `<section class="stage">
-    ${MAGIC_CIRCLE}
+    ${magicCircleHTML()}
     <div class="stagetop"><span class="turnno">TURN <b>${G.turn}</b></span><span class="p${G.cur} who">${esc(me.name)}の手番</span><div class="steps">${steps}</div></div>
     <div class="stagebody">
       <div class="prompt">${promptHTML()}</div>
