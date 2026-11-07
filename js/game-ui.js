@@ -61,9 +61,9 @@ function svtHTML(u){
       <div class="sname"><b title="${esc(d.name)}">${esc(d.name)}</b><button class="info" data-ui="detail" data-uid="${u.uid}" title="詳細を見る">i</button></div>
       <div class="gauge hp"><span>HP</span><div class="bar"><i style="width:${pctOf(u.hp,d.hp)}%"></i></div><b>${fmt(u.hp)}<small>/${d.hp}</small></b></div>
       <div class="gauge np ${u.np>=RULES.ultCost?'full':''}"><span>${TERMS.gauge}</span><div class="bar"><i style="width:${Math.min(100,u.np)}%"></i></div><b>${u.np}<small>%</small></b></div>
+      ${ctlHTML(u)}
       <div class="fxs" title="${esc(u.fx.map(fxText).join(' / '))}">${fx}</div>
       ${skillBtns(u,d)}
-      ${ctlHTML(u)}
     </div>
   </div>`;
 }
@@ -101,9 +101,9 @@ function promptHTML(){
   return '';
 }
 function laneHTML(){
-  if(G.ult){ const d=D(U(G.ult).def); return `<div class="it">${cmdCardHTML(d,{c:'ULT',col:d.ult.c})}<span>${dn(U(G.ult))}</span></div>`; }
+  if(G.ult){ const d=D(U(G.ult).def); return `<div class="it">${cmdCardHTML(d,{c:'ULT',col:d.ult.c})}<span title="${dn(U(G.ult))}">${dn(U(G.ult))}</span></div>`; }
   if(!G.rolled.length) return `<span class="sub small lanehint">ここにこのターンのコマンドが並びます</span>`;
-  let s=G.rolled.map(r=>`<div class="it">${cmdCardHTML(D(U(r.uid).def),r.cmd)}<span>${dn(U(r.uid))}</span></div>`).join('');
+  let s=G.rolled.map(r=>`<div class="it">${cmdCardHTML(D(U(r.uid).def),r.cmd)}<span title="${dn(U(r.uid))}">${dn(U(r.uid))}</span></div>`).join('');
   const badges=[];
   if(G.rolled.length===3){
     const c=G.rolled.map(r=>r.cmd.c);
