@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pencil Duel</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/game.css">
+</head>
+<body>
+<header>
+  <h1>PENCIL DUEL</h1><span id="hinfo"></span>
+  <span class="grow"></span>
+  <button id="spd" data-a="toggleSpeed" hidden></button>
+  <a class="btn" href="editor.html">ペンシルエディタ</a>
+  <button data-a="restart">最初から</button>
+</header>
+<div id="app"></div>
+
+<!-- 読み込み順が大事：ルール → 標準データ → 共通処理 → エンジン → CPU → 画面 -->
+<script src="js/rules.js"></script>
+<script src="js/units.js"></script>
+<script src="js/common.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/cpu.js"></script>
+<script src="js/game-ui.js"></script>
+</body>
+</html>
