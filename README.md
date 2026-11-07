@@ -1,1 +1,1 @@
-# degital_pensaba
+# digital_pensaba
