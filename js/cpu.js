@@ -19,7 +19,10 @@ let cpuTimer=null;
 function scheduleCpu(){
   clearTimeout(cpuTimer);
   if(!cpuActing()) return;
-  cpuTimer=setTimeout(()=>{ const s=cpuDecide(); if(s) act(s[0],s[1]||{}); }, G.phase==='setup'?500:G.speed);
+  cpuTimer=setTimeout(()=>{
+    if(typeof fxBusy==='function' && fxBusy()){ scheduleCpu(); return; } // 演出の再生中は待つ
+    const s=cpuDecide(); if(s) act(s[0],s[1]||{});
+  }, G.phase==='setup'?500:G.speed);
 }
 function cpuDecide(){
   const easy=G.level==='easy';
@@ -48,7 +51,7 @@ function cpuDecide(){
 function avgDmg(u){
   const d=D(u.def);
   const base=d.faces.reduce((s,f)=>{ const c=u.asc?f.post:f.pre; return s+(c.dmg||0)+(c.c==='ASC'?40:0); },0)/6;
-  return base*Math.max(1,...alive(1-u.pid).map(t=>affinity(d.cls,D(t.def).cls)));
+  return base;
 }
 function cpuAlloc(easy){
   const us=alive(G.cur).filter(u=>(G.maxActs[u.uid]||0)>0), res={};
@@ -128,18 +131,18 @@ function cpuPickTarget(uid,si,easy){
   if(k.includes('poison')||k.includes('burn')){ const c=cands.filter(x=>!has(x,'poison')&&!has(x,'burn')); return [...(c.length?c:cands)].sort((a,b)=>b.hp-a.hp)[0]; }
   return cands[0];
 }
-// 攻撃対象：倒し切れる相手（ゲージが高い・コストが高い方）を優先、無理なら削れる割合が大きい相手
+// 攻撃対象：倒し切れる相手（NPが高い・コストが高い方）を優先、無理なら削れる割合が大きい相手
 function estDamage(t){
   const red=()=>mods(t,'defDown').sum-mods(t,'def').sum;
   if(G.ult){
     const u=U(G.ult), ud=D(u.def).ult;
-    return ud.eff.filter(e=>e.k==='dmg').reduce((s,e)=>s+Math.max(0,e.v+mods(u,'atk',ud.c).sum-mods(u,'atkDown').sum+red())*affinity(D(u.def).cls,D(t.def).cls),0);
+    return ud.eff.filter(e=>e.k==='dmg').reduce((s,e)=>s+Math.max(0,e.v+mods(u,'atk',ud.c).sum-mods(u,'atkDown').sum+red()),0);
   }
   const cols=G.rolled.map(r=>r.cmd.c), chainR=G.rolled.length===3&&cols.every(c=>c==='R');
   return G.rolled.reduce((s,r)=>{
     const c=r.cmd; if(!c.dmg) return s;
     const a=U(r.uid), d=Math.max(0,c.dmg+mods(a,'atk',c.c).sum-mods(a,'atkDown').sum+red())+(chainR?RULES.chainR:0);
-    return s+d*affinity(D(a.def).cls,D(t.def).cls);
+    return s+d;
   },0);
 }
 function cpuBestTarget(easy){

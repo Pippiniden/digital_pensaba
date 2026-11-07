@@ -7,26 +7,29 @@
 <link rel="icon" href="data:,">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Noto+Serif+JP:wght@600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Noto+Serif+JP:wght@600;700;900&display=swap">
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/game.css">
 </head>
-<body>
+<body class="game">
 <header>
   <h1>PENCIL DUEL</h1><span id="hinfo"></span>
   <span class="grow"></span>
+  <button id="logbtn" data-ui="toggleLog" hidden>バトルログ</button>
   <button id="spd" data-a="toggleSpeed" hidden></button>
   <a class="btn" href="editor.html">ペンシルエディタ</a>
   <button data-a="restart">最初から</button>
 </header>
 <div id="app"></div>
+<div id="fx" aria-hidden="true"></div>
 
-<!-- 読み込み順が大事：ルール → 標準データ → 共通処理 → エンジン → CPU → 画面 -->
+<!-- 読み込み順が大事：ルール → 標準データ → 共通処理 → エンジン → CPU → 演出 → 画面 -->
 <script src="js/rules.js"></script>
 <script src="js/units.js"></script>
 <script src="js/common.js"></script>
 <script src="js/engine.js"></script>
 <script src="js/cpu.js"></script>
+<script src="js/fx.js"></script>
 <script src="js/game-ui.js"></script>
 </body>
 </html>
