@@ -17,7 +17,14 @@ function newGame(){
     players:[{name:TERMS.player+'1',party:[],stars:0},{name:TERMS.player+'2',party:[],stars:0}],
     cur:0, turn:0, actRolled:false, maxActs:{}, alloc:{}, rolled:[], ult:null, target:null,
     gen:0, pending:null, log:[], winner:null };
+  FXQ.length=0;
 }
+
+// ---------- 演出イベント ----------
+// セリフ・ダメージ表示・宝具カットインを FXQ に積み、画面側（fx.js）が順番に再生する。ルール処理には影響しない
+const FXQ=[];
+const fxEmit = ev=>FXQ.push(ev);
+function say(u,key){ const t=pickLine(D(u.def),key); if(t) fxEmit({t:'say',uid:u.uid,key,text:t}); }
 
 // ---------- ヘルパー ----------
 const D = id=>UNITS.find(u=>u.id===id);
@@ -87,7 +94,7 @@ function applyOne(src,t,e){
     case 'star': G.players[t.pid].stars+=e.v; log(`${TERMS.star}${e.v}個獲得`); return;
     case 'cleanse': t.fx=t.fx.filter(x=>FX[x.k].buff!==false); log(`${nm(t)}の弱体を解除`,'good'); return;
     case 'strip': t.fx=t.fx.filter(x=>FX[x.k].buff!==true); log(`${nm(t)}の強化を解除`,'bad'); return;
-    case 'dmg': return; // 必殺技側で処理
+    case 'dmg': return; // 宝具側で処理
   }
   if(e.k==='guts') t.fx=t.fx.filter(x=>x.k!=='guts'); // ガッツは重複不可
   const inst={k:e.k,v:e.v,color:e.color||null,turns:e.turns??null,times:e.times??null,owner:src.pid};
@@ -106,13 +113,14 @@ function blocked(att,tgt){
   consume(tgt,[e]);
   return FX[e.k].name;
 }
-function dealDamage(u,dmg,isHit){
+function dealDamage(u,dmg,isHit,o={}){
   if(u.out) return;
+  fxEmit({t:'dmg',uid:u.uid,v:fmt(dmg),crit:!!o.crit,np:!!o.np});
   u.hp-=dmg;
   if(u.hp<=0){
     const g=u.fx.find(e=>e.k==='guts');
     if(g){ u.hp=g.v; u.fx=u.fx.filter(e=>e!==g); log(`${nm(u)} ガッツ発動！ HP${g.v}で踏みとどまった`,'good'); }
-    else { u.hp=0; u.out=true; u.fx=[]; log(`${nm(u)} 撤退`,'bad'); return; }
+    else { u.hp=0; u.out=true; u.fx=[]; log(`${nm(u)} 撤退`,'bad'); say(u,'defeat'); return; }
   }
   if(isHit) addNp(u,RULES.gaugeOnHit);
 }
@@ -124,6 +132,7 @@ function resolveCommand(att,cmd,tgt,o={}){
   const n=nm(att);
   if(cmd.c==='ASC'){ log(`${n}：${TERMS.asc}（1行動）`,'sub'); return; }
   if(cmd.c==='W'){ log(`${n}：特殊行動「${esc(cmd.label)}」`); applyEffects(att,cmd.eff||[],null); gainNpStar(att,cmd,1); return; }
+  say(att,'attack');
   let dmg=cmd.dmg; const note=[`基本${dmg}`]; let usedA=[], usedT=[];
   // 2. スキル効果補正 / 3. Busterチェイン
   if(!o.extra){
@@ -133,10 +142,7 @@ function resolveCommand(att,cmd,tgt,o={}){
     if(mod){ dmg=Math.max(0,dmg+mod); note.push(`補正${mod>0?'+':''}${mod}`); }
     if(o.chain==='R'){ dmg+=RULES.chainR; note.push(`チェイン+${RULES.chainR}`); }
   } else note.push('エクストラ：補正なし');
-  // 4. クラス相性
-  const af=affinity(D(att.def).cls,D(tgt.def).cls);
-  if(af!==1){ dmg*=af; note.push(`相性×${af}`); }
-  // 5. クリティカル
+  // 4. クリティカル（クラス相性はなし）
   let crit=false;
   if(!o.extra){
     const st=G.players[att.pid].stars;
@@ -153,8 +159,8 @@ function resolveCommand(att,cmd,tgt,o={}){
     log(`${n} ${cmdChip(cmd)} → オーバーキル（${TERMS.gauge}・${TERMS.star}2倍）`);
   } else {
     const b=blocked(att,tgt);
-    if(b) log(`${n} ${cmdChip(cmd)} → ${nm(tgt)}：${b}で無効 <span class="sub">(${note.join(' / ')})</span>`);
-    else { log(`${n} ${cmdChip(cmd)} → ${nm(tgt)}：<b>${fmt(dmg)}</b>ダメージ <span class="sub">(${note.join(' / ')})</span>`); consume(tgt,usedT); dealDamage(tgt,dmg,true); }
+    if(b){ log(`${n} ${cmdChip(cmd)} → ${nm(tgt)}：${b}で無効 <span class="sub">(${note.join(' / ')})</span>`); fxEmit({t:'dmg',uid:tgt.uid,text:b}); }
+    else { log(`${n} ${cmdChip(cmd)} → ${nm(tgt)}：<b>${fmt(dmg)}</b>ダメージ <span class="sub">(${note.join(' / ')})</span>`); consume(tgt,usedT); dealDamage(tgt,dmg,true,{crit}); }
   }
   gainNpStar(att,cmd,mult);
   consume(att,usedA);
@@ -162,6 +168,8 @@ function resolveCommand(att,cmd,tgt,o={}){
 function resolveUlt(u,tgt){
   const ud=D(u.def).ult;
   log(`${nm(u)}の${TERMS.ult}「${esc(ud.name)}」！`,'good');
+  fxEmit({t:'cutin',uid:u.uid,title:ud.name,col:ud.c});
+  say(u,'np');
   for(const e of ud.eff){
     if(e.k!=='dmg'){ applyEffects(u,[e],null); continue; }
     const ts = e.t==='enemy_all' ? alive(1-u.pid) : [tgt].filter(x=>x&&!x.out);
@@ -169,10 +177,9 @@ function resolveUlt(u,tgt){
     for(const t of ts){
       const dd=mods(t,'defDown'), df=mods(t,'def');
       let dmg=Math.max(0,e.v+a.sum-ad.sum+dd.sum-df.sum);
-      dmg*=affinity(D(u.def).cls,D(t.def).cls);
       const b=blocked(u,t);
-      if(b) log(`→ ${nm(t)}：${b}で無効`);
-      else { log(`→ ${nm(t)}：<b>${fmt(dmg)}</b>ダメージ`); consume(t,[...dd.list,...df.list]); dealDamage(t,dmg,true); }
+      if(b){ log(`→ ${nm(t)}：${b}で無効`); fxEmit({t:'dmg',uid:t.uid,text:b}); }
+      else { log(`→ ${nm(t)}：<b>${fmt(dmg)}</b>ダメージ`); consume(t,[...dd.list,...df.list]); dealDamage(t,dmg,true,{np:true}); if(!t.out) say(t,'npDamage'); }
     }
     consume(u,[...a.list,...ad.list]);
   }
@@ -182,6 +189,7 @@ function resolveDamage(){
   log(`⑥ ダメージフェイズ（攻撃対象：${nm(tgt)}）`,'h');
   if(G.ult){ resolveUlt(U(G.ult),tgt); }
   else {
+    const hp0=tgt.hp;
     const acts=G.rolled, cols=acts.map(a=>a.cmd.c);
     const chain = acts.length===3 && ['R','B','G'].includes(cols[0]) && cols.every(c=>c===cols[0]) ? cols[0] : null;
     if(chain) log(`${TERMS[chain]}チェイン発生！`,'good');
@@ -195,6 +203,7 @@ function resolveDamage(){
       if(!u.asc && face.pre.c==='ASC'){ ascend(u); u.face={i:f,kind:'cmd',cmd:face.pre}; }
       else { const cmd=u.asc?face.post:face.pre; u.face={i:f,kind:'cmd',cmd}; resolveCommand(u,cmd,tgt,{extra:true}); }
     }
+    if(!tgt.out && tgt.hp<hp0) say(tgt,'damage');
   }
   checkWin();
   if(G.winner==null) G.phase='end';
@@ -216,6 +225,7 @@ function startGame(){
   } while(r0===r1);
   G.cur=r0>r1?0:1; G.turn=1;
   log(`${esc(G.players[G.cur].name)} が先攻`,'good');
+  [G.cur,1-G.cur].forEach(pid=>say(G.players[pid].party[0],'start'));
   beginTurn();
 }
 function beginTurn(){
@@ -248,7 +258,7 @@ function checkWin(){
   if(alive(1-G.cur).length===0) win(G.cur);      // 同時全滅は手番側の勝ち
   else if(alive(G.cur).length===0) win(1-G.cur);
 }
-function win(pid){ G.winner=pid; G.phase='over'; log(`${esc(G.players[pid].name)} の勝利！`,'good'); }
+function win(pid){ G.winner=pid; G.phase='over'; log(`${esc(G.players[pid].name)} の勝利！`,'good'); const w=alive(pid)[0]; if(w) say(w,'win'); }
 function applyMode(cfg){
   Object.assign(G,{mode:cfg.mode, level:cfg.level, cpu:cfg.cpu, speed:cfg.speed||G.speed, phase:'setup'});
   cfg.names.forEach((n,i)=>G.players[i].name=n);
@@ -257,6 +267,7 @@ function doSkill(u,si,picked){
   const s=D(u.def).skills[si];
   u.used[si]=true;
   log(`${nm(u)} スキル「${esc(s.name)}」`);
+  say(u,'skill');
   applyEffects(u,s.eff,picked);
 }
 function toTargetPhase(){

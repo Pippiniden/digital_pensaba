@@ -27,6 +27,7 @@ function normCmd(c){
   if(c.c==='W') return {c:'W', label:String(c.label||''), eff:(c.eff||[]).map(normEff), np:num(c.np), star:num(c.star)};
   return {c:String(c.c||'R'), dmg:num(c.dmg), np:num(c.np), star:num(c.star)};
 }
+function normClass(c){ c=String(c||'').trim(); return CLASS_LEGACY[c]||c; }
 function normalizeUnit(u){
   u=u||{};
   const faces=Array.from({length:6},(_,i)=>{ const f=(u.faces||[])[i]||{}; return {acts:num(f.acts,1), pre:normCmd(f.pre), post:normCmd(f.post||f.pre)}; });
@@ -34,11 +35,13 @@ function normalizeUnit(u){
     const o={name:String(s.name||''), eff:(s.eff||[]).map(normEff)}; if(['ally','enemy','any'].includes(s.pick)) o.pick=s.pick; return o; });
   const ult=u.ult||{}, im=u.img||{};
   const img=Object.fromEntries(Object.keys(IMG_KEYS).map(k=>[k,String(im[k]||'')]));
-  return { id:String(u.id||''), name:String(u.name||''), cls:String(u.cls||CLASSES[0]), cost:num(u.cost), hp:num(u.hp,100),
-    img, faces, skills, ult:{name:String(ult.name||''), c:String(ult.c||'R'), eff:(ult.eff||[]).map(normEff)} };
+  const ln=u.lines||{};
+  const lines=Object.fromEntries(Object.keys(LINE_KEYS).map(k=>[k,(Array.isArray(ln[k])?ln[k]:[ln[k]]).map(x=>String(x??'').trim()).filter(Boolean)]));
+  return { id:String(u.id||''), name:String(u.name||''), cls:normClass(u.cls), cost:num(u.cost), hp:num(u.hp,100),
+    img, lines, faces, skills, ult:{name:String(ult.name||''), c:String(ult.c||'R'), eff:(ult.eff||[]).map(normEff)} };
 }
 function normalizeUnits(raw){
-  if(!Array.isArray(raw)) throw new Error('ユニットデータは配列である必要があります');
+  if(!Array.isArray(raw)) throw new Error('サーヴァントデータは配列である必要があります');
   return raw.map(normalizeUnit);
 }
 
@@ -53,7 +56,10 @@ function validateUnits(units){
     else if(ids.has(u.id)) add('error',`ID「${u.id}」が他の${TERMS.unit}と重複しています`);
     else ids.set(u.id,i);
     if(!u.name.trim()) add('error','名前が空です');
-    if(!CLASSES.includes(u.cls)) add('warn','クラスが相性表（rules.js）にありません');
+    if(!u.cls.trim()) add('warn','クラスが空です');
+    const noLine=Object.keys(LINE_KEYS).filter(k=>!u.lines[k].length);
+    if(noLine.length) add('warn',`セリフ未設定：${noLine.map(k=>LINE_KEYS[k]).join('・')}`);
+    for(const [k,n] of Object.entries(LINE_MIN)) if(u.lines[k].length && u.lines[k].length<n) add('warn',`${LINE_KEYS[k]}のセリフは${n}種類以上にしてください（今は${u.lines[k].length}種類）`);
     if(!(u.hp>0)) add('error','HPは1以上にしてください');
     if(!(u.cost>=0)) add('error','コストは0以上にしてください');
     if(u.cost>RULES.costCap) add('error',`コストが上限${RULES.costCap}を超えているため編成できません`);
@@ -127,6 +133,9 @@ function unitsToJS(units){
     '  {',
     `    "id":${j(u.id)}, "name":${j(u.name)}, "cls":${j(u.cls)}, "cost":${u.cost}, "hp":${u.hp},`,
     `    "img":${j(u.img)},`,
+    '    "lines":{',
+    Object.keys(LINE_KEYS).map(k=>`      ${j(k)}:${j(u.lines[k])}`).join(',\n'),
+    '    },',
     '    "faces":[',
     u.faces.map(f=>`      ${j(f)}`).join(',\n'),
     '    ],',
@@ -137,7 +146,8 @@ function unitsToJS(units){
     '  }'].join('\n')).join(',\n');
   return `'use strict';
 // ${TERMS.unit}データ（ペンシルエディタで書き出し）
-// img: 顔グラ(face)・カード画像(R/B/G) のパス
+// img: キャラクター画像(face)・カード画像(R/B/G) のパス
+// lines: 場面ごとのセリフ
 // faces: 出目1〜6の面 / acts: 行動回数 / pre・post: ${TERMS.asc}前・後のコマンド
 // c: R=${TERMS.R} B=${TERMS.B} G=${TERMS.G} W=${TERMS.W} ASC=${TERMS.asc}
 const DEFAULT_UNITS = [
@@ -149,7 +159,7 @@ function parseUnitsFile(text){
   const t=text.trim();
   if(t.startsWith('[')) return normalizeUnits(JSON.parse(t));
   const a=t.indexOf('['), b=t.lastIndexOf(']');
-  if(a<0||b<a) throw new Error('ユニットの配列が見つかりません');
+  if(a<0||b<a) throw new Error('サーヴァントの配列が見つかりません');
   return normalizeUnits(JSON.parse(t.slice(a,b+1)));
 }
 function downloadText(name,text,type='text/plain'){
@@ -159,8 +169,14 @@ function downloadText(name,text,type='text/plain'){
   setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 
+// ランダムにセリフを1つ（なければ空文字）
+function pickLine(d,key){ const a=(d&&d.lines&&d.lines[key])||[]; return a.length?a[Math.floor(Math.random()*a.length)]:''; }
+
 // ---------- 画像 ----------
 // d: ユニット定義 / k: 'face' | 'R' | 'B' | 'G'
+// クラス表示（アイコン＋名前）。iconOnly ならアイコンだけ
+function clsIconTag(cls,cls2='clsicon'){ return imgTag(classIcon(cls),CLASS_ICON_EXTRA,cls2,cls); }
+function clsBadge(cls,iconOnly){ return `<span class="cls${iconOnly?' only':''}" title="${esc(cls)}">${clsIconTag(cls)}${iconOnly?'':`<span>${esc(cls)}</span>`}</span>`; }
 const imgSrc=(d,k)=>(d&&d.img&&d.img[k])||IMG_PLACEHOLDER[k]||'';
 const imgTag=(src,fallback,cls,alt='')=>`<img class="${cls}" src="${esc(src)}" alt="${esc(alt)}" loading="lazy" onerror="this.onerror=null;this.src='${esc(fallback)}'">`;
 function faceImg(d,cls='face'){ return `<span class="${cls}">${imgTag(imgSrc(d,'face'),IMG_PLACEHOLDER.face,'',d?d.name:'')}</span>`; }
@@ -172,10 +188,11 @@ function cmdCardHTML(d,c,opt={}){
     const ex=[c.np?`${TERMS.gauge}+${c.np}`:'', c.star?`★${c.star}`:''].filter(Boolean).join(' ');
     return `<div class="ccard ${c.c}${sz}" title="${esc(TERMS[c.c])}${c.dmg!=null?` ${c.dmg}`:''}">
       ${imgTag(imgSrc(d,c.c),IMG_PLACEHOLDER[c.c],'ccimg')}
+      ${d?clsIconTag(d.cls,'ccicon'):''}
       <span class="ccname">${TERMS[c.c]}</span>
       ${c.dmg!=null?`<span class="ccdmg">${c.dmg}</span>`:''}${ex&&!opt.small?`<span class="ccex">${ex}</span>`:''}</div>`;
   }
-  if(c.c==='ULT') return `<div class="ccard ULT ${esc(c.col||'R')}${sz}">${imgTag(imgSrc(d,c.col||'R'),IMG_PLACEHOLDER[c.col||'R'],'ccimg')}<span class="ccname">${TERMS.ult}</span></div>`;
+  if(c.c==='ULT') return `<div class="ccard ULT ${esc(c.col||'R')}${sz}">${imgTag(imgSrc(d,c.col||'R'),IMG_PLACEHOLDER[c.col||'R'],'ccimg')}${d?clsIconTag(d.cls,'ccicon'):''}<span class="ccname">${TERMS.ult}</span></div>`;
   const label=c.c==='ASC'?TERMS.asc:(c.label||TERMS.W);
   return `<div class="ccard ${esc(c.c)} plain${sz}"><span class="ccname">${esc(label)}</span></div>`;
 }

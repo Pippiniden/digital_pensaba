@@ -29,6 +29,7 @@ function conv(el){
     case 'num': return v===''?0:Number(v);
     case 'optnum': return v===''||!(Number(v)>0)?undefined:Number(v);
     case 'optstr': return v===''?undefined:v;
+    case 'lines': return v.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
     default: return v;
   }
 }
@@ -40,7 +41,7 @@ function uniqueId(base){
 }
 const C=(c,dmg,np=0,star=0)=>({c,dmg,np,star});
 function newUnit(){
-  return { id:uniqueId('unit'), name:'新しいユニット', cls:CLASSES[0], cost:2, hp:100, img:{...IMG_PLACEHOLDER},
+  return { id:uniqueId('unit'), name:'新しいサーヴァント', cls:CLASSES[0], cost:2, hp:100, img:{...IMG_PLACEHOLDER}, lines:Object.fromEntries(Object.keys(LINE_KEYS).map(k=>[k,[]])),
     faces:[ {acts:1,pre:C('R',20),post:C('R',30)}, {acts:2,pre:C('B',15,20),post:C('B',20,30)}, {acts:1,pre:C('G',10,0,3),post:C('G',15,0,5)},
             {acts:2,pre:C('R',20),post:C('R',30)}, {acts:3,pre:{c:'ASC'},post:C('R',45)}, {acts:1,pre:C('B',15,20),post:C('B',20,30)} ],
     skills:[ {name:'スキル1',eff:[{k:'atk',t:'self',v:10,turns:3}]},
@@ -93,7 +94,7 @@ function renderList(){
     <div class="ulist">${units.map((u,i)=>{
       const e=iss.filter(x=>x.i===i&&x.level==='error').length, w=iss.filter(x=>x.i===i&&x.level==='warn').length;
       return `<button class="uitem ${i===sel?'on':''}" data-act="sel" data-i="${i}">
-        ${faceImg(u,'face xs')}<span class="cls">${esc(u.cls)}</span><span class="uname">${esc(u.name)||'（名前なし）'}</span><span class="sub small">C${u.cost}</span>
+        ${clsBadge(u.cls,true)}${faceImg(u,'face xs')}<span class="uname">${esc(u.name)||'（名前なし）'}</span><span class="sub small">C${u.cost}</span>
         ${e?`<span class="dot err" title="エラー${e}件">${e}</span>`:w?`<span class="dot wrn" title="注意${w}件">${w}</span>`:''}</button>`;
     }).join('')}</div>
     <div class="row">
@@ -113,13 +114,14 @@ const optNum=(p,v,label)=>`<label class="mini"><span>${label}</span><input type=
 function renderForm(){
   const u=cur(), el=document.querySelector('#form');
   if(!u){ el.innerHTML=`<section class="sec"><p>${TERMS.unit}がありません。「＋ 追加」から作成してください。</p></section>`; return; }
-  const classes=CLASSES.includes(u.cls)?CLASSES:[...CLASSES,u.cls];
   el.innerHTML=`
   <section class="sec"><h2>基本情報</h2>
     <div class="fields">
       <label>名前<input data-p="name" value="${esc(u.name)}"></label>
       <label>ID<input data-p="id" value="${esc(u.id)}"><small>半角英数字・_・-（データの識別用）</small></label>
-      <label>クラス<select data-p="cls">${classes.map(c=>opt(c,c,u.cls)).join('')}</select></label>
+      <label>クラス<span class="clsin"><span data-clsprev>${clsIconTag(u.cls)}</span><input data-p="cls" list="classlist" value="${esc(u.cls)}"></span>
+        <small>一覧から選ぶか、オリジナルのクラス名を入力（相性はなし）</small>
+        <datalist id="classlist">${CLASSES.map(c=>`<option value="${esc(c)}">${CLASSES_BASIC.includes(c)?'基本':'エクストラ'}</option>`).join('')}</datalist></label>
       <label>コスト<input type="number" min="0" max="${RULES.costCap}" data-p="cost" data-t="num" value="${u.cost}"></label>
       <label>HP<input type="number" min="1" step="5" data-p="hp" data-t="num" value="${u.hp}"></label>
     </div>
@@ -130,6 +132,12 @@ function renderForm(){
       <span class="imgprev" data-imgprev="${k}">${k==='face'?faceImg(u,'face lg'):cmdCardHTML(u,{c:k})}</span>
       <span class="imglab">${lab}</span>
       <input data-p="img.${k}" value="${esc(u.img[k])}" placeholder="${esc(IMG_PLACEHOLDER[k])}"></label>`).join('')}</div>
+  </section>
+  <section class="sec"><h2>セリフ</h2>
+    <p class="sub small nm">1行に1つずつ書きます。複数あるときは、その場面でランダムに1つを吹き出しで表示します。</p>
+    <div class="lineed">${Object.entries(LINE_KEYS).map(([k,lab])=>`<label class="linefield">
+      <span class="linelab">${lab}${LINE_MIN[k]?`<small>（${LINE_MIN[k]}種類以上）</small>`:''}<span class="sub small" data-linecount="${k}">${u.lines[k].length}件</span></span>
+      <textarea data-p="lines.${k}" data-t="lines" rows="${Math.max(2,LINE_MIN[k]||0,u.lines[k].length)}" placeholder="${esc(lab)}のセリフ">${esc(u.lines[k].join(String.fromCharCode(10)))}</textarea></label>`).join('')}</div>
   </section>
   <section class="sec"><h2>鉛筆の6面</h2>
     <p class="sub small nm">行動回数は行動回数決定フェイズで、コマンドは行動決定フェイズで使います。${TERMS.asc}面は${TERMS.asc}前に1つ置くのが基本です。</p>
@@ -207,6 +215,8 @@ function updatePreviews(){
   document.querySelectorAll('.eff[data-ep]').forEach(el=>{ const e=getPath(u,el.dataset.ep); if(e) el.querySelector('.effprev').textContent=fxText(e); });
   document.querySelectorAll('[data-prev="skill"]').forEach(el=>{ const s=u.skills[+el.dataset.i]; el.textContent=effsText(s.eff,s.pick); });
   document.querySelectorAll('[data-prev="ult"]').forEach(el=>el.textContent=effsText(u.ult.eff));
+  document.querySelectorAll('[data-linecount]').forEach(el=>el.textContent=`${u.lines[el.dataset.linecount].length}件`);
+  document.querySelectorAll('[data-clsprev] img').forEach(im=>{ const src=classIcon(u.cls); if(im.getAttribute('src')!==src){ im.onerror=()=>{ im.onerror=null; im.src=CLASS_ICON_EXTRA; }; im.src=src; } });
   document.querySelectorAll('[data-imgprev]').forEach(el=>{ const im=el.querySelector('img'), src=imgSrc(u,el.dataset.imgprev);
     if(im && im.getAttribute('src')!==src){ im.onerror=()=>{ im.onerror=null; im.src=IMG_PLACEHOLDER[el.dataset.imgprev]; }; im.src=src; } });
 }
@@ -250,7 +260,7 @@ function renderSide(){
       <p class="sub small nm">1回ロールしたときの平均値です。全体平均は${units.length}体の${TERMS.asc}前の値です。</p>
     </div>
     <div class="sidecard"><b>カードの見え方</b>
-      <div class="card prev"><div class="uhead">${faceImg(u)}<div class="uinfo"><div class="top"><span class="cls">${esc(u.cls)}</span><b>${esc(u.name)}</b><span class="cost">コスト${u.cost} ・ HP${u.hp}</span></div>
+      <div class="card prev"><div class="uhead">${faceImg(u)}<div class="uinfo"><div class="top">${clsBadge(u.cls)}<b>${esc(u.name)}</b><span class="cost">コスト${u.cost} ・ HP${u.hp}</span></div>
         <div class="ccrow">${['R','B','G'].map(k=>cmdCardHTML(u,{c:k},{small:true})).join('')}</div></div></div>${skillListHTML(u)}</div>
     </div>`;
 }

@@ -1,12 +1,23 @@
 'use strict';
 // ユニットデータ（ペンシルエディタで書き出し）
-// img: 顔グラ(face)・カード画像(R/B/G) のパス
+// img: キャラクター画像(face)・カード画像(R/B/G) のパス
+// lines: 場面ごとのセリフ
 // faces: 出目1〜6の面 / acts: 行動回数 / pre・post: 覚醒前・後のコマンド
 // c: R=Buster B=Arts G=Quick W=特殊 ASC=覚醒
 const DEFAULT_UNITS = [
   {
-    "id":"minamo", "name":"鉄扇のミナモ", "cls":"剣士", "cost":5, "hp":120,
+    "id":"minamo", "name":"鉄扇のミナモ", "cls":"セイバー", "cost":5, "hp":120,
     "img":{"face":"img/placeholder/face.svg","R":"img/placeholder/buster.svg","B":"img/placeholder/arts.svg","G":"img/placeholder/quick.svg"},
+    "lines":{
+      "start":["鉄扇のミナモ、参ります。"],
+      "attack":["はっ！", "凪いで――断つ！", "この扇、ただの飾りではありませんよ。"],
+      "damage":["くっ……！"],
+      "skill":["流れを整えます。"],
+      "np":["千の波よ、重なりて砕け――『千重波』！"],
+      "npDamage":["これほどの……！"],
+      "defeat":["申し訳……ありません……"],
+      "win":["凪が戻りましたね。"]
+    },
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":30,"np":0,"star":0},"post":{"c":"R","dmg":40,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"B","dmg":20,"np":20,"star":0},"post":{"c":"B","dmg":25,"np":30,"star":0}},
@@ -23,8 +34,18 @@ const DEFAULT_UNITS = [
     "ult":{"name":"千重波","c":"R","eff":[{"k":"dmg","t":"target","v":100}]}
   },
   {
-    "id":"rio", "name":"灯火のリオ", "cls":"術士", "cost":3, "hp":90,
+    "id":"rio", "name":"灯火のリオ", "cls":"キャスター", "cost":3, "hp":90,
     "img":{"face":"img/placeholder/face.svg","R":"img/placeholder/buster.svg","B":"img/placeholder/arts.svg","G":"img/placeholder/quick.svg"},
+    "lines":{
+      "start":["灯りを絶やさずにいきましょう！"],
+      "attack":["えいっ！", "灯よ、走って！", "燃えて！"],
+      "damage":["きゃっ！"],
+      "skill":["みんな、温まって！"],
+      "np":["小さな火でも、祈れば篝火に――『篝火の祈り』！"],
+      "npDamage":["火が……揺らいで……！"],
+      "defeat":["灯が……消え……"],
+      "win":["みんな無事で、よかった！"]
+    },
     "faces":[
       {"acts":2,"pre":{"c":"B","dmg":15,"np":30,"star":0},"post":{"c":"B","dmg":20,"np":40,"star":0}},
       {"acts":1,"pre":{"c":"G","dmg":10,"np":0,"star":4},"post":{"c":"G","dmg":15,"np":0,"star":6}},
@@ -41,8 +62,18 @@ const DEFAULT_UNITS = [
     "ult":{"name":"篝火の祈り","c":"B","eff":[{"k":"atk","t":"ally_all","v":20,"turns":3},{"k":"heal","t":"ally_all","v":30}]}
   },
   {
-    "id":"kagari", "name":"影縫いのカガリ", "cls":"暗殺者", "cost":3, "hp":80,
+    "id":"kagari", "name":"影縫いのカガリ", "cls":"アサシン", "cost":3, "hp":80,
     "img":{"face":"img/placeholder/face.svg","R":"img/placeholder/buster.svg","B":"img/placeholder/arts.svg","G":"img/placeholder/quick.svg"},
+    "lines":{
+      "start":["……影は既に、お前の足元だ。"],
+      "attack":["遅い。", "そこだ。", "縫い止める。"],
+      "damage":["ちっ……"],
+      "skill":["……仕込みは済んだ。"],
+      "np":["千の影よ、喰らい尽くせ――『千影』。"],
+      "npDamage":["見誤った、か……"],
+      "defeat":["影に……還る……"],
+      "win":["……任務完了。"]
+    },
     "faces":[
       {"acts":1,"pre":{"c":"G","dmg":15,"np":0,"star":5},"post":{"c":"G","dmg":20,"np":0,"star":6}},
       {"acts":2,"pre":{"c":"R","dmg":25,"np":0,"star":0},"post":{"c":"R","dmg":35,"np":0,"star":0}},
@@ -59,8 +90,18 @@ const DEFAULT_UNITS = [
     "ult":{"name":"千影","c":"G","eff":[{"k":"dmg","t":"target","v":90},{"k":"poison","t":"target","v":0,"turns":3}]}
   },
   {
-    "id":"selen", "name":"流星射手セレン", "cls":"弓兵", "cost":4, "hp":100,
+    "id":"selen", "name":"流星射手セレン", "cls":"アーチャー", "cost":4, "hp":100,
     "img":{"face":"img/placeholder/face.svg","R":"img/placeholder/buster.svg","B":"img/placeholder/arts.svg","G":"img/placeholder/quick.svg"},
+    "lines":{
+      "start":["星の巡りは良好。始めましょう。"],
+      "attack":["射抜きます！", "流れ星、一つ！", "狙いは外さない。"],
+      "damage":["っ、やりますね……！"],
+      "skill":["星を読みます。"],
+      "np":["夜空の全てを、この一矢に――『流星雨』！"],
+      "npDamage":["空が、落ちて……！"],
+      "defeat":["星が……見えない……"],
+      "win":["今夜も、いい星空です。"]
+    },
     "faces":[
       {"acts":2,"pre":{"c":"R","dmg":25,"np":0,"star":0},"post":{"c":"R","dmg":35,"np":0,"star":0}},
       {"acts":1,"pre":{"c":"G","dmg":15,"np":0,"star":5},"post":{"c":"G","dmg":20,"np":0,"star":6}},
@@ -77,8 +118,18 @@ const DEFAULT_UNITS = [
     "ult":{"name":"流星雨","c":"G","eff":[{"k":"dmg","t":"enemy_all","v":60}]}
   },
   {
-    "id":"tsubaki", "name":"槍兵ツバキ", "cls":"槍兵", "cost":2, "hp":90,
+    "id":"tsubaki", "name":"槍兵ツバキ", "cls":"ランサー", "cost":2, "hp":90,
     "img":{"face":"img/placeholder/face.svg","R":"img/placeholder/buster.svg","B":"img/placeholder/arts.svg","G":"img/placeholder/quick.svg"},
+    "lines":{
+      "start":["槍兵ツバキ、推参！"],
+      "attack":["せいっ！", "穿つ！", "まだまだぁ！"],
+      "damage":["ぐっ……効かないね！"],
+      "skill":["さあ、かかってきな！"],
+      "np":["一閃にて咲き誇れ――『一閃・椿』！"],
+      "npDamage":["がはっ……！"],
+      "defeat":["ここまで、か……"],
+      "win":["椿は散らず、ってね！"]
+    },
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":20,"np":0,"star":0},"post":{"c":"R","dmg":30,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"B","dmg":15,"np":20,"star":0},"post":{"c":"B","dmg":20,"np":30,"star":0}},
@@ -95,8 +146,18 @@ const DEFAULT_UNITS = [
     "ult":{"name":"一閃・椿","c":"R","eff":[{"k":"strip","t":"target","v":0},{"k":"dmg","t":"target","v":90}]}
   },
   {
-    "id":"bard", "name":"狂嵐のバルド", "cls":"狂戦士", "cost":1, "hp":110,
+    "id":"bard", "name":"狂嵐のバルド", "cls":"バーサーカー", "cost":1, "hp":110,
     "img":{"face":"img/placeholder/face.svg","R":"img/placeholder/buster.svg","B":"img/placeholder/arts.svg","G":"img/placeholder/quick.svg"},
+    "lines":{
+      "start":["オオオオオッ！"],
+      "attack":["ガアッ！", "砕けろォ！", "ウオオオッ！"],
+      "damage":["グルル……"],
+      "skill":["ハァ……ハァ……！"],
+      "np":["嵐ヨ……吹キ荒レロォ――『嵐撃』！！"],
+      "npDamage":["グ、ガ……ッ！"],
+      "defeat":["ガ……ア……"],
+      "win":["……オオオオオォッ！！"]
+    },
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":35,"np":0,"star":0},"post":{"c":"R","dmg":45,"np":0,"star":0}},
       {"acts":1,"pre":{"c":"R","dmg":35,"np":0,"star":0},"post":{"c":"R","dmg":45,"np":0,"star":0}},
@@ -113,8 +174,18 @@ const DEFAULT_UNITS = [
     "ult":{"name":"嵐撃","c":"R","eff":[{"k":"dmg","t":"target","v":130}]}
   },
   {
-    "id":"nono", "name":"見習い騎兵ノノ", "cls":"騎兵", "cost":0, "hp":70,
+    "id":"nono", "name":"見習い騎兵ノノ", "cls":"ライダー", "cost":0, "hp":70,
     "img":{"face":"img/placeholder/face.svg","R":"img/placeholder/buster.svg","B":"img/placeholder/arts.svg","G":"img/placeholder/quick.svg"},
+    "lines":{
+      "start":["が、がんばります！"],
+      "attack":["えーいっ！", "いっけー！", "とりゃあ！"],
+      "damage":["いたた……"],
+      "skill":["相棒、お願い！"],
+      "np":["どこまでも駆けるよ――『草原駆け』！"],
+      "npDamage":["わわっ、すごい力……！"],
+      "defeat":["ごめんなさい……"],
+      "win":["やったぁ！勝てたよ、相棒！"]
+    },
     "faces":[
       {"acts":2,"pre":{"c":"G","dmg":10,"np":0,"star":3},"post":{"c":"G","dmg":15,"np":0,"star":4}},
       {"acts":1,"pre":{"c":"B","dmg":10,"np":20,"star":0},"post":{"c":"B","dmg":15,"np":25,"star":0}},
