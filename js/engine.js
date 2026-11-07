@@ -125,7 +125,7 @@ function resolveCommand(att,cmd,tgt,o={}){
   if(cmd.c==='ASC'){ log(`${n}：${TERMS.asc}（1行動）`,'sub'); return; }
   if(cmd.c==='W'){ log(`${n}：特殊行動「${esc(cmd.label)}」`); applyEffects(att,cmd.eff||[],null); gainNpStar(att,cmd,1); return; }
   let dmg=cmd.dmg; const note=[`基本${dmg}`]; let usedA=[], usedT=[];
-  // 2. スキル効果補正 / 3. パワーチェイン
+  // 2. スキル効果補正 / 3. Busterチェイン
   if(!o.extra){
     const a=mods(att,'atk',cmd.c), ad=mods(att,'atkDown');
     let mod=a.sum-ad.sum; usedA=[...a.list,...ad.list];

@@ -40,7 +40,7 @@ function uniqueId(base){
 }
 const C=(c,dmg,np=0,star=0)=>({c,dmg,np,star});
 function newUnit(){
-  return { id:uniqueId('unit'), name:'新しいユニット', cls:CLASSES[0], cost:2, hp:100,
+  return { id:uniqueId('unit'), name:'新しいユニット', cls:CLASSES[0], cost:2, hp:100, img:{...IMG_PLACEHOLDER},
     faces:[ {acts:1,pre:C('R',20),post:C('R',30)}, {acts:2,pre:C('B',15,20),post:C('B',20,30)}, {acts:1,pre:C('G',10,0,3),post:C('G',15,0,5)},
             {acts:2,pre:C('R',20),post:C('R',30)}, {acts:3,pre:{c:'ASC'},post:C('R',45)}, {acts:1,pre:C('B',15,20),post:C('B',20,30)} ],
     skills:[ {name:'スキル1',eff:[{k:'atk',t:'self',v:10,turns:3}]},
@@ -93,7 +93,7 @@ function renderList(){
     <div class="ulist">${units.map((u,i)=>{
       const e=iss.filter(x=>x.i===i&&x.level==='error').length, w=iss.filter(x=>x.i===i&&x.level==='warn').length;
       return `<button class="uitem ${i===sel?'on':''}" data-act="sel" data-i="${i}">
-        <span class="cls">${esc(u.cls)}</span><span class="uname">${esc(u.name)||'（名前なし）'}</span><span class="sub small">C${u.cost}</span>
+        ${faceImg(u,'face xs')}<span class="cls">${esc(u.cls)}</span><span class="uname">${esc(u.name)||'（名前なし）'}</span><span class="sub small">C${u.cost}</span>
         ${e?`<span class="dot err" title="エラー${e}件">${e}</span>`:w?`<span class="dot wrn" title="注意${w}件">${w}</span>`:''}</button>`;
     }).join('')}</div>
     <div class="row">
@@ -123,6 +123,13 @@ function renderForm(){
       <label>コスト<input type="number" min="0" max="${RULES.costCap}" data-p="cost" data-t="num" value="${u.cost}"></label>
       <label>HP<input type="number" min="1" step="5" data-p="hp" data-t="num" value="${u.hp}"></label>
     </div>
+  </section>
+  <section class="sec"><h2>画像</h2>
+    <p class="sub small nm">画像ファイルのパス（例：img/units/${esc(u.id||'unit')}/face.png）か URL を入力します。空欄・読み込めないときは仮画像を表示します。</p>
+    <div class="imged">${Object.entries(IMG_KEYS).map(([k,lab])=>`<label class="imgfield ${k==='face'?'isface':'iscard'}">
+      <span class="imgprev" data-imgprev="${k}">${k==='face'?faceImg(u,'face lg'):cmdCardHTML(u,{c:k})}</span>
+      <span class="imglab">${lab}</span>
+      <input data-p="img.${k}" value="${esc(u.img[k])}" placeholder="${esc(IMG_PLACEHOLDER[k])}"></label>`).join('')}</div>
   </section>
   <section class="sec"><h2>鉛筆の6面</h2>
     <p class="sub small nm">行動回数は行動回数決定フェイズで、コマンドは行動決定フェイズで使います。${TERMS.asc}面は${TERMS.asc}前に1つ置くのが基本です。</p>
@@ -200,6 +207,8 @@ function updatePreviews(){
   document.querySelectorAll('.eff[data-ep]').forEach(el=>{ const e=getPath(u,el.dataset.ep); if(e) el.querySelector('.effprev').textContent=fxText(e); });
   document.querySelectorAll('[data-prev="skill"]').forEach(el=>{ const s=u.skills[+el.dataset.i]; el.textContent=effsText(s.eff,s.pick); });
   document.querySelectorAll('[data-prev="ult"]').forEach(el=>el.textContent=effsText(u.ult.eff));
+  document.querySelectorAll('[data-imgprev]').forEach(el=>{ const im=el.querySelector('img'), src=imgSrc(u,el.dataset.imgprev);
+    if(im && im.getAttribute('src')!==src){ im.onerror=()=>{ im.onerror=null; im.src=IMG_PLACEHOLDER[el.dataset.imgprev]; }; im.src=src; } });
 }
 
 // ---------- 右側：プレビュー・検証・数値 ----------
@@ -241,7 +250,8 @@ function renderSide(){
       <p class="sub small nm">1回ロールしたときの平均値です。全体平均は${units.length}体の${TERMS.asc}前の値です。</p>
     </div>
     <div class="sidecard"><b>カードの見え方</b>
-      <div class="card prev"><div class="top"><span class="cls">${esc(u.cls)}</span><b>${esc(u.name)}</b><span class="cost">コスト${u.cost} ・ HP${u.hp}</span></div>${skillListHTML(u)}</div>
+      <div class="card prev"><div class="uhead">${faceImg(u)}<div class="uinfo"><div class="top"><span class="cls">${esc(u.cls)}</span><b>${esc(u.name)}</b><span class="cost">コスト${u.cost} ・ HP${u.hp}</span></div>
+        <div class="ccrow">${['R','B','G'].map(k=>cmdCardHTML(u,{c:k},{small:true})).join('')}</div></div></div>${skillListHTML(u)}</div>
     </div>`;
 }
 function pencilHTML(u){

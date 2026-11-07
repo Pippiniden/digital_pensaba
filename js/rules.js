@@ -6,15 +6,21 @@
 
 // ---------- 用語（画面上の呼び名） ----------
 const TERMS = { unit:'ユニット', player:'プレイヤー', gauge:'ゲージ', ult:'必殺技', asc:'覚醒', star:'スター',
-  R:'パワー', B:'チャージ', G:'ラッシュ', W:'特殊' };
+  R:'Buster', B:'Arts', G:'Quick', W:'特殊' };
+
+// ---------- 画像 ----------
+// 各ユニットの img に、顔グラ(face)と Buster(R)・Arts(B)・Quick(G) のカード画像のパスを書きます
+// 空欄や読み込めないときは IMG_PLACEHOLDER の仮画像を表示します
+const IMG_KEYS = { face:'顔グラ', R:'Busterカード', B:'Artsカード', G:'Quickカード' };
+const IMG_PLACEHOLDER = { face:'img/placeholder/face.svg', R:'img/placeholder/buster.svg', B:'img/placeholder/arts.svg', G:'img/placeholder/quick.svg' };
 
 // ---------- ルール定数 ----------
 const RULES = {
   costCap:10, partyMax:3, actionsMax:3,
   gaugeOnHit:10, gaugeMax:300, ultCost:100,
-  chainR:30,   // パワーチェイン：各コマンドのダメージ+30
-  chainB:20,   // チャージチェイン：行動した全ユニットのゲージ+20%
-  chainG:10,   // ラッシュチェイン：スター10個発生
+  chainR:30,   // Busterチェイン：各コマンドのダメージ+30
+  chainB:20,   // Artsチェイン：行動した全ユニットのゲージ+20%
+  chainG:10,   // Quickチェイン：スター10個発生
   dot:20,
   dotTiming:'current', // 毒・やけど・呪いの減少対象: 'current'=手番側のみ / 'all'=全ユニット
 };

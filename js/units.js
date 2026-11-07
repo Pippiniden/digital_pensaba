@@ -1,10 +1,12 @@
 'use strict';
 // ユニットデータ（ペンシルエディタで書き出し）
+// img: 顔グラ(face)・カード画像(R/B/G) のパス
 // faces: 出目1〜6の面 / acts: 行動回数 / pre・post: 覚醒前・後のコマンド
-// c: R=パワー B=チャージ G=ラッシュ W=特殊 ASC=覚醒
+// c: R=Buster B=Arts G=Quick W=特殊 ASC=覚醒
 const DEFAULT_UNITS = [
   {
     "id":"minamo", "name":"鉄扇のミナモ", "cls":"剣士", "cost":5, "hp":120,
+    "img":{"face":"img/placeholder/face.svg","R":"img/placeholder/buster.svg","B":"img/placeholder/arts.svg","G":"img/placeholder/quick.svg"},
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":30,"np":0,"star":0},"post":{"c":"R","dmg":40,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"B","dmg":20,"np":20,"star":0},"post":{"c":"B","dmg":25,"np":30,"star":0}},
@@ -22,6 +24,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"rio", "name":"灯火のリオ", "cls":"術士", "cost":3, "hp":90,
+    "img":{"face":"img/placeholder/face.svg","R":"img/placeholder/buster.svg","B":"img/placeholder/arts.svg","G":"img/placeholder/quick.svg"},
     "faces":[
       {"acts":2,"pre":{"c":"B","dmg":15,"np":30,"star":0},"post":{"c":"B","dmg":20,"np":40,"star":0}},
       {"acts":1,"pre":{"c":"G","dmg":10,"np":0,"star":4},"post":{"c":"G","dmg":15,"np":0,"star":6}},
@@ -39,6 +42,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"kagari", "name":"影縫いのカガリ", "cls":"暗殺者", "cost":3, "hp":80,
+    "img":{"face":"img/placeholder/face.svg","R":"img/placeholder/buster.svg","B":"img/placeholder/arts.svg","G":"img/placeholder/quick.svg"},
     "faces":[
       {"acts":1,"pre":{"c":"G","dmg":15,"np":0,"star":5},"post":{"c":"G","dmg":20,"np":0,"star":6}},
       {"acts":2,"pre":{"c":"R","dmg":25,"np":0,"star":0},"post":{"c":"R","dmg":35,"np":0,"star":0}},
@@ -56,6 +60,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"selen", "name":"流星射手セレン", "cls":"弓兵", "cost":4, "hp":100,
+    "img":{"face":"img/placeholder/face.svg","R":"img/placeholder/buster.svg","B":"img/placeholder/arts.svg","G":"img/placeholder/quick.svg"},
     "faces":[
       {"acts":2,"pre":{"c":"R","dmg":25,"np":0,"star":0},"post":{"c":"R","dmg":35,"np":0,"star":0}},
       {"acts":1,"pre":{"c":"G","dmg":15,"np":0,"star":5},"post":{"c":"G","dmg":20,"np":0,"star":6}},
@@ -73,6 +78,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"tsubaki", "name":"槍兵ツバキ", "cls":"槍兵", "cost":2, "hp":90,
+    "img":{"face":"img/placeholder/face.svg","R":"img/placeholder/buster.svg","B":"img/placeholder/arts.svg","G":"img/placeholder/quick.svg"},
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":20,"np":0,"star":0},"post":{"c":"R","dmg":30,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"B","dmg":15,"np":20,"star":0},"post":{"c":"B","dmg":20,"np":30,"star":0}},
@@ -90,6 +96,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"bard", "name":"狂嵐のバルド", "cls":"狂戦士", "cost":1, "hp":110,
+    "img":{"face":"img/placeholder/face.svg","R":"img/placeholder/buster.svg","B":"img/placeholder/arts.svg","G":"img/placeholder/quick.svg"},
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":35,"np":0,"star":0},"post":{"c":"R","dmg":45,"np":0,"star":0}},
       {"acts":1,"pre":{"c":"R","dmg":35,"np":0,"star":0},"post":{"c":"R","dmg":45,"np":0,"star":0}},
@@ -107,6 +114,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"nono", "name":"見習い騎兵ノノ", "cls":"騎兵", "cost":0, "hp":70,
+    "img":{"face":"img/placeholder/face.svg","R":"img/placeholder/buster.svg","B":"img/placeholder/arts.svg","G":"img/placeholder/quick.svg"},
     "faces":[
       {"acts":2,"pre":{"c":"G","dmg":10,"np":0,"star":3},"post":{"c":"G","dmg":15,"np":0,"star":4}},
       {"acts":1,"pre":{"c":"B","dmg":10,"np":20,"star":0},"post":{"c":"B","dmg":15,"np":25,"star":0}},
