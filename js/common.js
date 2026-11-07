@@ -32,9 +32,10 @@ function normalizeUnit(u){
   const faces=Array.from({length:6},(_,i)=>{ const f=(u.faces||[])[i]||{}; return {acts:num(f.acts,1), pre:normCmd(f.pre), post:normCmd(f.post||f.pre)}; });
   const skills=Array.from({length:3},(_,i)=>{ const s=(u.skills||[])[i]||{};
     const o={name:String(s.name||''), eff:(s.eff||[]).map(normEff)}; if(['ally','enemy','any'].includes(s.pick)) o.pick=s.pick; return o; });
-  const ult=u.ult||{};
+  const ult=u.ult||{}, im=u.img||{};
+  const img=Object.fromEntries(Object.keys(IMG_KEYS).map(k=>[k,String(im[k]||'')]));
   return { id:String(u.id||''), name:String(u.name||''), cls:String(u.cls||CLASSES[0]), cost:num(u.cost), hp:num(u.hp,100),
-    faces, skills, ult:{name:String(ult.name||''), c:String(ult.c||'R'), eff:(ult.eff||[]).map(normEff)} };
+    img, faces, skills, ult:{name:String(ult.name||''), c:String(ult.c||'R'), eff:(ult.eff||[]).map(normEff)} };
 }
 function normalizeUnits(raw){
   if(!Array.isArray(raw)) throw new Error('ユニットデータは配列である必要があります');
@@ -125,6 +126,7 @@ function unitsToJS(units){
   const body=units.map(u=>[
     '  {',
     `    "id":${j(u.id)}, "name":${j(u.name)}, "cls":${j(u.cls)}, "cost":${u.cost}, "hp":${u.hp},`,
+    `    "img":${j(u.img)},`,
     '    "faces":[',
     u.faces.map(f=>`      ${j(f)}`).join(',\n'),
     '    ],',
@@ -135,6 +137,7 @@ function unitsToJS(units){
     '  }'].join('\n')).join(',\n');
   return `'use strict';
 // ${TERMS.unit}データ（ペンシルエディタで書き出し）
+// img: 顔グラ(face)・カード画像(R/B/G) のパス
 // faces: 出目1〜6の面 / acts: 行動回数 / pre・post: ${TERMS.asc}前・後のコマンド
 // c: R=${TERMS.R} B=${TERMS.B} G=${TERMS.G} W=${TERMS.W} ASC=${TERMS.asc}
 const DEFAULT_UNITS = [
@@ -154,6 +157,27 @@ function downloadText(name,text,type='text/plain'){
   const a=document.createElement('a'); a.href=url; a.download=name;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+// ---------- 画像 ----------
+// d: ユニット定義 / k: 'face' | 'R' | 'B' | 'G'
+const imgSrc=(d,k)=>(d&&d.img&&d.img[k])||IMG_PLACEHOLDER[k]||'';
+const imgTag=(src,fallback,cls,alt='')=>`<img class="${cls}" src="${esc(src)}" alt="${esc(alt)}" loading="lazy" onerror="this.onerror=null;this.src='${esc(fallback)}'">`;
+function faceImg(d,cls='face'){ return `<span class="${cls}">${imgTag(imgSrc(d,'face'),IMG_PLACEHOLDER.face,'',d?d.name:'')}</span>`; }
+// コマンドカード（Buster/Arts/Quick はそのユニットのカード画像、特殊・覚醒は文字だけのカード）
+function cmdCardHTML(d,c,opt={}){
+  if(!c) return '';
+  const sz=opt.small?' sm':'';
+  if(['R','B','G'].includes(c.c)){
+    const ex=[c.np?`${TERMS.gauge}+${c.np}`:'', c.star?`★${c.star}`:''].filter(Boolean).join(' ');
+    return `<div class="ccard ${c.c}${sz}" title="${esc(TERMS[c.c])}${c.dmg!=null?` ${c.dmg}`:''}">
+      ${imgTag(imgSrc(d,c.c),IMG_PLACEHOLDER[c.c],'ccimg')}
+      <span class="ccname">${TERMS[c.c]}</span>
+      ${c.dmg!=null?`<span class="ccdmg">${c.dmg}</span>`:''}${ex&&!opt.small?`<span class="ccex">${ex}</span>`:''}</div>`;
+  }
+  if(c.c==='ULT') return `<div class="ccard ULT ${esc(c.col||'R')}${sz}">${imgTag(imgSrc(d,c.col||'R'),IMG_PLACEHOLDER[c.col||'R'],'ccimg')}<span class="ccname">${TERMS.ult}</span></div>`;
+  const label=c.c==='ASC'?TERMS.asc:(c.label||TERMS.W);
+  return `<div class="ccard ${esc(c.c)} plain${sz}"><span class="ccname">${esc(label)}</span></div>`;
 }
 
 // ---------- 表示用の文字列 ----------

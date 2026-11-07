@@ -20,7 +20,7 @@ function cardHTML(u){
   let last='';
   if(u.face){
     const f=d.faces[u.face.i];
-    last=`<div class="lastroll">🎲 出目<b>${u.face.i+1}</b>${u.face.kind==='acts'?` ・ 行動回数<b>${f.acts}</b>`:''}${u.face.kind==='cmd'?` ・ ${cmdChip(u.face.cmd)}`:''}</div>`;
+    last=`<div class="lastroll">🎲 出目<b>${u.face.i+1}</b>${u.face.kind==='acts'?` ・ 行動回数<b>${f.acts}</b>`:''}${u.face.kind==='cmd'?cmdCardHTML(d,u.face.cmd,{small:true}):''}</div>`;
   }
   let ctl='';
   if(own && !u.out){
@@ -35,11 +35,12 @@ function cardHTML(u){
   }
   const fx=u.fx.map(e=>`<span class="chip fx ${FX[e.k].buff?'buff':'debuff'}">${fxText(e)}</span>`).join('');
   return `<div class="${cls}" ${pickable?`data-a="cardClick" data-uid="${u.uid}"`:''}>
+    <div class="uhead">${faceImg(d)}<div class="uinfo">
     <div class="top"><span class="cls">${esc(d.cls)}</span><b>${esc(d.name)}</b>${u.asc?`<span class="ascb">${TERMS.asc}</span>`:''}${u.out?'<span class="chip">撤退</span>':''}<span class="cost">${['1st','2nd','3rd'][u.idx]} ・ C${d.cost}</span></div>
     <div class="bars">
       <span>HP</span><div class="bar"><i style="width:${u.hp/d.hp*100}%;background:var(--hp)"></i></div><span>${fmt(u.hp)}/${d.hp}</span>
       <span>${TERMS.gauge}</span><div class="bar"><i style="width:${Math.min(100,u.np)}%;background:var(--np)"></i></div><span>${u.np}%</span>
-    </div>
+    </div></div></div>
     ${fx?`<div class="fxs">${fx}</div>`:''}
     ${last}${ctl}
     ${skillsHTML(u,d)}
@@ -83,9 +84,9 @@ function centerHTML(){
       break;
   }
   let lane='';
-  if(G.ult) lane=`<div class="it"><span class="sub">${dn(U(G.ult))}</span><span class="cmd ${D(U(G.ult).def).ult.c}">${TERMS.ult}</span></div>`;
+  if(G.ult){ const d=D(U(G.ult).def); lane=`<div class="it">${cmdCardHTML(d,{c:'ULT',col:d.ult.c})}<span class="sub">${dn(U(G.ult))}</span></div>`; }
   else if(G.rolled.length){
-    lane=G.rolled.map(r=>`<div class="it"><span class="sub">${dn(U(r.uid))}</span>${cmdChip(r.cmd)}</div>`).join('');
+    lane=G.rolled.map(r=>`<div class="it">${cmdCardHTML(D(U(r.uid).def),r.cmd)}<span class="sub">${dn(U(r.uid))}</span></div>`).join('');
     if(G.rolled.length===3){
       const c=G.rolled.map(r=>r.cmd.c);
       if(['R','B','G'].includes(c[0])&&c.every(x=>x===c[0])) lane+=`<span class="badge">${TERMS[c[0]]}チェイン</span>`;
@@ -106,12 +107,15 @@ function centerHTML(){
     </div>
   </section>`;
 }
+// そのユニットの Buster/Arts/Quick カードを並べる（編成画面用）
+const cardRowHTML=d=>`<div class="ccrow">${['R','B','G'].map(k=>cmdCardHTML(d,{c:k},{small:true})).join('')}</div>`;
 function setupHTML(){
   const pid=G.setupPid, picks=G.picks[pid], cost=sumCost(picks);
   const cards=UNITS.map(d=>{
     const i=picks.indexOf(d.id);
     return `<div class="card ${i>=0?'sel':''}">${i>=0?`<span class="order">${i+1}</span>`:''}
-      <div class="top"><span class="cls">${esc(d.cls)}</span><b>${esc(d.name)}</b><span class="cost">コスト${d.cost} ・ HP${d.hp}</span></div>
+      <div class="uhead">${faceImg(d)}<div class="uinfo"><div class="top"><span class="cls">${esc(d.cls)}</span><b>${esc(d.name)}</b><span class="cost">コスト${d.cost} ・ HP${d.hp}</span></div>
+      ${cardRowHTML(d)}</div></div>
       ${skillListHTML(d)}
       <details><summary>鉛筆の面</summary>${facesTableHTML(d)}</details>
       <div class="row mt"><button ${i>=0?'':'class="primary"'} data-a="setupToggle" data-id="${esc(d.id)}">${i>=0?'外す':'選ぶ'}</button></div>
