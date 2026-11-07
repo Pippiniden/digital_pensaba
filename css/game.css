@@ -1,0 +1,50 @@
+/* ゲーム画面 */
+.wrap{max-width:1320px;margin:0 auto;padding:16px}
+.board{display:grid;grid-template-columns:1fr minmax(300px,380px) 1fr;gap:16px;align-items:start}
+@media (max-width:1000px){.board{grid-template-columns:1fr}}
+.sidehead{display:flex;align-items:center;gap:8px;margin:0 0 8px;font-size:15px}
+.turnbadge{font-size:11px;padding:1px 8px;border-radius:999px;background:var(--accent);color:var(--panel)}
+.card.out{opacity:.45;filter:grayscale(1)}
+.card.pickable{cursor:pointer;outline:2px dashed var(--accent);outline-offset:2px}
+.card.targeted{outline:3px solid var(--r);outline-offset:2px}
+.ascb{font-size:11px;padding:0 6px;border-radius:4px;background:var(--gold);color:#fff}
+.bars{display:grid;grid-template-columns:auto 1fr auto;gap:2px 8px;align-items:center;margin:6px 0;font-size:12px}
+.bar{height:7px;background:var(--line);border-radius:4px;overflow:hidden}
+.bar>i{display:block;height:100%}
+.fxs{display:flex;flex-wrap:wrap;gap:4px;margin:4px 0}
+.fx.buff{color:var(--g);border-color:color-mix(in srgb,var(--g) 40%,transparent)}
+.fx.debuff{color:var(--r);border-color:color-mix(in srgb,var(--r) 40%,transparent)}
+.lastroll{font-size:12px;margin:4px 0;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px;box-shadow:var(--shadow)}
+.panel p.small{margin:8px 0 0}
+.steps{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:10px}
+.steps span{text-align:center;font-size:10.5px;padding:4px 0;border-radius:6px;background:var(--line);color:var(--sub)}
+.steps span.done{opacity:.55}
+.steps span.on{background:var(--accent);color:var(--panel);font-weight:700}
+.turn{font-weight:700;margin-bottom:6px}
+.hl{color:var(--accent);font-weight:600}
+.win{font-size:18px;font-weight:700;color:var(--accent)}
+.lane{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);align-items:center}
+.lane .it{display:flex;flex-direction:column;gap:2px;font-size:11px}
+.badge{font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;background:var(--ink);color:var(--panel)}
+.log{height:300px;overflow:auto;font-size:12.5px;line-height:1.6;margin-top:4px}
+.log>div{padding:1px 0}
+.log .h{font-weight:700;color:var(--accent);margin-top:6px}
+.log .good{color:var(--g)}.log .bad{color:var(--r)}.log .sub{color:var(--sub)}
+.log .cmd{font-size:11px;padding:0 6px}
+.setup h2{margin:0 0 4px;font-size:18px}
+.pickbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0;padding:10px 12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;position:sticky;top:52px;z-index:4}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}
+.card.sel{outline:3px solid var(--accent);outline-offset:1px}
+.order{position:absolute;top:-8px;left:-8px;width:24px;height:24px;border-radius:50%;background:var(--accent);color:var(--panel);display:grid;place-items:center;font-weight:700;font-size:12px}
+.mode{max-width:760px;margin:0 auto;padding:32px 16px}
+.mode h2{font-size:22px;margin:0 0 4px}
+.datainfo{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 12px;border:1px dashed var(--accent);border-radius:10px;font-size:13px}
+.modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:16px}
+.modes .card{padding:16px}
+.modes h3{margin:0 0 4px;font-size:16px}
+.modes p{margin:4px 0}
+.lock .card button{pointer-events:none}
+.thinking{color:var(--accent);font-weight:600}
+.thinking::after{content:'';animation:dots 1.2s steps(4) infinite}
+@keyframes dots{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}}

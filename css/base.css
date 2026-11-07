@@ -1,0 +1,45 @@
+/* 共通：色・文字・ボタン・カード・コマンド表示（ゲームとエディタで共有） */
+:root{--bg:#f3efe7;--panel:#fffcf6;--ink:#2b2621;--sub:#776f64;--line:#e3dbcd;--accent:#7c4f22;--r:#cf3f37;--b:#2d68c9;--g:#25904f;--w:#857f78;--gold:#b8860b;--warn:#b7791f;--hp:#3c9d58;--np:#d08b12;--p0:#b9512f;--p1:#2f64b9;--wood:#e7c38f;--lead:#4a4540;--shadow:0 1px 2px rgba(0,0,0,.05),0 4px 14px rgba(0,0,0,.05)}
+@media (prefers-color-scheme:dark){:root{--bg:#181613;--panel:#24211d;--ink:#eee7dc;--sub:#a39a8c;--line:#3a352e;--accent:#e2aa6a;--warn:#e0a640;--p0:#e07a57;--p1:#6f9be6;--wood:#b8915e;--lead:#1a1816;--shadow:none}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;background:var(--bg);color:var(--ink)}
+body{font:14px/1.55 system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}
+header{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:5;flex-wrap:wrap}
+header h1{font-size:16px;margin:0;letter-spacing:.06em}
+#hinfo{color:var(--sub);font-size:13px}
+button,a.btn{font:inherit;font-size:13.5px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:5px 12px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:4px}
+button:hover:not(:disabled),a.btn:hover{border-color:var(--accent)}
+button:disabled{opacity:.38;cursor:default}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--panel);font-weight:600}
+input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:4px 6px;min-width:0}
+input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.sub{color:var(--sub)}
+.small{font-size:12px}
+.mt{margin-top:8px}
+.nm{margin:0}
+.grow{flex:1}
+.row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.warn{color:var(--r)}
+.p0{color:var(--p0)}.p1{color:var(--p1)}
+.card{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px;box-shadow:var(--shadow)}
+.card .top{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.cls{font-size:11px;padding:0 6px;border:1px solid var(--line);border-radius:4px;color:var(--sub)}
+.cost{margin-left:auto;font-size:12px;color:var(--sub)}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:12px;padding:0 8px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}
+.cmd{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:1px 8px;border-radius:6px;color:#fff;white-space:nowrap}
+.cmd small{font-weight:500;opacity:.9}
+.cmd.R{background:var(--r)}.cmd.B{background:var(--b)}.cmd.G{background:var(--g)}.cmd.W{background:var(--w)}.cmd.ASC{background:var(--gold)}
+.skills{display:grid;gap:4px;margin-top:6px}
+.skill{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:center;font-size:12px}
+.skill button{font-size:12px;padding:2px 8px;white-space:nowrap}
+.skill .sname{font-weight:600;white-space:nowrap}
+.skill.used button{text-decoration:line-through}
+.skill.ult button:not(:disabled){border-color:var(--np);color:var(--np);font-weight:700}
+.skill.ult .sname{color:var(--np)}
+.desc{color:var(--sub)}
+details{margin-top:6px;font-size:12px}
+summary{cursor:pointer;color:var(--sub)}
+table.faces{border-collapse:collapse;margin-top:4px;width:100%}
+table.faces td,table.faces th{border-bottom:1px solid var(--line);padding:3px 4px;text-align:left;font-weight:normal;vertical-align:top}
+table.faces th{color:var(--sub)}
