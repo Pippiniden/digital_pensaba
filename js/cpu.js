@@ -116,6 +116,9 @@ function cpuSkillScore(u,si){
       case 'spread': sc+=foes.some(t=>has(t,'burn'))?2:.5; break;
       case 'instantDeath': sc+=foes.length?5:-5; break;
       case 'drain': sc+=foes.length?2:-1; break;
+      case 'cleanseMental': sc+=ts.some(t=>t.fx.some(x=>FX[x.k].mental))?3:0; break;
+      case 'mentalImmune': sc+=.5; break;
+      case 'nullUnder': sc+=ts.some(t=>hpR(t)<.8)?2:1; break;
       case 'actsUp': sc+=ts.length&&!foes.length?2:0; break;
       case 'starLoss': sc+=foes.some(t=>G.players[t.pid].stars>0)?2:0; break;
       case 'critRoll': sc+=acting&&!G.ult&&stars>0?2:0; break;

@@ -146,32 +146,32 @@ const DEFAULT_UNITS = [
     "ult":{"name":"刺し穿つ死棘の槍","c":"R","eff":[{"k":"dmg","t":"target","v":400},{"k":"instantDeath","t":"target","v":0,"chance":1}]}
   },
   {
-    "id":"bard", "name":"狂嵐のバルド", "cls":"バーサーカー", "cost":1, "hp":110,
+    "id":"heracles", "name":"ヘラクレス", "cls":"バーサーカー", "cost":4, "hp":650,
     "img":{"face":"img/placeholder/face.svg","card":""},
     "lines":{
-      "start":["オオオオオッ！"],
-      "attack":["ガアッ！","砕けろォ！","ウオオオッ！"],
-      "damage":["グルル……"],
-      "skill":["ハァ……ハァ……！"],
-      "np":["嵐ヨ……吹キ荒レロォ――『嵐撃』！！"],
-      "npDamage":["グ、ガ……ッ！"],
-      "defeat":["ガ……ア……"],
-      "win":["……オオオオオォッ！！"]
+      "start":["■■■■■――！"],
+      "attack":["■■■！","■■■■ッ！","■■――！"],
+      "damage":["■■……！"],
+      "skill":["■■■■■■！"],
+      "np":["■■■■■■■■――ッ！"],
+      "npDamage":["■■ッ……！"],
+      "defeat":["■■……"],
+      "win":["■■■■■■――！！"]
     },
     "faces":[
-      {"acts":1,"pre":{"c":"R","dmg":35,"np":0,"star":0},"post":{"c":"R","dmg":45,"np":0,"star":0}},
-      {"acts":1,"pre":{"c":"R","dmg":35,"np":0,"star":0},"post":{"c":"R","dmg":45,"np":0,"star":0}},
-      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"R","dmg":60,"np":0,"star":0}},
-      {"acts":1,"pre":{"c":"B","dmg":10,"np":15,"star":0},"post":{"c":"B","dmg":15,"np":20,"star":0}},
-      {"acts":3,"pre":{"c":"G","dmg":10,"np":0,"star":3},"post":{"c":"G","dmg":15,"np":0,"star":4}},
-      {"acts":2,"pre":{"c":"R","dmg":35,"np":0,"star":0},"post":{"c":"R","dmg":45,"np":0,"star":0}}
+      {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":90,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":90,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"ASC"},"post":{"c":"W","label":"十二の試練","eff":[{"k":"nullUnder","t":"self","v":60,"turns":1}],"dmg":90,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":70,"np":25,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":1},"post":{"c":"G","dmg":60,"np":0,"star":2}}
     ],
     "skills":[
-      {"name":"狂化","eff":[{"k":"atk","t":"self","v":30,"turns":2},{"k":"defDown","t":"self","v":10,"turns":2}]},
-      {"name":"戦闘続行","eff":[{"k":"guts","t":"self","v":30,"turns":5,"times":1}]},
-      {"name":"咆哮","eff":[{"k":"atkDown","t":"enemy_all","v":15,"turns":2}]}
+      {"name":"勇猛A+","eff":[{"k":"mentalImmune","t":"self","v":0,"turns":3},{"k":"atk","t":"self","v":30,"turns":3}]},
+      {"name":"心眼(偽)B","eff":[{"k":"evade","t":"self","v":0,"turns":1},{"k":"critPow","t":"self","v":30,"turns":3}]},
+      {"name":"戦闘続行A","eff":[{"k":"guts","t":"self","v":200,"turns":5,"times":1}]}
     ],
-    "ult":{"name":"嵐撃","c":"R","eff":[{"k":"dmg","t":"target","v":130}]}
+    "ult":{"name":"射殺す百頭","c":"R","eff":[{"k":"dmg","t":"target","v":500},{"k":"defDown","t":"target","v":30,"turns":3}]}
   },
   {
     "id":"mash", "name":"マシュ・キリエライト", "cls":"シールダー", "cost":0, "hp":400,
@@ -200,5 +200,61 @@ const DEFAULT_UNITS = [
       {"name":"なし","eff":[]}
     ],
     "ult":{"name":"疑似展開/人理の礎","c":"B","eff":[{"k":"def","t":"ally_all","v":30,"turns":3}]}
+  },
+  {
+    "id":"kojiro", "name":"佐々木小次郎", "cls":"アサシン", "cost":1, "hp":400,
+    "img":{"face":"img/placeholder/face.svg","card":""},
+    "lines":{
+      "start":["佐々木小次郎、推して参る。"],
+      "attack":["ふっ。","見えたか？","そこよ。"],
+      "damage":["おっと……"],
+      "skill":["風流よな。"],
+      "np":["秘剣――"],
+      "npDamage":["ぐっ……！"],
+      "defeat":["ここまでか……悪くはなかった。"],
+      "win":["良い立ち合いであった。"]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":50,"np":0,"star":0},"post":{"c":"R","dmg":60,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":40,"np":10,"star":0},"post":{"c":"B","dmg":50,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":20,"np":0,"star":2},"post":{"c":"W","label":"無属性攻撃","eff":[{"k":"ignoreDef","t":"self","v":0,"turns":1,"times":1}],"dmg":60,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"ASC"},"post":{"c":"G","dmg":30,"np":0,"star":4}},
+      {"acts":1,"pre":{"c":"G","dmg":20,"np":0,"star":2},"post":{"c":"G","dmg":30,"np":0,"star":4}},
+      {"acts":1,"pre":{"c":"G","dmg":20,"np":0,"star":2},"post":{"c":"G","dmg":30,"np":0,"star":5}}
+    ],
+    "skills":[
+      {"name":"心眼(偽)A","eff":[{"k":"evade","t":"self","v":0,"turns":1},{"k":"critPow","t":"self","v":30,"turns":3}]},
+      {"name":"透過B+","eff":[{"k":"cleanseMental","t":"self","v":0},{"k":"star","t":"master","v":5}]},
+      {"name":"宗和の心得B++","eff":[{"k":"sureHit","t":"self","v":0,"turns":3},{"k":"onAtkStar","t":"self","v":3,"turns":3}]}
+    ],
+    "ult":{"name":"燕返し","c":"B","eff":[{"k":"dmg","t":"target","v":300},{"k":"star","t":"master","v":7}]}
+  },
+  {
+    "id":"hassan", "name":"呪腕のハサン", "cls":"アサシン", "cost":2, "hp":550,
+    "img":{"face":"img/placeholder/face.svg","card":""},
+    "lines":{
+      "start":["ハサン・サッバーハ、ここに。"],
+      "attack":["シッ！","喰らえ。","逃さぬ。"],
+      "damage":["ぬうっ……"],
+      "skill":["影に紛れよう。"],
+      "np":["その心臓、握り潰す。"],
+      "npDamage":["ぐおっ……！"],
+      "defeat":["無念……"],
+      "win":["任務、完了。"]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":40,"np":0,"star":0},"post":{"c":"R","dmg":70,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":40,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":25,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":2},"post":{"c":"G","dmg":40,"np":0,"star":4}},
+      {"acts":1,"pre":{"c":"ASC"},"post":{"c":"G","dmg":70,"np":0,"star":5}},
+      {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":3},"post":{"c":"G","dmg":40,"np":0,"star":5}},
+      {"acts":1,"pre":{"c":"G","dmg":20,"np":0,"star":4},"post":{"c":"G","dmg":40,"np":0,"star":6}}
+    ],
+    "skills":[
+      {"name":"投擲(短刀)B","eff":[{"k":"star","t":"master","v":5}]},
+      {"name":"自己改造C","eff":[{"k":"critPow","t":"self","v":30,"turns":3}]},
+      {"name":"風除けの加護A","eff":[{"k":"evade","t":"self","v":0,"times":3},{"k":"onAtkStar","t":"self","v":3,"turns":3}]}
+    ],
+    "ult":{"name":"妄想心音","c":"B","eff":[{"k":"dmg","t":"target","v":350},{"k":"instantDeath","t":"target","v":0,"chance":1}]}
   }
 ];

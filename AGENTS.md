@@ -126,6 +126,8 @@ Damage over time (`endPhase`): ignores atk/def, invul, evade and crits; blocked 
 | `curse` | **Times only** (`timesOnly`). No NP gain when hit; each hit uses one time; reapplying adds times | `applyOne`, `dealDamage` |
 | `fear` | Action count −1 | `ACTIONS.rollActs` |
 | `actsUp` | Next action-count roll +x; used up on that roll (give it `times:1`) | `ACTIONS.rollActs` |
+| `nullUnder` | "Nullify damage ≤ x": per attack (each command / each ultimate hit), if the final damage is ≤ x it becomes 0. Not applied to DoT | `nullified()` in `resolveCommand` / `resolveUlt` |
+| `mentalImmune` / `cleanseMental` | Block / remove debuffs flagged `mental` in `FX` (currently `charm`, `fear`) | `immuneTo()` / `applyOne` |
 | `drain` | "HP decrease": DoT of value v at turn end. **Stacks** (all instances add up), permanent is normal (`perm` flag, no duration warning). A debuff, so cleanse / debuffImmune apply | `endPhase` |
 | `sealSkill` / `sealUlt` | Can't use skills / ultimate | `canSkill` / `canUlt` (engine), UI buttons, CPU |
 | `stun` / `charm` | Can't act, use skills or ultimate | `disabled()` |
@@ -143,6 +145,7 @@ Damage over time (`endPhase`): ignores atk/def, invul, evade and crits; blocked 
 3. **UI-only state belongs in `UI` (game-ui.js)**, not in `G`.
 4. **`render()` rebuilds `#app.innerHTML` from scratch every time.** Events are delegated on `document` (`data-a` = game action, `data-ui` = UI action; the editor uses `data-act` / `data-p`). Do not attach listeners directly to elements.
 5. **Effects go through `FXQ`** (`fxEmit`/`say`), and `fx.js` plays them on `#fx`. Rule processing does not wait for effects to finish; only the CPU waits via `fxBusy()`.
+   - Displayed HP lags behind `G` on purpose: a `dmg` event carries `hp0` (before), `hp` and `out` (after). `fxEmit` puts the unit into `FXHOLD` at `hp0`; `fx.js` (`stepHold`) advances it per event and redraws only that card (`redrawSvt`); when the unit has no more queued `dmg` events the hold is removed. Cards read HP / retreated state via `shown(u)` in `game-ui.js`. Any new code that changes HP through damage must go through `dealDamage` (or emit the same fields) or the bar will jump.
 6. Always wrap user data in `esc()` when embedding it in HTML. `log()` messages are rendered as HTML, so insert names via `nm()`/`dn()`.
 7. Pull on-screen terms from `TERMS` (rules.js); do not hard-code them.
 8. **The CPU does not know the rules.** Tune strength via `cpuSkillScore` (when to use skills), `cpuBestTarget` (attack target) and `cpuAlloc` (action allocation). When you add a new effect to `FX`, also add a score to the `switch` in `cpuSkillScore` (otherwise it counts as worth 0).
@@ -184,5 +187,5 @@ There are no automated tests in the repo, so verify manually in a browser. For r
 - `G.phase==='init'` is only set momentarily by `setupConfirm`; `startGame()` → `beginTurn()` immediately moves to `actRoll` (there is no screen for it).
 - Many Japanese strings and log messages are hard-coded in the logic (the `log(...)` calls in `engine.js`). The intent is to centralize terms in `TERMS`, but not everything has been moved there.
 - The UI text, character data, and log messages in the game itself remain in Japanese; only this document is in English.
-- Default roster: アルトリア (C5), エミヤ (C4), クー・フーリン / メドゥーサ / メディア (C3) and マシュ (C0) use official-SPS-scale numbers (HP 400–1000, damage 10–140). Only the sample バルド (`bard`, C1) is still at the old placeholder scale (HP 110).
+- Default roster (9 units, all at official-SPS scale: HP 400–1000, damage 10–140): アルトリア C5, エミヤ C4, ヘラクレス C4, クー・フーリン C3, メドゥーサ C3, メディア C3, 呪腕のハサン C2, 佐々木小次郎 C1, マシュ C0. No placeholder samples remain.
 - Terminology: "ascension" in code (`asc`, `ASC`, `ascend`) is shown as `TERMS.asc` = 再臨 (short, for badges/tables) or `TERMS.ascFull` = 霊基再臨 (logs, editor explanations, detail views). Never hard-code 覚醒/再臨 in UI strings.

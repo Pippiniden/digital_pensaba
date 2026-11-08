@@ -45,22 +45,24 @@ function ctlHTML(u){
   }
   return '';
 }
+// 画面に出すHP・撤退状態（ダメージ演出の再生中は演出に合わせて遅れて変わる）
+const shown = u=>FXHOLD[u.uid]||{hp:u.hp,out:u.out};
 function svtHTML(u){
-  const d=D(u.def), ph=G.phase;
+  const d=D(u.def), ph=G.phase, sh=shown(u);
   const pickable=(G.copy&&copyCands(U(G.copy.uid)).includes(u)) || (G.pending&&pickValid(u)) || (!G.pending&&!G.copy&&ph==='target'&&targetCandidates().includes(u));
   const acting=G.ult?G.ult===u.uid:(G.alloc[u.uid]||0)>0;
-  const cls=['svt',u.out?'out':'',pickable?'pickable':'',G.target===u.uid&&!u.out?'targeted':'',acting&&u.pid===G.cur?'acting':''].join(' ');
+  const cls=['svt',sh.out?'out':'',pickable?'pickable':'',G.target===u.uid&&!u.out?'targeted':'',acting&&u.pid===G.cur?'acting':''].join(' ');
   const fx=u.fx.map(e=>`<span class="chip fx ${FX[e.k].buff?'buff':'debuff'}">${fxText(e)}</span>`).join('');
   return `<div class="${cls}" data-uid="${u.uid}" ${pickable?`data-a="cardClick"`:''}>
     <div class="portrait">${imgTag(imgSrc(d,'face'),IMG_PLACEHOLDER.face,'pimg',d.name)}
       ${clsIconTag(d.cls,'pcls')}<span class="pord">${ORD[u.idx]}</span>
       ${u.asc?`<span class="pasc">${TERMS.asc}</span>`:''}
-      ${u.out?`<span class="pout">撤退</span>`:''}
+      ${sh.out?`<span class="pout">撤退</span>`:''}
       ${rollBadge(u,d)}
     </div>
     <div class="sinfo">
       <div class="sname"><b title="${esc(d.name)}">${esc(d.name)}</b><button class="info" data-ui="detail" data-uid="${u.uid}" title="詳細を見る">i</button></div>
-      <div class="gauge hp"><span>HP</span><div class="bar"><i style="width:${pctOf(u.hp,d.hp)}%"></i></div><b>${fmt(u.hp)}<small>/${d.hp}</small></b></div>
+      <div class="gauge hp"><span>HP</span><div class="bar"><i style="width:${pctOf(sh.hp,d.hp)}%"></i></div><b>${fmt(sh.hp)}<small>/${d.hp}</small></b></div>
       <div class="gauge np ${u.np>=RULES.ultCost?'full':''}"><span>${TERMS.gauge}</span><div class="bar"><i style="width:${Math.min(100,u.np)}%"></i></div><b>${u.np}<small>%</small></b></div>
       ${ctlHTML(u)}
       <div class="fxs" title="${esc(u.fx.map(fxText).join(' / '))}">${fx}</div>

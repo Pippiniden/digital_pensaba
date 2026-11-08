@@ -22,8 +22,9 @@ const fxLayer = ()=>document.querySelector('#fx');
 const portraitOf = uid=>document.querySelector(`.svt[data-uid="${uid}"] .portrait`);
 
 function fxPlay(ev){
-  const L=fxLayer(); if(!L) return 0;
+  const L=fxLayer(); if(!L){ if(ev.t==='dmg') stepHold(ev); return 0; }
   if(ev.t==='cutin'){ showCutin(L,ev); return FX_WAIT.cutin; }
+  if(ev.t==='dmg') stepHold(ev); // カードが見つからなくても表示HPは進める
   const p=portraitOf(ev.uid); if(!p) return 0;
   const r=p.getBoundingClientRect();
   if(ev.t==='say'){ showBubble(L,ev,r); return FX_WAIT.say; }
@@ -51,6 +52,13 @@ function showBubble(L,ev,r){
 }
 
 // ダメージ数値：肖像の中央から浮き上がって消える
+// 表示HPをこのダメージのぶんだけ減らす（HP0以下になったらここで撤退表示になる）
+function stepHold(ev){
+  if(ev.hp==null) return;
+  if(FXQ.some(e=>e.t==='dmg'&&e.uid===ev.uid&&e.hp!=null)) FXHOLD[ev.uid]={hp:ev.hp,out:ev.out};
+  else delete FXHOLD[ev.uid];
+  redrawSvt(ev.uid);
+}
 function showDmg(L,ev,r){
   const n=document.createElement('div');
   n.className='dmgpop'+(ev.crit?' crit':'')+(ev.np?' np':'')+(ev.text?' miss':'');
@@ -61,6 +69,14 @@ function showDmg(L,ev,r){
   const svt=document.querySelector(`.svt[data-uid="${ev.uid}"]`);
   if(svt&&!ev.text){ svt.classList.remove('hit'); void svt.offsetWidth; svt.classList.add('hit'); }
   setTimeout(()=>n.remove(),1100);
+}
+
+// サーヴァントのカード1枚だけ描き直す（画面全体の render は呼ばない）
+function redrawSvt(uid){
+  const el=document.querySelector(`.svt[data-uid="${uid}"]`), u=U(uid);
+  if(!el||!u) return;
+  const t=document.createElement('div'); t.innerHTML=svtHTML(u).trim();
+  el.replaceWith(t.firstChild);
 }
 
 // 宝具カットイン：キャラクター画像が横切り、宝具名を大きく表示

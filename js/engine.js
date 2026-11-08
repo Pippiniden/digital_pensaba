@@ -17,13 +17,19 @@ function newGame(){
     players:[{name:TERMS.player+'1',party:[],stars:0},{name:TERMS.player+'2',party:[],stars:0}],
     cur:0, turn:0, actRolled:false, maxActs:{}, alloc:{}, rolled:[], ult:null, target:null,
     gen:0, pending:null, copy:null, log:[], winner:null };
-  FXQ.length=0;
+  FXQ.length=0; for(const k in FXHOLD) delete FXHOLD[k];
 }
 
 // ---------- 演出イベント ----------
 // セリフ・ダメージ表示・宝具カットインを FXQ に積み、画面側（fx.js）が順番に再生する。ルール処理には影響しない
 const FXQ=[];
-const fxEmit = ev=>FXQ.push(ev);
+// 表示用のHP：ダメージ演出が再生されるまで、画面には攻撃前のHPを出しておく（{uid:{hp,out}}）。
+// fx.js がダメージ演出を1つ再生するたびに更新し、そのユニットの演出が無くなったら消す
+const FXHOLD={};
+function fxEmit(ev){
+  if(ev.t==='dmg'&&ev.hp!=null&&!(ev.uid in FXHOLD)) FXHOLD[ev.uid]={hp:ev.hp0,out:false};
+  FXQ.push(ev);
+}
 function say(u,key){ const t=pickLine(D(u.def),key); if(t) fxEmit({t:'say',uid:u.uid,key,text:t}); }
 
 // ---------- ヘルパー ----------
@@ -95,7 +101,9 @@ function changeStars(pid,v){
 }
 // 強化無効・弱体無効で防がれたら true（防いだ効果に回数があれば1減らす）
 function immuneTo(t,k){
-  const b=FX[k].buff, guard=b===true?'buffImmune':b===false?'debuffImmune':null;
+  const b=FX[k].buff;
+  let guard=b===true?'buffImmune':b===false?'debuffImmune':null;
+  if(FX[k].mental&&!t.fx.some(x=>x.k===guard)&&t.fx.some(x=>x.k==='mentalImmune')) guard='mentalImmune';
   const g=guard&&t.fx.find(x=>x.k===guard); if(!g) return false;
   consume(t,[g]); log(`${nm(t)}は${FX[guard].name}で「${FX[k].name}」を防いだ`,'sub');
   return true;
@@ -110,8 +118,9 @@ function applyOne(src,t,e){
     case 'star': changeStars(t.pid,e.v); return;
     case 'starLoss': changeStars(t.pid,-e.v); return;
     case 'cleanse': t.fx=t.fx.filter(x=>FX[x.k].buff!==false); log(`${nm(t)}の弱体を解除`,'good'); return;
+    case 'cleanseMental': t.fx=t.fx.filter(x=>!FX[x.k].mental); log(`${nm(t)}の精神異常を解除`,'good'); return;
     case 'strip': t.fx=t.fx.filter(x=>FX[x.k].buff!==true); log(`${nm(t)}の強化を解除`,'bad'); return;
-    case 'instantDeath': log(`${nm(t)}に即死効果`,'bad'); fxEmit({t:'dmg',uid:t.uid,text:FX.instantDeath.name}); retreat(t); return;
+    case 'instantDeath': log(`${nm(t)}に即死効果`,'bad'); fxEmit({t:'dmg',uid:t.uid,text:FX.instantDeath.name,hp0:t.hp,hp:0,out:true}); retreat(t); return;
     case 'dmg': return; // 宝具側で処理
   }
   if(e.k==='guts') t.fx=t.fx.filter(x=>x.k!=='guts'); // ガッツは重複不可
@@ -129,6 +138,8 @@ function applyOne(src,t,e){
 // =====================================================================
 // ダメージ処理
 // =====================================================================
+// x以下のダメージ無効：最終ダメージが値以下なら true
+const nullified=(tgt,dmg)=>{ const v=Math.max(0,...tgt.fx.filter(e=>e.k==='nullUnder').map(e=>e.v)); return v>0&&dmg<=v?v:0; };
 function blocked(att,tgt){
   if(has(att,'pierce')) return null;
   let e=tgt.fx.find(x=>x.k==='invul');
@@ -139,10 +150,11 @@ function blocked(att,tgt){
 }
 function dealDamage(u,dmg,isHit,o={}){
   if(u.out) return;
-  fxEmit({t:'dmg',uid:u.uid,v:fmt(dmg),crit:!!o.crit,np:!!o.np});
+  const hp0=u.hp, g=hp0-dmg<=0?u.fx.find(e=>e.k==='guts'):null;
+  const hp1=hp0-dmg<=0?(g?g.v:0):hp0-dmg;
+  fxEmit({t:'dmg',uid:u.uid,v:fmt(dmg),crit:!!o.crit,np:!!o.np,hp0,hp:hp1,out:hp0-dmg<=0&&!g});
   u.hp-=dmg;
   if(u.hp<=0){
-    const g=u.fx.find(e=>e.k==='guts');
     if(g){ u.hp=g.v; u.fx=u.fx.filter(e=>e!==g); log(`${nm(u)} ガッツ発動！ HP${g.v}で踏みとどまった`,'good'); }
     else { retreat(u); return; }
   }
@@ -232,6 +244,7 @@ function resolveCommand(att,cmd,tgt,o={}){
   } else {
     const b=blocked(att,tgt);
     if(b){ log(`${n} ${cmdChip(cmd)} → ${nm(tgt)}：${b}で無効 <span class="sub">(${note.join(' / ')})</span>`); fxEmit({t:'dmg',uid:tgt.uid,text:b}); }
+    else if(nullified(tgt,dmg)){ log(`${n} ${cmdChip(cmd)} → ${nm(tgt)}：${fmt(dmg)}ダメージは${nullified(tgt,dmg)}以下なので無効 <span class="sub">(${note.join(' / ')})</span>`); fxEmit({t:'dmg',uid:tgt.uid,text:'無効'}); consume(tgt,usedT); }
     else { log(`${n} ${cmdChip(cmd)} → ${nm(tgt)}：<b>${fmt(dmg)}</b>ダメージ <span class="sub">(${note.join(' / ')})</span>`); consume(tgt,usedT); dealDamage(tgt,dmg,true,{crit}); }
   }
   gainNpStar(att,cmd,mult);
@@ -260,6 +273,7 @@ function resolveUlt(u,tgt){
       let dmg=Math.max(0,e.v+m.sum);
       const b=blocked(u,t);
       if(b){ log(`→ ${nm(t)}：${b}で無効`); fxEmit({t:'dmg',uid:t.uid,text:b}); }
+      else if(nullified(t,dmg)){ log(`→ ${nm(t)}：${fmt(dmg)}ダメージは${nullified(t,dmg)}以下なので無効`); fxEmit({t:'dmg',uid:t.uid,text:'無効'}); consume(t,m.usedT); }
       else { log(`→ ${nm(t)}：<b>${fmt(dmg)}</b>ダメージ`); consume(t,m.usedT); dealDamage(t,dmg,true,{np:true}); if(!t.out) say(t,'npDamage'); }
     }
     consume(u,[...usedA]);

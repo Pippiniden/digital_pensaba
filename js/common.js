@@ -234,6 +234,7 @@ function fxText(e){
     case 'poison': s=`毒${e.v||RULES.dot}`; break;
     case 'burn': s=`やけど${e.v||RULES.dot}`; break;
     case 'starLoss': s=`${TERMS.star}${e.v}個消失`; break;
+    case 'nullUnder': s=`${e.v}以下のダメージ無効`; break;
     case 'drain': s=`ターン終了時HP${e.v}減少`; break;
     case 'actsUp': s=`最大行動回数+${e.v}`; break;
     case 'onAtkStar': s=`${e.color?TERMS[e.color]:''}攻撃時：${TERMS.star}${e.v}個発生`; break;
