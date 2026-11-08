@@ -25,8 +25,8 @@ function skillBtns(u,d){
     const tip=`S${i+1}「${s.name}」 ${effsText(s.eff,s.pick)}${locked?`（${TERMS.asc}後に使用可）`:''}${used?'（使用済み）':''}${sealed?'（使用不可）':''}`;
     return `<span class="skw" title="${esc(tip)}"><button class="sk ${used?'used':''} ${locked?'locked':''}" data-a="useSkill" data-uid="${u.uid}" data-si="${i}" ${ok?'':'disabled'}><i>S${i+1}</i><span>${locked?'🔒':''}${esc(s.name)}</span></button></span>`;
   }).join('');
-  const ready=u.np>=RULES.ultCost&&!u.out, ok=own&&canUlt(u)&&!G.ult&&ready;
-  const tip=`${TERMS.ult}「${d.ult.name}」 [${TERMS[d.ult.c]}] ${effsText(d.ult.eff)}（${TERMS.gauge}${RULES.ultCost}%で使用可）`;
+  const ready=u.np>=RULES.ultCost&&!u.out, ok=own&&ultManual()&&canUlt(u)&&!G.ult&&ready;
+  const tip=`${TERMS.ult}「${d.ult.name}」 [${TERMS[d.ult.c]}] ${effsText(d.ult.eff)}（${ultManual()?`${TERMS.gauge}${RULES.ultCost}%で使用可`:`${TERMS.gauge}${RULES.ultCost}%で手番を迎えると発動して勝利`}）`;
   const ult=`<span class="skw" title="${esc(tip)}"><button class="sk np ${d.ult.c} ${ready?'ready':''}" data-a="useUlt" data-uid="${u.uid}" ${ok?'':'disabled'}><i>${TERMS.ult}</i><span>${esc(d.ult.name)}</span></button></span>`;
   return `<div class="sks">${sk}${ult}</div>`;
 }
@@ -100,7 +100,7 @@ function promptHTML(){
     case 'skill':
       return G.pending
         ? `<p class="hl">「${esc(pendingSkill().name)}」の対象を選んでください</p><button data-a="cancelPick">キャンセル</button>`
-        : `<p>スキル・${TERMS.ult}を使えます。${TERMS.ult}は${TERMS.gauge}${RULES.ultCost}%以上・1ターン1回。</p>${G.ult?`<p class="hl">${nm(U(G.ult))}が${TERMS.ult}を使用予定</p>`:''}<button class="primary big" data-a="skillDone">${G.ult?'攻撃対象の選択へ':'行動決定へ'}</button>`;
+        : `<p>${ultManual()?`スキル・${TERMS.ult}を使えます。${TERMS.ult}は${TERMS.gauge}${RULES.ultCost}%以上・1ターン1回。`:`スキルを使えます。${TERMS.ult}は${TERMS.gauge}${RULES.ultCost}%で手番を迎えると発動して勝利。`}</p>${G.ult?`<p class="hl">${nm(U(G.ult))}が${TERMS.ult}を使用予定</p>`:''}<button class="primary big" data-a="skillDone">${G.ult?'攻撃対象の選択へ':'行動決定へ'}</button>`;
     case 'action': {
       const left=remainingRolls();
       if(G.copy) return `<p class="hl">${nm(U(G.copy.uid))}：ロールする${TERMS.unit}を選んでください（敵味方どちらでも・${TERMS.asc}後コマンドを使用）</p>`;
@@ -171,16 +171,21 @@ function stageHTML(){
   const stepNo={actRoll:2,skill:3,action:4,target:5,end:7,over:8}[ph]||1;
   const names=['開始','行動回数','スキル','行動','対象','ダメージ','終了'];
   const steps=names.map((s,i)=>`<span class="${i+1===stepNo?'on':i+1<stepNo?'done':''}">${s}</span>`).join('');
-  const stars=me.stars, lv=critLevel(stars);
+  const stars=me.stars;
   return `<section class="stage">
     ${magicCircleHTML()}
     <div class="stagetop"><span class="turnno">TURN <b>${G.turn}</b></span><span class="p${G.cur} who">${esc(me.name)}の手番</span><div class="steps">${steps}</div></div>
     <div class="stagebody">
       <div class="prompt">${promptHTML()}</div>
       <div class="lane">${laneHTML()}</div>
-      <div class="critbox"><span>クリティカル</span><b>★${stars}</b><small>${lv?`Lv${lv}・${critChance(lv)}%`:'判定なし'}</small></div>
+      <div class="critbox"><span>クリティカル</span><b>★${stars}</b><small>${critInfo(stars)}</small></div>
     </div>
   </section>`;
+}
+// クリティカルの見込み（ルールごと）
+function critInfo(stars){
+  if(ruleset().crit==='d6'){ const n=critNeedD6(stars); return !n?'判定なし':n>=6?'確定':`出目${n}以下`; }
+  const lv=critLevel(stars); return lv?`Lv${lv}・${critChance(lv)}%`:'判定なし';
 }
 function logHTML(){
   return `<aside class="logpane"><div class="loghead"><b>バトルログ</b><button class="small" data-ui="toggleLog">閉じる</button></div>
@@ -221,7 +226,7 @@ function resultHTML(){
       <p class="sub small">与えたダメージ合計 <b>${fmt(G.dealt[pid])}</b></p></div>`; };
   return `<div class="modal result"><div class="mback"></div>
     <div class="mbody"><h2 class="rtitle ${w===0?'p0':'p1'}">${title}</h2><p class="rsub">${sub}</p>
-      <p class="sub small rturn">経過ターン <b>${G.turn}</b></p>
+      <p class="sub small rturn">${esc(ruleset().name)}ルール ・ 経過ターン <b>${G.turn}</b>${G.winBy==='np'?` ・ ${TERMS.ult}発動で決着`:''}</p>
       <div class="rsides">${side(0)}${side(1)}</div>
       <div class="row"><button class="primary" data-a="rematch">もう一度</button><button data-a="restart">モード選択へ</button><button data-ui="closeResult">盤面を見る</button></div>
     </div></div>`;
@@ -229,15 +234,15 @@ function resultHTML(){
 
 // ---------- 編成画面 ----------
 function setupHTML(){
-  const pid=G.setupPid, picks=G.picks[pid], cost=sumCost(picks);
+  const pid=G.setupPid, picks=G.picks[pid], cost=sumCost(picks), rs=ruleset(), solo=rs.partyMax===1;
   const view=D(UI.setupView)||D(picks[picks.length-1])||UNITS[0];
-  const slots=[0,1,2].map(i=>{
+  const slots=Array.from({length:rs.partyMax},(_,i)=>i).map(i=>{
     const d=D(picks[i]);
     return d ? `<button class="slot filled" data-a="setupToggle" data-id="${esc(d.id)}" data-view="${esc(d.id)}" title="外す">${unitImg(d,'face','pimg',d.name)}<span>${ORD[i]}</span><b>${esc(d.name)}</b></button>`
              : `<div class="slot"><span>${ORD[i]}</span></div>`;
   }).join('');
   const tiles=UNITS.map(d=>{
-    const i=picks.indexOf(d.id), sel=i>=0, over=!sel&&(picks.length>=RULES.partyMax||cost+d.cost>RULES.costCap);
+    const i=picks.indexOf(d.id), sel=i>=0, over=!sel&&!solo&&(picks.length>=rs.partyMax||cost+d.cost>RULES.costCap);
     return `<button class="tile ${sel?'sel':''} ${over?'dim':''} ${view&&view.id===d.id?'viewing':''}" data-a="setupToggle" data-id="${esc(d.id)}" data-view="${esc(d.id)}">
       ${unitImg(d,'face','pimg',d.name)}${clsIconTag(d.cls,'pcls')}
       <span class="tcost">C${d.cost}</span>${sel?`<span class="order">${i+1}</span>`:''}
@@ -245,10 +250,10 @@ function setupHTML(){
   }).join('');
   return `<div class="setup">
     <div class="sethead">
-      <div class="settitle"><h2><span class="p${pid}">${esc(G.players[pid].name)}</span> のパーティ編成</h2>
-        <p class="sub small nm">コスト合計${RULES.costCap}以下・最大${RULES.partyMax}騎。選んだ順に 1st / 2nd / 3rd。</p></div>
+      <div class="settitle"><h2><span class="p${pid}">${esc(G.players[pid].name)}</span> の${solo?`${TERMS.unit}選択`:'パーティ編成'}</h2>
+        <p class="sub small nm">${solo?`${rs.name}ルール：${TERMS.unit}を1騎選びます。${handicapNote(pid)}`:`コスト合計${RULES.costCap}以下・最大${rs.partyMax}騎。選んだ順に 1st / 2nd / 3rd。`}</p></div>
       <div class="slots">${slots}</div>
-      <div class="costm"><span>COST</span><b>${cost}</b><small>/ ${RULES.costCap}</small><div class="bar"><i style="width:${pctOf(cost,RULES.costCap)}%"></i></div></div>
+      <div class="costm" ${solo?'hidden':''}><span>COST</span><b>${cost}</b><small>/ ${RULES.costCap}</small><div class="bar"><i style="width:${pctOf(cost,RULES.costCap)}%"></i></div></div>
       <div class="setbtns"><button data-a="${isCpu(pid)?'setupCpu':'setupRandom'}">おまかせ</button><button class="primary big" data-a="setupConfirm" ${picks.length?'':'disabled'}>決定</button></div>
     </div>
     ${G.setupMsg?`<p class="warn nm">${G.setupMsg}</p>`:''}
@@ -259,6 +264,12 @@ function setupHTML(){
   </div>`;
 }
 
+// シンプルルール：相手のコストとハンデの説明
+function handicapNote(pid){
+  const opp=G.picks[1-pid][0]; if(!opp||pid===0) return '同コストどうしが公平です。';
+  const rs=ruleset(), h=G.handicap&&rs.handicapAsc;
+  return `相手はコスト${D(opp).cost}。${h?`コスト差${rs.handicapAsc}以上なら低い方が${TERMS.ascFull}済みで開始します。`:''}`;
+}
 // ---------- モード選択 ----------
 function modeHTML(){
   const src = UNIT_SOURCE==='custom'
@@ -269,9 +280,15 @@ function modeHTML(){
     <div class="title"><small>Fate fan-made pencil battle</small><h2>PENCIL DUEL</h2></div>
     <div class="showcase">${show}</div>
     ${src}
+    <div class="rules">
+      <span class="rlabel">ルール</span>
+      ${Object.entries(RULESETS).map(([k,r])=>`<button class="${G.rule===k?'on':''}" data-a="setRule" data-rule="${k}">${esc(r.name)}</button>`).join('')}
+      ${ruleset().handicapAsc?`<button class="hcap ${G.handicap?'on':''}" data-a="toggleHandicap" title="コスト差${ruleset().handicapAsc}以上なら、低コスト側が最初から${TERMS.ascFull}済み">ハンデ戦：${G.handicap?'ON':'OFF'}</button>`:''}
+      <p class="sub small">${esc(ruleset().desc)}</p>
+    </div>
     <div class="modes">
       <div class="card"><h3>CPU戦</h3>
-        <p class="sub">あなたとCPUのパーティを編成して、1対1で戦います（CPUはおまかせも選べます）。</p>
+        <p class="sub">あなたとCPUの${ruleset().partyMax===1?TERMS.unit:'パーティ'}を選んで、1対1で戦います（CPUはおまかせも選べます）。</p>
         <p class="sub small">よわい：スキルや攻撃対象をほぼ気まぐれに選ぶ<br>ふつう：状況を見てスキル・行動配分・攻撃対象を選ぶ</p>
         <div class="row mt"><button data-a="chooseMode" data-mode="cpu" data-level="easy">よわい</button><button class="primary" data-a="chooseMode" data-mode="cpu" data-level="normal">ふつう</button></div></div>
       <div class="card"><h3>2人対戦</h3>
@@ -293,11 +310,11 @@ function render(){
   ab.hidden=screen!=='battle';
   ab.textContent=`オート：${UI.auto?'ON':'OFF'}`; ab.classList.toggle('on',UI.auto);
   if(screen==='mode'){ app.innerHTML=modeHTML(); hinfo.textContent=''; }
-  else if(screen==='setup'){ app.innerHTML=setupHTML(); hinfo.textContent='パーティ編成'; }
+  else if(screen==='setup'){ app.innerHTML=setupHTML(); hinfo.textContent=ruleset().partyMax===1?`${ruleset().name}ルール ・ ${TERMS.unit}選択`:'パーティ編成'; }
   else {
     if(UI.detail&&!U(UI.detail)) UI.detail=null;
     app.innerHTML=`<div class="battle ${UI.log?'':'nolog'}"><main class="field">${sideHTML(1,'top')}${stageHTML()}${sideHTML(0,'bottom')}</main>${UI.log?logHTML():''}</div>${UI.detail?detailModalHTML():''}${UI.result&&G.phase==='over'?resultHTML():''}`;
-    hinfo.textContent=`ターン${G.turn}`;
+    hinfo.textContent=`${ruleset().npWin?`${ruleset().name}ルール ・ `:''}ターン${G.turn}`;
     const l=document.querySelector('#log'); if(l) l.scrollTop=l.scrollHeight;
     animateLane();
   }
@@ -313,7 +330,7 @@ const AUTO_DELAY=550;
 let autoTimer=null;
 function hasSkillChoice(){
   return alive(G.cur).some(u=>canSkill(u)&&D(u.def).skills.some((s,i)=>!u.used[i]&&(i<2||u.asc)&&s.eff.length))
-      || (!G.ult&&alive(G.cur).some(u=>canUlt(u)&&u.np>=RULES.ultCost));
+      || (ultManual()&&!G.ult&&alive(G.cur).some(u=>canUlt(u)&&u.np>=RULES.ultCost));
 }
 function autoMove(){
   if(!UI.auto||cpuActing()||UI.detail||G.pending||G.copy) return null;

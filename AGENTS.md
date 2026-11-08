@@ -69,9 +69,10 @@ Editor (editor.html): rules → units → common → editor
 - Look up the definition with `D(u.def)` and a unit by uid with `U(uid)`.
 
 ### 4.3 Rule constants — `RULES` (rules.js)
-`costCap:10, partyMax:3, actionsMax:3, actsTable:[0,1,1,3,2,2], gaugeOnHit:10, gaugeMax:300, ultCost:100, chainR:30, chainB:20, chainG:10, critDmg:30, critDmgR:60, dot:20, dotTiming:'current'|'all'`.
+`costCap:10, partyMax:3, actionsMax:3, actsTable:[0,1,1,3,2,2], gaugeOnHit:10, gaugeMax:100, ultCost:100, chainR:30, chainB:20, chainG:10, critDmg:30, critDmgR:60, dot:20, dotTiming:'current'|'all'`.
 - `actsTable`: action count per pencil face (index 0–5 = face 1–6), shared by all units. Set to `null` to use each face's own `acts` instead. Always read it through `faceActs(d, i)`.
 - Critical: `critLevel(stars)` → level 0–7 from `CRIT_TABLE`, `critChance(level)` → % (Lv1 10 / Lv2 20 / Lv3 35 / Lv4 50 / Lv5 75 / Lv6 90 / Lv7 100; thresholds at 1/6/11/16/21/26/31 stars).
+- `RULESETS` (rules.js) holds per-rule settings: `team` (3 units, d100 crit) and `simple` (1 unit, d6 crit via `CRIT_D6_TABLE` / `critNeedD6`, `npWin`, `handicapAsc:2`). The active one is `G.rule`; read it through `ruleset()` (engine.js). Party size comes from `ruleset().partyMax`, not `RULES`.
 - `dot` is only the fallback damage for poison/burn effects whose value is 0 (old data).
 
 ### 4.4 Storage (localStorage)
@@ -118,7 +119,15 @@ Per command, `resolveCommand` does, in order:
 Extra attack (Brave Chain): no modifiers, no critical, but evade/invul still apply.
 Damage over time (`endPhase`): ignores atk/def, invul, evade and crits; blocked by `debuffImmune`. Poison and burn each don't stack (the highest value applies); `spread` doubles burn.
 
-### 5.2 Effect kinds that need special handling (`FX` in rules.js)
+### 5.2 Simple rule — シンプルルール (`G.rule==='simple'`)
+
+Chosen on the mode screen (`setRule`, plus `toggleHandicap`; both kept by `restart`/`rematch` via `keepRule()`). Same flow as the team rule, with:
+- 1 servant per side (picking another replaces it); the normal CPU picks the same (or nearest) cost as the opponent.
+- Critical: if the player holds stars, roll 1d6; success when roll − `critRoll` ≤ `critNeedD6(stars)` (1–6★: 2, 7–13: 3, 14–29: 5, 30+: certain). Effects of a success are the same as the team rule.
+- NP win: `npWinCheck()` at the end of `beginTurn` — if the turn player's servant has NP ≥ 100 and `canUlt`, its ultimate fires (cut-in) and that player wins (`G.winBy='np'`). The ultimate **cannot be used manually** in the skill phase (`ultManual()` is false; UI, auto-advance and CPU respect it).
+- Handicap (`G.handicap`, default ON): `applyHandicap()` in `startGame` ascends the lower-cost side when the cost gap ≥ `handicapAsc`. The rule's optional "3+ cost gap → NP / attack bonus" is not implemented.
+
+### 5.3 Effect kinds that need special handling (`FX` in rules.js)
 
 | key | Meaning | Where it is implemented |
 |---|---|---|
@@ -163,6 +172,7 @@ Damage over time (`endPhase`): ignores atk/def, invul, evade and crits; blocked 
 | I want to… | File / place |
 |---|---|
 | Add or tune a character (numbers / skills / lines) | `js/units.js` (or edit in the editor, export, and replace). `id` is half-width alphanumerics, `_`, `-`, unique. Cost ≤ `RULES.costCap` |
+| Add or change a rule variant (party size, crit method, win conditions) | `RULESETS` in `js/rules.js` → `ruleset()` checks in `engine.js` (`resolveCommand` crit, `npWinCheck`, `applyHandicap`, setup ACTIONS) → `critInfo` / `setupHTML` / `modeHTML` in `game-ui.js` |
 | Balance numbers (NP amounts, chains, crit bonus, action-count table, etc.) | `RULES` and `CRIT_TABLE` in `js/rules.js` |
 | Change terminology / display names | `TERMS` in `js/rules.js` |
 | Add a class | `CLASS_ICONS` in `js/rules.js` (icons in `img/classes/`). Names not in the list also work and get `extra.webp` |

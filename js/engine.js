@@ -11,8 +11,8 @@ function reloadUnits(){ const r=loadUnits(); UNITS=r.units; UNIT_SOURCE=r.source
 reloadUnits();
 
 let G;
-function newGame(){
-  G = { phase:'mode', mode:null, cpu:[false,false], level:'normal', speed:700, seed:String(Math.random()),
+function newGame(o={}){
+  G = { phase:'mode', mode:null, rule:o.rule||'team', handicap:o.handicap??true, winBy:null, cpu:[false,false], level:'normal', speed:700, seed:String(Math.random()),
     setupPid:0, picks:[[],[]], setupMsg:'',
     players:[{name:TERMS.player+'1',party:[],stars:0},{name:TERMS.player+'2',party:[],stars:0}],
     cur:0, turn:0, actRolled:false, maxActs:{}, alloc:{}, rolled:[], ult:null, target:null,
@@ -41,6 +41,9 @@ function rollFx(uid,f,o={}){ (o.keys||[]).forEach(k=>FXHIDE.add(k)); fxEmit({t:'
 
 // ---------- ヘルパー ----------
 const D = id=>UNITS.find(u=>u.id===id);
+const ruleset = ()=>RULESETS[G.rule]||RULESETS.team;
+const ultManual = ()=>!ruleset().npWin;  // スキルフェイズで宝具を使えるか（シンプルルールはターン開始時の勝利判定だけ）
+const keepRule = ()=>({rule:G.rule, handicap:G.handicap});
 const ALL = ()=>[...G.players[0].party,...G.players[1].party];
 const U = uid=>ALL().find(u=>u.uid===uid);
 const alive = pid=>G.players[pid].party.filter(u=>!u.out);
@@ -250,10 +253,18 @@ function resolveCommand(att,cmd,tgt,o={}){
   if(!o.extra){
     const st=G.players[att.pid].stars;
     if(st>0){
-      const cr=mods(att,'critRoll'), lv=Math.min(CRIT_TABLE.length,critLevel(st)+cr.sum), p=critChance(lv);
-      const r=Math.floor(Math.random()*100)+1;
-      crit=r<=p; consume(att,cr.list);
-      note.push(`クリ判定 Lv${lv}(${p}%) 出目${r} ${crit?'成功':'失敗'}`);
+      const cr=mods(att,'critRoll');
+      if(ruleset().crit==='d6'){ // シンプルルール：1d6 の出目（クリティカルロール-x で出目を下げる）が必要値以下で成功
+        const need=critNeedD6(st), r=roll()+1, rv=r-cr.sum;
+        crit=need>=6||rv<=need;
+        note.push(`クリ判定 出目${r}${cr.sum?`-${cr.sum}`:''} ≤ ${need} ${crit?'成功':'失敗'}`);
+      } else {
+        const lv=Math.min(CRIT_TABLE.length,critLevel(st)+cr.sum), p=critChance(lv);
+        const r=Math.floor(Math.random()*100)+1;
+        crit=r<=p;
+        note.push(`クリ判定 Lv${lv}(${p}%) 出目${r} ${crit?'成功':'失敗'}`);
+      }
+      consume(att,cr.list);
     }
     if(crit){
       const cp=mods(att,'critPow'), add=(cmd.c==='R'?RULES.critDmgR:RULES.critDmg)+cp.sum+colorBuff;
@@ -339,6 +350,7 @@ function ascend(u){ u.asc=true; fxEmit({t:'pop',uid:u.uid,text:TERMS.ascFull,cls
 // =====================================================================
 function startGame(){
   G.players.forEach((P,pid)=>{ P.party=G.picks[pid].map((id,i)=>makeUnit(pid,i,id)); P.stars=0; });
+  applyHandicap();
   log('先攻・後攻の決定','h');
   let r0,r1;
   do{
@@ -353,6 +365,29 @@ function startGame(){
   [G.cur,1-G.cur].forEach(pid=>say(G.players[pid].party[0],'start'));
   beginTurn();
 }
+// シンプルルールのハンデ戦：コスト差が handicapAsc 以上なら、低コスト側を最初から霊基再臨済みにする
+function applyHandicap(){
+  const rs=ruleset(); if(!rs.handicapAsc||!G.handicap) return;
+  const c=G.players.map(P=>P.party.reduce((s,u)=>s+D(u.def).cost,0)), diff=Math.abs(c[0]-c[1]);
+  if(diff<rs.handicapAsc) return;
+  const low=c[0]<c[1]?0:1;
+  log(`ハンデ戦：コスト差${diff}のため ${esc(G.players[low].name)} は${TERMS.ascFull}済みで開始`,'h');
+  G.players[low].party.forEach(ascend);
+}
+// シンプルルール：NP100%で自分の手番を迎えたら宝具発動で勝利
+function npWinCheck(){
+  if(!ruleset().npWin) return;
+  for(const u of alive(G.cur)){
+    if(u.np<RULES.ultCost) continue;
+    if(!canUlt(u)){ log(`${nm(u)}は${TERMS.gauge}${RULES.ultCost}%だが、${TERMS.ult}を発動できない`,'bad'); continue; }
+    const ud=D(u.def).ult;
+    log(`${nm(u)}：${TERMS.gauge}${RULES.ultCost}%で手番開始 → ${TERMS.ult}「${esc(ud.name)}」発動！`,'good');
+    fxEmit({t:'cutin',uid:u.uid,title:ud.name,col:ud.c});
+    say(u,'np');
+    alive(1-G.cur).forEach(t=>say(t,'npDamage'));
+    G.winBy='np'; win(G.cur); return;
+  }
+}
 function beginTurn(){
   Object.assign(G,{phase:'actRoll',actRolled:false,maxActs:{},alloc:{},rolled:[],ult:null,target:null,gen:0,pending:null,copy:null});
   log(`━ ターン${G.turn}：${esc(G.players[G.cur].name)} ━`,'h');
@@ -363,6 +398,7 @@ function beginTurn(){
     const ex=u.fx.filter(e=>e.turns!=null&&e.turns<=0);
     if(ex.length){ u.fx=u.fx.filter(e=>!ex.includes(e)); log(`${nm(u)}の ${ex.map(e=>FX[e.k].name).join('・')} が終了`,'sub'); }
   });
+  npWinCheck();
 }
 function endPhase(){
   log('⑦ 終了フェイズ','h');
@@ -388,7 +424,7 @@ function checkWin(){
   if(alive(1-G.cur).length===0) win(G.cur);      // 同時全滅は手番側の勝ち
   else if(alive(G.cur).length===0) win(1-G.cur);
 }
-function win(pid){ G.winner=pid; G.phase='over'; log(`${esc(G.players[pid].name)} の勝利！`,'good');
+function win(pid){ G.winner=pid; G.phase='over'; log(`${esc(G.players[pid].name)} の勝利！${G.winBy==='np'?`（${TERMS.ult}発動）`:''}`,'good');
   phaseFx(G.mode==='cpu'?(pid===0?'VICTORY':'DEFEAT'):'WINNER',G.mode==='cpu'?'':`${G.players[pid].name}の勝利`,{big:true,pid,end:true}); const w=alive(pid)[0]; if(w) say(w,'win'); }
 function applyMode(cfg){
   Object.assign(G,{mode:cfg.mode, level:cfg.level, cpu:cfg.cpu, speed:cfg.speed||G.speed, phase:'setup'});
@@ -412,8 +448,10 @@ function toTargetPhase(){
 // 操作（すべてここを通る）
 // =====================================================================
 const ACTIONS = {
-  restart(){ newGame(); },
-  useDefaultData(){ clearCustomUnits(); reloadUnits(); newGame(); },
+  restart(){ newGame(keepRule()); },
+  useDefaultData(){ clearCustomUnits(); reloadUnits(); newGame(keepRule()); },
+  setRule({rule}){ if(G.phase==='mode'&&RULESETS[rule]) G.rule=rule; },
+  toggleHandicap(){ if(G.phase==='mode') G.handicap=!G.handicap; },
   chooseMode({mode,level}){
     if(G.phase!=='mode') return;
     applyMode(mode==='cpu'
@@ -422,7 +460,7 @@ const ACTIONS = {
   },
   rematch(){
     const cfg={mode:G.mode, level:G.level, cpu:G.cpu, speed:G.speed, names:G.players.map(p=>p.name)};
-    newGame(); applyMode(cfg);
+    newGame(keepRule()); applyMode(cfg);
   },
   toggleSpeed(){ G.speed = G.speed>=500 ? 250 : 700; },
   setupToggle({id}){
@@ -430,7 +468,9 @@ const ACTIONS = {
     if(!d) return;
     const i=picks.indexOf(id);
     if(i>=0){ picks.splice(i,1); return; }
-    if(picks.length>=RULES.partyMax){ G.setupMsg=`最大${RULES.partyMax}体までです`; return; }
+    const max=ruleset().partyMax;
+    if(max===1){ picks.splice(0,1,id); return; } // 1騎だけのルールは選び直し
+    if(picks.length>=max){ G.setupMsg=`最大${max}体までです`; return; }
     if(sumCost(picks)+d.cost>RULES.costCap){ G.setupMsg=`コスト合計が${RULES.costCap}を超えます`; return; }
     picks.push(id);
   },
@@ -438,15 +478,20 @@ const ACTIONS = {
     let best=[];
     for(let t=0;t<50;t++){
       const pool=[...UNITS].sort(()=>Math.random()-.5), p=[];
-      for(const d of pool){ if(p.length<RULES.partyMax && sumCost(p)+d.cost<=RULES.costCap) p.push(d.id); }
+      for(const d of pool){ if(p.length<ruleset().partyMax && sumCost(p)+d.cost<=RULES.costCap) p.push(d.id); }
       if(p.length>best.length) best=p;
-      if(best.length===RULES.partyMax) break;
+      if(best.length===ruleset().partyMax) break;
     }
     G.picks[G.setupPid]=best; G.setupMsg='';
   },
   setupCpu(){
     const pid=G.setupPid;
     if(G.level==='easy'){ ACTIONS.setupRandom(); return; }
+    if(ruleset().partyMax===1){ // 1騎のルール：相手と同じ（なければ一番近い）コストからランダム
+      const opp=G.picks[1-pid][0], want=opp?D(opp).cost:Math.max(...UNITS.map(d=>d.cost));
+      const gap=Math.min(...UNITS.map(d=>Math.abs(d.cost-want))), c=UNITS.filter(d=>Math.abs(d.cost-want)===gap);
+      G.picks[pid]=[c[Math.floor(Math.random()*c.length)].id]; return;
+    }
     // コスト合計が最大になる3体の組み合わせからランダム（HPが高い順に1st）
     const combos=[];
     for(let i=0;i<UNITS.length;i++) for(let j=i+1;j<UNITS.length;j++) for(let k=j+1;k<UNITS.length;k++){
@@ -505,7 +550,7 @@ const ACTIONS = {
   cancelPick(){ G.pending=null; },
   useUlt({uid}){
     const u=U(uid);
-    if(G.phase!=='skill'||G.pending||G.ult||u.pid!==G.cur||!canUlt(u)||u.np<RULES.ultCost) return;
+    if(G.phase!=='skill'||G.pending||G.ult||!ultManual()||u.pid!==G.cur||!canUlt(u)||u.np<RULES.ultCost) return;
     G.ult=uid; u.np=0;
     log(`${nm(u)}が${TERMS.ult}「${esc(D(u.def).ult.name)}」を使用（このターンの行動になります）`,'good');
   },

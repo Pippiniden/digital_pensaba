@@ -36,7 +36,7 @@ const RULES = {
   // 行動回数決定フェイズ：出目1〜6 → 行動回数（全サーヴァント共通）。戦闘不能の味方1騎ごとに+1
   // null にすると、鉛筆の各面の acts（サーヴァントごとの値）を使う
   actsTable:[0,1,1,3,2,2],
-  gaugeOnHit:10, gaugeMax:300, ultCost:100,
+  gaugeOnHit:10, gaugeMax:100, ultCost:100,
   chainR:30,   // Busterチェイン：各コマンドのダメージ+30
   chainB:20,   // Artsチェイン：行動した全サーヴァントのNP+20%
   chainG:10,   // Quickチェイン：スター10個発生
@@ -50,6 +50,24 @@ const CRIT_TABLE = [ // [必要スター, 確率%]  index+1 がレベル
 ];
 function critLevel(stars){ let lv=0; CRIT_TABLE.forEach(([s],i)=>{ if(stars>=s) lv=i+1; }); return lv; }
 const critChance = lv=>lv<=0?0:CRIT_TABLE[Math.min(lv,CRIT_TABLE.length)-1][1];
+// シンプルルールのクリティカル：1d6 の出目がこの値以下なら成功（6 は確定）
+const CRIT_D6_TABLE = [ // [必要スター, 成功する出目の上限]
+  [1,2],[7,3],[14,5],[30,6],
+];
+function critNeedD6(stars){ let n=0; CRIT_D6_TABLE.forEach(([s,v])=>{ if(stars>=s) n=v; }); return n; }
+
+// ---------- ルールの種類 ----------
+// team  : チームバトルルール（3on3・合計コスト10・クリティカルは1d100）
+// simple: シンプルルール（1on1・クリティカルは1d6・NP100%でターン開始を迎えると宝具発動で勝利）
+//         宝具はターン開始時の勝利判定でだけ発動する（スキルフェイズでは使えない）
+//         handicapAsc：ハンデ戦ON のとき、この値以上のコスト差があれば低コスト側が最初から霊基再臨済み
+const RULESETS = {
+  team:  { name:'チームバトル', partyMax:3, crit:'d100', npWin:false,
+    desc:'3騎まで・コスト合計10以下で編成する基本ルール。' },
+  simple:{ name:'シンプル', partyMax:1, crit:'d6', npWin:true, handicapAsc:2,
+    desc:`1騎どうしで戦う簡易ルール。${TERMS.gauge}100%で手番を迎えると${TERMS.ult}発動で勝利。` },
+};
+
 // 出目index(0-5)の行動回数
 const faceActs = (d,i)=>RULES.actsTable ? RULES.actsTable[i] : d.faces[i].acts;
 
