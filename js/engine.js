@@ -420,6 +420,7 @@ function endPhase(){
   }));
   G.players[G.cur].stars=G.gen;
   log(`${esc(G.players[G.cur].name)}：${TERMS.star}を${G.gen}個獲得（次のターンに使用）`);
+  ALL().forEach(u=>u.face=null); // このターンの出目・コマンドの表示は次のターンに持ち越さない
   flushKo();
   checkWin(); if(G.winner!=null) return;
   G.cur=1-G.cur; G.turn++;
@@ -439,6 +440,9 @@ function doSkill(u,si,picked){
   const s=D(u.def).skills[si];
   u.used[si]=true;
   log(`${nm(u)} スキル「${esc(s.name)}」`);
+  // 使ったスキルの名前と効果を中央に出す（選んだ対象があれば名前も）
+  fxEmit({t:'skill',uid:u.uid,si,name:s.name,picked:picked?D(picked.def).name:'',
+    lines:s.eff.length?s.eff.map(e=>`${tLabel(e.t,s.pick)}：${fxText(e)}${e.chance?`（出目${e.chance}以下で成功）`:''}`):['効果なし']});
   say(u,'skill');
   applyEffects(u,s.eff,picked);
   flushKo();
@@ -514,6 +518,7 @@ const ACTIONS = {
   rollActs(){
     if(G.phase!=='actRoll'||G.actRolled) return;
     log('② 行動回数決定','h');
+    ALL().forEach(u=>u.face=null); // 先攻決定の出目なども消してから振る
     const bonus=G.players[G.cur].party.filter(u=>u.out).length; let left=RULES.actionsMax; const rolls=[];
     alive(G.cur).forEach(u=>{
       let m=0;

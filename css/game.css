@@ -346,6 +346,23 @@ body[data-screen="battle"] #app{overflow:auto}
 .txtpop{position:fixed;z-index:3;translate:-50% -50%;white-space:nowrap;font:900 22px "Noto Serif JP",serif;color:#fff;animation:pop 1.35s ease-out forwards}
 .txtpop.asc{color:var(--gold-hi);letter-spacing:.15em;text-shadow:0 0 3px #000,0 0 16px rgba(246,227,161,1),0 0 30px rgba(246,227,161,.7)}
 
+/* スキル使用：スキル名と効果のパネル（中央の帯の上） */
+.skillfx{position:fixed;z-index:4;translate:-50% -50%;width:max-content;padding:10px 18px 12px;border-radius:6px;border:1px solid var(--gold-hi);
+  background:linear-gradient(180deg,rgba(22,41,90,.97),rgba(6,13,34,.97));box-shadow:0 0 0 1px #0008,0 0 24px rgba(246,227,161,.45),0 10px 30px rgba(0,0,0,.6);
+  animation:sfin .28s cubic-bezier(.2,.8,.2,1);transition:opacity .3s,transform .3s}
+.skillfx.p0{border-left:4px solid var(--p0)}
+.skillfx.p1{border-left:4px solid var(--p1)}
+.skillfx.bye{opacity:0;transform:translateY(-10px)}
+.sf-head{display:flex;align-items:baseline;gap:8px}
+.sf-head i{font:normal 700 12px var(--serif);color:var(--sub)}
+.sf-head b{font:900 20px "Noto Serif JP",serif;color:var(--gold-hi);letter-spacing:.06em;text-shadow:0 0 10px rgba(246,227,161,.5)}
+.sf-who{display:flex;align-items:center;gap:6px;margin-top:2px;font-size:12px;color:var(--sub)}
+.sf-cls{width:18px;height:18px}
+.skillfx ul{margin:6px 0 0;padding:6px 0 0;list-style:none;border-top:1px solid var(--gold-lo);display:flex;flex-direction:column;gap:2px}
+.skillfx li{font-size:13.5px;color:#fff}
+.skillfx li::before{content:'◆';margin-right:6px;font-size:9px;color:var(--gold)}
+@keyframes sfin{from{opacity:0;transform:scale(.9)}to{opacity:1;transform:none}}
+
 /* オートボタン */
 #autobtn.on{color:#1a1206;font-weight:700;border-color:var(--gold-hi);background:linear-gradient(180deg,var(--gold-hi),var(--gold))}
 

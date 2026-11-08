@@ -7,7 +7,7 @@
    ===================================================================== */
 
 // 次のイベントまでの待ち時間(ms)。イベントに w があればそちらを優先
-const FX_WAIT = { say:950, dmg:420, cutin:2000, phase:420, phaseBig:900, banner:700, roll:780, rollGrp:110, atk:640, pop:520, ko:900 };
+const FX_WAIT = { skill:700, say:950, dmg:420, cutin:2000, phase:420, phaseBig:900, banner:700, roll:780, rollGrp:110, atk:640, pop:520, ko:900 };
 const ROLL_SPIN = 520;                             // ロール演出で出目が回っている時間(ms)
 const BUBBLE_MS = 2600;                            // 吹き出しの表示時間(ms)
 let fxRunning=false;
@@ -38,6 +38,7 @@ function fxPlay(ev){
   if(ev.t==='cutin'){ showCutin(L,ev); return FX_WAIT.cutin; }
   if(ev.t==='phase'||ev.t==='banner'){ showPhase(L,ev); return ev.t==='banner'?FX_WAIT.banner:ev.big?FX_WAIT.phaseBig:FX_WAIT.phase; }
   if(ev.t==='atk'){ showAtk(L,ev); return FX_WAIT.atk; }
+  if(ev.t==='skill'){ showSkill(L,ev); return FX_WAIT.skill; }
   if(ev.t==='dmg') stepHold(ev); // カードが見つからなくても表示HPは進める
   const p=portraitOf(ev.uid);
   if(!p){ if(ev.t==='roll') reveal(ev); return 0; }
@@ -196,6 +197,24 @@ function redrawSvt(uid){
   if(!el||!u) return;
   const t=document.createElement('div'); t.innerHTML=svtHTML(u).trim();
   el.replaceWith(t.firstChild);
+}
+
+// スキル使用：中央の帯（.stage）の上に、スキル名と効果のパネルを出す（続くセリフの吹き出しと重ねて見せる）
+const SKILL_MS = 2300;
+function showSkill(L,ev){
+  const u=U(ev.uid), st=document.querySelector('.stage'); if(!u||!st) return;
+  const d=D(u.def), r=st.getBoundingClientRect();
+  L.querySelectorAll('.skillfx').forEach(x=>x.remove());
+  const el=document.createElement('div');
+  el.className=`skillfx p${u.pid}`;
+  el.innerHTML=`<div class="sf-head"><i>S${ev.si+1}</i><b>${esc(ev.name)}</b></div>
+    <div class="sf-who">${clsIconTag(d.cls,'sf-cls')}${esc(d.name)}${ev.picked?` → ${esc(ev.picked)}`:''}</div>
+    <ul>${ev.lines.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`;
+  L.appendChild(el);
+  el.style.left=`${r.left+r.width/2}px`; el.style.top=`${r.top+r.height/2}px`;
+  el.style.maxWidth=`${Math.max(240,Math.min(520,r.width-16))}px`;
+  setTimeout(()=>el.classList.add('bye'),SKILL_MS);
+  setTimeout(()=>el.remove(),SKILL_MS+300);
 }
 
 // 宝具カットイン：キャラクター画像が横切り、宝具名を大きく表示
