@@ -309,6 +309,7 @@ body[data-screen="battle"] #app{overflow:auto}
 .phasefx.banner.cG .pf-band{background:linear-gradient(90deg,transparent,rgba(6,48,27,.92) 20%,rgba(35,163,93,.95) 50%,rgba(6,48,27,.92) 80%,transparent)}
 .phasefx.banner .pf-band b{color:#fff;font-size:32px;font-style:italic}
 @keyframes pfband{0%{clip-path:inset(50% 0);opacity:0}14%{clip-path:inset(0);opacity:1}80%{clip-path:inset(0);opacity:1}100%{clip-path:inset(50% 0);opacity:0}}
+@keyframes pftextsm{0%{transform:translateX(-40px);opacity:0;letter-spacing:.5em}22%{transform:none;opacity:1;letter-spacing:.12em}80%{transform:translateX(6px);opacity:1}100%{transform:translateX(30px);opacity:0}}
 @keyframes pftext{0%{transform:translateX(-60px);opacity:0;letter-spacing:.9em}22%{transform:none;opacity:1;letter-spacing:.32em}80%{transform:translateX(10px);opacity:1}100%{transform:translateX(50px);opacity:0}}
 
 /* 鉛筆ロール：六角の鉛筆の断面が回って出目が決まる */
@@ -323,6 +324,8 @@ body[data-screen="battle"] #app{overflow:auto}
 .rf-res .ccard{width:92px;box-shadow:0 0 18px rgba(246,227,161,.6),0 4px 12px rgba(0,0,0,.6)}
 .rf-acts{display:block;font:700 20px var(--serif);color:#fff;white-space:nowrap;padding:1px 12px;border-radius:3px;background:rgba(6,13,34,.85);border:1px solid var(--gold-hi);text-shadow:0 0 8px rgba(246,227,161,.8)}
 .rf-acts.zero{color:#ff8a80;border-color:var(--r)}
+.rf-ch{text-align:center;line-height:1.15;padding:2px 12px 3px}
+.rf-ch small{display:block;font:600 10.5px "Noto Serif JP",serif;color:var(--sub);text-shadow:none;letter-spacing:0}
 .rollfx.bye{opacity:0}
 @keyframes rfspin{to{rotate:60deg}}
 @keyframes rfland{0%{transform:scale(1.6)}100%{transform:scale(1)}}
@@ -449,4 +452,10 @@ body[data-screen="battle"] #app{overflow:auto}
   .critbox{justify-self:center;flex-direction:row;gap:8px;min-width:0;padding:3px 10px}
   .critbox b{font-size:16px}
   .udops .sks{grid-template-columns:1fr 1fr}
+  /* フェイズの帯：狭い画面では文字を詰めて小さく（VICTORY などがはみ出さないように） */
+  .pf-band b{animation-name:pftextsm;font-size:22px;letter-spacing:.12em}
+  .phasefx.big .pf-band b{font-size:min(36px,10vw)}
+  .phasefx.end .pf-band b{font-size:min(56px,12vw)}
+  .phasefx.banner .pf-band b{font-size:26px}
+  .pf-band small{letter-spacing:.08em}
 }

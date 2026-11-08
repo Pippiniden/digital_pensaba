@@ -81,7 +81,7 @@ function showRoll(L,ev,r){
     num.textContent=ev.f+1;
     el.classList.add('land');
     const res=el.querySelector('.rf-res');
-    if(ev.ch) res.innerHTML=`<span class="rf-acts ${ev.ch.ok?'':'zero'}">${ev.f+1} ≤ ${ev.ch.need}？ ${ev.ch.ok?'成功':'失敗'}</span>`;
+    if(ev.ch) res.innerHTML=`<span class="rf-acts rf-ch ${ev.ch.ok?'':'zero'}">${ev.ch.ok?'成功':'失敗'}<small>${ev.ch.need}以下で成功</small></span>`;
     else if(ev.n!=null) res.innerHTML=`<span class="rf-acts ${ev.n?'':'zero'}">行動 ×${ev.n}</span>`;
     else if(ev.cmd&&d) res.innerHTML=cmdCardHTML(d,ev.cmd);
     reveal(ev);
