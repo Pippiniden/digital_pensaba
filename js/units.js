@@ -27,11 +27,11 @@ const DEFAULT_UNITS = [
       {"acts":1,"pre":{"c":"G","dmg":50,"np":0,"star":2},"post":{"c":"G","dmg":70,"np":0,"star":4}}
     ],
     "skills":[
-      {"name":"カリスマB","eff":[{"k":"atk","t":"ally_all","v":20,"turns":3}]},
-      {"name":"魔力放出A","eff":[{"k":"atk","t":"self","v":40,"turns":1,"color":"R"}]},
-      {"name":"直感A","eff":[{"k":"star","t":"master","v":15}]}
+      {"name":"カリスマ","eff":[{"k":"atk","t":"ally_all","v":20,"turns":3}],"rank":"B"},
+      {"name":"魔力放出","eff":[{"k":"atk","t":"self","v":40,"turns":1,"color":"R"}],"rank":"A"},
+      {"name":"直感","eff":[{"k":"star","t":"master","v":15}],"rank":"A"}
     ],
-    "ult":{"name":"約束された勝利の剣","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":400},{"k":"np","t":"self","v":20}]}
+    "ult":{"name":"約束された勝利の剣","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":400},{"k":"np","t":"self","v":20}],"ruby":"エクスカリバー"}
   },
   {
     "id":"emiya", "name":"エミヤ", "cls":"アーチャー", "cost":4, "hp":650,
@@ -56,11 +56,11 @@ const DEFAULT_UNITS = [
       {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":2},"post":{"c":"G","dmg":50,"np":0,"star":4}}
     ],
     "skills":[
-      {"name":"心眼(真)B","eff":[{"k":"evade","t":"self","v":0,"turns":1},{"k":"def","t":"self","v":10,"turns":3}]},
-      {"name":"鷹の瞳B+","eff":[{"k":"critPow","t":"self","v":30,"turns":3},{"k":"onAtkStar","t":"self","v":3,"turns":3}]},
-      {"name":"投影魔術A","eff":[{"k":"atk","t":"self","v":30,"turns":1,"color":"R"},{"k":"onAtkNp","t":"self","v":10,"turns":1,"color":"B"},{"k":"onAtkStar","t":"self","v":3,"turns":1,"color":"G"}]}
+      {"name":"心眼(真)","eff":[{"k":"evade","t":"self","v":0,"turns":1},{"k":"def","t":"self","v":10,"turns":3}],"rank":"B"},
+      {"name":"鷹の瞳","eff":[{"k":"critPow","t":"self","v":30,"turns":3},{"k":"onAtkStar","t":"self","v":3,"turns":3}],"rank":"B+"},
+      {"name":"投影魔術","eff":[{"k":"atk","t":"self","v":30,"turns":1,"color":"R"},{"k":"onAtkNp","t":"self","v":10,"turns":1,"color":"B"},{"k":"onAtkStar","t":"self","v":3,"turns":1,"color":"G"}],"rank":"A"}
     ],
-    "ult":{"name":"無限の剣製","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":350},{"k":"atkDown","t":"enemy_all","v":30,"turns":3}]}
+    "ult":{"name":"無限の剣製","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":350},{"k":"atkDown","t":"enemy_all","v":30,"turns":3}],"ruby":"アンリミテッド・ブレイド・ワークス"}
   },
   {
     "id":"cu", "name":"クー・フーリン", "cls":"ランサー", "cost":3, "hp":550,
@@ -85,11 +85,11 @@ const DEFAULT_UNITS = [
       {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":2},"post":{"c":"G","dmg":60,"np":0,"star":4}}
     ],
     "skills":[
-      {"name":"戦闘続行A","eff":[{"k":"guts","t":"self","v":80,"turns":5,"times":1}]},
-      {"name":"矢避けの加護B","eff":[{"k":"evade","t":"self","v":0,"times":3},{"k":"def","t":"self","v":10,"turns":3}]},
-      {"name":"仕切り直しC","eff":[{"k":"cleanse","t":"self","v":0},{"k":"heal","t":"self","v":200}]}
+      {"name":"戦闘続行","eff":[{"k":"guts","t":"self","v":80,"turns":5,"times":1}],"rank":"A"},
+      {"name":"矢避けの加護","eff":[{"k":"evade","t":"self","v":0,"times":3},{"k":"def","t":"self","v":10,"turns":3}],"rank":"B"},
+      {"name":"仕切り直し","eff":[{"k":"cleanse","t":"self","v":0},{"k":"heal","t":"self","v":200}],"rank":"C"}
     ],
-    "ult":{"name":"刺し穿つ死棘の槍","c":"G","eff":[{"k":"dmg","t":"target","v":400},{"k":"instantDeath","t":"target","v":0,"chance":1}]}
+    "ult":{"name":"刺し穿つ死棘の槍","c":"G","eff":[{"k":"dmg","t":"target","v":400},{"k":"instantDeath","t":"target","v":0,"chance":1}],"ruby":"ゲイ・ボルグ"}
   },
   {
     "id":"medusa", "name":"メドゥーサ", "cls":"ライダー", "cost":3, "hp":500,
@@ -114,11 +114,11 @@ const DEFAULT_UNITS = [
       {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":2},"post":{"c":"G","dmg":50,"np":0,"star":4}}
     ],
     "skills":[
-      {"name":"魔眼A+","eff":[{"k":"stun","t":"picked","v":0,"turns":1,"chance":3}],"pick":"enemy"},
-      {"name":"怪力B","eff":[{"k":"atk","t":"self","v":30,"turns":1}]},
-      {"name":"鮮血神殿B","eff":[{"k":"np","t":"self","v":20},{"k":"onAtkNp","t":"self","v":10,"turns":3}]}
+      {"name":"魔眼","eff":[{"k":"stun","t":"picked","v":0,"turns":1,"chance":3}],"pick":"enemy","rank":"A+"},
+      {"name":"怪力","eff":[{"k":"atk","t":"self","v":30,"turns":1}],"rank":"B"},
+      {"name":"鮮血神殿","eff":[{"k":"np","t":"self","v":20},{"k":"onAtkNp","t":"self","v":10,"turns":3}],"rank":"B"}
     ],
-    "ult":{"name":"騎英の手綱","c":"G","eff":[{"k":"dmg","t":"enemy_all","v":200},{"k":"onAtkStar","t":"ally_all","v":3,"turns":3}]}
+    "ult":{"name":"騎英の手綱","c":"G","eff":[{"k":"dmg","t":"enemy_all","v":200},{"k":"onAtkStar","t":"ally_all","v":3,"turns":3}],"ruby":"ベルレフォーン"}
   },
   {
     "id":"medea", "name":"メディア", "cls":"キャスター", "cost":3, "hp":500,
@@ -143,11 +143,11 @@ const DEFAULT_UNITS = [
       {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":2},"post":{"c":"G","dmg":40,"np":0,"star":4}}
     ],
     "skills":[
-      {"name":"高速神言A","eff":[{"k":"np","t":"self","v":80}]},
+      {"name":"高速神言","eff":[{"k":"np","t":"self","v":80}],"rank":"A"},
       {"name":"金羊の皮","eff":[{"k":"heal","t":"self","v":50}]},
-      {"name":"キルケーの教えA","eff":[{"k":"cleanse","t":"picked","v":0},{"k":"onAtkNp","t":"picked","v":15,"turns":1}],"pick":"ally"}
+      {"name":"キルケーの教え","eff":[{"k":"cleanse","t":"picked","v":0},{"k":"onAtkNp","t":"picked","v":15,"turns":1}],"pick":"ally","rank":"A"}
     ],
-    "ult":{"name":"破戒すべき全ての符","c":"B","eff":[{"k":"dmg","t":"target","v":250},{"k":"strip","t":"target","v":0},{"k":"np","t":"self","v":20}]}
+    "ult":{"name":"破戒すべき全ての符","c":"B","eff":[{"k":"dmg","t":"target","v":250},{"k":"strip","t":"target","v":0},{"k":"np","t":"self","v":20}],"ruby":"ルールブレイカー"}
   },
   {
     "id":"kojiro", "name":"佐々木小次郎", "cls":"アサシン", "cost":1, "hp":400,
@@ -172,9 +172,9 @@ const DEFAULT_UNITS = [
       {"acts":1,"pre":{"c":"G","dmg":20,"np":0,"star":2},"post":{"c":"G","dmg":30,"np":0,"star":5}}
     ],
     "skills":[
-      {"name":"心眼(偽)A","eff":[{"k":"evade","t":"self","v":0,"turns":1},{"k":"critPow","t":"self","v":30,"turns":3}]},
-      {"name":"透過B+","eff":[{"k":"cleanseMental","t":"self","v":0},{"k":"star","t":"master","v":5}]},
-      {"name":"宗和の心得B++","eff":[{"k":"sureHit","t":"self","v":0,"turns":3},{"k":"onAtkStar","t":"self","v":3,"turns":3}]}
+      {"name":"心眼(偽)","eff":[{"k":"evade","t":"self","v":0,"turns":1},{"k":"critPow","t":"self","v":30,"turns":3}],"rank":"A"},
+      {"name":"透過","eff":[{"k":"cleanseMental","t":"self","v":0},{"k":"star","t":"master","v":5}],"rank":"B+"},
+      {"name":"宗和の心得","eff":[{"k":"sureHit","t":"self","v":0,"turns":3},{"k":"onAtkStar","t":"self","v":3,"turns":3}],"rank":"B++"}
     ],
     "ult":{"name":"燕返し","c":"G","eff":[{"k":"dmg","t":"target","v":300},{"k":"star","t":"master","v":7}]}
   },
@@ -201,11 +201,11 @@ const DEFAULT_UNITS = [
       {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":1},"post":{"c":"G","dmg":60,"np":0,"star":2}}
     ],
     "skills":[
-      {"name":"勇猛A+","eff":[{"k":"mentalImmune","t":"self","v":0,"turns":3},{"k":"atk","t":"self","v":30,"turns":3}]},
-      {"name":"心眼(偽)B","eff":[{"k":"evade","t":"self","v":0,"turns":1},{"k":"critPow","t":"self","v":30,"turns":3}]},
-      {"name":"戦闘続行A","eff":[{"k":"guts","t":"self","v":200,"turns":5,"times":1}]}
+      {"name":"勇猛","eff":[{"k":"mentalImmune","t":"self","v":0,"turns":3},{"k":"atk","t":"self","v":30,"turns":3}],"rank":"A+"},
+      {"name":"心眼(偽)","eff":[{"k":"evade","t":"self","v":0,"turns":1},{"k":"critPow","t":"self","v":30,"turns":3}],"rank":"B"},
+      {"name":"戦闘続行","eff":[{"k":"guts","t":"self","v":200,"turns":5,"times":1}],"rank":"A"}
     ],
-    "ult":{"name":"射殺す百頭","c":"R","eff":[{"k":"dmg","t":"target","v":500},{"k":"defDown","t":"target","v":30,"turns":3}]}
+    "ult":{"name":"射殺す百頭","c":"R","eff":[{"k":"dmg","t":"target","v":500},{"k":"defDown","t":"target","v":30,"turns":3}],"ruby":"ナインライブス"}
   },
   {
     "id":"hassan", "name":"呪腕のハサン", "cls":"アサシン", "cost":2, "hp":550,
@@ -230,11 +230,11 @@ const DEFAULT_UNITS = [
       {"acts":1,"pre":{"c":"G","dmg":20,"np":0,"star":4},"post":{"c":"G","dmg":40,"np":0,"star":6}}
     ],
     "skills":[
-      {"name":"投擲(短刀)B","eff":[{"k":"star","t":"master","v":5}]},
-      {"name":"自己改造C","eff":[{"k":"critPow","t":"self","v":30,"turns":3}]},
-      {"name":"風除けの加護A","eff":[{"k":"evade","t":"self","v":0,"times":3},{"k":"onAtkStar","t":"self","v":3,"turns":3}]}
+      {"name":"投擲(短刀)","eff":[{"k":"star","t":"master","v":5}],"rank":"B"},
+      {"name":"自己改造","eff":[{"k":"critPow","t":"self","v":30,"turns":3}],"rank":"C"},
+      {"name":"風除けの加護","eff":[{"k":"evade","t":"self","v":0,"times":3},{"k":"onAtkStar","t":"self","v":3,"turns":3}],"rank":"A"}
     ],
-    "ult":{"name":"妄想心音","c":"G","eff":[{"k":"dmg","t":"target","v":350},{"k":"instantDeath","t":"target","v":0,"chance":1}]}
+    "ult":{"name":"妄想心音","c":"G","eff":[{"k":"dmg","t":"target","v":350},{"k":"instantDeath","t":"target","v":0,"chance":1}],"ruby":"ザバーニーヤ"}
   },
   {
     "id":"mash", "name":"マシュ・キリエライト", "cls":"シールダー", "cost":0, "hp":400,
@@ -263,7 +263,7 @@ const DEFAULT_UNITS = [
       {"name":"時に煙る白亜の壁","eff":[{"k":"invul","t":"picked","v":0,"turns":1},{"k":"np","t":"picked","v":10}],"pick":"ally"},
       {"name":"なし","eff":[]}
     ],
-    "ult":{"name":"疑似展開/人理の礎","c":"B","eff":[{"k":"def","t":"ally_all","v":30,"turns":3}]}
+    "ult":{"name":"疑似展開/人理の礎","c":"B","eff":[{"k":"def","t":"ally_all","v":30,"turns":3}],"ruby":"ロード・カルデアス"}
   },
   {
     "id":"athelstan", "name":"エゼルスタン", "cls":"セイバー", "cost":5, "hp":900,
@@ -288,10 +288,10 @@ const DEFAULT_UNITS = [
       {"acts":1,"pre":{"c":"G","dmg":50,"np":0,"star":4},"post":{"c":"G","dmg":60,"np":0,"star":6}}
     ],
     "skills":[
-      {"name":"信仰の加護","eff":[{"k":"debuffImmune","t":"self","v":0,"turns":5},{"k":"heal","t":"self","v":150},{"k":"def","t":"self","v":20,"turns":3},{"k":"atk","t":"self","v":20,"turns":3}]},
-      {"name":"統一王","eff":[{"k":"atk","t":"self","v":10,"turns":3},{"k":"def","t":"self","v":10,"turns":3},{"k":"onAtkStar","t":"self","v":1,"turns":3},{"k":"onAtkNp","t":"self","v":10,"turns":3}]},
-      {"name":"スキル3","eff":[{"k":"atk","t":"self","v":20,"turns":1},{"k":"invul","t":"self","v":0,"turns":1}]}
+      {"name":"信仰の加護","eff":[{"k":"debuffImmune","t":"self","v":0,"turns":5},{"k":"heal","t":"self","v":150},{"k":"def","t":"self","v":20,"turns":3},{"k":"atk","t":"self","v":20,"turns":3}],"rank":"B"},
+      {"name":"統一王","eff":[{"k":"atk","t":"self","v":10,"turns":3},{"k":"def","t":"self","v":10,"turns":3},{"k":"onAtkStar","t":"self","v":1,"turns":3},{"k":"onAtkNp","t":"self","v":10,"turns":3}],"rank":"A"},
+      {"name":"獅子の紋章","eff":[{"k":"atk","t":"self","v":20,"turns":1},{"k":"invul","t":"self","v":0,"turns":1}],"rank":"D-"}
     ],
-    "ult":{"name":"統一王の覇光","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":350},{"k":"pierce","t":"self","v":0,"turns":1},{"k":"ignoreDef","t":"self","v":0,"turns":1}]}
+    "ult":{"name":"統一王の覇光","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":350},{"k":"pierce","t":"self","v":0,"turns":1},{"k":"ignoreDef","t":"self","v":0,"turns":1}],"ruby":"ユナイテッド・キングス・レガリア"}
   }
 ];
