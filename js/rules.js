@@ -55,7 +55,7 @@ const faceActs = (d,i)=>RULES.actsTable ? RULES.actsTable[i] : d.faces[i].acts;
 
 // ---------- セリフ ----------
 // 各サーヴァントの lines に、場面ごとのセリフを配列で書きます（複数あればランダムに1つ）
-const LINE_KEYS = { start:'戦闘開始', attack:'攻撃', damage:'被ダメージ', skill:'スキル使用', np:'宝具使用', npDamage:'宝具で被ダメージ', defeat:'敗退', win:'勝利' };
+const LINE_KEYS = { start:'戦闘開始', attack:'攻撃', extra:'エクストラアタック', damage:'被ダメージ', skill:'スキル使用', np:'宝具使用', npDamage:'宝具で被ダメージ', defeat:'敗退', win:'勝利' };
 const LINE_MIN = { attack:3 };   // 最低限そろえたい種類数（足りないと注意を出す）
 
 // ---------- クラス ----------

@@ -234,7 +234,7 @@ function resolveCommand(att,cmd,tgt,o={}){
     if(!(cmd.dmg>0)){ gainNpStar(att,cmd,1); return; }
     // ダメージを持つ特殊行動は無属性の攻撃として続けて処理する（チェインには数えない）
   }
-  say(att,'attack',{w:250}); // 吹き出しと攻撃カードを重ねて見せる
+  say(att,(o.extra&&(D(att.def).lines.extra||[]).length)?'extra':'attack',{w:250}); // 吹き出しと攻撃カードを重ねて見せる（エクストラ用が空なら通常の攻撃セリフ）
   atkFx(tgt.uid); // 戦闘不能の相手にも（オーバーキル）カードを飛ばす
   let dmg=cmd.dmg; const note=[`基本${dmg}`]; let usedA=[], usedT=[], colorBuff=0;
   // 2. スキル効果補正 / 3. Busterチェイン

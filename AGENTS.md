@@ -49,7 +49,7 @@ Editor (editor.html): rules → units → common → editor
 { id, name, cls, cost, hp,
                                          // images are NOT data: img/units/{id}.webp (face) and {id}_card.webp (card, optional)
                                          // card chain: {id}_card → {id} → card.svg / face chain: {id} → face.svg (see imgCandidates)
-  lines: { start, attack, damage, skill, np, npDamage, defeat, win },  // each string[] (LINE_KEYS)
+  lines: { start, attack, extra, damage, skill, np, npDamage, defeat, win },  // each string[] (LINE_KEYS)
   faces: [ {acts:1|2|3, pre:Cmd, post:Cmd} ×6 ],   // pencil faces 1–6. pre = before ascension / post = after
                                                    // acts is IGNORED while RULES.actsTable is set (the default)
   skills:[ {name, eff:Eff[], pick?:'ally'|'enemy'|'any'} ×3 ],   // skill 3 is usable only after ascension
