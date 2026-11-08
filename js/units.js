@@ -1,6 +1,5 @@
 'use strict';
 // サーヴァントデータ（ペンシルエディタで書き出し）
-// 画像は img/units/{id}.webp（キャラクター）と img/units/{id}_card.webp（カード用・任意）を自動で使う
 // lines: 場面ごとのセリフ
 // faces: 出目1〜6の面 / acts: 行動回数 / pre・post: 再臨前・後のコマンド
 // c: R=Buster B=Arts G=Quick W=特殊 ASC=再臨
@@ -8,14 +7,15 @@ const DEFAULT_UNITS = [
   {
     "id":"artoria", "name":"アルトリア・ペンドラゴン", "cls":"セイバー", "cost":5, "hp":1000,
     "lines":{
-      "start":["剣の英霊、ここに。"],
-      "attack":["はっ！","そこです！","断つ！"],
-      "damage":["この程度……！"],
-      "skill":["風よ、力を。"],
-      "np":["この剣にかけて！"],
-      "npDamage":["ぐっ……！"],
-      "defeat":["ここまで、ですか……"],
-      "win":["勝利を、あなたに。"]
+      "start":["始めましょう、マスター","死力を尽くして来るがいい","戦いであれば、蹴散らすのみです","落ち着いて、油断なきように"],
+      "attack":["はっ！","ふっ！","やあっ！","斬り上げる！"],
+      "extra":["叩き斬る！","風よ、舞いあがれ！","風王鉄槌ストライク・エア！"],
+      "damage":["ぐっ……！"],
+      "skill":["本気で行きましょう","総員、突撃準備！","決着の時だ……！","全霊を見せる！","逃がしはしない！","正面から、受けて立つ！","この道に勝利を！","聖剣、解放"],
+      "np":["束ねるは星の息吹、輝ける命の奔流。受けるが良い『約束された勝利の剣』！"],
+      "npDamage":["この程度で！"],
+      "defeat":["こんな……ところで……","すまない……マスター……"],
+      "win":["まだまだ未熟ですね","騎士の誓いは破れない","負傷者の手当てを。戦いはまだ続きます","兵站は保っていますか？それは結構"]
     },
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":100,"np":0,"star":0},"post":{"c":"R","dmg":140,"np":0,"star":0}},
@@ -33,70 +33,17 @@ const DEFAULT_UNITS = [
     "ult":{"name":"約束された勝利の剣","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":400},{"k":"np","t":"self","v":20}]}
   },
   {
-    "id":"medea", "name":"メディア", "cls":"キャスター", "cost":3, "hp":500,
-    "lines":{
-      "start":["キャスター、参上よ。"],
-      "attack":["えいっ。","焼き払いなさい。","邪魔よ。"],
-      "damage":["きゃっ……！"],
-      "skill":["少し本気を出しましょうか。"],
-      "np":["その契り、断ち切ってあげる。"],
-      "npDamage":["くうっ……！"],
-      "defeat":["こんな、ところで……"],
-      "win":["ふふ、当然ね。"]
-    },
-    "faces":[
-      {"acts":1,"pre":{"c":"R","dmg":60,"np":0,"star":0},"post":{"c":"R","dmg":70,"np":0,"star":0}},
-      {"acts":1,"pre":{"c":"B","dmg":40,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
-      {"acts":1,"pre":{"c":"B","dmg":40,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
-      {"acts":1,"pre":{"c":"ASC"},"post":{"c":"W","label":"呪詛","eff":[{"k":"drain","t":"enemy_all","v":20}],"dmg":0,"np":0,"star":0}},
-      {"acts":1,"pre":{"c":"B","dmg":50,"np":10,"star":0},"post":{"c":"B","dmg":70,"np":15,"star":0}},
-      {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":2},"post":{"c":"G","dmg":40,"np":0,"star":4}}
-    ],
-    "skills":[
-      {"name":"高速神言A","eff":[{"k":"np","t":"self","v":80}]},
-      {"name":"金羊の皮","eff":[{"k":"heal","t":"self","v":50}]},
-      {"name":"キルケーの教えA","eff":[{"k":"cleanse","t":"picked","v":0},{"k":"onAtkNp","t":"picked","v":15,"turns":1}],"pick":"ally"}
-    ],
-    "ult":{"name":"破戒すべき全ての符","c":"B","eff":[{"k":"dmg","t":"target","v":250},{"k":"strip","t":"target","v":0},{"k":"np","t":"self","v":20}]}
-  },
-  {
-    "id":"medusa", "name":"メドゥーサ", "cls":"ライダー", "cost":3, "hp":500,
-    "lines":{
-      "start":["ライダー、参ります。"],
-      "attack":["ふっ……！","逃がしません。","そこです。"],
-      "damage":["くっ……"],
-      "skill":["動かないでください。"],
-      "np":["駆けなさい……！"],
-      "npDamage":["ああっ……！"],
-      "defeat":["ここまで、ですね……"],
-      "win":["終わりました。"]
-    },
-    "faces":[
-      {"acts":1,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":90,"np":0,"star":0}},
-      {"acts":1,"pre":{"c":"B","dmg":50,"np":10,"star":0},"post":{"c":"B","dmg":70,"np":15,"star":0}},
-      {"acts":1,"pre":{"c":"B","dmg":40,"np":15,"star":0},"post":{"c":"B","dmg":70,"np":20,"star":0}},
-      {"acts":1,"pre":{"c":"ASC"},"post":{"c":"G","dmg":70,"np":0,"star":0,"eff":[{"k":"actsUp","t":"self","v":1,"times":1}]}},
-      {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":2},"post":{"c":"G","dmg":50,"np":0,"star":4}},
-      {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":2},"post":{"c":"G","dmg":50,"np":0,"star":4}}
-    ],
-    "skills":[
-      {"name":"魔眼A+","eff":[{"k":"stun","t":"picked","v":0,"turns":1,"chance":3}],"pick":"enemy"},
-      {"name":"怪力B","eff":[{"k":"atk","t":"self","v":30,"turns":1}]},
-      {"name":"鮮血神殿B","eff":[{"k":"np","t":"self","v":20},{"k":"onAtkNp","t":"self","v":10,"turns":3}]}
-    ],
-    "ult":{"name":"騎英の手綱","c":"G","eff":[{"k":"dmg","t":"enemy_all","v":200},{"k":"onAtkStar","t":"ally_all","v":3,"turns":3}]}
-  },
-  {
     "id":"emiya", "name":"エミヤ", "cls":"アーチャー", "cost":4, "hp":650,
     "lines":{
-      "start":["アーチャー、出るぞ。"],
-      "attack":["ふっ！","遅い。","そこだ。"],
-      "damage":["ちっ……"],
-      "skill":["見切った。"],
-      "np":["剣の丘へ、招待しよう。"],
-      "npDamage":["ぐっ……！"],
-      "defeat":["……ここまでか。"],
-      "win":["当然の結果だ。"]
+      "start":["懲りない連中だ","全霊でお相手しよう","正面から？　ふん、勘弁してくれ"],
+      "attack":["ふっ！","はぁっ！","せい！","そこだっ！","どいていろっ！","干将・莫耶！"],
+      "extra":["もらったぞ！","そこまでだっ！"],
+      "damage":["ぐっ……！"],
+      "skill":["癖が悪くてね","投影、開始","この際だ。確実に仕留める"],
+      "np":["I am the bone of my sword. ──So as I pray 『Unlimited blade works』"],
+      "npDamage":["やってくれる……！"],
+      "defeat":["……ここまでか","深手を負ったか","私の……敗北だ……"],
+      "win":["当然の結果だ","決意も覚悟も足りなかったな","もう少し手こずると思ったのだが……"]
     },
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":90,"np":0,"star":0},"post":{"c":"R","dmg":120,"np":0,"star":0}},
@@ -116,14 +63,15 @@ const DEFAULT_UNITS = [
   {
     "id":"cu", "name":"クー・フーリン", "cls":"ランサー", "cost":3, "hp":550,
     "lines":{
-      "start":["ランサー、推参だ。"],
-      "attack":["おらよっ！","遅えっ！","もらった！"],
-      "damage":["やるじゃねえか……！"],
-      "skill":["まだまだ、これからよ。"],
-      "np":["この槍、外しはしねえ！"],
-      "npDamage":["ぐっ……！"],
-      "defeat":["ちっ……ここまでか。"],
-      "win":["いい勝負だったぜ。"]
+      "start":["おう、かかってきな","少しは楽しめそうじゃねぇか","準備運動？はっ、いらねぇよ！やってりゃ、あったまるだろ"],
+      "attack":["おらよっ！","遅えっ！","もらった！","そらっ！！"],
+      "extra":["よいしょっと！","眠ってんのかぁ！？","撃ち抜く！"],
+      "damage":["ぐっ……！"],
+      "skill":["んじゃまぁ、ぶちかますかねぇ！","紅い棘は茨のごとくってな","見えてりゃ当たらねぇよ！","手を凝らして来いよ"],
+      "np":["その心臓貰い受ける！『刺し穿つ死棘の槍』！"],
+      "npDamage":["痛ぇじゃねぇか！"],
+      "defeat":["ちっ……ここまでか","抜かった……ぜ……","悪い、ちょっとタンマ……"],
+      "win":["何だよ、あっけねぇな","あ？何？今の全力？"]
     },
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":90,"np":0,"star":0}},
@@ -138,18 +86,103 @@ const DEFAULT_UNITS = [
       {"name":"矢避けの加護B","eff":[{"k":"evade","t":"self","v":0,"times":3},{"k":"def","t":"self","v":10,"turns":3}]},
       {"name":"仕切り直しC","eff":[{"k":"cleanse","t":"self","v":0},{"k":"heal","t":"self","v":200}]}
     ],
-    "ult":{"name":"刺し穿つ死棘の槍","c":"R","eff":[{"k":"dmg","t":"target","v":400},{"k":"instantDeath","t":"target","v":0,"chance":1}]}
+    "ult":{"name":"刺し穿つ死棘の槍","c":"G","eff":[{"k":"dmg","t":"target","v":400},{"k":"instantDeath","t":"target","v":0,"chance":1}]}
+  },
+  {
+    "id":"medusa", "name":"メドゥーサ", "cls":"ライダー", "cost":3, "hp":500,
+    "lines":{
+      "start":["あまり美味しそうな方ではありませんね……","気は乗りませんが……"],
+      "attack":["ふっ……！","逃がしません","そこです"],
+      "extra":["眠りなさい"],
+      "damage":["うっ……！"],
+      "skill":["動かないでください","御覚悟を","怒りましたよ……"],
+      "np":["優しく蹴散らしてあげましょう。『騎英の手綱』！"],
+      "npDamage":["そんなっ！？"],
+      "defeat":["ここまで、ですね……","後は……お任せします……","私の……負け、ですね……"],
+      "win":["生贄になったのは、そちらでしたね","見た目よりは楽しめました"]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":90,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":50,"np":10,"star":0},"post":{"c":"B","dmg":70,"np":15,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":40,"np":15,"star":0},"post":{"c":"B","dmg":70,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"ASC"},"post":{"c":"G","dmg":70,"np":0,"star":0,"eff":[{"k":"actsUp","t":"self","v":1,"times":1}]}},
+      {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":2},"post":{"c":"G","dmg":50,"np":0,"star":4}},
+      {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":2},"post":{"c":"G","dmg":50,"np":0,"star":4}}
+    ],
+    "skills":[
+      {"name":"魔眼A+","eff":[{"k":"stun","t":"picked","v":0,"turns":1,"chance":3}],"pick":"enemy"},
+      {"name":"怪力B","eff":[{"k":"atk","t":"self","v":30,"turns":1}]},
+      {"name":"鮮血神殿B","eff":[{"k":"np","t":"self","v":20},{"k":"onAtkNp","t":"self","v":10,"turns":3}]}
+    ],
+    "ult":{"name":"騎英の手綱","c":"G","eff":[{"k":"dmg","t":"enemy_all","v":200},{"k":"onAtkStar","t":"ally_all","v":3,"turns":3}]}
+  },
+  {
+    "id":"medea", "name":"メディア", "cls":"キャスター", "cost":3, "hp":500,
+    "lines":{
+      "start":["此処で消えてしまいなさい","始めようかしら"],
+      "attack":["残念……","これはどう？","邪魔よ","絶望なさい"],
+      "extra":["コリュキオン！ヘカティック・グライアー！"],
+      "damage":["きゃっ……！"],
+      "skill":["苦しんで貰おうかしら","指先一つで仕留めてあげる"],
+      "np":["術理、摂理、世の理、その万象……一切を原始に還さん。『破戒すべき全ての符』！！"],
+      "npDamage":["くうっ……！"],
+      "defeat":["もう……嫌……","今回は見逃してあげるわ……"],
+      "win":["あら、これで終わり？","敗者らしく、逃げるように立ち去るのね"]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":60,"np":0,"star":0},"post":{"c":"R","dmg":70,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":40,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":40,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"ASC"},"post":{"c":"W","label":"呪詛","eff":[{"k":"drain","t":"enemy_all","v":20}],"dmg":0,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":50,"np":10,"star":0},"post":{"c":"B","dmg":70,"np":15,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":2},"post":{"c":"G","dmg":40,"np":0,"star":4}}
+    ],
+    "skills":[
+      {"name":"高速神言A","eff":[{"k":"np","t":"self","v":80}]},
+      {"name":"金羊の皮","eff":[{"k":"heal","t":"self","v":50}]},
+      {"name":"キルケーの教えA","eff":[{"k":"cleanse","t":"picked","v":0},{"k":"onAtkNp","t":"picked","v":15,"turns":1}],"pick":"ally"}
+    ],
+    "ult":{"name":"破戒すべき全ての符","c":"B","eff":[{"k":"dmg","t":"target","v":250},{"k":"strip","t":"target","v":0},{"k":"np","t":"self","v":20}]}
+  },
+  {
+    "id":"kojiro", "name":"佐々木小次郎", "cls":"アサシン", "cost":1, "hp":400,
+    "lines":{
+      "start":["佐々木小次郎、推して参る","では、果たし合おうぞ","落としがいのある首よ"],
+      "attack":["ふっ","見えたか？","遅いな！"],
+      "extra":["見せ所よな！"],
+      "damage":["ちっ"],
+      "skill":["さて……仕掛け時と見たが如何に？","石火春雷、一刀にて証を示す"],
+      "np":["秘剣『燕返し』！"],
+      "npDamage":["何と……！"],
+      "defeat":["あっけないものよ……","不覚をとったか……"],
+      "win":["一念鬼神に通じる。人の身と侮ったな","刀身に歪みなし。まったくの無傷であった"]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":50,"np":0,"star":0},"post":{"c":"R","dmg":60,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":40,"np":10,"star":0},"post":{"c":"B","dmg":50,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":20,"np":0,"star":2},"post":{"c":"W","label":"無属性攻撃","eff":[{"k":"ignoreDef","t":"self","v":0,"turns":1,"times":1}],"dmg":60,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"ASC"},"post":{"c":"G","dmg":30,"np":0,"star":4}},
+      {"acts":1,"pre":{"c":"G","dmg":20,"np":0,"star":2},"post":{"c":"G","dmg":30,"np":0,"star":4}},
+      {"acts":1,"pre":{"c":"G","dmg":20,"np":0,"star":2},"post":{"c":"G","dmg":30,"np":0,"star":5}}
+    ],
+    "skills":[
+      {"name":"心眼(偽)A","eff":[{"k":"evade","t":"self","v":0,"turns":1},{"k":"critPow","t":"self","v":30,"turns":3}]},
+      {"name":"透過B+","eff":[{"k":"cleanseMental","t":"self","v":0},{"k":"star","t":"master","v":5}]},
+      {"name":"宗和の心得B++","eff":[{"k":"sureHit","t":"self","v":0,"turns":3},{"k":"onAtkStar","t":"self","v":3,"turns":3}]}
+    ],
+    "ult":{"name":"燕返し","c":"G","eff":[{"k":"dmg","t":"target","v":300},{"k":"star","t":"master","v":7}]}
   },
   {
     "id":"heracles", "name":"ヘラクレス", "cls":"バーサーカー", "cost":4, "hp":650,
     "lines":{
       "start":["■■■■■――！"],
       "attack":["■■■！","■■■■ッ！","■■――！"],
+      "extra":["■■■■■！"],
       "damage":["■■……！"],
       "skill":["■■■■■■！"],
       "np":["■■■■■■■■――ッ！"],
       "npDamage":["■■ッ……！"],
-      "defeat":["■■……"],
+      "defeat":["■■……","■■……■"],
       "win":["■■■■■■――！！"]
     },
     "faces":[
@@ -168,16 +201,45 @@ const DEFAULT_UNITS = [
     "ult":{"name":"射殺す百頭","c":"R","eff":[{"k":"dmg","t":"target","v":500},{"k":"defDown","t":"target","v":30,"turns":3}]}
   },
   {
+    "id":"hassan", "name":"呪腕のハサン", "cls":"アサシン", "cost":2, "hp":550,
+    "lines":{
+      "start":["瞬きの間に殺してみせよう","アサシンの技、侮らない事だ"],
+      "attack":["シッ！","シャアッ！","逃さぬ"],
+      "extra":["柘榴と散れ！"],
+      "damage":["ぐあっ！"],
+      "skill":["闇に潜むは我等が得手なり","貴様等鈍間に見切れるか？"],
+      "np":["魂なぞ飴細工よ。苦悶を溢せ『妄想心音』！"],
+      "npDamage":["このままではぁああ……っ！"],
+      "defeat":["ぐああああっ！","こんな……はずでは……！"],
+      "win":["フフフ、無様よな","死して屍を残すとは、恥を知るがいい"]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":40,"np":0,"star":0},"post":{"c":"R","dmg":70,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":40,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":25,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":2},"post":{"c":"G","dmg":40,"np":0,"star":4}},
+      {"acts":1,"pre":{"c":"ASC"},"post":{"c":"G","dmg":70,"np":0,"star":5}},
+      {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":3},"post":{"c":"G","dmg":40,"np":0,"star":5}},
+      {"acts":1,"pre":{"c":"G","dmg":20,"np":0,"star":4},"post":{"c":"G","dmg":40,"np":0,"star":6}}
+    ],
+    "skills":[
+      {"name":"投擲(短刀)B","eff":[{"k":"star","t":"master","v":5}]},
+      {"name":"自己改造C","eff":[{"k":"critPow","t":"self","v":30,"turns":3}]},
+      {"name":"風除けの加護A","eff":[{"k":"evade","t":"self","v":0,"times":3},{"k":"onAtkStar","t":"self","v":3,"turns":3}]}
+    ],
+    "ult":{"name":"妄想心音","c":"G","eff":[{"k":"dmg","t":"target","v":350},{"k":"instantDeath","t":"target","v":0,"chance":1}]}
+  },
+  {
     "id":"mash", "name":"マシュ・キリエライト", "cls":"シールダー", "cost":0, "hp":400,
     "lines":{
-      "start":["マシュ・キリエライト、戦闘を開始します。"],
-      "attack":["はあっ！","盾で押し切ります！","行きます！"],
-      "damage":["っ……まだ、立てます！"],
-      "skill":["守りは任せてください。"],
-      "np":["宝具、展開します！"],
-      "npDamage":["くっ……！"],
-      "defeat":["申し訳、ありません……"],
-      "win":["皆さん、無事ですか？"]
+      "start":["戦闘です。マスター、指示を！","武装完了……。行きます、先輩！","見ていてください、マスター"],
+      "attack":["はあっ！","ふっ！","やああっ！"],
+      "extra":["これで、倒れて……！"],
+      "damage":["くっ！"],
+      "skill":["ステータスアップ。頑張ります……！","ステータスアップ。これで耐えます","シールドエフェクト、発揮します！"],
+      "np":["宝具、展開します……！"],
+      "npDamage":["あぁ！"],
+      "defeat":["ごめん……なさい……","だめ……まだ……戦わなく、ちゃ……"],
+      "win":["戦闘終了……。あの、お役に立てましたか……？","戦闘終了。何とかなりましたね","見事な采配です、先輩"]
     },
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":40,"np":0,"star":0},"post":{"c":"R","dmg":40,"np":0,"star":0}},
@@ -193,59 +255,5 @@ const DEFAULT_UNITS = [
       {"name":"なし","eff":[]}
     ],
     "ult":{"name":"疑似展開/人理の礎","c":"B","eff":[{"k":"def","t":"ally_all","v":30,"turns":3}]}
-  },
-  {
-    "id":"kojiro", "name":"佐々木小次郎", "cls":"アサシン", "cost":1, "hp":400,
-    "lines":{
-      "start":["佐々木小次郎、推して参る。"],
-      "attack":["ふっ。","見えたか？","そこよ。"],
-      "damage":["おっと……"],
-      "skill":["風流よな。"],
-      "np":["秘剣――"],
-      "npDamage":["ぐっ……！"],
-      "defeat":["ここまでか……悪くはなかった。"],
-      "win":["良い立ち合いであった。"]
-    },
-    "faces":[
-      {"acts":1,"pre":{"c":"R","dmg":50,"np":0,"star":0},"post":{"c":"R","dmg":60,"np":0,"star":0}},
-      {"acts":1,"pre":{"c":"B","dmg":40,"np":10,"star":0},"post":{"c":"B","dmg":50,"np":20,"star":0}},
-      {"acts":1,"pre":{"c":"G","dmg":20,"np":0,"star":2},"post":{"c":"W","label":"無属性攻撃","eff":[{"k":"ignoreDef","t":"self","v":0,"turns":1,"times":1}],"dmg":60,"np":0,"star":0}},
-      {"acts":1,"pre":{"c":"ASC"},"post":{"c":"G","dmg":30,"np":0,"star":4}},
-      {"acts":1,"pre":{"c":"G","dmg":20,"np":0,"star":2},"post":{"c":"G","dmg":30,"np":0,"star":4}},
-      {"acts":1,"pre":{"c":"G","dmg":20,"np":0,"star":2},"post":{"c":"G","dmg":30,"np":0,"star":5}}
-    ],
-    "skills":[
-      {"name":"心眼(偽)A","eff":[{"k":"evade","t":"self","v":0,"turns":1},{"k":"critPow","t":"self","v":30,"turns":3}]},
-      {"name":"透過B+","eff":[{"k":"cleanseMental","t":"self","v":0},{"k":"star","t":"master","v":5}]},
-      {"name":"宗和の心得B++","eff":[{"k":"sureHit","t":"self","v":0,"turns":3},{"k":"onAtkStar","t":"self","v":3,"turns":3}]}
-    ],
-    "ult":{"name":"燕返し","c":"B","eff":[{"k":"dmg","t":"target","v":300},{"k":"star","t":"master","v":7}]}
-  },
-  {
-    "id":"hassan", "name":"呪腕のハサン", "cls":"アサシン", "cost":2, "hp":550,
-    "lines":{
-      "start":["ハサン・サッバーハ、ここに。"],
-      "attack":["シッ！","喰らえ。","逃さぬ。"],
-      "damage":["ぬうっ……"],
-      "skill":["影に紛れよう。"],
-      "np":["その心臓、握り潰す。"],
-      "npDamage":["ぐおっ……！"],
-      "defeat":["無念……"],
-      "win":["任務、完了。"]
-    },
-    "faces":[
-      {"acts":1,"pre":{"c":"R","dmg":40,"np":0,"star":0},"post":{"c":"R","dmg":70,"np":0,"star":0}},
-      {"acts":1,"pre":{"c":"B","dmg":40,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":25,"star":0}},
-      {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":2},"post":{"c":"G","dmg":40,"np":0,"star":4}},
-      {"acts":1,"pre":{"c":"ASC"},"post":{"c":"G","dmg":70,"np":0,"star":5}},
-      {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":3},"post":{"c":"G","dmg":40,"np":0,"star":5}},
-      {"acts":1,"pre":{"c":"G","dmg":20,"np":0,"star":4},"post":{"c":"G","dmg":40,"np":0,"star":6}}
-    ],
-    "skills":[
-      {"name":"投擲(短刀)B","eff":[{"k":"star","t":"master","v":5}]},
-      {"name":"自己改造C","eff":[{"k":"critPow","t":"self","v":30,"turns":3}]},
-      {"name":"風除けの加護A","eff":[{"k":"evade","t":"self","v":0,"times":3},{"k":"onAtkStar","t":"self","v":3,"turns":3}]}
-    ],
-    "ult":{"name":"妄想心音","c":"B","eff":[{"k":"dmg","t":"target","v":350},{"k":"instantDeath","t":"target","v":0,"chance":1}]}
   }
 ];
