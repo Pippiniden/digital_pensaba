@@ -216,7 +216,6 @@ function cmdCardHTML(d,c,opt={}){
       ${L.bg?`<img class="cc-bg" src="${esc(L.bg)}" alt="">`:''}
       ${unitImg(d,'card','ccimg',d?d.name:'')}
       ${L.frame?`<img class="cc-frame" src="${esc(L.frame)}" alt="${esc(label)}">`:`<span class="ccname">${label}</span>`}
-      ${d?clsIconTag(d.cls,'ccicon'):''}
       ${c.dmg!=null?`<span class="ccdmg">${c.dmg}</span>`:''}${ex&&!opt.small?`<span class="ccex">${ex}</span>`:''}</div>`;
   }
   const label=c.c==='ASC'?TERMS.asc:(c.label||TERMS.W);

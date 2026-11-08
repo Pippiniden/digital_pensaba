@@ -95,8 +95,10 @@ body[data-screen="battle"] #app{overflow:auto}
 /* 中央 */
 .stage{position:relative;overflow:hidden;padding:8px 14px 10px;border-radius:6px;border:1px solid var(--gold);
   background:radial-gradient(ellipse at 50% 60%,rgba(61,111,214,.4),rgba(10,21,51,.92) 70%);box-shadow:var(--frame),var(--shadow)}
-.circle{position:absolute;left:50%;top:50%;width:min(600px,80%);aspect-ratio:1;translate:-50% -50%;pointer-events:none;opacity:.42}
-.circle img{position:absolute;inset:0;width:100%;height:100%;mix-blend-mode:screen} /* 黒地の画像を透過して重ねる */
+.circle{position:absolute;left:50%;top:50%;width:min(600px,80%);aspect-ratio:1;translate:-50% -50%;pointer-events:none;opacity:.42;mix-blend-mode:screen}
+/* 黒地の画像を screen で透過して重ねる。opacity/translate があると .circle の中で合成が閉じて黒い四角が出るので、.circle 自体に掛ける */
+.circle img{position:absolute;inset:0;width:100%;height:100%}
+.circle .mc-i{mix-blend-mode:screen}
 .circle .mc-o{animation:spin 120s linear infinite}
 .circle .mc-i{animation:spin 80s linear infinite reverse}
 @keyframes spin{to{rotate:360deg}}
@@ -123,7 +125,6 @@ body[data-screen="battle"] #app{overflow:auto}
 .lane .it.al:hover .acard::after{content:'戻す';position:absolute;inset:0;z-index:3;display:grid;place-items:center;font:700 13px "Noto Serif JP",serif;color:#fff;text-shadow:0 0 4px #000}
 .acard,.aslot{position:relative;width:80px;aspect-ratio:2/3;border-radius:5px;overflow:hidden}
 .acard{border:2px solid var(--gold);background:var(--panel2);box-shadow:0 0 0 1px var(--gold-lo),0 0 14px rgba(246,227,161,.4),0 4px 10px rgba(0,0,0,.5);transition:transform .12s,filter .12s}
-.acard .pcls{width:20px;height:20px;top:3px;left:3px}
 .aord{position:absolute;right:3px;top:3px;z-index:2;font:700 9px var(--serif);color:var(--gold-hi);padding:0 4px;background:rgba(6,13,34,.8);border:1px solid var(--gold-lo);border-radius:2px}
 .aslot{border:1px dashed var(--gold-lo);background:rgba(6,13,34,.35)}
 .svt.allocable{outline-style:solid;outline-color:color-mix(in srgb,var(--gold-hi) 70%,transparent)}

@@ -125,7 +125,7 @@ function allocLaneHTML(){
   const slots=Array.from({length:RULES.actionsMax-cs.length},()=>`<div class="it"><div class="aslot"></div><span>&nbsp;</span></div>`).join('');
   return cs.map(({u,k})=>{ const d=D(u.def);
     return `<div class="it al" data-key="${u.uid}#${k}" ${own?`data-a="alloc" data-uid="${u.uid}" data-d="-1" title="クリックで戻す"`:''}>
-      <div class="acard">${unitImg(d,'card','pimg',d.name)}${clsIconTag(d.cls,'pcls')}<span class="aord">${ORD[u.idx]}</span></div>
+      <div class="acard">${unitImg(d,'card','pimg',d.name)}<span class="aord">${ORD[u.idx]}</span></div>
       <span title="${dn(u)}">${dn(u)}</span></div>`; }).join('')+slots;
 }
 // 新しく並んだカードを、そのサーヴァントの肖像の位置から飛ばしてくる（描き直しても既にあるカードは動かさない）

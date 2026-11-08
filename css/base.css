@@ -126,9 +126,7 @@ table.faces th{color:var(--sub)}
 /* 枠の画像があるときは CSS の枠を消す */
 .ccard.hasframe{border:0;box-shadow:0 3px 10px rgba(0,0,0,.5)}
 .ccard.hasframe::after{display:none}
-.ccname,.ccdmg,.ccex,.ccicon{z-index:3}
-.ccicon{position:absolute;top:3px;right:3px;width:22px;height:22px;filter:drop-shadow(0 1px 2px #000)}
-.ccard.sm .ccicon{width:13px;height:13px;top:1px;right:1px}
+.ccname,.ccdmg,.ccex{z-index:3}
 .ccname{position:absolute;left:0;right:0;bottom:4px;text-align:center;font-family:var(--serif);font-weight:700;font-size:12px;letter-spacing:.06em;color:#fff;
   text-shadow:0 0 4px var(--cc),0 1px 2px #000}
 .ccard.plain .ccname{top:50%;bottom:auto;transform:translateY(-50%);padding:0 4px;line-height:1.3}
