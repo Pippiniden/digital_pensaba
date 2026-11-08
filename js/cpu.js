@@ -45,6 +45,7 @@ function cpuDecide(){
       return uid ? ['rollAction',{uid}] : ['toTarget'];
     }
     case 'target': {
+      if(G.targetAll) return ['resolve'];
       const best=cpuBestTarget(easy);
       return G.target!==best.uid ? ['cardClick',{uid:best.uid}] : ['resolve'];
     }

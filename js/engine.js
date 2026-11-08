@@ -60,6 +60,8 @@ const sumCost = ids=>ids.reduce((s,id)=>s+D(id).cost,0);
 const totalAlloc = ()=>Object.values(G.alloc).reduce((a,b)=>a+b,0);
 const remainingRolls = ()=>Object.entries(G.alloc).reduce((s,[uid,n])=>U(uid).out?s:s+n-G.rolled.filter(r=>r.uid===uid).length,0);
 function makeUnit(pid,idx,id){ return {uid:`p${pid}u${idx}`,pid,idx,def:id,hp:D(id).hp,np:0,asc:false,out:false,used:[false,false,false],fx:[],face:null}; }
+// 宝具に「攻撃対象」を使う効果がない（全体宝具・補助宝具）なら、対象を選ばず敵全体が対象
+const ultNoTarget = u=>!D(u.def).ult.eff.some(e=>e.t==='target');
 function targetCandidates(){ const es=alive(1-G.cur); const t=es.filter(u=>has(u,'taunt')); return t.length?t:es; }
 function pendingSkill(){ return G.pending ? D(U(G.pending.uid).def).skills[G.pending.si] : null; }
 function pickValid(u){
@@ -316,7 +318,7 @@ function resolveUlt(u,tgt){
 }
 function resolveDamage(){
   const tgt=U(G.target);
-  log(`⑥ ダメージフェイズ（攻撃対象：${nm(tgt)}）`,'h');
+  log(`⑥ ダメージフェイズ（攻撃対象：${G.targetAll?'敵全体':nm(tgt)}）`,'h');
   phaseFx('BATTLE','ダメージフェイズ',{w:800}); // 帯が消えてから攻撃カードを出す
   if(G.ult){ resolveUlt(U(G.ult),tgt); }
   else {
@@ -394,7 +396,7 @@ function npWinCheck(){
   }
 }
 function beginTurn(){
-  Object.assign(G,{phase:'actRoll',actRolled:false,maxActs:{},alloc:{},rolled:[],ult:null,target:null,gen:0,pending:null,copy:null});
+  Object.assign(G,{phase:'actRoll',actRolled:false,maxActs:{},alloc:{},rolled:[],ult:null,target:null,targetAll:false,gen:0,pending:null,copy:null});
   log(`━ ターン${G.turn}：${esc(G.players[G.cur].name)} ━`,'h');
   phaseFx(`TURN ${G.turn}`,`${G.players[G.cur].name}の手番`,{big:true,pid:G.cur});
   // ① ターン開始：このプレイヤーが付与した効果の残りターン-1
@@ -450,7 +452,9 @@ function doSkill(u,si,picked){
 }
 function toTargetPhase(){
   G.phase='target'; log('⑤ 攻撃対象決定','h'); phaseFx('TARGET','攻撃対象の選択');
-  const c=targetCandidates(); if(c.length===1) G.target=c[0].uid;
+  const c=targetCandidates();
+  if(G.ult&&ultNoTarget(U(G.ult))){ G.targetAll=true; G.target=c[0].uid; return; } // 全体宝具：最初から敵全体を選んだ状態
+  if(c.length===1) G.target=c[0].uid;
 }
 
 // =====================================================================
@@ -589,6 +593,7 @@ const ACTIONS = {
     const u=U(uid);
     if(G.copy){ const c=U(G.copy.uid); if(copyCands(c).includes(u)) doCopy(c.uid,u); return; }
     if(G.pending){ if(pickValid(u)){ const p=G.pending; G.pending=null; doSkill(U(p.uid),p.si,u); } return; }
+    if(G.phase==='target' && G.targetAll){ if(u.pid!==G.cur&&!u.out&&!isCpu(G.cur)) resolveDamage(); return; } // 全体宝具：敵を押すと発動
     if(G.phase==='target' && targetCandidates().includes(u)){
       if(G.target===uid && !isCpu(G.cur)) resolveDamage(); // 選択中の相手をもう一度押すと確定
       else G.target=uid;

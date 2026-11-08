@@ -62,13 +62,16 @@ function svtHTML(u){
   const allocable=canAllocMore(u);
   const pickable=allocable || (G.copy&&copyCands(U(G.copy.uid)).includes(u)) || (G.pending&&pickValid(u)) || (!G.pending&&!G.copy&&ph==='target'&&targetCandidates().includes(u));
   const acting=G.ult?G.ult===u.uid:(G.alloc[u.uid]||0)>0;
-  const cls=['svt',sh.out?'out':'',pickable?'pickable':'',G.target===u.uid&&!sh.out?'targeted':'',acting&&u.pid===G.cur?'acting':''].join(' ');
+  const tgt=(G.targetAll?u.pid!==G.cur&&!u.out&&['target','end'].includes(ph):G.target===u.uid)&&!sh.out;
+  // スキルを使える自分のサーヴァント（スキル欄が隠れる小さい表示のとき、ⓘ を光らせて知らせる）
+  const canSk=u.pid===G.cur&&ph==='skill'&&!G.pending&&!cpuActing()&&(canSkill(u)&&d.skills.some((s,i)=>!u.used[i]&&(i<2||u.asc))||ultManual()&&!G.ult&&canUlt(u)&&u.np>=RULES.ultCost);
+  const cls=['svt',sh.out?'out':'',pickable?'pickable':'',tgt?'targeted':'',acting&&u.pid===G.cur?'acting':'',canSk?'canskill':''].join(' ');
   const fx=u.fx.map(e=>`<span class="chip fx ${FX[e.k].buff?'buff':'debuff'}">${fxText(e)}</span>`).join('');
   // スマホの簡易表示用：効果の数（強化▲・弱体▼）。中身は拡大ウィンドウで見る
   const nb=u.fx.filter(e=>FX[e.k].buff===true).length, nd=u.fx.filter(e=>FX[e.k].buff===false).length;
   const pfx=nb||nd?`<span class="pfx">${nb?`<b class="buff">▲${nb}</b>`:''}${nd?`<b class="debuff">▼${nd}</b>`:''}</span>`:'';
   return `<div class="${cls}${allocable?' allocable':''}" data-uid="${u.uid}" ${allocable?`data-a="alloc" data-d="1" title="クリックで行動を1回追加"`:pickable?`data-a="cardClick"`:''}>
-    <div class="portrait">${unitImg(d,'face','pimg',d.name)}
+    <div class="svin"><div class="portrait">${unitImg(d,'face','pimg',d.name)}
       ${clsIconTag(d.cls,'pcls')}<span class="pord">${ORD[u.idx]}</span>
       ${u.asc?`<span class="pasc">${TERMS.asc}</span>`:''}
       ${sh.out?`<span class="pout">${TERMS.out}</span>`:''}
@@ -81,7 +84,7 @@ function svtHTML(u){
       ${ctlHTML(u)}
       <div class="fxs" title="${esc(u.fx.map(fxText).join(' / '))}">${fx}</div>
       ${skillBtns(u,d)}
-    </div>
+    </div></div>
   </div>`;
 }
 function sideHTML(pid,pos){
@@ -110,6 +113,7 @@ function promptHTML(){
       if(G.copy) return `<p class="hl">${nm(U(G.copy.uid))}：ロールする${TERMS.unit}を選んでください（敵味方どちらでも・${TERMS.asc}後コマンドを使用）</p>`;
       return `<p>行動する${TERMS.unit}の「ロール」でコマンドを決めます（残り${left}回）。</p><button class="primary big" data-a="toTarget" ${left?'disabled':''}>攻撃対象の選択へ</button>`; }
     case 'target':
+      if(G.targetAll) return `<p>${TERMS.ult}「${esc(D(U(G.ult).def).ult.name)}」は<b class="hl">敵全体</b>が対象です。</p><button class="primary big" data-a="resolve">⚔ ${TERMS.ult}発動</button>`;
       return `<p>相手の${TERMS.unit}をクリックして攻撃対象を選びます${targetCandidates().some(u=>has(u,'taunt'))?'（ターゲット集中あり）':''}。</p><p>対象：<b>${G.target?nm(U(G.target)):'未選択'}</b></p><button class="primary big" data-a="resolve" ${G.target?'':'disabled'}>⚔ 攻撃</button>`;
     case 'end':
       return `<p>ダメージフェイズが終わりました。</p><button class="primary big" data-a="endTurn">ターン終了</button>`;
@@ -360,6 +364,7 @@ function render(){
   const app=document.querySelector('#app'), hinfo=document.querySelector('#hinfo'), spd=document.querySelector('#spd'), lb=document.querySelector('#logbtn'), ab=document.querySelector('#autobtn');
   const screen=G.phase==='mode'?'mode':G.phase==='setup'?'setup':'battle';
   document.body.dataset.screen=screen;
+  document.body.dataset.phase=G.phase;
   if(G.phase!=='over'){ UI.result=false; UI.resultShown=false; UI.endReady=false; }
   document.body.classList.toggle('lock',cpuActing());
   spd.hidden=!(G.mode==='cpu'&&G.phase!=='mode');
@@ -404,7 +409,7 @@ function autoMove(){
       const uid=Object.keys(G.alloc).find(id=>!U(id).out&&G.rolled.filter(r=>r.uid===id).length<G.alloc[id]);
       return uid?['rollAction',{uid}]:['toTarget'];
     }
-    case 'target': return targetCandidates().length===1&&G.target ? ['resolve'] : null;
+    case 'target': return (G.targetAll||targetCandidates().length===1)&&G.target ? ['resolve'] : null;
     case 'end': return ['endTurn'];
   }
   return null;

@@ -6,8 +6,8 @@ body.game{height:100vh;height:100dvh;display:flex;flex-direction:column;overflow
 body.game>header{flex:none}
 body.game #app{flex:1;min-height:0;overflow:auto}
 body[data-screen="setup"] #app{overflow:hidden}
-/* 対戦画面：高さが足りないときは切り取らずにスクロール（ボタンが隠れないように） */
-body[data-screen="battle"] #app{overflow:auto}
+/* 対戦画面：どの画面サイズでもスクロールなしで1画面に収める（中身は高さに合わせて縮む） */
+body[data-screen="battle"] #app{overflow:hidden}
 .lock .field button:not(.info),.lock .roster,.lock .setbtns,.lock .slots{pointer-events:none}
 .big{font-size:15px;padding:7px 22px}
 
@@ -28,18 +28,21 @@ body[data-screen="battle"] #app{overflow:auto}
   color:#1a1206;background:linear-gradient(180deg,var(--gold-hi),var(--gold));border:1px solid var(--gold-lo);box-shadow:0 0 0 2px var(--panel2),0 0 10px rgba(246,227,161,.6)}
 
 /* ---------- 対戦画面 ---------- */
-.battle{height:100%;min-height:640px;display:grid;grid-template-columns:minmax(0,1fr) 300px}
+.battle{height:100%;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 300px}
 .battle.nolog{grid-template-columns:minmax(0,1fr)}
-.field{position:relative;min-height:0;display:grid;grid-template-rows:minmax(200px,1fr) auto minmax(200px,1fr);gap:8px;padding:10px 12px}
+.field{position:relative;min-height:0;display:grid;grid-template-rows:minmax(0,1fr) auto minmax(0,1fr);gap:8px;padding:10px 12px}
 .side{min-height:0;display:flex;flex-direction:column;gap:5px}
+.sidebar{flex:none}
 .side.bottom{flex-direction:column-reverse}
 .sidebar{display:flex;align-items:center;gap:8px;font-family:var(--serif);font-size:14px;padding:0 4px}
 .stars{font-size:12px;color:var(--gold-hi);padding:0 10px;border:1px solid var(--gold-lo);border-radius:999px;background:rgba(6,13,34,.6)}
 .stars b{font-size:14px}
-.svts{flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.svts{flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:minmax(0,1fr);gap:10px}
 .svts.solo{grid-template-columns:minmax(0,440px);justify-content:center} /* 1騎だけのルール：中央に置く */
 
-.svt{position:relative;min-height:0;display:grid;grid-template-columns:clamp(80px,34%,150px) minmax(0,1fr);gap:8px;padding:6px;border-radius:6px;border:1px solid var(--gold);
+/* サーヴァントのカード：自分の大きさ（コンテナ）に合わせて中身を切り替える
+   横長 → 肖像の右に情報 / 縦長（スマホ縦など）→ 肖像の下にHP・NP / 低い → 効果やスキル欄を隠して ⓘ で見る */
+.svt{container:svt/size;position:relative;min-height:0;min-width:0;padding:6px;border-radius:6px;border:1px solid var(--gold);
   background:linear-gradient(160deg,#16295a,var(--panel) 45%,var(--panel2));box-shadow:var(--frame),var(--shadow);transition:box-shadow .15s,transform .15s}
 .side.turn .svt.acting{box-shadow:var(--frame),0 0 0 1px var(--gold-hi),0 0 16px rgba(246,227,161,.35)}
 .svt.out{filter:grayscale(1) brightness(.55)}
@@ -50,7 +53,8 @@ body[data-screen="battle"] #app{overflow:auto}
 .svt.hit{animation:hit .32s}
 @keyframes hit{0%,100%{transform:none}20%{transform:translateX(-5px)}40%{transform:translateX(4px)}60%{transform:translateX(-3px)}80%{transform:translateX(2px)}}
 
-.portrait{position:relative;min-height:0;border-radius:4px;overflow:hidden;background:var(--panel2);border:1px solid var(--gold-lo);box-shadow:inset 0 0 0 1px var(--blue)}
+.svin{height:100%;display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px}
+.portrait{width:min(38cqw,75cqh);position:relative;min-height:0;border-radius:4px;overflow:hidden;background:var(--panel2);border:1px solid var(--gold-lo);box-shadow:inset 0 0 0 1px var(--blue)}
 .portrait::after{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(180deg,transparent 55%,rgba(6,13,34,.85));box-shadow:inset 0 0 0 1px rgba(127,166,255,.35)}
 .pord{position:absolute;top:5px;right:5px;z-index:2;font:700 10px var(--serif);color:var(--gold-hi);padding:0 5px;background:rgba(6,13,34,.75);border:1px solid var(--gold-lo);border-radius:2px}
 .pasc{position:absolute;top:34px;left:4px;z-index:2;font-size:10px;font-weight:700;padding:0 5px;border-radius:2px;color:#1a1206;background:linear-gradient(180deg,var(--gold-hi),var(--gold))}
@@ -111,13 +115,17 @@ body[data-screen="battle"] #app{overflow:auto}
 .steps span{font-size:10.5px;padding:2px 8px;color:var(--sub);background:rgba(6,13,34,.6);border:1px solid var(--line);clip-path:polygon(6px 0,100% 0,calc(100% - 6px) 100%,0 100%)}
 .steps span.done{opacity:.45}
 .steps span.on{color:#1a1206;font-weight:700;background:linear-gradient(180deg,var(--gold-hi),var(--gold));border-color:var(--gold-hi)}
-.stagebody{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:16px;align-items:center} /* コマンド列はいつも中央 */
+.stagebody{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);grid-template-areas:"prompt lane crit";gap:16px;align-items:center} /* コマンド列はいつも中央 */
+.stagebody>.prompt{grid-area:prompt}
+.stagebody>.lane{grid-area:lane}
+.stagebody>.critbox{grid-area:crit}
 .critbox{justify-self:end;min-width:120px}
 .prompt p{margin:0 0 6px;font-size:13px}
-.lane{display:flex;align-items:flex-start;justify-content:center;gap:10px;height:140px;padding-top:4px;min-width:280px;position:relative} /* 高さ固定：中身で中央の帯の高さが変わらないように */
-.lane .it{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10.5px;color:var(--sub);width:80px;text-align:center;animation:dealin .25s ease-out}
+/* 高さ固定：中身で中央の帯の高さが変わらないように。画面の高さに合わせて縮む（カードの幅も連動） */
+.lane{--lh:clamp(84px,15vh,140px);--cw:calc((var(--lh) - 20px)*.667);display:flex;align-items:flex-start;justify-content:center;gap:10px;height:var(--lh);padding-top:4px;min-width:280px;position:relative}
+.lane .it{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10.5px;color:var(--sub);width:var(--cw);text-align:center;animation:dealin .25s ease-out}
 .lane .it>span{display:block;width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap} /* 長い名前は1行で省略 */
-.lane .ccard{width:80px}
+.lane .ccard,.lane .acard,.lane .aslot{width:var(--cw)}
 @keyframes dealin{from{opacity:0;transform:translateY(12px) scale(.9)}to{opacity:1;transform:none}}
 .lanehint{align-self:center;opacity:.7}
 /* 行動配分：サーヴァントのカードを中央に並べる */
@@ -391,21 +399,35 @@ body[data-screen="battle"] #app{overflow:auto}
   .setbody{grid-template-columns:minmax(0,1fr) 340px}
   .sethead{grid-template-columns:minmax(0,1fr) auto;}
 }
+/* 対戦画面以外（編成・モード選択）は、狭い・低い画面では縦に並べてスクロール */
 @media (max-width:860px), (max-height:620px){
-  body.game{height:auto;min-height:100vh;overflow:auto}
-  body.game #app,body[data-screen] #app{overflow:visible}
-  .battle,.setup{height:auto}
-  .field{grid-template-rows:auto auto auto}
-  .svt{min-height:200px}
+  body.game:not([data-screen="battle"]){height:auto;min-height:100vh;overflow:auto}
+  body.game:not([data-screen="battle"]) #app{overflow:visible}
+  .setup{height:auto}
   .setbody{grid-template-columns:1fr}
   .roster{overflow:visible;flex:none}
 }
 @media (max-width:860px){
-  .svts{grid-template-columns:1fr}
-  .stagebody{grid-template-columns:1fr}
-  .lane{min-width:0}
   .steps{margin-left:0}
   .sethead{grid-template-columns:1fr}
+}
+/* 幅が狭い：中央は「説明とボタン｜クリティカル」の下にコマンド列 */
+@media (max-width:640px){
+  .stagebody{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"prompt crit" "lane lane";gap:6px 10px}
+  .lane{min-width:0}
+}
+/* 高さが低い：中央の帯を詰める */
+@media (max-height:560px){
+  header{padding-block:4px}
+  .field{gap:5px;padding:6px 10px}
+  .stage{padding:4px 10px 6px}
+  .stagetop{margin-bottom:2px}
+  .turnno b{font-size:16px}
+  .steps{display:none}
+  .prompt p:not(.hl):not(.win){display:none}
+  .win{font-size:22px;margin-bottom:2px}
+  .big{padding:4px 16px;font-size:14px}
+  .lane{--lh:clamp(70px,17vh,110px)}
 }
 /* ---------- スマホ：ユニットはカード・HP・NPだけ。スキルや効果は拡大（i）ウィンドウで ---------- */
 @media (max-width:860px){
@@ -418,38 +440,20 @@ body[data-screen="battle"] #app{overflow:auto}
   header{padding:8px 12px;flex-wrap:nowrap;gap:8px}
   header h1{font-size:16px;flex:none}
   #hinfo{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11.5px}
-  .svts.solo{grid-template-columns:minmax(0,140px)}
+  .svts.solo{grid-template-columns:minmax(0,180px)}
 
   .field{gap:6px;padding:8px}
-  .svts{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
-  .svt{min-height:0;grid-template-columns:1fr;gap:4px;padding:4px}
-  .portrait{aspect-ratio:1}
-  .pcls{width:20px;height:20px}
-  .pasc{top:26px}
-  .pout{font-size:14px;letter-spacing:.1em}
-  .pfx{display:flex}
-  .proll .ccard{width:44px}
-  .sname b{font-size:11px}
-  .info{width:24px;height:24px}
-  /* HP・NP はバーの上に文字を重ねて1行に */
-  .gauge{position:relative;display:block}
-  .gauge .bar{height:14px}
-  .gauge>span,.gauge>b{position:absolute;top:0;z-index:1;line-height:14px;text-shadow:0 1px 2px #000,0 0 3px #000}
-  .gauge>span{left:4px;font-size:9px;color:#fff}
-  .gauge>b{right:4px;min-width:0;font-size:10.5px}
-  .gauge>b small{color:#dfe6f5}
-  .svt .fxs,.svt .sks{display:none}
+  .svts{gap:6px}
+  .svt{padding:4px}
   .ctl{flex-wrap:wrap;gap:4px;font-size:11px}
   .ctl .primary{padding:2px 8px;font-size:12px}
   .sidebar{font-size:13px}
   .stage{padding:6px 10px 8px}
   .stagetop{gap:4px 10px;margin-bottom:4px}
   .steps span{font-size:9.5px;padding:1px 6px}
-  .stagebody{gap:6px}
   .prompt p{font-size:12px;margin-bottom:4px}
-  .lane{height:auto;min-height:100px;gap:6px}
-  .lane .it,.lane .ccard{width:64px}
-  .critbox{justify-self:center;flex-direction:row;gap:8px;min-width:0;padding:3px 10px}
+  .lane{gap:6px}
+  .critbox{justify-self:end;min-width:0;padding:3px 10px}
   .critbox b{font-size:16px}
   .udops .sks{grid-template-columns:1fr 1fr}
   /* フェイズの帯：狭い画面では文字を詰めて小さく（VICTORY などがはみ出さないように） */
@@ -459,3 +463,46 @@ body[data-screen="battle"] #app{overflow:auto}
   .phasefx.banner .pf-band b{font-size:26px}
   .pf-band small{letter-spacing:.08em}
 }
+
+/* ---------- サーヴァントのカード：大きさに応じた表示（コンテナクエリ） ---------- */
+/* 小さい表示のときの共通：HP・NP はバーの上に文字を重ねて1行に */
+@container svt (max-height:150px) or (max-aspect-ratio:1/1){
+  .gauge{position:relative;display:block}
+  .gauge .bar{height:14px}
+  .gauge>span,.gauge>b{position:absolute;top:0;z-index:1;line-height:14px;text-shadow:0 1px 2px #000,0 0 3px #000}
+  .gauge>span{left:4px;font-size:9px;color:#fff}
+  .gauge>b{right:4px;min-width:0;font-size:10.5px}
+  .gauge>b small{color:#dfe6f5}
+  .sks{display:none}
+  .pcls{width:20px;height:20px}
+  .pasc{top:26px}
+  .pord{font-size:9px}
+  .pout{font-size:14px;letter-spacing:.1em}
+  .info{width:24px;height:24px}
+  /* スキル欄が隠れているので、使えるときは ⓘ を光らせる */
+  .canskill .info{color:#1a1206;border-color:var(--gold-hi);background:linear-gradient(180deg,var(--gold-hi),var(--gold));animation:npbtn 1.1s ease-in-out infinite alternate}
+}
+/* 効果の一覧は数だけ（▲▼）に */
+@container svt (max-height:200px) or (max-aspect-ratio:1/1){
+  .fxs{display:none}
+  .pfx{display:flex}
+}
+/* 縦長：肖像の下に名前・HP・NP */
+@container svt (max-aspect-ratio:1/1){
+  .svin{display:flex;flex-direction:column;gap:4px}
+  .portrait{width:100%;flex:1 1 0;min-height:24px}
+  .sinfo{flex:none;gap:3px}
+  .sname b{font-size:11px}
+  .proll .ccard{width:44px}
+}
+/* とても低い：名前を肖像に重ねて詰める */
+@container svt (max-height:84px) and (min-aspect-ratio:1/1){
+  .sinfo{gap:2px;justify-content:center}
+  .sname b{font-size:11px}
+  .gauge .bar{height:12px}
+  .gauge>span,.gauge>b{line-height:12px}
+  .pcls,.pasc,.pord{display:none}
+  .proll .ccard{width:28px}
+  .proll .die{width:16px;height:16px;font-size:9px}
+}
+
