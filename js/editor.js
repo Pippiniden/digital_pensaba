@@ -69,6 +69,7 @@ function fixEff(e){
   else if(!f.perm&&e.turns==null&&e.times==null) e.turns=3;
   if((e.k==='poison'||e.k==='burn')&&!e.v) e.v=RULES.dot;
   if(!f.color) delete e.color;
+  if(e.k==='dmg'||e.k==='copyRoll') delete e.at;
   if(e.k==='star'&&e.t==='self') e.t='master';
 }
 
@@ -174,7 +175,7 @@ function renderForm(){
         <label>ルビ（任意）<input data-p="ult.ruby" value="${esc(u.ult.ruby||'')}" placeholder="よみがな"></label>
         <label>コマンドの色<select data-p="ult.c">${['R','B','G'].map(c=>opt(c,TERMS[c],u.ult.c)).join('')}</select></label>
       </div>
-      ${effList('ult.eff',u.ult.eff,'ult')}
+      ${effList('ult.eff',u.ult.eff,'ult','ult')}
       <div class="preview" data-prev="ult">${esc(effsText(u.ult.eff))}</div>
     </div>
   </section>`;
@@ -184,10 +185,10 @@ function cmdEd(path,c,isPre){
   const label=t=>t==='ASC'?`${TERMS.ascFull}面`:t==='W'?`${TERMS.W}（白）`:TERMS[t];
   const select=`<select class="ctype" data-act="cmdType" data-path="${path}" aria-label="コマンドの種類">${types.map(t=>opt(t,label(t),c.c)).join('')}</select>`;
   let body='';
-  if(['R','B','G'].includes(c.c)) body=`<div class="cmdnums">${numIn(path+'.dmg',c.dmg,'ダメージ')}${numIn(path+'.np',c.np,TERMS.gauge)}${numIn(path+'.star',c.star,'★')}</div>${effList(path+'.eff',c.eff||[],'special')}`;
+  if(['R','B','G'].includes(c.c)) body=`<div class="cmdnums">${numIn(path+'.dmg',c.dmg,'ダメージ')}${numIn(path+'.np',c.np,TERMS.gauge)}${numIn(path+'.star',c.star,'★')}</div>${effList(path+'.eff',c.eff||[],'special','cmd')}`;
   else if(c.c==='W') body=`<input data-p="${path}.label" value="${esc(c.label)}" placeholder="特殊行動の名前">
     <div class="cmdnums">${numIn(path+'.dmg',c.dmg||0,'ダメージ')}${numIn(path+'.np',c.np,TERMS.gauge)}${numIn(path+'.star',c.star,'★')}</div>
-    <p class="sub small nm">ダメージを入れると無属性の攻撃になります（チェインには数えません）。</p>${effList(path+'.eff',c.eff,'special')}`;
+    <p class="sub small nm">ダメージを入れると無属性の攻撃になります（チェインには数えません）。</p>${effList(path+'.eff',c.eff,'special','W')}`;
   else if(c.c==='ASC') body=`<span class="sub small">出たら${TERMS.ascFull}する（1行動として数える）</span>`;
   return `<div class="cmded c-${esc(c.c)}">${select}${body}</div>`;
 }
@@ -204,11 +205,18 @@ function skillEd(s,i){
     <div class="preview" data-prev="skill" data-i="${i}">${esc(effsText(s.eff,s.pick))}</div>
   </div>`;
 }
-function effList(path,effs,ctx){
-  return `<div class="effs">${effs.map((e,j)=>effRow(path,j,e,ctx,effs.length)).join('')}
+// atKind：攻撃に付いた効果のタイミングの既定（'W'＝特殊行動 / 'cmd'＝通常コマンド / 'ult'＝宝具）。スキルでは渡さない
+function effList(path,effs,ctx,atKind){
+  return `<div class="effs">${effs.map((e,j)=>effRow(path,j,e,ctx,effs.length,atKind)).join('')}
     <button class="small add" data-act="effAdd" data-path="${path}" data-ctx="${ctx}">＋ 効果</button></div>`;
 }
-function effRow(path,j,e,ctx,n){
+// 攻撃前／攻撃後の選択（ダメージ効果と「他のサーヴァントをロール」には不要）
+function effAtSel(p,e,atKind){
+  if(!atKind||e.k==='dmg'||e.k==='copyRoll') return '';
+  const def=EFF_AT_DEFAULT[atKind], defLabel=def==='order'?'並び順':EFF_AT[def];
+  return `<label class="mini" title="攻撃（ダメージ）の前に適用するか、後に適用するか"><span>タイミング</span><select data-p="${p}.at" data-t="optstr">${opt('',`既定（${defLabel}）`,e.at||'')}${Object.entries(EFF_AT).map(([k,v])=>opt(k,v,e.at)).join('')}</select></label>`;
+}
+function effRow(path,j,e,ctx,n,atKind){
   const p=`${path}.${j}`, f=FX[e.k]||{};
   const kinds=Object.keys(FX).filter(k=>!FX[k].only||FX[k].only===ctx);
   const tg=TGT_BY_CTX[ctx].includes(e.t)?TGT_BY_CTX[ctx]:[...TGT_BY_CTX[ctx],e.t];
@@ -219,6 +227,7 @@ function effRow(path,j,e,ctx,n){
     ${f.inst?'':(f.timesOnly?'':optNum(p+'.turns',e.turns,'ターン'))+optNum(p+'.times',e.times,'回数')}
     ${FX[e.k]&&FX[e.k].color?`<label class="mini"><span>色</span><select data-p="${p}.color" data-t="optstr">${opt('','すべて',e.color||'')}${['R','B','G'].map(c=>opt(c,TERMS[c],e.color)).join('')}</select></label>`:''}
     <label class="mini"><span>確率</span><select data-p="${p}.chance" data-t="optnum">${opt('','必ず',e.chance??'')}${[1,2,3,4,5].map(k=>opt(k,`ロール${k}以下`,e.chance)).join('')}</select></label>
+    ${effAtSel(p,e,atKind)}
     <span class="effops">
       <button data-act="effMove" data-path="${path}" data-i="${j}" data-d="-1" ${j?'':'disabled'} title="上へ">↑</button>
       <button data-act="effMove" data-path="${path}" data-i="${j}" data-d="1" ${j<n-1?'':'disabled'} title="下へ">↓</button>

@@ -97,7 +97,7 @@ function reveal(ev){
   uids.forEach(redrawSvt);
   if(lane||G.phase==='actRoll') redrawLane(); // 行動配分中は、出目が出たサーヴァントのカードを中央に並べる
 }
-function redrawLane(){ const l=document.querySelector('.lane'); if(l){ l.innerHTML=laneHTML(); animateLane(); } }
+function redrawLane(){ const l=document.querySelector('.lane'); if(l){ setHTML(l,laneHTML()); animateLane(); } }
 
 // 攻撃：コマンドカードを中央で大きく見せ、攻撃対象へ飛ばす
 function showAtk(L,ev){
@@ -195,8 +195,7 @@ function showDmg(L,ev,r){
 function redrawSvt(uid){
   const el=document.querySelector(`.svt[data-uid="${uid}"]`), u=U(uid);
   if(!el||!u) return;
-  const t=document.createElement('div'); t.innerHTML=svtHTML(u).trim();
-  el.replaceWith(t.firstChild);
+  replaceHTML(el,svtHTML(u)); // 肖像の画像は残したまま差し替える（チカチカ防止）
 }
 
 // スキル使用：中央の帯（.stage）の上に、スキル名と効果のパネルを出す（続くセリフの吹き出しと重ねて見せる）
