@@ -24,7 +24,7 @@ function normEff(e){
 function normCmd(c){
   c=c||{};
   if(c.c==='ASC') return {c:'ASC'};
-  if(c.c==='W') return {c:'W', label:String(c.label||''), eff:(c.eff||[]).map(normEff), np:num(c.np), star:num(c.star)};
+  if(c.c==='W') return {c:'W', label:String(c.label||''), eff:(c.eff||[]).map(normEff), dmg:num(c.dmg), np:num(c.np), star:num(c.star)};
   return {c:String(c.c||'R'), dmg:num(c.dmg), np:num(c.np), star:num(c.star)};
 }
 function normClass(c){ c=String(c||'').trim(); return CLASS_LEGACY[c]||c; }
@@ -65,7 +65,7 @@ function validateUnits(units){
     if(u.cost>RULES.costCap) add('error',`コストが上限${RULES.costCap}を超えているため編成できません`);
 
     const ascN=u.faces.filter(f=>f.pre.c==='ASC').length;
-    if(!ascN) add('warn',`${TERMS.asc}面がないため、スキル3が使えません`);
+    if(!ascN&&u.skills[2]&&u.skills[2].eff.length) add('warn',`${TERMS.asc}面がないため、スキル3が使えません`);
     if(ascN>1) add('warn',`${TERMS.asc}面が${ascN}つあります`);
     u.faces.forEach((f,fi)=>{
       if(!RULES.actsTable&&![1,2,3].includes(f.acts)) add('error',`出目${fi+1}：行動回数は1〜3にしてください`);
@@ -76,13 +76,15 @@ function validateUnits(units){
         if(['R','B','G'].includes(c.c) && !(c.dmg>0)) add('warn',`${where}：ダメージが0です`);
         if(c.c==='W'){
           if(!c.label.trim()) add('warn',`${where}：特殊行動の名前が空です`);
-          if(!c.eff.length) add('warn',`${where}：特殊行動に効果がありません`);
+          if(!c.eff.length&&!(c.dmg>0)) add('warn',`${where}：特殊行動に効果もダメージもありません`);
+          if(c.eff.some(e=>e.k==='copyRoll')&&(c.dmg>0||c.eff.length>1)) add('warn',`${where}：「${FX.copyRoll.name}」があるときは、ダメージやほかの効果は使われません`);
           checkEffs(c.eff,'special',where,add);
         }
       });
     });
     u.skills.forEach((s,si)=>{
       const where=`スキル${si+1}`;
+      if(si===2&&!ascN&&!s.eff.length) return; // 覚醒しないサーヴァントのスキル3は空でよい
       if(!s.name.trim()) add('warn',`${where}：名前が空です`);
       if(!s.eff.length) add('warn',`${where}：効果がありません`);
       const usesPicked=s.eff.some(e=>e.t==='picked');
@@ -101,7 +103,8 @@ function checkEffs(effs,ctx,where,add){
   effs.forEach((e,ei)=>{
     const w=`${where}・効果${ei+1}`;
     if(!FX[e.k]) return add('error',`${w}：効果の種類が不正です`);
-    if(e.k==='dmg'&&ctx!=='ult') add('error',`${w}：ダメージ効果は${TERMS.ult}でのみ使えます`);
+    if(FX[e.k].only&&ctx!==FX[e.k].only) add('error',`${w}：「${FX[e.k].name}」は${FX[e.k].only==='ult'?TERMS.ult:'特殊行動'}でのみ使えます`);
+    if(e.color&&!FX[e.k].color) add('warn',`${w}：この効果では色の指定は使われません`);
     if(!TGT_BY_CTX[ctx].includes(e.t)) add('error',`${w}：ここでは「${TARGETS[e.t]||e.t}」を対象にできません`);
     if(e.t==='master'&&e.k!=='star') add('warn',`${w}：${TERMS.player}が対象だと、${TERMS.star}獲得以外は効果がありません`);
     if(FX[e.k].val&&e.v===0) add('warn',`${w}：値が0です`);
@@ -210,7 +213,7 @@ function cmdCardHTML(d,c,opt={}){
       ${c.dmg!=null?`<span class="ccdmg">${c.dmg}</span>`:''}${ex&&!opt.small?`<span class="ccex">${ex}</span>`:''}</div>`;
   }
   const label=c.c==='ASC'?TERMS.asc:(c.label||TERMS.W);
-  return `<div class="ccard ${esc(c.c)} plain${sz}"><span class="ccname">${esc(label)}</span></div>`;
+  return `<div class="ccard ${esc(c.c)} plain${sz}"><span class="ccname">${esc(label)}</span>${c.dmg>0?`<span class="ccdmg">${c.dmg}</span>`:''}</div>`;
 }
 
 // ---------- 表示用の文字列 ----------
@@ -228,6 +231,8 @@ function fxText(e){
     case 'poison': s=`毒${e.v||RULES.dot}`; break;
     case 'burn': s=`やけど${e.v||RULES.dot}`; break;
     case 'starLoss': s=`${TERMS.star}${e.v}個消失`; break;
+    case 'onAtkStar': s=`${e.color?TERMS[e.color]:''}攻撃時：${TERMS.star}${e.v}個発生`; break;
+    case 'onAtkNp': s=`${e.color?TERMS[e.color]:''}攻撃時：${TERMS.gauge}+${e.v}%`; break;
     case 'heal': s=`HP${e.v}回復`; break;
     case 'np': s=`${TERMS.gauge}${e.v>=0?'+':''}${e.v}%`; break;
     case 'star': s=`${TERMS.star}${e.v}個獲得`; break;
@@ -245,7 +250,7 @@ const effsText=(effs,pick)=>effs.length?effs.map(e=>`${tLabel(e.t,pick)}：${fxT
 function cmdChip(c){
   if(!c) return '';
   if(c.c==='ASC') return `<span class="cmd ASC">${TERMS.asc}</span>`;
-  if(c.c==='W') return `<span class="cmd W">${esc(c.label||TERMS.W)}</span>`;
+  if(c.c==='W') return `<span class="cmd W">${esc(c.label||TERMS.W)}${c.dmg>0?` ${c.dmg}`:''}</span>`;
   const ex=[c.np?`${TERMS.gauge}+${c.np}`:'', c.star?`★${c.star}`:''].filter(Boolean).join(' ');
   return `<span class="cmd ${esc(c.c)}">${TERMS[c.c]||esc(c.c)} ${c.dmg}${ex?` <small>${ex}</small>`:''}</span>`;
 }

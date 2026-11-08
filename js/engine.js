@@ -16,7 +16,7 @@ function newGame(){
     setupPid:0, picks:[[],[]], setupMsg:'',
     players:[{name:TERMS.player+'1',party:[],stars:0},{name:TERMS.player+'2',party:[],stars:0}],
     cur:0, turn:0, actRolled:false, maxActs:{}, alloc:{}, rolled:[], ult:null, target:null,
-    gen:0, pending:null, log:[], winner:null };
+    gen:0, pending:null, copy:null, log:[], winner:null };
   FXQ.length=0;
 }
 
@@ -170,10 +170,38 @@ function gainNpStar(att,cmd,mult){
   if(cmd.np) addNp(att,cmd.np*mult);
   if(cmd.star) G.gen+=cmd.star*mult;
 }
+// ---------- 他のサーヴァントをロール（copyRoll） ----------
+const isCopyCmd = c=>!!c&&c.c==='W'&&(c.eff||[]).some(e=>e.k==='copyRoll');
+const copyCands = u=>G.players.flatMap(P=>P.party).filter(x=>!x.out&&x.uid!==u.uid);
+// 選んだサーヴァントの鉛筆をロールし、覚醒後コマンドを返す（同じ特殊行動が出たら振り直し）
+function copyRollFrom(src){
+  const d=D(src.def); let f, c;
+  for(let i=0;i<20;i++){ f=roll(); c=d.faces[f].post; if(!isCopyCmd(c)) break; }
+  if(isCopyCmd(c)) c={c:'W',label:'不発',eff:[],np:0,star:0,dmg:0};
+  return {f, cmd:{...c, from:d.name}};
+}
+function doCopy(uid,src){
+  const r=G.rolled[G.copy.idx], u=U(uid);
+  const {f,cmd}=copyRollFrom(src);
+  r.cmd=cmd; u.face={i:r.f,kind:'cmd',cmd};
+  log(`${nm(u)}：${nm(src)}の鉛筆をロール 出目${f+1} → ${cmdChip(cmd)}`);
+  G.copy=null;
+}
 function resolveCommand(att,cmd,tgt,o={}){
   const n=nm(att);
   if(cmd.c==='ASC'){ log(`${n}：${TERMS.asc}（1行動）`,'sub'); return; }
-  if(cmd.c==='W'){ log(`${n}：特殊行動「${esc(cmd.label)}」`); applyEffects(att,cmd.eff||[],null); gainNpStar(att,cmd,1); return; }
+  if(isCopyCmd(cmd)){ // エクストラアタックで出たときは対象をランダムに選んで、その場でロール
+    const cs=copyCands(att); if(!cs.length) return;
+    const src=cs[Math.floor(Math.random()*cs.length)], r=copyRollFrom(src);
+    log(`${n}：${nm(src)}の鉛筆をロール 出目${r.f+1} → ${cmdChip(r.cmd)}`);
+    return resolveCommand(att,r.cmd,tgt,o);
+  }
+  if(cmd.c==='W'){
+    log(`${n}：特殊行動「${esc(cmd.label)}」${cmd.from?`（${esc(cmd.from)}）`:''}`);
+    applyEffects(att,cmd.eff||[],null);
+    if(!(cmd.dmg>0)){ gainNpStar(att,cmd,1); return; }
+    // ダメージを持つ特殊行動は無属性の攻撃として続けて処理する（チェインには数えない）
+  }
   say(att,'attack');
   let dmg=cmd.dmg; const note=[`基本${dmg}`]; let usedA=[], usedT=[], colorBuff=0;
   // 2. スキル効果補正 / 3. Busterチェイン
@@ -208,6 +236,13 @@ function resolveCommand(att,cmd,tgt,o={}){
   }
   gainNpStar(att,cmd,mult);
   consume(att,usedA);
+  // 攻撃時○○（エクストラアタックでは発動しない）
+  if(!o.extra){
+    const s=mods(att,'onAtkStar',cmd.c), p=mods(att,'onAtkNp',cmd.c);
+    if(s.sum){ G.gen+=s.sum; log(`${n} 攻撃時効果：${TERMS.star}${s.sum}個発生`,'sub'); }
+    if(p.sum){ addNp(att,p.sum); log(`${n} 攻撃時効果：${TERMS.gauge}+${p.sum}%`,'sub'); }
+    consume(att,[...s.list,...p.list]);
+  }
 }
 function resolveUlt(u,tgt){
   const ud=D(u.def).ult;
@@ -273,7 +308,7 @@ function startGame(){
   beginTurn();
 }
 function beginTurn(){
-  Object.assign(G,{phase:'actRoll',actRolled:false,maxActs:{},alloc:{},rolled:[],ult:null,target:null,gen:0,pending:null});
+  Object.assign(G,{phase:'actRoll',actRolled:false,maxActs:{},alloc:{},rolled:[],ult:null,target:null,gen:0,pending:null,copy:null});
   log(`━ ターン${G.turn}：${esc(G.players[G.cur].name)} ━`,'h');
   // ① ターン開始：このプレイヤーが付与した効果の残りターン-1
   ALL().forEach(u=>{
@@ -430,7 +465,7 @@ const ACTIONS = {
   },
   rollAction({uid}){
     const u=U(uid);
-    if(G.phase!=='action'||u.out) return;
+    if(G.phase!=='action'||G.copy||u.out) return;
     if(G.rolled.filter(r=>r.uid===uid).length>=(G.alloc[uid]||0)) return;
     const f=roll(), face=D(u.def).faces[f];
     let cmd;
@@ -438,10 +473,13 @@ const ACTIONS = {
     else cmd=u.asc?face.post:face.pre;
     G.rolled.push({uid,f,cmd}); u.face={i:f,kind:'cmd',cmd};
     log(`${nm(u)} 出目${f+1} → ${cmdChip(cmd)}`);
+    // 他のサーヴァントをロール：ロールするサーヴァントの選択待ち
+    if(isCopyCmd(cmd) && copyCands(u).length) G.copy={idx:G.rolled.length-1, uid};
   },
-  toTarget(){ if(G.phase==='action'&&remainingRolls()===0) toTargetPhase(); },
+  toTarget(){ if(G.phase==='action'&&!G.copy&&remainingRolls()===0) toTargetPhase(); },
   cardClick({uid}){
     const u=U(uid);
+    if(G.copy){ const c=U(G.copy.uid); if(copyCands(c).includes(u)) doCopy(c.uid,u); return; }
     if(G.pending){ if(pickValid(u)){ const p=G.pending; G.pending=null; doSkill(U(p.uid),p.si,u); } return; }
     if(G.phase==='target' && targetCandidates().includes(u)) G.target=uid;
   },

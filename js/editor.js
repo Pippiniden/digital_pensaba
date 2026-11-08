@@ -52,7 +52,7 @@ function newUnit(){
 function makeCmd(t,old){
   old=old||{};
   if(t==='ASC') return {c:'ASC'};
-  if(t==='W') return {c:'W',label:old.label||'特殊行動',eff:old.eff||[{k:'heal',t:'self',v:20}],np:old.np||0,star:old.star||0};
+  if(t==='W') return {c:'W',label:old.label||'特殊行動',eff:old.eff||[{k:'heal',t:'self',v:20}],dmg:0,np:old.np||0,star:old.star||0};
   return {c:t,dmg:old.dmg||20,np:old.np||0,star:old.star||0};
 }
 function newEff(ctx){
@@ -68,7 +68,7 @@ function fixEff(e){
   else if(f.timesOnly){ delete e.turns; if(e.times==null) e.times=1; }
   else if(e.turns==null&&e.times==null) e.turns=3;
   if((e.k==='poison'||e.k==='burn')&&!e.v) e.v=RULES.dot;
-  if(e.k!=='atk') delete e.color;
+  if(!f.color) delete e.color;
   if(e.k==='star'&&e.t==='self') e.t='master';
 }
 
@@ -179,7 +179,8 @@ function cmdEd(path,c,isPre){
   let body='';
   if(['R','B','G'].includes(c.c)) body=`<div class="cmdnums">${numIn(path+'.dmg',c.dmg,'ダメージ')}${numIn(path+'.np',c.np,TERMS.gauge)}${numIn(path+'.star',c.star,'★')}</div>`;
   else if(c.c==='W') body=`<input data-p="${path}.label" value="${esc(c.label)}" placeholder="特殊行動の名前">
-    <div class="cmdnums">${numIn(path+'.np',c.np,TERMS.gauge)}${numIn(path+'.star',c.star,'★')}</div>${effList(path+'.eff',c.eff,'special')}`;
+    <div class="cmdnums">${numIn(path+'.dmg',c.dmg||0,'ダメージ')}${numIn(path+'.np',c.np,TERMS.gauge)}${numIn(path+'.star',c.star,'★')}</div>
+    <p class="sub small nm">ダメージを入れると無属性の攻撃になります（チェインには数えません）。</p>${effList(path+'.eff',c.eff,'special')}`;
   else if(c.c==='ASC') body=`<span class="sub small">出たら${TERMS.asc}する（1行動として数える）</span>`;
   return `<div class="cmded c-${esc(c.c)}">${select}${body}</div>`;
 }
@@ -201,14 +202,14 @@ function effList(path,effs,ctx){
 }
 function effRow(path,j,e,ctx,n){
   const p=`${path}.${j}`, f=FX[e.k]||{};
-  const kinds=Object.keys(FX).filter(k=>k!=='dmg'||ctx==='ult');
+  const kinds=Object.keys(FX).filter(k=>!FX[k].only||FX[k].only===ctx);
   const tg=TGT_BY_CTX[ctx].includes(e.t)?TGT_BY_CTX[ctx]:[...TGT_BY_CTX[ctx],e.t];
   return `<div class="eff" data-ep="${p}">
     <select data-p="${p}.k" data-act="effKind" aria-label="効果の種類">${kinds.map(k=>opt(k,FX[k].name,e.k)).join('')}</select>
     <select data-p="${p}.t" aria-label="対象">${tg.map(t=>opt(t,TARGETS[t]||t,e.t)).join('')}</select>
     ${f.val?numIn(p+'.v',e.v,'値'):''}
     ${f.inst?'':(f.timesOnly?'':optNum(p+'.turns',e.turns,'ターン'))+optNum(p+'.times',e.times,'回数')}
-    ${e.k==='atk'?`<label class="mini"><span>色</span><select data-p="${p}.color" data-t="optstr">${opt('','すべて',e.color||'')}${['R','B','G'].map(c=>opt(c,TERMS[c],e.color)).join('')}</select></label>`:''}
+    ${FX[e.k]&&FX[e.k].color?`<label class="mini"><span>色</span><select data-p="${p}.color" data-t="optstr">${opt('','すべて',e.color||'')}${['R','B','G'].map(c=>opt(c,TERMS[c],e.color)).join('')}</select></label>`:''}
     <label class="mini"><span>確率</span><select data-p="${p}.chance" data-t="optnum">${opt('','必ず',e.chance??'')}${[1,2,3,4,5].map(k=>opt(k,`ロール${k}以下`,e.chance)).join('')}</select></label>
     <span class="effops">
       <button data-act="effMove" data-path="${path}" data-i="${j}" data-d="-1" ${j?'':'disabled'} title="上へ">↑</button>

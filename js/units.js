@@ -1,44 +1,44 @@
 'use strict';
-// ユニットデータ（ペンシルエディタで書き出し）
+// サーヴァントデータ（ペンシルエディタで書き出し）
 // img: キャラクター画像(face)・カード用キャラ画像(card、空欄ならfaceを使う) のパス
 // lines: 場面ごとのセリフ
 // faces: 出目1〜6の面 / acts: 行動回数 / pre・post: 覚醒前・後のコマンド
 // c: R=Buster B=Arts G=Quick W=特殊 ASC=覚醒
 const DEFAULT_UNITS = [
   {
-    "id":"minamo", "name":"鉄扇のミナモ", "cls":"セイバー", "cost":5, "hp":120,
+    "id":"artoria", "name":"アルトリア・ペンドラゴン", "cls":"セイバー", "cost":5, "hp":1000,
     "img":{"face":"img/placeholder/face.svg","card":""},
     "lines":{
-      "start":["鉄扇のミナモ、参ります。"],
-      "attack":["はっ！", "凪いで――断つ！", "この扇、ただの飾りではありませんよ。"],
-      "damage":["くっ……！"],
-      "skill":["流れを整えます。"],
-      "np":["千の波よ、重なりて砕け――『千重波』！"],
-      "npDamage":["これほどの……！"],
-      "defeat":["申し訳……ありません……"],
-      "win":["凪が戻りましたね。"]
+      "start":["剣の英霊、ここに。"],
+      "attack":["はっ！","そこです！","断つ！"],
+      "damage":["この程度……！"],
+      "skill":["風よ、力を。"],
+      "np":["この剣にかけて！"],
+      "npDamage":["ぐっ……！"],
+      "defeat":["ここまで、ですか……"],
+      "win":["勝利を、あなたに。"]
     },
     "faces":[
-      {"acts":1,"pre":{"c":"R","dmg":30,"np":0,"star":0},"post":{"c":"R","dmg":40,"np":0,"star":0}},
-      {"acts":2,"pre":{"c":"B","dmg":20,"np":20,"star":0},"post":{"c":"B","dmg":25,"np":30,"star":0}},
-      {"acts":1,"pre":{"c":"G","dmg":15,"np":0,"star":3},"post":{"c":"G","dmg":20,"np":0,"star":5}},
-      {"acts":3,"pre":{"c":"R","dmg":30,"np":0,"star":0},"post":{"c":"R","dmg":45,"np":0,"star":0}},
-      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"R","dmg":60,"np":0,"star":0}},
-      {"acts":1,"pre":{"c":"B","dmg":20,"np":20,"star":0},"post":{"c":"B","dmg":30,"np":20,"star":0}}
+      {"acts":1,"pre":{"c":"R","dmg":100,"np":0,"star":0},"post":{"c":"R","dmg":140,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"R","dmg":90,"np":0,"star":0},"post":{"c":"R","dmg":120,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":60,"np":15,"star":0},"post":{"c":"B","dmg":80,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"ASC"},"post":{"c":"W","label":"無属性攻撃","eff":[{"k":"ignoreDef","t":"self","v":0,"turns":1,"times":1}],"dmg":120,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":70,"np":10,"star":0},"post":{"c":"B","dmg":90,"np":15,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":50,"np":0,"star":2},"post":{"c":"G","dmg":70,"np":0,"star":4}}
     ],
     "skills":[
-      {"name":"凪の型","eff":[{"k":"atk","t":"self","v":20,"turns":3}]},
-      {"name":"鉄扇返し","eff":[{"k":"evade","t":"self","v":0,"turns":3,"times":1},{"k":"star","t":"master","v":5}]},
-      {"name":"水鏡","eff":[{"k":"np","t":"self","v":50}]}
+      {"name":"カリスマB","eff":[{"k":"atk","t":"ally_all","v":20,"turns":3}]},
+      {"name":"魔力放出A","eff":[{"k":"atk","t":"self","v":40,"turns":1,"color":"R"}]},
+      {"name":"直感A","eff":[{"k":"star","t":"master","v":15}]}
     ],
-    "ult":{"name":"千重波","c":"R","eff":[{"k":"dmg","t":"target","v":100}]}
+    "ult":{"name":"約束された勝利の剣","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":400},{"k":"np","t":"self","v":20}]}
   },
   {
     "id":"rio", "name":"灯火のリオ", "cls":"キャスター", "cost":3, "hp":90,
     "img":{"face":"img/placeholder/face.svg","card":""},
     "lines":{
       "start":["灯りを絶やさずにいきましょう！"],
-      "attack":["えいっ！", "灯よ、走って！", "燃えて！"],
+      "attack":["えいっ！","灯よ、走って！","燃えて！"],
       "damage":["きゃっ！"],
       "skill":["みんな、温まって！"],
       "np":["小さな火でも、祈れば篝火に――『篝火の祈り』！"],
@@ -52,7 +52,7 @@ const DEFAULT_UNITS = [
       {"acts":3,"pre":{"c":"ASC"},"post":{"c":"B","dmg":30,"np":30,"star":0}},
       {"acts":2,"pre":{"c":"R","dmg":20,"np":0,"star":0},"post":{"c":"R","dmg":30,"np":0,"star":0}},
       {"acts":1,"pre":{"c":"B","dmg":15,"np":30,"star":0},"post":{"c":"B","dmg":20,"np":40,"star":0}},
-      {"acts":2,"pre":{"c":"W","label":"癒しの灯","eff":[{"k":"heal","t":"self","v":20}],"np":0,"star":0},"post":{"c":"W","label":"癒しの大灯","eff":[{"k":"heal","t":"ally_all","v":20}],"np":0,"star":0}}
+      {"acts":2,"pre":{"c":"W","label":"癒しの灯","eff":[{"k":"heal","t":"self","v":20}],"dmg":0,"np":0,"star":0},"post":{"c":"W","label":"癒しの大灯","eff":[{"k":"heal","t":"ally_all","v":20}],"dmg":0,"np":0,"star":0}}
     ],
     "skills":[
       {"name":"導きの灯","eff":[{"k":"np","t":"picked","v":30}],"pick":"ally"},
@@ -66,7 +66,7 @@ const DEFAULT_UNITS = [
     "img":{"face":"img/placeholder/face.svg","card":""},
     "lines":{
       "start":["……影は既に、お前の足元だ。"],
-      "attack":["遅い。", "そこだ。", "縫い止める。"],
+      "attack":["遅い。","そこだ。","縫い止める。"],
       "damage":["ちっ……"],
       "skill":["……仕込みは済んだ。"],
       "np":["千の影よ、喰らい尽くせ――『千影』。"],
@@ -90,39 +90,39 @@ const DEFAULT_UNITS = [
     "ult":{"name":"千影","c":"G","eff":[{"k":"dmg","t":"target","v":90},{"k":"poison","t":"target","v":20,"turns":3}]}
   },
   {
-    "id":"selen", "name":"流星射手セレン", "cls":"アーチャー", "cost":4, "hp":100,
+    "id":"emiya", "name":"エミヤ", "cls":"アーチャー", "cost":4, "hp":650,
     "img":{"face":"img/placeholder/face.svg","card":""},
     "lines":{
-      "start":["星の巡りは良好。始めましょう。"],
-      "attack":["射抜きます！", "流れ星、一つ！", "狙いは外さない。"],
-      "damage":["っ、やりますね……！"],
-      "skill":["星を読みます。"],
-      "np":["夜空の全てを、この一矢に――『流星雨』！"],
-      "npDamage":["空が、落ちて……！"],
-      "defeat":["星が……見えない……"],
-      "win":["今夜も、いい星空です。"]
+      "start":["アーチャー、出るぞ。"],
+      "attack":["ふっ！","遅い。","そこだ。"],
+      "damage":["ちっ……"],
+      "skill":["見切った。"],
+      "np":["剣の丘へ、招待しよう。"],
+      "npDamage":["ぐっ……！"],
+      "defeat":["……ここまでか。"],
+      "win":["当然の結果だ。"]
     },
     "faces":[
-      {"acts":2,"pre":{"c":"R","dmg":25,"np":0,"star":0},"post":{"c":"R","dmg":35,"np":0,"star":0}},
-      {"acts":1,"pre":{"c":"G","dmg":15,"np":0,"star":5},"post":{"c":"G","dmg":20,"np":0,"star":6}},
-      {"acts":2,"pre":{"c":"B","dmg":15,"np":25,"star":0},"post":{"c":"B","dmg":20,"np":30,"star":0}},
-      {"acts":3,"pre":{"c":"ASC"},"post":{"c":"G","dmg":30,"np":0,"star":8}},
-      {"acts":1,"pre":{"c":"R","dmg":25,"np":0,"star":0},"post":{"c":"R","dmg":35,"np":0,"star":0}},
-      {"acts":2,"pre":{"c":"G","dmg":10,"np":0,"star":4},"post":{"c":"G","dmg":15,"np":0,"star":5}}
+      {"acts":1,"pre":{"c":"R","dmg":90,"np":0,"star":0},"post":{"c":"R","dmg":120,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":60,"np":10,"star":0},"post":{"c":"B","dmg":80,"np":15,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":60,"np":15,"star":0},"post":{"c":"B","dmg":80,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"ASC"},"post":{"c":"W","label":"投影","eff":[{"k":"copyRoll","t":"self","v":0}],"dmg":0,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":70,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":2},"post":{"c":"G","dmg":50,"np":0,"star":4}}
     ],
     "skills":[
-      {"name":"鷹の目","eff":[{"k":"critPow","t":"self","v":30,"turns":3}]},
-      {"name":"星読み","eff":[{"k":"star","t":"master","v":10}]},
-      {"name":"流星群","eff":[{"k":"sureHit","t":"self","v":0,"turns":3},{"k":"atk","t":"self","v":15,"turns":3}]}
+      {"name":"心眼(真)B","eff":[{"k":"evade","t":"self","v":0,"turns":1},{"k":"def","t":"self","v":10,"turns":3}]},
+      {"name":"鷹の瞳B+","eff":[{"k":"critPow","t":"self","v":30,"turns":3},{"k":"onAtkStar","t":"self","v":3,"turns":3}]},
+      {"name":"投影魔術A","eff":[{"k":"atk","t":"self","v":30,"turns":1,"color":"R"},{"k":"onAtkNp","t":"self","v":10,"turns":1,"color":"B"},{"k":"onAtkStar","t":"self","v":3,"turns":1,"color":"G"}]}
     ],
-    "ult":{"name":"流星雨","c":"G","eff":[{"k":"dmg","t":"enemy_all","v":60}]}
+    "ult":{"name":"無限の剣製","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":350},{"k":"atkDown","t":"enemy_all","v":30,"turns":3}]}
   },
   {
     "id":"tsubaki", "name":"槍兵ツバキ", "cls":"ランサー", "cost":2, "hp":90,
     "img":{"face":"img/placeholder/face.svg","card":""},
     "lines":{
       "start":["槍兵ツバキ、推参！"],
-      "attack":["せいっ！", "穿つ！", "まだまだぁ！"],
+      "attack":["せいっ！","穿つ！","まだまだぁ！"],
       "damage":["ぐっ……効かないね！"],
       "skill":["さあ、かかってきな！"],
       "np":["一閃にて咲き誇れ――『一閃・椿』！"],
@@ -150,7 +150,7 @@ const DEFAULT_UNITS = [
     "img":{"face":"img/placeholder/face.svg","card":""},
     "lines":{
       "start":["オオオオオッ！"],
-      "attack":["ガアッ！", "砕けろォ！", "ウオオオッ！"],
+      "attack":["ガアッ！","砕けろォ！","ウオオオッ！"],
       "damage":["グルル……"],
       "skill":["ハァ……ハァ……！"],
       "np":["嵐ヨ……吹キ荒レロォ――『嵐撃』！！"],
@@ -174,31 +174,31 @@ const DEFAULT_UNITS = [
     "ult":{"name":"嵐撃","c":"R","eff":[{"k":"dmg","t":"target","v":130}]}
   },
   {
-    "id":"nono", "name":"見習い騎兵ノノ", "cls":"ライダー", "cost":0, "hp":70,
+    "id":"mash", "name":"マシュ・キリエライト", "cls":"シールダー", "cost":0, "hp":400,
     "img":{"face":"img/placeholder/face.svg","card":""},
     "lines":{
-      "start":["が、がんばります！"],
-      "attack":["えーいっ！", "いっけー！", "とりゃあ！"],
-      "damage":["いたた……"],
-      "skill":["相棒、お願い！"],
-      "np":["どこまでも駆けるよ――『草原駆け』！"],
-      "npDamage":["わわっ、すごい力……！"],
-      "defeat":["ごめんなさい……"],
-      "win":["やったぁ！勝てたよ、相棒！"]
+      "start":["マシュ・キリエライト、戦闘を開始します。"],
+      "attack":["はあっ！","盾で押し切ります！","行きます！"],
+      "damage":["っ……まだ、立てます！"],
+      "skill":["守りは任せてください。"],
+      "np":["宝具、展開します！"],
+      "npDamage":["くっ……！"],
+      "defeat":["申し訳、ありません……"],
+      "win":["皆さん、無事ですか？"]
     },
     "faces":[
-      {"acts":2,"pre":{"c":"G","dmg":10,"np":0,"star":3},"post":{"c":"G","dmg":15,"np":0,"star":4}},
-      {"acts":1,"pre":{"c":"B","dmg":10,"np":20,"star":0},"post":{"c":"B","dmg":15,"np":25,"star":0}},
-      {"acts":2,"pre":{"c":"R","dmg":15,"np":0,"star":0},"post":{"c":"R","dmg":25,"np":0,"star":0}},
-      {"acts":1,"pre":{"c":"G","dmg":10,"np":0,"star":3},"post":{"c":"G","dmg":15,"np":0,"star":4}},
-      {"acts":3,"pre":{"c":"ASC"},"post":{"c":"G","dmg":25,"np":0,"star":6}},
-      {"acts":2,"pre":{"c":"W","label":"見回り","eff":[{"k":"star","t":"master","v":3}],"np":0,"star":0},"post":{"c":"G","dmg":20,"np":0,"star":5}}
+      {"acts":1,"pre":{"c":"R","dmg":40,"np":0,"star":0},"post":{"c":"R","dmg":40,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"R","dmg":30,"np":0,"star":0},"post":{"c":"R","dmg":30,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":20,"np":10,"star":0},"post":{"c":"B","dmg":20,"np":10,"star":0}},
+      {"acts":1,"pre":{"c":"W","label":"味方守護","eff":[{"k":"def","t":"ally_all","v":10,"turns":1}],"dmg":0,"np":0,"star":0},"post":{"c":"W","label":"味方守護","eff":[{"k":"def","t":"ally_all","v":10,"turns":1}],"dmg":0,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":30,"np":10,"star":0},"post":{"c":"B","dmg":30,"np":10,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":10,"np":0,"star":1},"post":{"c":"G","dmg":10,"np":0,"star":1}}
     ],
     "skills":[
-      {"name":"相棒の馬","eff":[{"k":"evade","t":"self","v":0,"turns":2,"times":1}]},
-      {"name":"元気印","eff":[{"k":"np","t":"ally_all","v":10}]},
-      {"name":"全速力","eff":[{"k":"atk","t":"self","v":20,"turns":3,"color":"G"},{"k":"star","t":"master","v":5}]}
+      {"name":"今は脆き雪花の壁","eff":[{"k":"def","t":"ally_all","v":10,"turns":3}]},
+      {"name":"時に煙る白亜の壁","eff":[{"k":"invul","t":"picked","v":0,"turns":1},{"k":"np","t":"picked","v":10}],"pick":"ally"},
+      {"name":"なし","eff":[]}
     ],
-    "ult":{"name":"草原駆け","c":"G","eff":[{"k":"dmg","t":"target","v":70},{"k":"star","t":"master","v":10}]}
+    "ult":{"name":"疑似展開/人理の礎","c":"B","eff":[{"k":"def","t":"ally_all","v":30,"turns":3}]}
   }
 ];

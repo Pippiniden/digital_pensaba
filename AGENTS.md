@@ -53,10 +53,11 @@ Editor (editor.html): rules → units → common → editor
   skills:[ {name, eff:Eff[], pick?:'ally'|'enemy'|'any'} ×3 ],   // skill 3 is usable only after ascension
   ult:   { name, c:'R'|'B'|'G', eff:Eff[] } }                    // Noble Phantasm (ultimate)
 ```
-- `Cmd`: `{c:'R'|'B'|'G', dmg, np, star}` / `{c:'W', label, eff:Eff[], np, star}` (special action) / `{c:'ASC'}` (ascension face; allowed only in `pre`). R = Buster, B = Arts, G = Quick.
+- `Cmd`: `{c:'R'|'B'|'G', dmg, np, star}` / `{c:'W', label, eff:Eff[], dmg, np, star}` (special action; with `dmg>0` it is also a colorless attack that does not count toward chains — `eff` is applied first) / `{c:'ASC'}` (ascension face; allowed only in `pre`). R = Buster, B = Arts, G = Quick.
 - `Eff`: `{k:effectKind, t:target, v:value, turns?, times?, chance?, color?}`
   - `k` is a key of `FX` in `rules.js`. `t` is a key of `TARGETS`; the allowed targets depend on where the effect lives (`TGT_BY_CTX`: skill / ult / special).
-  - `chance` = succeeds on a roll ≤ N (1–5). `color` only applies to `atk`. The `dmg` effect is allowed only in an ultimate.
+  - `chance` = succeeds on a roll ≤ N (1–5). `color` only applies to effects with `FX[k].color` (`atk`, `onAtkStar`, `onAtkNp`). Effects with `FX[k].only` are restricted to that place (`dmg` → ultimate, `copyRoll` → special action).
+  - A unit without an ascension face (e.g. Mash) may leave skill 3 empty; validation skips it.
   - A lasting effect with neither `turns` nor `times` lasts forever (validation warns).
 - **`normalizeUnit()` drops unknown fields.** If you add a new field to characters, follow the whole procedure in §7.
 
@@ -93,7 +94,7 @@ turn: actRoll → skill → action → target → end → (endPhase → swap tur
 | `setup` | Party building (total cost ≤ 10, up to 3 units) | `setupToggle` `setupRandom` `setupCpu` `setupConfirm` |
 | `actRoll` | ② Each unit rolls its max action count from `actsTable` (0 is possible); +1 per retreated ally, −1 with fear, capped at 3. Allocate up to 3 in total | `rollActs` `alloc` `setAlloc` `confirmAlloc` |
 | `skill` | ③ Skills (once each per battle) and ultimate (NP ≥ 100, once per turn). Skills with `pick` wait for target selection (`G.pending`) | `useSkill` `useUlt` `cancelPick` `skillDone` |
-| `action` | ④ Roll the pencil for each allocated action to decide commands | `rollAction` `toTarget` |
+| `action` | ④ Roll the pencil for each allocated action to decide commands. If the face is a `copyRoll` special, `G.copy` waits for the player to click another alive servant (either side); its post-ascension face is rolled and replaces the command | `rollAction` `cardClick` `toTarget` |
 | `target` | ⑤ Choose the attack target (only `taunt` units if any) | `cardClick` `resolve` |
 | `end` | After damage resolution. ⑦ Damage over time, star gain, turn swap | `endTurn` |
 | `over` | Game decided. Only `restart` `rematch` `toggleSpeed` `useDefaultData` are accepted | |
@@ -130,6 +131,8 @@ Damage over time (`endPhase`): ignores atk/def, invul, evade and crits; blocked 
 | `ignoreDef` | Ignore the target's `def` | `dmgMods()` |
 | `instantDeath` | HP → 0 and retreat, **ignores guts** | `applyOne` (`doSkill` then calls `checkWin`) |
 | `starLoss` | Target's master loses x stars (min 0) | `applyOne` / `changeStars` |
+| `onAtkStar` / `onAtkNp` | "On attack": each damaging command (optionally only of `color`) generates x stars / gains x% NP. Not on extra attacks or ultimates | end of `resolveCommand` |
+| `copyRoll` | Special-action only. Roll another servant's pencil and use its post-ascension command (rerolls if it lands on another `copyRoll`). On an extra attack the servant is picked at random. Brave Chain still counts it as the roller's action | `isCopyCmd` / `copyCands` / `doCopy` (engine), `cardClick`, CPU `cpuDecide` |
 
 ## 6. Design rules (do not break these)
 
@@ -179,3 +182,4 @@ There are no automated tests in the repo, so verify manually in a browser. For r
 - `G.phase==='init'` is only set momentarily by `setupConfirm`; `startGame()` → `beginTurn()` immediately moves to `actRoll` (there is no screen for it).
 - Many Japanese strings and log messages are hard-coded in the logic (the `log(...)` calls in `engine.js`). The intent is to centralize terms in `TERMS`, but not everything has been moved there.
 - The UI text, character data, and log messages in the game itself remain in Japanese; only this document is in English.
+- Default roster: アルトリア (C5), エミヤ (C4) and マシュ (C0) use official-SPS-scale numbers (HP 400–1000, damage 10–140); the other four samples (rio, kagari, tsubaki, bard) are still at the old placeholder scale (HP ~100), so mixed parties are unbalanced until those are replaced.
