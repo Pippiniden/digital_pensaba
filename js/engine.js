@@ -462,7 +462,7 @@ function toTargetPhase(){
 // =====================================================================
 const ACTIONS = {
   restart(){ newGame(keepRule()); },
-  useDefaultData(){ clearCustomUnits(); reloadUnits(); newGame(keepRule()); },
+  useDefaultData(){ clearCustomUnits(); reloadUnits(); SHOW_IDS=null; newGame(keepRule()); },
   setRule({rule}){ if(G.phase==='mode'&&RULESETS[rule]) G.rule=rule; },
   toggleHandicap(){ if(G.phase==='mode') G.handicap=!G.handicap; },
   chooseMode({mode,level}){

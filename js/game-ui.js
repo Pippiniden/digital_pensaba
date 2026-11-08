@@ -333,11 +333,41 @@ function handicapNote(pid){
   return `相手はコスト${D(opp).cost}。${h?`コスト差${rs.handicapAsc}以上なら低い方が${TERMS.ascFull}済みで開始します。`:''}`;
 }
 // ---------- モード選択 ----------
+// ---------- タイトルのショーケース ----------
+// 基本クラスごとに1騎ずつランダム（顔画像があるサーヴァントだけ）。20%の確率でどれか1枠をエクストラクラスの騎に差し替える。
+// 画像の有無は読み込んで確かめるので、確認が済むまでは表示しない。選出はページを開いている間は固定
+const FACE_OK={};   // id → true/false（画像があるか）
+let SHOW_IDS=null;
+function faceUrl(d){ return IMG_DIR+encodeURIComponent(d.id)+'.'+IMG_EXT; }
+function probeFaces(){
+  const todo=UNITS.filter(d=>!(d.id in FACE_OK));
+  if(!todo.length) return Promise.resolve();
+  return Promise.all(todo.map(d=>new Promise(res=>{
+    const im=new Image(); im.onload=()=>{ FACE_OK[d.id]=true; res(); }; im.onerror=()=>{ FACE_OK[d.id]=false; res(); }; im.src=faceUrl(d);
+  })));
+}
+function pickShowcase(){
+  const pool=UNITS.filter(d=>FACE_OK[d.id]), rnd=a=>a[Math.floor(Math.random()*a.length)];
+  const ids=[];
+  CLASSES_BASIC.forEach(c=>{ const l=pool.filter(d=>d.cls===c); if(l.length) ids.push(rnd(l).id); });
+  const ex=pool.filter(d=>!CLASSES_BASIC.includes(d.cls));
+  if(ex.length && ids.length && Math.random()<0.2) ids[Math.floor(Math.random()*ids.length)]=rnd(ex).id;
+  return ids;
+}
+function showcaseHTML(){
+  if(!SHOW_IDS){
+    if(!SHOW_IDS_PENDING){ SHOW_IDS_PENDING=true; probeFaces().then(()=>{ SHOW_IDS=pickShowcase(); SHOW_IDS_PENDING=false; if(G.phase==='mode') render(); }); }
+    return '';
+  }
+  return SHOW_IDS.map(D).filter(Boolean).map((d,i)=>`<div class="showtile" style="--i:${i}">${unitImg(d,'face','pimg',d.name)}${clsIconTag(d.cls,'pcls')}</div>`).join('');
+}
+let SHOW_IDS_PENDING=false;
+
 function modeHTML(){
   const src = UNIT_SOURCE==='custom'
     ? `<p class="datainfo">ペンシルエディタで作ったデータ（${UNITS.length}騎）を使っています。<button data-a="useDefaultData">標準データに戻す</button></p>`
     : UNIT_BROKEN ? `<p class="datainfo warn">エディタのデータにエラーがあったため、標準データを使っています。</p>` : '';
-  const show=UNITS.slice(0,7).map((d,i)=>`<div class="showtile" style="--i:${i}">${unitImg(d,'face','pimg',d.name)}${clsIconTag(d.cls,'pcls')}</div>`).join('');
+  const show=showcaseHTML();
   return `<div class="mode">
     <div class="title"><small>Fate fan-made pencil battle</small><h2>PENCIL DUEL</h2></div>
     <div class="showcase">${show}</div>
