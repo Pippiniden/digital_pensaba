@@ -8,7 +8,7 @@
 
 const isCpu = pid=>!!(G.cpu&&G.cpu[pid]);
 const actor = ()=>G.phase==='setup'?G.setupPid:G.cur;
-const cpuActing = ()=>!['mode','over'].includes(G.phase) && isCpu(actor());
+const cpuActing = ()=>!['mode','setup','over'].includes(G.phase) && isCpu(actor()); // 編成はCPU分も人が選ぶ（おまかせ＝setupCpu）
 const hpR = u=>u.hp/D(u.def).hp;
 const isActing = u=>G.ult ? G.ult===u.uid : (G.alloc[u.uid]||0)>0;
 function rnd01(s){ // 「よわい」用：同じ局面では同じ答えになる疑似乱数
@@ -27,7 +27,6 @@ function scheduleCpu(){
 function cpuDecide(){
   const easy=G.level==='easy';
   switch(G.phase){
-    case 'setup': return G.picks[G.setupPid].length ? ['setupConfirm'] : ['setupCpu'];
     case 'actRoll': return G.actRolled ? ['setAlloc',{alloc:JSON.stringify(cpuAlloc(easy))}] : ['rollActs'];
     case 'skill': {
       if(G.pending) return ['cardClick',{uid:cpuPickTarget(G.pending.uid,G.pending.si,easy).uid}];

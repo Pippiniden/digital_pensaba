@@ -16,7 +16,7 @@ function newGame(){
     setupPid:0, picks:[[],[]], setupMsg:'',
     players:[{name:TERMS.player+'1',party:[],stars:0},{name:TERMS.player+'2',party:[],stars:0}],
     cur:0, turn:0, actRolled:false, maxActs:{}, alloc:{}, rolled:[], ult:null, target:null,
-    gen:0, pending:null, copy:null, log:[], winner:null };
+    gen:0, pending:null, copy:null, log:[], winner:null, dealt:[0,0] };
   FXQ.length=0; for(const k in FXHOLD) delete FXHOLD[k]; FXHIDE.clear(); KO_PEND.length=0;
 }
 
@@ -91,7 +91,8 @@ function resolveTargets(src,t,picked){
 function applyEffects(src,effs,picked){
   for(const e of effs){
     if(e.chance){
-      const r=roll()+1, ok=r<=e.chance;
+      const r=roll()+1, ok=r<=e.chance, who=resolveTargets(src,e.t,picked)[0]||src;
+      rollFx(who.uid,r-1,{ch:{need:e.chance,ok}});
       log(`判定ロール（${dn(src)}）出目${r} ≤ ${e.chance} → ${ok?'成功':'失敗'}`, ok?'':'sub');
       if(!ok) continue;
     }
@@ -169,6 +170,7 @@ function dealDamage(u,dmg,isHit,o={}){
   const hp0=u.hp, g=hp0-dmg<=0?u.fx.find(e=>e.k==='guts'):null;
   const hp1=hp0-dmg<=0?(g?g.v:0):hp0-dmg;
   fxEmit({t:'dmg',uid:u.uid,v:fmt(dmg),crit:!!o.crit,np:!!o.np,hp0,hp:hp1,out:hp0-dmg<=0&&!g});
+  G.dealt[1-u.pid]+=Math.min(dmg,hp0);
   u.hp-=dmg;
   if(u.hp<=0){
     if(g){ u.hp=g.v; u.fx=u.fx.filter(e=>e!==g); log(`${nm(u)} ガッツ発動！ HP${g.v}で踏みとどまった`,'good'); }
@@ -532,7 +534,10 @@ const ACTIONS = {
     const u=U(uid);
     if(G.copy){ const c=U(G.copy.uid); if(copyCands(c).includes(u)) doCopy(c.uid,u); return; }
     if(G.pending){ if(pickValid(u)){ const p=G.pending; G.pending=null; doSkill(U(p.uid),p.si,u); } return; }
-    if(G.phase==='target' && targetCandidates().includes(u)) G.target=uid;
+    if(G.phase==='target' && targetCandidates().includes(u)){
+      if(G.target===uid && !isCpu(G.cur)) resolveDamage(); // 選択中の相手をもう一度押すと確定
+      else G.target=uid;
+    }
   },
   resolve(){ if(G.phase==='target'&&G.target) resolveDamage(); },
   endTurn(){ if(G.phase==='end') endPhase(); },

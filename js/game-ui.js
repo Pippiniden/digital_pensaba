@@ -6,7 +6,7 @@
    - 画面だけの状態（詳細ウィンドウ・ログの開閉など）は UI に持ち、G には入れない
    ===================================================================== */
 
-const UI = { detail:null, setupView:null, log:readLogPref(), auto:readPref('pencilduel.auto')==='1' };
+const UI = { result:false, resultShown:false, detail:null, setupView:null, log:readLogPref(), auto:readPref('pencilduel.auto')==='1' };
 function readPref(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
 function savePref(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
 function readLogPref(){
@@ -100,7 +100,7 @@ function promptHTML(){
     case 'skill':
       return G.pending
         ? `<p class="hl">「${esc(pendingSkill().name)}」の対象を選んでください</p><button data-a="cancelPick">キャンセル</button>`
-        : `<p>スキル・${TERMS.ult}を使えます（${TERMS.ult}は${TERMS.gauge}${RULES.ultCost}%以上・1ターン1回）。</p>${G.ult?`<p class="hl">${nm(U(G.ult))}が${TERMS.ult}を使用予定</p>`:''}<button class="primary big" data-a="skillDone">${G.ult?'攻撃対象の選択へ':'行動決定へ'}</button>`;
+        : `<p>スキル・${TERMS.ult}を使えます。${TERMS.ult}は${TERMS.gauge}${RULES.ultCost}%以上・1ターン1回。</p>${G.ult?`<p class="hl">${nm(U(G.ult))}が${TERMS.ult}を使用予定</p>`:''}<button class="primary big" data-a="skillDone">${G.ult?'攻撃対象の選択へ':'行動決定へ'}</button>`;
     case 'action': {
       const left=remainingRolls();
       if(G.copy) return `<p class="hl">${nm(U(G.copy.uid))}：ロールする${TERMS.unit}を選んでください（敵味方どちらでも・${TERMS.asc}後コマンドを使用）</p>`;
@@ -110,7 +110,7 @@ function promptHTML(){
     case 'end':
       return `<p>ダメージフェイズが終わりました。</p><button class="primary big" data-a="endTurn">ターン終了</button>`;
     case 'over':
-      return `<p class="win">${G.mode==='cpu'?(G.winner===0?'勝利！':'敗北…'):`${esc(G.players[G.winner].name)} の勝利！`}</p><div class="row"><button class="primary" data-a="rematch">もう一度</button><button data-a="restart">モード選択へ</button></div>`;
+      return `<p class="win">${G.mode==='cpu'?(G.winner===0?'勝利！':'敗北…'):`${esc(G.players[G.winner].name)} の勝利！`}</p><div class="row"><button class="primary" data-a="rematch">もう一度</button><button data-ui="openResult">リザルト</button><button data-a="restart">モード選択へ</button></div>`;
   }
   return '';
 }
@@ -143,10 +143,10 @@ function animateLane(){
   laneSeen=now;
 }
 function laneHTML(){
-  if(G.phase==='actRoll') return G.actRolled?allocLaneHTML():`<span class="sub small lanehint">ここにこのターンのコマンドが並びます</span>`;
+  if(G.phase==='actRoll') return G.actRolled?allocLaneHTML():'';
   if(G.ult){ const d=D(U(G.ult).def); return `<div class="it">${cmdCardHTML(d,{c:'ULT',col:d.ult.c})}<span title="${dn(U(G.ult))}">${dn(U(G.ult))}</span></div>`; }
   const vis=G.rolled.filter((r,i)=>!FXHIDE.has(`r:${i}`)); // ロール演出の着地前のカードはまだ出さない
-  if(!vis.length) return `<span class="sub small lanehint">${G.rolled.length?'ロール中…':'ここにこのターンのコマンドが並びます'}</span>`;
+  if(!vis.length) return `<span class="sub small lanehint">${G.rolled.length?'ロール中…':''}</span>`;
   let s=vis.map(r=>`<div class="it">${cmdCardHTML(D(U(r.uid).def),r.cmd)}<span title="${dn(U(r.uid))}">${dn(U(r.uid))}</span></div>`).join('');
   const badges=[];
   if(vis.length===3){
@@ -209,6 +209,24 @@ function detailModalHTML(){
     <div class="mbody"><button class="mclose" data-ui="closeDetail" title="閉じる">×</button>${unitDetailHTML(D(u.def),u)}</div></div>`;
 }
 
+// ---------- リザルト（決着後） ----------
+function resultHTML(){
+  const w=G.winner, cpuMode=G.mode==='cpu';
+  const title=cpuMode?(w===0?'VICTORY':'DEFEAT'):'WINNER';
+  const sub=cpuMode?(w===0?'勝利！':'敗北…'):`${esc(G.players[w].name)} の勝利！`;
+  const side=pid=>{ const P=G.players[pid];
+    const rows=P.party.map(u=>{ const d=D(u.def);
+      return `<div class="rrow ${u.out?'out':''}">${unitImg(d,'face','pimg',d.name)}<b>${esc(d.name)}</b><span>${u.out?TERMS.out:`HP ${fmt(u.hp)}<small>/${d.hp}</small>`}</span></div>`; }).join('');
+    return `<div class="rside ${pid===w?'win':''}"><h4><span class="p${pid}">${esc(P.name)}</span>${pid===w?'<em>WIN</em>':''}</h4>${rows}
+      <p class="sub small">与えたダメージ合計 <b>${fmt(G.dealt[pid])}</b></p></div>`; };
+  return `<div class="modal result"><div class="mback"></div>
+    <div class="mbody"><h2 class="rtitle ${w===0?'p0':'p1'}">${title}</h2><p class="rsub">${sub}</p>
+      <p class="sub small rturn">経過ターン <b>${G.turn}</b></p>
+      <div class="rsides">${side(0)}${side(1)}</div>
+      <div class="row"><button class="primary" data-a="rematch">もう一度</button><button data-a="restart">モード選択へ</button><button data-ui="closeResult">盤面を見る</button></div>
+    </div></div>`;
+}
+
 // ---------- 編成画面 ----------
 function setupHTML(){
   const pid=G.setupPid, picks=G.picks[pid], cost=sumCost(picks);
@@ -231,10 +249,9 @@ function setupHTML(){
         <p class="sub small nm">コスト合計${RULES.costCap}以下・最大${RULES.partyMax}騎。選んだ順に 1st / 2nd / 3rd。</p></div>
       <div class="slots">${slots}</div>
       <div class="costm"><span>COST</span><b>${cost}</b><small>/ ${RULES.costCap}</small><div class="bar"><i style="width:${pctOf(cost,RULES.costCap)}%"></i></div></div>
-      <div class="setbtns"><button data-a="setupRandom">おまかせ</button><button class="primary big" data-a="setupConfirm" ${picks.length?'':'disabled'}>決定</button></div>
+      <div class="setbtns"><button data-a="${isCpu(pid)?'setupCpu':'setupRandom'}">おまかせ</button><button class="primary big" data-a="setupConfirm" ${picks.length?'':'disabled'}>決定</button></div>
     </div>
     ${G.setupMsg?`<p class="warn nm">${G.setupMsg}</p>`:''}
-    ${cpuActing()?'<p class="thinking nm">CPUが編成中</p>':''}
     <div class="setbody">
       <div class="roster">${tiles}</div>
       <div class="sdetail">${view?unitDetailHTML(view):''}</div>
@@ -254,7 +271,7 @@ function modeHTML(){
     ${src}
     <div class="modes">
       <div class="card"><h3>CPU戦</h3>
-        <p class="sub">あなたが先にパーティを編成し、CPUと1対1で戦います。</p>
+        <p class="sub">あなたとCPUのパーティを編成して、1対1で戦います（CPUはおまかせも選べます）。</p>
         <p class="sub small">よわい：スキルや攻撃対象をほぼ気まぐれに選ぶ<br>ふつう：状況を見てスキル・行動配分・攻撃対象を選ぶ</p>
         <div class="row mt"><button data-a="chooseMode" data-mode="cpu" data-level="easy">よわい</button><button class="primary" data-a="chooseMode" data-mode="cpu" data-level="normal">ふつう</button></div></div>
       <div class="card"><h3>2人対戦</h3>
@@ -268,6 +285,7 @@ function render(){
   const app=document.querySelector('#app'), hinfo=document.querySelector('#hinfo'), spd=document.querySelector('#spd'), lb=document.querySelector('#logbtn'), ab=document.querySelector('#autobtn');
   const screen=G.phase==='mode'?'mode':G.phase==='setup'?'setup':'battle';
   document.body.dataset.screen=screen;
+  if(G.phase!=='over'){ UI.result=false; UI.resultShown=false; }
   document.body.classList.toggle('lock',cpuActing());
   spd.hidden=!(G.mode==='cpu'&&G.phase!=='mode');
   spd.textContent=`CPU速度：${G.speed<500?'速い':'普通'}`;
@@ -278,7 +296,7 @@ function render(){
   else if(screen==='setup'){ app.innerHTML=setupHTML(); hinfo.textContent='パーティ編成'; }
   else {
     if(UI.detail&&!U(UI.detail)) UI.detail=null;
-    app.innerHTML=`<div class="battle ${UI.log?'':'nolog'}"><main class="field">${sideHTML(1,'top')}${stageHTML()}${sideHTML(0,'bottom')}</main>${UI.log?logHTML():''}</div>${UI.detail?detailModalHTML():''}`;
+    app.innerHTML=`<div class="battle ${UI.log?'':'nolog'}"><main class="field">${sideHTML(1,'top')}${stageHTML()}${sideHTML(0,'bottom')}</main>${UI.log?logHTML():''}</div>${UI.detail?detailModalHTML():''}${UI.result&&G.phase==='over'?resultHTML():''}`;
     hinfo.textContent=`ターン${G.turn}`;
     const l=document.querySelector('#log'); if(l) l.scrollTop=l.scrollHeight;
     animateLane();
@@ -329,6 +347,8 @@ function uiAct(a,ds){
   switch(a){
     case 'detail': UI.detail=ds.uid; break;
     case 'closeDetail': UI.detail=null; break;
+    case 'openResult': UI.result=true; break;
+    case 'closeResult': UI.result=false; break;
     case 'toggleLog': UI.log=!UI.log; savePref('pencilduel.logOpen',UI.log?'1':'0'); break;
     case 'toggleAuto': UI.auto=!UI.auto; savePref('pencilduel.auto',UI.auto?'1':'0'); break;
   }

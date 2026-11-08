@@ -16,7 +16,11 @@ const fxBusy = ()=>fxRunning||FXQ.length>0;
 function fxKick(){ if(!fxRunning&&FXQ.length){ fxRunning=true; setTimeout(fxNext,30); } }
 function fxNext(){
   const ev=FXQ.shift();
-  if(!ev){ fxRunning=false; clearKoHolds(); return; }
+  if(!ev){
+    fxRunning=false; clearKoHolds();
+    if(G.phase==='over'&&!UI.resultShown){ UI.resultShown=true; setTimeout(()=>{ if(G.phase==='over'){ UI.result=true; render(); } },1600); }
+    return;
+  }
   let wait=0;
   try{ wait=fxPlay(ev); }catch(e){ console.error(e); if(ev.t==='roll') reveal(ev); }
   if(ev.w!=null) wait=ev.w;
@@ -73,7 +77,8 @@ function showRoll(L,ev,r){
     num.textContent=ev.f+1;
     el.classList.add('land');
     const res=el.querySelector('.rf-res');
-    if(ev.n!=null) res.innerHTML=`<span class="rf-acts ${ev.n?'':'zero'}">行動 ×${ev.n}</span>`;
+    if(ev.ch) res.innerHTML=`<span class="rf-acts ${ev.ch.ok?'':'zero'}">${ev.f+1} ≤ ${ev.ch.need}？ ${ev.ch.ok?'成功':'失敗'}</span>`;
+    else if(ev.n!=null) res.innerHTML=`<span class="rf-acts ${ev.n?'':'zero'}">行動 ×${ev.n}</span>`;
     else if(ev.cmd&&d) res.innerHTML=cmdCardHTML(d,ev.cmd);
     reveal(ev);
   },ROLL_SPIN);
