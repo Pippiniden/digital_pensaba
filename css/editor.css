@@ -35,7 +35,7 @@ textarea:focus{outline:1px solid var(--gold);border-color:var(--gold)}
 /* 画像 */
 .imged{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
 .imgfield{display:flex;flex-direction:column;align-items:center;gap:6px;padding:10px;border:1px solid var(--line);border-radius:4px;background:rgba(6,13,34,.35)}
-.imgfield input{width:100%;font-size:12px}
+.imgfield code{font-size:11px;word-break:break-all;text-align:center}
 .imgprev{height:112px;display:flex;align-items:center}
 .imgfield.iscards{grid-column:span 2}
 .imgfield.iscards .ccrow{margin:0}

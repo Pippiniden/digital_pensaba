@@ -197,7 +197,7 @@ function showCutin(L,ev){
   const c=document.createElement('div');
   c.className=`cutin ${esc(ev.col||'R')}`;
   c.innerHTML=`<div class="ci-band"><div class="ci-lines"></div>
-    ${imgTag(imgSrc(d,'face'),IMG_PLACEHOLDER.face,'ci-img',d.name)}
+    ${unitImg(d,'face','ci-img',d.name)}
     <div class="ci-text"><small>${TERMS.ult} ・ ${esc(TERMS[ev.col]||'')}</small><b>${esc(ev.title)}</b><span>${clsIconTag(d.cls,'ci-cls')}${esc(d.name)}</span></div></div>`;
   L.appendChild(c);
   setTimeout(()=>c.remove(),FX_WAIT.cutin);

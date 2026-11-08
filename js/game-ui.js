@@ -64,7 +64,7 @@ function svtHTML(u){
   const cls=['svt',sh.out?'out':'',pickable?'pickable':'',G.target===u.uid&&!sh.out?'targeted':'',acting&&u.pid===G.cur?'acting':''].join(' ');
   const fx=u.fx.map(e=>`<span class="chip fx ${FX[e.k].buff?'buff':'debuff'}">${fxText(e)}</span>`).join('');
   return `<div class="${cls}${allocable?' allocable':''}" data-uid="${u.uid}" ${allocable?`data-a="alloc" data-d="1" title="クリックで行動を1回追加"`:pickable?`data-a="cardClick"`:''}>
-    <div class="portrait">${imgTag(imgSrc(d,'face'),IMG_PLACEHOLDER.face,'pimg',d.name)}
+    <div class="portrait">${unitImg(d,'face','pimg',d.name)}
       ${clsIconTag(d.cls,'pcls')}<span class="pord">${ORD[u.idx]}</span>
       ${u.asc?`<span class="pasc">${TERMS.asc}</span>`:''}
       ${sh.out?`<span class="pout">${TERMS.out}</span>`:''}
@@ -125,7 +125,7 @@ function allocLaneHTML(){
   const slots=Array.from({length:RULES.actionsMax-cs.length},()=>`<div class="it"><div class="aslot"></div><span>&nbsp;</span></div>`).join('');
   return cs.map(({u,k})=>{ const d=D(u.def);
     return `<div class="it al" data-key="${u.uid}#${k}" ${own?`data-a="alloc" data-uid="${u.uid}" data-d="-1" title="クリックで戻す"`:''}>
-      <div class="acard">${imgTag(imgSrc(d,'card'),IMG_PLACEHOLDER.face,'pimg',d.name)}${clsIconTag(d.cls,'pcls')}<span class="aord">${ORD[u.idx]}</span></div>
+      <div class="acard">${unitImg(d,'card','pimg',d.name)}${clsIconTag(d.cls,'pcls')}<span class="aord">${ORD[u.idx]}</span></div>
       <span title="${dn(u)}">${dn(u)}</span></div>`; }).join('')+slots;
 }
 // 新しく並んだカードを、そのサーヴァントの肖像の位置から飛ばしてくる（描き直しても既にあるカードは動かさない）
@@ -192,7 +192,7 @@ function unitDetailHTML(d,u){
   const fx=u&&u.fx.length?`<h4>効果</h4><div class="fxs open">${u.fx.map(e=>`<span class="chip fx ${FX[e.k].buff?'buff':'debuff'}">${fxText(e)}</span>`).join('')}</div>`:'';
   return `<div class="udetail">
     <div class="udtop">
-      <div class="udimg">${imgTag(imgSrc(d,'face'),IMG_PLACEHOLDER.face,'pimg',d.name)}</div>
+      <div class="udimg">${unitImg(d,'face','pimg',d.name)}</div>
       <div class="udinfo">${clsBadge(d.cls)}<h3>${esc(d.name)}</h3>
         <div class="sub small">コスト ${d.cost} ・ HP ${u?`${fmt(u.hp)} / `:''}${d.hp}${u?` ・ ${TERMS.gauge} ${u.np}%`:''}${u&&u.asc?` ・ <span class="hl">${TERMS.ascFull}済み</span>`:''}</div>
         <div class="ccrow">${['R','B','G'].map(k=>cmdCardHTML(d,{c:k},{small:true})).join('')}</div>
@@ -215,13 +215,13 @@ function setupHTML(){
   const view=D(UI.setupView)||D(picks[picks.length-1])||UNITS[0];
   const slots=[0,1,2].map(i=>{
     const d=D(picks[i]);
-    return d ? `<button class="slot filled" data-a="setupToggle" data-id="${esc(d.id)}" data-view="${esc(d.id)}" title="外す">${imgTag(imgSrc(d,'face'),IMG_PLACEHOLDER.face,'pimg',d.name)}<span>${ORD[i]}</span><b>${esc(d.name)}</b></button>`
+    return d ? `<button class="slot filled" data-a="setupToggle" data-id="${esc(d.id)}" data-view="${esc(d.id)}" title="外す">${unitImg(d,'face','pimg',d.name)}<span>${ORD[i]}</span><b>${esc(d.name)}</b></button>`
              : `<div class="slot"><span>${ORD[i]}</span></div>`;
   }).join('');
   const tiles=UNITS.map(d=>{
     const i=picks.indexOf(d.id), sel=i>=0, over=!sel&&(picks.length>=RULES.partyMax||cost+d.cost>RULES.costCap);
     return `<button class="tile ${sel?'sel':''} ${over?'dim':''} ${view&&view.id===d.id?'viewing':''}" data-a="setupToggle" data-id="${esc(d.id)}" data-view="${esc(d.id)}">
-      ${imgTag(imgSrc(d,'face'),IMG_PLACEHOLDER.face,'pimg',d.name)}${clsIconTag(d.cls,'pcls')}
+      ${unitImg(d,'face','pimg',d.name)}${clsIconTag(d.cls,'pcls')}
       <span class="tcost">C${d.cost}</span>${sel?`<span class="order">${i+1}</span>`:''}
       <span class="tname">${esc(d.name)}<small>${esc(d.cls)} ・ HP${d.hp}</small></span></button>`;
   }).join('');
@@ -247,7 +247,7 @@ function modeHTML(){
   const src = UNIT_SOURCE==='custom'
     ? `<p class="datainfo">ペンシルエディタで作ったデータ（${UNITS.length}騎）を使っています。<button data-a="useDefaultData">標準データに戻す</button></p>`
     : UNIT_BROKEN ? `<p class="datainfo warn">エディタのデータにエラーがあったため、標準データを使っています。</p>` : '';
-  const show=UNITS.slice(0,7).map((d,i)=>`<div class="showtile" style="--i:${i}">${imgTag(imgSrc(d,'face'),IMG_PLACEHOLDER.face,'pimg',d.name)}${clsIconTag(d.cls,'pcls')}</div>`).join('');
+  const show=UNITS.slice(0,7).map((d,i)=>`<div class="showtile" style="--i:${i}">${unitImg(d,'face','pimg',d.name)}${clsIconTag(d.cls,'pcls')}</div>`).join('');
   return `<div class="mode">
     <div class="title"><small>Fate fan-made pencil battle</small><h2>PENCIL DUEL</h2></div>
     <div class="showcase">${show}</div>

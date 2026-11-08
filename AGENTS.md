@@ -26,6 +26,7 @@ It was written from the code (`js/*.js`). If you find a mismatch, the code is th
 | `js/editor.js` | Editor rendering, input, auto-save |
 | `css/base.css` | Shared styles (CSS variables, buttons, header) |
 | `css/game.css` / `css/editor.css` | Per-screen styles |
+| `img/units/` | **Character images by id**: `{id}.webp` (face), `{id}_card.webp` (command card, optional). Names/extension set by `IMG_DIR` / `IMG_EXT` / `IMG_CARD_SUFFIX` in rules.js |
 | `img/classes/` | Class icons (webp) / `img/placeholder/` placeholder images (svg) / `img/ui/` magic circle |
 
 ## 3. Script load order and dependencies
@@ -46,7 +47,8 @@ Editor (editor.html): rules → units → common → editor
 ### 4.1 Character ("servant") definition — `DEFAULT_UNITS[i]` / `UNITS[i]`
 ```
 { id, name, cls, cost, hp,
-  img:   { face, card },                 // empty card → face; if that is also the placeholder → card.svg
+                                         // images are NOT data: img/units/{id}.webp (face) and {id}_card.webp (card, optional)
+                                         // card chain: {id}_card → {id} → card.svg / face chain: {id} → face.svg (see imgCandidates)
   lines: { start, attack, damage, skill, np, npDamage, defeat, win },  // each string[] (LINE_KEYS)
   faces: [ {acts:1|2|3, pre:Cmd, post:Cmd} ×6 ],   // pencil faces 1–6. pre = before ascension / post = after
                                                    // acts is IGNORED while RULES.actsTable is set (the default)

@@ -41,7 +41,7 @@ function uniqueId(base){
 }
 const C=(c,dmg,np=0,star=0)=>({c,dmg,np,star});
 function newUnit(){
-  return { id:uniqueId('unit'), name:'新しいサーヴァント', cls:CLASSES[0], cost:2, hp:100, img:{face:IMG_PLACEHOLDER.face, card:''}, lines:Object.fromEntries(Object.keys(LINE_KEYS).map(k=>[k,[]])),
+  return { id:uniqueId('unit'), name:'新しいサーヴァント', cls:CLASSES[0], cost:2, hp:100, lines:Object.fromEntries(Object.keys(LINE_KEYS).map(k=>[k,[]])),
     faces:[ {acts:1,pre:C('R',20),post:C('R',30)}, {acts:2,pre:C('B',15,20),post:C('B',20,30)}, {acts:1,pre:C('G',10,0,3),post:C('G',15,0,5)},
             {acts:2,pre:C('R',20),post:C('R',30)}, {acts:3,pre:{c:'ASC'},post:C('R',45)}, {acts:1,pre:C('B',15,20),post:C('B',20,30)} ],
     skills:[ {name:'スキル1',eff:[{k:'atk',t:'self',v:10,turns:3}]},
@@ -129,15 +129,15 @@ function renderForm(){
     </div>
   </section>
   <section class="sec"><h2>画像</h2>
-    <p class="sub small nm">画像ファイルのパス（例：img/units/${esc(u.id||'unit')}/face.png）か URL を入力します。
-      コマンドカードは「共通の背景」＋「カード用キャラ画像」＋「共通の枠と種別名」の重ね合わせなので、サーヴァントごとに用意するのは最大2枚です（共通素材は rules.js の CARD_LAYERS）。</p>
+    <p class="sub small nm">画像は専用フォルダ <code>${IMG_DIR}</code> に、キャラクターのIDと同じ名前の ${IMG_EXT} を置くと自動で使われます（エディタでの指定は不要）。
+      カード用画像がなければキャラクター画像をカードにも使います。コマンドカードは「共通の背景」＋「カード用キャラ画像」＋「共通の枠と種別名」の重ね合わせです（共通素材は rules.js の CARD_LAYERS）。</p>
     <div class="imged">
-      <label class="imgfield isface"><span class="imgprev" data-imgprev="face">${faceImg(u,'face lg')}</span>
+      <div class="imgfield isface"><span class="imgprev" data-imgprev="face">${faceImg(u,'face lg')}</span>
         <span class="imglab">${IMG_KEYS.face}</span>
-        <input data-p="img.face" value="${esc(u.img.face)}" placeholder="${esc(IMG_PLACEHOLDER.face)}"><small class="sub">空欄なら仮画像</small></label>
-      <label class="imgfield iscards"><span class="imgprev" data-imgprev="cards">${cardPreviewHTML(u)}</span>
-        <span class="imglab">${IMG_KEYS.card}</span>
-        <input data-p="img.card" value="${esc(u.img.card)}" placeholder="空欄ならキャラクター画像を使う"><small class="sub">背景を透過した画像だと、共通背景が見えて映えます</small></label>
+        <code data-imgpath="face">${esc(IMG_DIR+u.id)}.${IMG_EXT}</code><small class="sub">なければ仮画像</small></div>
+      <div class="imgfield iscards"><span class="imgprev" data-imgprev="cards">${cardPreviewHTML(u)}</span>
+        <span class="imglab">${IMG_KEYS.card}（任意）</span>
+        <code data-imgpath="card">${esc(IMG_DIR+u.id)}${IMG_CARD_SUFFIX}.${IMG_EXT}</code><small class="sub">なければキャラクター画像を使う。背景を透過すると共通背景が見えて映えます</small></div>
     </div>
   </section>
   <section class="sec"><h2>セリフ</h2>
@@ -231,8 +231,10 @@ function updatePreviews(){
   document.querySelectorAll('[data-clsprev] img').forEach(im=>{ const src=classIcon(u.cls); if(im.getAttribute('src')!==src){ im.onerror=()=>{ im.onerror=null; im.src=CLASS_ICON_EXTRA; }; im.src=src; } });
   // 画像のパスが変わったときだけプレビューを作り直す（同じパスなら読み込み直さない）
   document.querySelectorAll('[data-imgprev]').forEach(el=>{
-    const key=`${u.img.face}|${u.img.card}|${u.cls}`; if(el.dataset.key===key) return; el.dataset.key=key;
+    const key=`${u.id}|${u.cls}`; if(el.dataset.key===key) return; el.dataset.key=key;
     el.innerHTML = el.dataset.imgprev==='face' ? faceImg(u,'face lg') : cardPreviewHTML(u);
+    const f=document.querySelector('[data-imgpath="face"]'), c=document.querySelector('[data-imgpath="card"]');
+    if(f) f.textContent=`${IMG_DIR+u.id}.${IMG_EXT}`; if(c) c.textContent=`${IMG_DIR+u.id}${IMG_CARD_SUFFIX}.${IMG_EXT}`;
   });
 }
 

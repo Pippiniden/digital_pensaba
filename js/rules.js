@@ -9,9 +9,10 @@ const TERMS = { unit:'サーヴァント', player:'マスター', gauge:'NP', ul
   R:'Buster', B:'Arts', G:'Quick', W:'特殊' };
 
 // ---------- 画像 ----------
-// 各サーヴァントの img に書くもの
-//   face: キャラクター画像（必須。空欄・読み込めないときは IMG_PLACEHOLDER.face の仮画像）
-//   card: コマンドカードに載せるキャラ画像（空欄なら face を使う。背景を透過したPNG/WebPだと映えます）
+// サーヴァント画像は専用フォルダ IMG_DIR に、キャラクターの id と同じ名前で置きます
+//   face: img/units/{id}.webp        キャラクター画像（なければ IMG_PLACEHOLDER.face の仮画像）
+//   card: img/units/{id}_card.webp   コマンドカード用（任意。なければ face を使う。背景透過だと映えます）
+const IMG_DIR = 'img/units/', IMG_EXT = 'webp', IMG_CARD_SUFFIX = '_card';
 const IMG_KEYS = { face:'キャラクター画像', card:'カード用キャラ画像' };
 const IMG_PLACEHOLDER = { face:'img/placeholder/face.svg', card:'img/placeholder/card.svg' }; // card は背景透過の仮画像
 

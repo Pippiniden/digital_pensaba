@@ -1,13 +1,12 @@
 'use strict';
 // サーヴァントデータ（ペンシルエディタで書き出し）
-// img: キャラクター画像(face)・カード用キャラ画像(card、空欄ならfaceを使う) のパス
+// 画像は img/units/{id}.webp（キャラクター）と img/units/{id}_card.webp（カード用・任意）を自動で使う
 // lines: 場面ごとのセリフ
 // faces: 出目1〜6の面 / acts: 行動回数 / pre・post: 再臨前・後のコマンド
 // c: R=Buster B=Arts G=Quick W=特殊 ASC=再臨
 const DEFAULT_UNITS = [
   {
     "id":"artoria", "name":"アルトリア・ペンドラゴン", "cls":"セイバー", "cost":5, "hp":1000,
-    "img":{"face":"img/placeholder/face.svg","card":""},
     "lines":{
       "start":["剣の英霊、ここに。"],
       "attack":["はっ！","そこです！","断つ！"],
@@ -35,7 +34,6 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"medea", "name":"メディア", "cls":"キャスター", "cost":3, "hp":500,
-    "img":{"face":"img/placeholder/face.svg","card":""},
     "lines":{
       "start":["キャスター、参上よ。"],
       "attack":["えいっ。","焼き払いなさい。","邪魔よ。"],
@@ -63,7 +61,6 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"medusa", "name":"メドゥーサ", "cls":"ライダー", "cost":3, "hp":500,
-    "img":{"face":"img/placeholder/face.svg","card":""},
     "lines":{
       "start":["ライダー、参ります。"],
       "attack":["ふっ……！","逃がしません。","そこです。"],
@@ -91,7 +88,6 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"emiya", "name":"エミヤ", "cls":"アーチャー", "cost":4, "hp":650,
-    "img":{"face":"img/placeholder/face.svg","card":""},
     "lines":{
       "start":["アーチャー、出るぞ。"],
       "attack":["ふっ！","遅い。","そこだ。"],
@@ -119,7 +115,6 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"cu", "name":"クー・フーリン", "cls":"ランサー", "cost":3, "hp":550,
-    "img":{"face":"img/placeholder/face.svg","card":""},
     "lines":{
       "start":["ランサー、推参だ。"],
       "attack":["おらよっ！","遅えっ！","もらった！"],
@@ -147,7 +142,6 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"heracles", "name":"ヘラクレス", "cls":"バーサーカー", "cost":4, "hp":650,
-    "img":{"face":"img/placeholder/face.svg","card":""},
     "lines":{
       "start":["■■■■■――！"],
       "attack":["■■■！","■■■■ッ！","■■――！"],
@@ -175,7 +169,6 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"mash", "name":"マシュ・キリエライト", "cls":"シールダー", "cost":0, "hp":400,
-    "img":{"face":"img/placeholder/face.svg","card":""},
     "lines":{
       "start":["マシュ・キリエライト、戦闘を開始します。"],
       "attack":["はあっ！","盾で押し切ります！","行きます！"],
@@ -203,7 +196,6 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"kojiro", "name":"佐々木小次郎", "cls":"アサシン", "cost":1, "hp":400,
-    "img":{"face":"img/placeholder/face.svg","card":""},
     "lines":{
       "start":["佐々木小次郎、推して参る。"],
       "attack":["ふっ。","見えたか？","そこよ。"],
@@ -231,7 +223,6 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"hassan", "name":"呪腕のハサン", "cls":"アサシン", "cost":2, "hp":550,
-    "img":{"face":"img/placeholder/face.svg","card":""},
     "lines":{
       "start":["ハサン・サッバーハ、ここに。"],
       "attack":["シッ！","喰らえ。","逃さぬ。"],
