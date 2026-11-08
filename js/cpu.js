@@ -80,7 +80,6 @@ function ultPower(u){
   return D(u.def).ult.eff.filter(e=>e.k==='dmg').reduce((s,e)=>s+e.v*(e.t==='enemy_all'?alive(1-u.pid).length:1),0);
 }
 function cpuUltUser(){
-  if(!ultManual()) return null;
   const c=alive(G.cur).filter(u=>canUlt(u)&&u.np>=RULES.ultCost);
   return c.sort((a,b)=>ultPower(b)-ultPower(a))[0]||null;
 }

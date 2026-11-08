@@ -19,6 +19,7 @@ function normEff(e){
   const o={k:String(e.k||'atk'), t:String(e.t||'self'), v:num(e.v)};
   for(const k of ['turns','times','chance']) if(num(e[k])>0) o[k]=num(e[k]);
   if(['R','B','G'].includes(e.color)) o.color=e.color;
+  if(EFF_AT[e.at]) o.at=e.at; // 攻撃の前/後（未指定なら既定のタイミング。rules.js の EFF_AT）
   return o;
 }
 function normCmd(c){
@@ -132,6 +133,8 @@ function checkEffs(effs,ctx,where,add){
     if(FX[e.k].timesOnly&&e.turns!=null) add('warn',`${w}：${FX[e.k].name}は回数で指定します（ターンは使われません）`);
     if(e.k==='instantDeath'&&['self','ally_all'].includes(e.t)) add('warn',`${w}：味方に即死効果がかかります`);
     if(e.chance&&e.chance>=6) add('warn',`${w}：ロール6以下は必ず成功します`);
+    if(e.at&&ctx==='skill') add('warn',`${w}：スキルでは「${EFF_AT[e.at]}」の指定は使われません`);
+    if(e.at&&e.k==='dmg') add('warn',`${w}：ダメージ効果には「${EFF_AT[e.at]}」の指定は使われません`);
   });
 }
 const hasErrors = units=>validateUnits(units).some(x=>x.level==='error');
@@ -201,18 +204,57 @@ function clsIconTag(cls,cls2='clsicon'){ return imgTag(classIcon(cls),CLASS_ICON
 function clsBadge(cls,iconOnly){ return `<span class="cls${iconOnly?' only':''}" title="${esc(cls)}">${clsIconTag(cls)}${iconOnly?'':`<span>${esc(cls)}</span>`}</span>`; }
 // サーヴァント画像は IMG_DIR の中から id に合う名前のファイルを探す（rules.js）
 //   face: {id}.webp / card: {id}_card.webp → なければ face → なければ仮画像
+// 一度読み込めなかったURLは IMG_BAD に覚えて、次の描画からは最初から飛ばす
+// （毎回 404 → 差し替え をくり返すと、描き直すたびに画像がチカチカ消える）
+const IMG_BAD=new Set();
 function imgCandidates(d,k){
   const id=d&&d.id, base=id?IMG_DIR+encodeURIComponent(id):'';
   const face=base?base+'.'+IMG_EXT:'', card=base?base+IMG_CARD_SUFFIX+'.'+IMG_EXT:'';
-  return k==='card' ? [card,face,IMG_PLACEHOLDER.card].filter(Boolean) : [face,IMG_PLACEHOLDER.face].filter(Boolean);
+  const all=(k==='card' ? [card,face,IMG_PLACEHOLDER.card] : [face,IMG_PLACEHOLDER.face]).filter(Boolean);
+  const ok=all.filter(u=>!IMG_BAD.has(u));
+  return ok.length?ok:all.slice(-1);
 }
 // 読み込めなければ data-fb に積んだ次の候補へ順に差し替える
 function imgFail(el){
+  IMG_BAD.add(el.getAttribute('src'));
   const fb=(el.dataset.fb||'').split('|').filter(Boolean);
   if(!fb.length){ el.onerror=null; return; }
   el.dataset.fb=fb.slice(1).join('|'); el.src=fb[0];
 }
-const imgTag=(src,fallback,cls,alt='',style='')=>`<img class="${cls}" src="${esc(src)}" alt="${esc(alt)}" loading="lazy" data-fb="${esc([].concat(fallback).join('|'))}" onerror="imgFail(this)"${style?` style="${style}"`:''}>`;
+// loading="lazy" は付けない：描き直しで作り直した画像が、表示されるまで一瞬空白になるため
+const imgTag=(src,fallback,cls,alt='',style='')=>`<img class="${cls}" src="${esc(src)}" alt="${esc(alt)}" data-fb="${esc([].concat(fallback).join('|'))}" onerror="imgFail(this)"${style?` style="${style}"`:''}>`;
+// ---------- 画像を残したまま描き直す ----------
+// innerHTML で丸ごと作り直すと、同じ画像でも <img> が作り直されて一瞬消える（チカチカ）・毎回デコードし直す。
+// 新しいHTMLを組み立てたあと、読み込み済みの同じ画像（src・class・style が同じもの）を古い要素から移し替える。
+// 回転中の魔法陣（.mc-o / .mc-i）は style（animation-delay）が毎回変わるので style を見ずに残す（回転も途切れない）
+const KEEP_STYLELESS=['mc-o','mc-i'];
+function imgKey(im){
+  const free=KEEP_STYLELESS.some(c=>im.classList.contains(c));
+  return `${im.getAttribute('src')}|${im.className}|${free?'':im.getAttribute('style')||''}`;
+}
+function keepImgs(oldRoot,newRoot){
+  const pool=new Map();
+  oldRoot.querySelectorAll('img').forEach(im=>{
+    if(!im.complete||!im.naturalWidth) return; // 読み込み中・失敗した画像は使い回さない
+    const k=imgKey(im); if(!pool.has(k)) pool.set(k,[]); pool.get(k).push(im);
+  });
+  if(!pool.size) return;
+  newRoot.querySelectorAll('img').forEach(im=>{ const a=pool.get(imgKey(im)); if(a&&a.length) im.replaceWith(a.shift()); });
+}
+// el の中身を html に置き換える（画像は残す）
+function setHTML(el,html){
+  const t=document.createElement('template'); t.innerHTML=html;
+  keepImgs(el,t.content);
+  el.replaceChildren(t.content);
+}
+// el そのものを html の要素に置き換える（画像は残す）。新しい要素を返す
+function replaceHTML(el,html){
+  const t=document.createElement('template'); t.innerHTML=html.trim();
+  const n=t.content.firstElementChild; if(!n) return el;
+  keepImgs(el,n);
+  el.replaceWith(n);
+  return n;
+}
 function unitImg(d,k,cls,alt=''){ const c=imgCandidates(d,k); return imgTag(c[0],c.slice(1),cls,alt,fitStyle(d,k)); }
 function faceImg(d,cls='face'){ return `<span class="${cls}">${unitImg(d,'face','',d?d.name:'')}</span>`; }
 // コマンドカードの共通素材（rules.js の CARD_LAYERS）。宝具は bg が空なら宝具の色の bg を借りる
@@ -268,7 +310,7 @@ function fxText(e){
     default: s=FX[e.k]?FX[e.k].name:e.k;
   }
   const dur=[e.times!=null?`${e.times}回`:'', e.turns!=null?`${e.turns}T`:''].filter(Boolean).join('・');
-  return s+(dur?`(${dur})`:'')+(e.chance?`［ロール${e.chance}以下］`:'');
+  return s+(dur?`(${dur})`:'')+(e.chance?`［ロール${e.chance}以下］`:'')+(EFF_AT[e.at]&&e.k!=='dmg'?`［${EFF_AT[e.at]}］`:'');
 }
 function tLabel(t,pick){
   if(t==='picked') return PICKS[pick]&&pick ? PICKS[pick] : TARGETS.picked;
