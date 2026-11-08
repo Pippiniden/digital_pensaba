@@ -24,9 +24,9 @@ It was written from the code (`js/*.js`). If you find a mismatch, the code is th
 | `js/fx.js` | Visual effects (speech bubbles, damage numbers, ultimate cut-in, phase banners, pencil-roll animation, attack-card zoom). Plays `FXQ` in order |
 | `js/game-ui.js` | Game screen rendering (`render`) and input (click handling) |
 | `js/editor.js` | Editor rendering, input, auto-save |
-| `js/sim.js` | **Balance simulation core**: `simGame(a,b,handicap)` plays one headless simple-rule match (both sides CPU normal, draw after `SIM_TURN_LIMIT` turns); `simPair` aggregates n games from `a`'s side |
-| `js/sim-worker.js` | Web Worker that `importScripts` rules → units → common → engine → cpu → sim with a no-op `render()`, sets `UNITS` from the posted draft and posts one `{t:'pair',r}` per matchup, then `{t:'done'}` |
-| `js/editor-sim.js` | Editor's "バランス検証" dialog (`#simdlg`): options in `SIM`, starts/terminates the worker, renders per-opponent table or all-vs-all ranking + win-rate matrix. "検証から外す" chips (`SIM.excl`) drop special characters (e.g. メディア, whose NP gain is unusual) from opponents and all-vs-all; the selected character is still tested as the target |
+| `js/sim.js` | **Balance simulation core**: `simGame(picks,rule,handicap)` plays one headless match (both sides CPU normal, draw after `SIM_TURN_LIMIT` turns). Simple rule: `simPair(a,b,n,handicap)` aggregates n games from `a`'s side. Team rule: `simTeam(t,n,pool,full)` gives `t` random allies (cost ≤ `costCap`, as many units as possible; `full` = only teams at exactly `costCap`) against a random team **without `t`** with the **same total cost and size** (`simTeamPlan`), and breaks the win rate down by ally / enemy unit / team cost |
+| `js/sim-worker.js` | Web Worker that `importScripts` rules → units → common → engine → cpu → sim with a no-op `render()`, sets `UNITS` from the posted draft and posts one `{t:'pair',r}` per matchup (simple) or per target unit (`rule:'team'`), then `{t:'done'}` |
+| `js/editor-sim.js` | Editor's "バランス検証" dialog (`#simdlg`): options in `SIM` (`rule` simple/team, target, range/handicap for simple, `full` for team), starts/terminates the worker. Simple: per-opponent table or all-vs-all ranking + win-rate matrix. Team: `simTeamResultHTML` (one unit: summary + ally / enemy / team-cost tables; all: ranking). "検証から外す" chips (`SIM.excl`) drop special characters (e.g. メディア, whose NP gain is unusual) from opponents and all-vs-all; the selected character is still tested as the target |
 | `css/base.css` | Shared styles (CSS variables, buttons, header) |
 | `css/game.css` / `css/editor.css` | Per-screen styles |
 | `img/units/` | **Character images by id**: `{id}.webp` (face), `{id}_card.webp` (command card, optional). Names/extension set by `IMG_DIR` / `IMG_EXT` / `IMG_CARD_SUFFIX` in rules.js |
@@ -196,7 +196,7 @@ Chosen on the mode screen (`setRule`, plus `toggleHandicap`; both kept by `resta
 | End-of-game timing | `fxNext` in `fx.js`: when the queue empties with `G.phase==='over'`, `UI.endReady` (shows the rematch / result buttons in `promptHTML`) turns on after the VICTORY banner fades, then the result modal opens |
 | Auto-advance rules | `autoMove` / `hasSkillChoice` in `js/game-ui.js` |
 | Command card look / shared assets | `cmdCardHTML` / `cardLayers` in `common.js`; asset paths in `CARD_LAYERS` in `rules.js` |
-| Balance testing (simple-rule auto matches) | Rules of a match: `simGame` in `js/sim.js` (runs on the real engine/CPU, so rule changes apply automatically). Dialog / options / tables: `js/editor-sim.js` + "バランス検証" in `css/editor.css`. Needs the page served over http (Workers don't load from `file://`) |
+| Balance testing (simple-rule and 3v3 auto matches) | Rules of a match: `simGame` in `js/sim.js` (runs on the real engine/CPU, so rule changes apply automatically). Dialog / options / tables: `js/editor-sim.js` + "バランス検証" in `css/editor.css`. Needs the page served over http (Workers don't load from `file://`) |
 | Editor form / preview | `js/editor.js` (`renderForm` / `effRow` / `renderSide`) + `css/editor.css` |
 | Data validation rules (errors / warnings) | `validateUnits` / `checkEffs` in `common.js` |
 | **Add a new field to characters** | `normalizeUnit` in `common.js` (otherwise it is dropped) → `unitsToJS` (export) → `newUnit` and `renderForm` in `editor.js` → `validateUnits` → existing data in `units.js` |
@@ -206,7 +206,7 @@ Chosen on the mode screen (`setRule`, plus `toggleHandicap`; both kept by `resta
 
 There are no automated tests in the repo, so verify manually in a browser. For rule changes, also consider a quick headless check: load `rules/units/common/engine/cpu` into a Node `vm` context with a no-op `render()`, call `newGame()`, then loop `act(...cpuDecide())` with `G.cpu=[true,true]` for a few hundred games and look for hangs or `NaN` in `G.log`.
 - Game: open `index.html` and play one full match each in vs-CPU (easy / normal) and 2-player. Depending on your change, also exercise ultimates, ascension, chains, skill target selection, and knock-outs.
-- Balance test: `node` can load `rules/units/common/engine/cpu/sim` into a `vm` context (plus `function render(){}`) and call `simPair(a,b,n,true)` directly.
+- Balance test: `node` can load `rules/units/common/engine/cpu/sim` into a `vm` context (plus `function render(){}`) and call `simPair(a,b,n,true)` / `simTeam(id,n,UNITS.map(u=>u.id))` directly.
 - Editor: edit in `editor.html` → confirm the "validation" panel on the right shows no errors → "apply to game" → confirm it shows up on the game's mode-select screen → "reset to default data".
 - Confirm there are no console errors in the browser dev tools. To see how a broken `pencilduel.units` behaves, edit `localStorage` directly.
 
