@@ -231,6 +231,66 @@ body[data-screen="battle"] #app{overflow:auto}
 @keyframes cislide{0%{transform:translateX(45%);opacity:0}16%{transform:translateX(0);opacity:1}86%{transform:translateX(-5%);opacity:1}100%{transform:translateX(-9%);opacity:0}}
 @keyframes citext{0%{transform:translateX(-30%);opacity:0}20%{transform:translateX(0);opacity:1}86%{opacity:1}100%{transform:translateX(4%);opacity:0}}
 
+/* フェイズ切り替えの帯（.stage の位置に重ねる） */
+.phasefx{position:fixed;display:grid;place-items:center;overflow:hidden}
+.pf-band{position:relative;width:100%;padding:8px 0 10px;display:flex;flex-direction:column;align-items:center;gap:2px;
+  background:linear-gradient(90deg,transparent,rgba(6,13,34,.92) 18%,rgba(22,41,90,.95) 50%,rgba(6,13,34,.92) 82%,transparent);
+  border-block:1px solid var(--gold);box-shadow:0 0 24px rgba(246,227,161,.25);animation:pfband 1.05s cubic-bezier(.2,.8,.2,1) forwards}
+.pf-band b{font:700 26px/1.1 var(--serif);letter-spacing:.32em;color:var(--gold-hi);text-shadow:0 0 14px rgba(246,227,161,.7),0 2px 2px #000;animation:pftext 1.05s cubic-bezier(.2,.8,.2,1) forwards}
+.pf-band small{font:700 12px "Noto Serif JP",serif;letter-spacing:.2em;color:#fff;text-shadow:0 1px 3px #000}
+.phasefx.big .pf-band{padding:14px 0 16px;animation-duration:1.45s}
+.phasefx.big .pf-band b{font-size:44px;animation-duration:1.45s}
+.phasefx.big .pf-band small{font-size:15px}
+.phasefx.p0 .pf-band{border-color:var(--p0);box-shadow:0 0 30px color-mix(in srgb,var(--p0) 45%,transparent)}
+.phasefx.p1 .pf-band{border-color:var(--p1);box-shadow:0 0 30px color-mix(in srgb,var(--p1) 45%,transparent)}
+.phasefx.end .pf-band,.phasefx.end .pf-band b{animation-duration:3.1s}
+.phasefx.end .pf-band b{font-size:56px}
+.phasefx.banner .pf-band{background:linear-gradient(90deg,transparent,rgba(60,40,8,.92) 20%,rgba(120,86,20,.95) 50%,rgba(60,40,8,.92) 80%,transparent);border-color:var(--gold-hi)}
+.phasefx.banner.cR .pf-band{background:linear-gradient(90deg,transparent,rgba(80,10,10,.92) 20%,rgba(180,58,44,.95) 50%,rgba(80,10,10,.92) 80%,transparent)}
+.phasefx.banner.cB .pf-band{background:linear-gradient(90deg,transparent,rgba(10,26,74,.92) 20%,rgba(47,98,214,.95) 50%,rgba(10,26,74,.92) 80%,transparent)}
+.phasefx.banner.cG .pf-band{background:linear-gradient(90deg,transparent,rgba(6,48,27,.92) 20%,rgba(35,163,93,.95) 50%,rgba(6,48,27,.92) 80%,transparent)}
+.phasefx.banner .pf-band b{color:#fff;font-size:32px;font-style:italic}
+@keyframes pfband{0%{clip-path:inset(50% 0);opacity:0}14%{clip-path:inset(0);opacity:1}80%{clip-path:inset(0);opacity:1}100%{clip-path:inset(50% 0);opacity:0}}
+@keyframes pftext{0%{transform:translateX(-60px);opacity:0;letter-spacing:.9em}22%{transform:none;opacity:1;letter-spacing:.32em}80%{transform:translateX(10px);opacity:1}100%{transform:translateX(50px);opacity:0}}
+
+/* 鉛筆ロール：六角の鉛筆の断面が回って出目が決まる */
+.rollfx{position:fixed;z-index:3;translate:-50% -50%;display:flex;flex-direction:column;align-items:center;gap:6px;transition:opacity .3s}
+.rf-pencil{width:58px;height:58px;display:grid;place-items:center;clip-path:polygon(25% 3%,75% 3%,100% 50%,75% 97%,25% 97%,0 50%);
+  background:radial-gradient(circle at 50% 50%,#fff8e0 0 34%,#f2c14e 36% 62%,#b8861d 64%);animation:rfspin .16s linear infinite;filter:drop-shadow(0 0 8px rgba(0,0,0,.7))}
+.rf-pencil span{font:900 26px var(--serif);color:#2a1a04}
+.rollfx.land .rf-pencil{animation:rfland .4s cubic-bezier(.2,1.6,.4,1);filter:drop-shadow(0 0 14px rgba(246,227,161,.95))}
+.rf-res{min-height:0}
+.rf-res:empty{display:none}
+.rollfx.land .rf-res{animation:rfres .3s ease-out}
+.rf-res .ccard{width:92px;box-shadow:0 0 18px rgba(246,227,161,.6),0 4px 12px rgba(0,0,0,.6)}
+.rf-acts{display:block;font:700 20px var(--serif);color:#fff;white-space:nowrap;padding:1px 12px;border-radius:3px;background:rgba(6,13,34,.85);border:1px solid var(--gold-hi);text-shadow:0 0 8px rgba(246,227,161,.8)}
+.rf-acts.zero{color:#ff8a80;border-color:var(--r)}
+.rollfx.bye{opacity:0}
+@keyframes rfspin{to{rotate:60deg}}
+@keyframes rfland{0%{transform:scale(1.6)}100%{transform:scale(1)}}
+@keyframes rfres{from{opacity:0;transform:translateY(-8px) scale(.8)}to{opacity:1;transform:none}}
+
+/* 攻撃：コマンドカードを拡大して攻撃対象へ飛ばす */
+.atkfx{position:fixed;z-index:4;width:150px;margin:-112px 0 0 -75px;pointer-events:none}
+.atkfx .ccard{width:150px;box-shadow:0 0 0 2px var(--gold-hi),0 0 34px rgba(246,227,161,.8),0 10px 30px rgba(0,0,0,.7)}
+.atkfx .ccard .ccdmg{font-size:22px}
+.atkfx .ccard .ccname{font-size:16px}
+.af-tag{position:absolute;z-index:5;left:50%;top:-14px;translate:-50% 0;font:700 13px var(--serif);letter-spacing:.2em;color:#1a1206;padding:1px 10px;background:linear-gradient(180deg,var(--gold-hi),var(--gold))}
+.svt.lunge.up{animation:lungeUp .45s ease-out}
+.svt.lunge.down{animation:lungeDown .45s ease-out}
+@keyframes lungeUp{0%,100%{transform:none}35%{transform:translateY(-14px) scale(1.03)}}
+@keyframes lungeDown{0%,100%{transform:none}35%{transform:translateY(14px) scale(1.03)}}
+.lane .it.fire{animation:fire .6s ease-out}
+.lane .it.fire .ccard{box-shadow:0 0 0 2px var(--gold-hi),0 0 18px rgba(246,227,161,.9)}
+@keyframes fire{0%{transform:none}30%{transform:translateY(-8px) scale(1.1)}100%{transform:none}}
+
+/* 肖像の上に出る文字（霊基再臨など） */
+.txtpop{position:fixed;z-index:3;translate:-50% -50%;white-space:nowrap;font:900 22px "Noto Serif JP",serif;color:#fff;animation:pop 1.35s ease-out forwards}
+.txtpop.asc{color:var(--gold-hi);letter-spacing:.15em;text-shadow:0 0 3px #000,0 0 16px rgba(246,227,161,1),0 0 30px rgba(246,227,161,.7)}
+
+/* オートボタン */
+#autobtn.on{color:#1a1206;font-weight:700;border-color:var(--gold-hi);background:linear-gradient(180deg,var(--gold-hi),var(--gold))}
+
 /* ---------- 狭い画面：縦に並べてスクロール ---------- */
 @media (max-width:1100px){
   .battle,.battle.nolog{grid-template-columns:minmax(0,1fr)}

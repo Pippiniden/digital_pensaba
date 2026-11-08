@@ -17,7 +17,7 @@ function newGame(){
     players:[{name:TERMS.player+'1',party:[],stars:0},{name:TERMS.player+'2',party:[],stars:0}],
     cur:0, turn:0, actRolled:false, maxActs:{}, alloc:{}, rolled:[], ult:null, target:null,
     gen:0, pending:null, copy:null, log:[], winner:null };
-  FXQ.length=0; for(const k in FXHOLD) delete FXHOLD[k];
+  FXQ.length=0; for(const k in FXHOLD) delete FXHOLD[k]; FXHIDE.clear();
 }
 
 // ---------- 演出イベント ----------
@@ -30,7 +30,14 @@ function fxEmit(ev){
   if(ev.t==='dmg'&&ev.hp!=null&&!(ev.uid in FXHOLD)) FXHOLD[ev.uid]={hp:ev.hp0,out:false};
   FXQ.push(ev);
 }
-function say(u,key){ const t=pickLine(D(u.def),key); if(t) fxEmit({t:'say',uid:u.uid,key,text:t}); }
+// 出目の表示待ち：ロール演出が着地するまで画面に結果を出さないもの（'f:<uid>'=肖像の出目 / 'r:<idx>'=コマンド列の1枚）
+const FXHIDE=new Set();
+// o.w を付けると、次の演出までの待ち時間をその値にする（重ねて見せたいとき）
+function say(u,key,o={}){ const t=pickLine(D(u.def),key); if(t) fxEmit({t:'say',uid:u.uid,key,text:t,...o}); }
+// フェイズ切り替えの帯。big はターン開始など大きく見せるもの
+function phaseFx(title,sub,o={}){ fxEmit({t:'phase',title,sub,...o}); }
+// 鉛筆ロールの演出。keys の結果は演出の着地まで隠す
+function rollFx(uid,f,o={}){ (o.keys||[]).forEach(k=>FXHIDE.add(k)); fxEmit({t:'roll',uid,f,...o}); }
 
 // ---------- ヘルパー ----------
 const D = id=>UNITS.find(u=>u.id===id);
@@ -196,25 +203,30 @@ function doCopy(uid,src){
   const r=G.rolled[G.copy.idx], u=U(uid);
   const {f,cmd}=copyRollFrom(src);
   r.cmd=cmd; u.face={i:r.f,kind:'cmd',cmd};
+  rollFx(src.uid,f,{cmd,def:src.def,keys:[`f:${uid}`,`r:${G.copy.idx}`]});
   log(`${nm(u)}：${nm(src)}の鉛筆をロール 出目${f+1} → ${cmdChip(cmd)}`);
   G.copy=null;
 }
 function resolveCommand(att,cmd,tgt,o={}){
   const n=nm(att);
-  if(cmd.c==='ASC'){ log(`${n}：${TERMS.ascFull}（1行動）`,'sub'); return; }
+  const atkFx=to=>fxEmit({t:'atk',uid:att.uid,tgt:to,cmd,ri:o.ri,extra:!!o.extra});
+  if(cmd.c==='ASC'){ atkFx(null); log(`${n}：${TERMS.ascFull}（1行動）`,'sub'); return; }
   if(isCopyCmd(cmd)){ // エクストラアタックで出たときは対象をランダムに選んで、その場でロール
     const cs=copyCands(att); if(!cs.length) return;
     const src=cs[Math.floor(Math.random()*cs.length)], r=copyRollFrom(src);
     log(`${n}：${nm(src)}の鉛筆をロール 出目${r.f+1} → ${cmdChip(r.cmd)}`);
+    rollFx(src.uid,r.f,{cmd:r.cmd,def:src.def});
     return resolveCommand(att,r.cmd,tgt,o);
   }
   if(cmd.c==='W'){
     log(`${n}：特殊行動「${esc(cmd.label)}」${cmd.from?`（${esc(cmd.from)}）`:''}`);
+    if(!(cmd.dmg>0)) atkFx(null);
     applyEffects(att,cmd.eff||[],null);
     if(!(cmd.dmg>0)){ gainNpStar(att,cmd,1); return; }
     // ダメージを持つ特殊行動は無属性の攻撃として続けて処理する（チェインには数えない）
   }
-  say(att,'attack');
+  say(att,'attack',{w:250}); // 吹き出しと攻撃カードを重ねて見せる
+  atkFx(tgt.out?null:tgt.uid);
   let dmg=cmd.dmg; const note=[`基本${dmg}`]; let usedA=[], usedT=[], colorBuff=0;
   // 2. スキル効果補正 / 3. Busterチェイン
   if(!o.extra){
@@ -282,28 +294,32 @@ function resolveUlt(u,tgt){
 function resolveDamage(){
   const tgt=U(G.target);
   log(`⑥ ダメージフェイズ（攻撃対象：${nm(tgt)}）`,'h');
+  phaseFx('BATTLE','ダメージフェイズ',{w:800}); // 帯が消えてから攻撃カードを出す
   if(G.ult){ resolveUlt(U(G.ult),tgt); }
   else {
     const hp0=tgt.hp;
     const acts=G.rolled, cols=acts.map(a=>a.cmd.c);
     const chain = acts.length===3 && ['R','B','G'].includes(cols[0]) && cols.every(c=>c===cols[0]) ? cols[0] : null;
-    if(chain) log(`${TERMS[chain]}チェイン発生！`,'good');
-    acts.forEach(a=>resolveCommand(U(a.uid),a.cmd,tgt,{chain}));
+    if(chain){ log(`${TERMS[chain]}チェイン発生！`,'good'); fxEmit({t:'banner',title:`${TERMS[chain]} Chain`,col:chain}); }
+    acts.forEach((a,ri)=>resolveCommand(U(a.uid),a.cmd,tgt,{chain,ri}));
     if(chain==='B'){ [...new Set(acts.map(a=>a.uid))].map(U).forEach(u=>addNp(u,RULES.chainB)); log(`チェインボーナス：行動${TERMS.unit}の${TERMS.gauge}+${RULES.chainB}%`); }
     if(chain==='G'){ G.gen+=RULES.chainG; log(`チェインボーナス：${TERMS.star}${RULES.chainG}個発生`); }
     // 7. ブレイブチェイン
     if(acts.length===3 && acts.every(a=>a.uid===acts[0].uid)){
       const u=U(acts[0].uid), f=roll(), face=D(u.def).faces[f];
       log(`ブレイブチェイン！ ${nm(u)}のエクストラアタック（出目${f+1}）`,'good');
-      if(!u.asc && face.pre.c==='ASC'){ ascend(u); u.face={i:f,kind:'cmd',cmd:face.pre}; }
-      else { const cmd=u.asc?face.post:face.pre; u.face={i:f,kind:'cmd',cmd}; resolveCommand(u,cmd,tgt,{extra:true}); }
+      fxEmit({t:'banner',title:'Brave Chain',sub:'エクストラアタック'});
+      const cmd=!u.asc&&face.pre.c==='ASC'?face.pre:u.asc?face.post:face.pre;
+      rollFx(u.uid,f,{cmd,keys:[`f:${u.uid}`]}); u.face={i:f,kind:'cmd',cmd};
+      if(cmd.c==='ASC') ascend(u);
+      else resolveCommand(u,cmd,tgt,{extra:true});
     }
     if(!tgt.out && tgt.hp<hp0) say(tgt,'damage');
   }
   checkWin();
   if(G.winner==null) G.phase='end';
 }
-function ascend(u){ u.asc=true; log(`${nm(u)} ${TERMS.ascFull}！ 以降は${TERMS.asc}後コマンド、スキル3解放`,'good'); }
+function ascend(u){ u.asc=true; fxEmit({t:'pop',uid:u.uid,text:TERMS.ascFull,cls:'asc'}); log(`${nm(u)} ${TERMS.ascFull}！ 以降は${TERMS.asc}後コマンド、スキル3解放`,'good'); }
 
 // =====================================================================
 // ターン進行
@@ -316,6 +332,7 @@ function startGame(){
     r0=roll(); r1=roll();
     const a=G.players[0].party[0], b=G.players[1].party[0];
     a.face={i:r0,kind:'die'}; b.face={i:r1,kind:'die'};
+    rollFx(a.uid,r0,{grp:true,keys:[`f:${a.uid}`]}); rollFx(b.uid,r1,{keys:[`f:${b.uid}`]});
     log(`${nm(a)} 出目${r0+1} ／ ${nm(b)} 出目${r1+1}${r0===r1?'（同値・振り直し）':''}`);
   } while(r0===r1);
   G.cur=r0>r1?0:1; G.turn=1;
@@ -326,6 +343,7 @@ function startGame(){
 function beginTurn(){
   Object.assign(G,{phase:'actRoll',actRolled:false,maxActs:{},alloc:{},rolled:[],ult:null,target:null,gen:0,pending:null,copy:null});
   log(`━ ターン${G.turn}：${esc(G.players[G.cur].name)} ━`,'h');
+  phaseFx(`TURN ${G.turn}`,`${G.players[G.cur].name}の手番`,{big:true,pid:G.cur});
   // ① ターン開始：このプレイヤーが付与した効果の残りターン-1
   ALL().forEach(u=>{
     u.fx.forEach(e=>{ if(e.owner===G.cur && e.turns!=null) e.turns--; });
@@ -356,7 +374,8 @@ function checkWin(){
   if(alive(1-G.cur).length===0) win(G.cur);      // 同時全滅は手番側の勝ち
   else if(alive(G.cur).length===0) win(1-G.cur);
 }
-function win(pid){ G.winner=pid; G.phase='over'; log(`${esc(G.players[pid].name)} の勝利！`,'good'); const w=alive(pid)[0]; if(w) say(w,'win'); }
+function win(pid){ G.winner=pid; G.phase='over'; log(`${esc(G.players[pid].name)} の勝利！`,'good');
+  phaseFx(G.mode==='cpu'?(pid===0?'VICTORY':'DEFEAT'):'WINNER',G.mode==='cpu'?'':`${G.players[pid].name}の勝利`,{big:true,pid,end:true}); const w=alive(pid)[0]; if(w) say(w,'win'); }
 function applyMode(cfg){
   Object.assign(G,{mode:cfg.mode, level:cfg.level, cpu:cfg.cpu, speed:cfg.speed||G.speed, phase:'setup'});
   cfg.names.forEach((n,i)=>G.players[i].name=n);
@@ -370,7 +389,7 @@ function doSkill(u,si,picked){
   checkWin(); // 即死などでスキルだけで決着することがある
 }
 function toTargetPhase(){
-  G.phase='target'; log('⑤ 攻撃対象決定','h');
+  G.phase='target'; log('⑤ 攻撃対象決定','h'); phaseFx('TARGET','攻撃対象の選択');
   const c=targetCandidates(); if(c.length===1) G.target=c[0].uid;
 }
 
@@ -430,18 +449,19 @@ const ACTIONS = {
   rollActs(){
     if(G.phase!=='actRoll'||G.actRolled) return;
     log('② 行動回数決定','h');
-    const bonus=G.players[G.cur].party.filter(u=>u.out).length; let left=RULES.actionsMax;
+    const bonus=G.players[G.cur].party.filter(u=>u.out).length; let left=RULES.actionsMax; const rolls=[];
     alive(G.cur).forEach(u=>{
       let m=0;
       if(disabled(u)){ u.face=null; log(`${nm(u)}は行動不能`,'bad'); }
       else {
-        const f=roll(); u.face={i:f,kind:'acts'};
+        const f=roll(); u.face={i:f,kind:'acts'}; rolls.push({uid:u.uid,f});
         const fear=has(u,'fear')?1:0, up=mods(u,'actsUp'); consume(u,up.list);
         m=Math.max(0,Math.min(RULES.actionsMax, faceActs(D(u.def),f)+bonus+up.sum-fear));
         log(`${nm(u)} 出目${f+1} → 最大行動${m}${bonus?`（撤退ボーナス+${bonus}）`:''}${up.sum?`（最大行動回数+${up.sum}）`:''}${fear?'（恐怖-1）':''}`, m?'':'bad');
       }
       G.maxActs[u.uid]=m; const a=Math.min(m,left); G.alloc[u.uid]=a; left-=a;
     });
+    rolls.forEach((r,i)=>rollFx(r.uid,r.f,{n:G.maxActs[r.uid],grp:i<rolls.length-1,keys:[`f:${r.uid}`]}));
     G.actRolled=true;
   },
   alloc({uid,d}){
@@ -460,7 +480,7 @@ const ACTIONS = {
     log(`配分：${txt||'なし'}`,'sub');
     ACTIONS.confirmAlloc();
   },
-  confirmAlloc(){ if(G.phase==='actRoll'&&G.actRolled){ G.phase='skill'; log(`③ スキル・${TERMS.ult}使用`,'h'); } },
+  confirmAlloc(){ if(G.phase==='actRoll'&&G.actRolled){ G.phase='skill'; log(`③ スキル・${TERMS.ult}使用`,'h'); phaseFx('SKILL',`スキル・${TERMS.ult}`); } },
   useSkill({uid,si}){
     si=Number(si); const u=U(uid), s=D(u.def).skills[si];
     if(G.phase!=='skill'||G.pending||u.pid!==G.cur||!canSkill(u)||u.used[si]||(si===2&&!u.asc)) return;
@@ -477,7 +497,7 @@ const ACTIONS = {
   skillDone(){
     if(G.phase!=='skill'||G.pending) return;
     if(G.ult) toTargetPhase();
-    else { G.phase='action'; log('④ 行動決定','h'); }
+    else { G.phase='action'; log('④ 行動決定','h'); phaseFx('COMMAND','行動決定'); }
   },
   rollAction({uid}){
     const u=U(uid);
@@ -485,9 +505,11 @@ const ACTIONS = {
     if(G.rolled.filter(r=>r.uid===uid).length>=(G.alloc[uid]||0)) return;
     const f=roll(), face=D(u.def).faces[f];
     let cmd;
-    if(!u.asc && face.pre.c==='ASC'){ cmd=face.pre; ascend(u); }
-    else cmd=u.asc?face.post:face.pre;
+    const asc=!u.asc && face.pre.c==='ASC';
+    cmd=asc?face.pre:u.asc?face.post:face.pre;
     G.rolled.push({uid,f,cmd}); u.face={i:f,kind:'cmd',cmd};
+    rollFx(uid,f,{cmd,keys:[`f:${uid}`,`r:${G.rolled.length-1}`]});
+    if(asc) ascend(u);
     log(`${nm(u)} 出目${f+1} → ${cmdChip(cmd)}`);
     // 他のサーヴァントをロール：ロールするサーヴァントの選択待ち
     if(isCopyCmd(cmd) && copyCands(u).length) G.copy={idx:G.rolled.length-1, uid};

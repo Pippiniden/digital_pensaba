@@ -6,9 +6,11 @@
    - 画面だけの状態（詳細ウィンドウ・ログの開閉など）は UI に持ち、G には入れない
    ===================================================================== */
 
-const UI = { detail:null, setupView:null, log:readLogPref() };
+const UI = { detail:null, setupView:null, log:readLogPref(), auto:readPref('pencilduel.auto')==='1' };
+function readPref(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function savePref(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
 function readLogPref(){
-  try{ const v=localStorage.getItem('pencilduel.logOpen'); if(v!=null) return v==='1'; }catch(e){}
+  const v=readPref('pencilduel.logOpen'); if(v!=null) return v==='1';
   return window.innerWidth>1100;
 }
 const ORD=['1st','2nd','3rd'];
@@ -29,13 +31,14 @@ function skillBtns(u,d){
   return `<div class="sks">${sk}${ult}</div>`;
 }
 function rollBadge(u,d){
-  if(!u.face) return '';
+  if(!u.face||FXHIDE.has(`f:${u.uid}`)) return ''; // ロール演出の着地までは出さない
   const n=u.face.kind==='acts'?(G.maxActs[u.uid]??faceActs(d,u.face.i)):0;
   return `<div class="proll"><span class="die">${u.face.i+1}</span>${u.face.kind==='acts'?`<span class="actn">×${n}</span>`:''}${u.face.kind==='cmd'?cmdCardHTML(d,u.face.cmd,{small:true}):''}</div>`;
 }
 function ctlHTML(u){
   if(u.pid!==G.cur || u.out) return '';
   if(G.phase==='actRoll' && G.actRolled){
+    if(FXHIDE.has(`f:${u.uid}`)) return `<div class="ctl"><span class="sub">ロール中…</span></div>`;
     const m=G.maxActs[u.uid]||0, a=G.alloc[u.uid]||0;
     return `<div class="ctl"><span class="sub">行動</span><button data-a="alloc" data-uid="${u.uid}" data-d="-1" ${a<=0?'disabled':''}>−</button><b>${a}</b><button data-a="alloc" data-uid="${u.uid}" data-d="1" ${a>=m||totalAlloc()>=RULES.actionsMax?'disabled':''}>＋</button><span class="sub">最大${m}</span></div>`;
   }
@@ -106,10 +109,11 @@ function promptHTML(){
 }
 function laneHTML(){
   if(G.ult){ const d=D(U(G.ult).def); return `<div class="it">${cmdCardHTML(d,{c:'ULT',col:d.ult.c})}<span title="${dn(U(G.ult))}">${dn(U(G.ult))}</span></div>`; }
-  if(!G.rolled.length) return `<span class="sub small lanehint">ここにこのターンのコマンドが並びます</span>`;
-  let s=G.rolled.map(r=>`<div class="it">${cmdCardHTML(D(U(r.uid).def),r.cmd)}<span title="${dn(U(r.uid))}">${dn(U(r.uid))}</span></div>`).join('');
+  const vis=G.rolled.filter((r,i)=>!FXHIDE.has(`r:${i}`)); // ロール演出の着地前のカードはまだ出さない
+  if(!vis.length) return `<span class="sub small lanehint">${G.rolled.length?'ロール中…':'ここにこのターンのコマンドが並びます'}</span>`;
+  let s=vis.map(r=>`<div class="it">${cmdCardHTML(D(U(r.uid).def),r.cmd)}<span title="${dn(U(r.uid))}">${dn(U(r.uid))}</span></div>`).join('');
   const badges=[];
-  if(G.rolled.length===3){
+  if(vis.length===3){
     const c=G.rolled.map(r=>r.cmd.c);
     if(['R','B','G'].includes(c[0])&&c.every(x=>x===c[0])) badges.push(`${TERMS[c[0]]} Chain`);
     if(G.rolled.every(r=>r.uid===G.rolled[0].uid)) badges.push('Brave Chain');
@@ -225,13 +229,15 @@ function modeHTML(){
 
 // ---------- 描画 ----------
 function render(){
-  const app=document.querySelector('#app'), hinfo=document.querySelector('#hinfo'), spd=document.querySelector('#spd'), lb=document.querySelector('#logbtn');
+  const app=document.querySelector('#app'), hinfo=document.querySelector('#hinfo'), spd=document.querySelector('#spd'), lb=document.querySelector('#logbtn'), ab=document.querySelector('#autobtn');
   const screen=G.phase==='mode'?'mode':G.phase==='setup'?'setup':'battle';
   document.body.dataset.screen=screen;
   document.body.classList.toggle('lock',cpuActing());
   spd.hidden=!(G.mode==='cpu'&&G.phase!=='mode');
   spd.textContent=`CPU速度：${G.speed<500?'速い':'普通'}`;
   lb.hidden=screen!=='battle'||UI.log;
+  ab.hidden=screen!=='battle';
+  ab.textContent=`オート：${UI.auto?'ON':'OFF'}`; ab.classList.toggle('on',UI.auto);
   if(screen==='mode'){ app.innerHTML=modeHTML(); hinfo.textContent=''; }
   else if(screen==='setup'){ app.innerHTML=setupHTML(); hinfo.textContent='パーティ編成'; }
   else {
@@ -241,7 +247,43 @@ function render(){
     const l=document.querySelector('#log'); if(l) l.scrollTop=l.scrollHeight;
   }
   scheduleCpu();
+  scheduleAuto();
   fxKick();
+}
+
+// ---------- オート進行 ----------
+// 選ぶ余地がない操作（ロールするだけ・決定するだけ）を、オートONのとき自動で押す。
+// 人の手番だけ。act() を通すので、手で押したのと同じ扱い
+const AUTO_DELAY=550;
+let autoTimer=null;
+function hasSkillChoice(){
+  return alive(G.cur).some(u=>canSkill(u)&&D(u.def).skills.some((s,i)=>!u.used[i]&&(i<2||u.asc)&&s.eff.length))
+      || (!G.ult&&alive(G.cur).some(u=>canUlt(u)&&u.np>=RULES.ultCost));
+}
+function autoMove(){
+  if(!UI.auto||cpuActing()||UI.detail||G.pending||G.copy) return null;
+  switch(G.phase){
+    case 'actRoll':
+      if(!G.actRolled) return ['rollActs'];
+      // 全員を最大まで行動させても上限以内なら、配分を選ぶ余地はない
+      return Object.values(G.maxActs).reduce((a,b)=>a+b,0)<=RULES.actionsMax ? ['confirmAlloc'] : null;
+    case 'skill': return hasSkillChoice()?null:['skillDone'];
+    case 'action': {
+      const uid=Object.keys(G.alloc).find(id=>!U(id).out&&G.rolled.filter(r=>r.uid===id).length<G.alloc[id]);
+      return uid?['rollAction',{uid}]:['toTarget'];
+    }
+    case 'target': return targetCandidates().length===1&&G.target ? ['resolve'] : null;
+    case 'end': return ['endTurn'];
+  }
+  return null;
+}
+function scheduleAuto(delay=AUTO_DELAY){
+  clearTimeout(autoTimer);
+  if(!autoMove()) return;
+  autoTimer=setTimeout(()=>{
+    if(fxBusy()){ scheduleAuto(150); return; } // 演出が終わってから
+    const m=autoMove(); if(m) act(m[0],m[1]||{});
+  },delay);
 }
 
 // ---------- 入力 ----------
@@ -250,7 +292,8 @@ function uiAct(a,ds){
   switch(a){
     case 'detail': UI.detail=ds.uid; break;
     case 'closeDetail': UI.detail=null; break;
-    case 'toggleLog': UI.log=!UI.log; try{ localStorage.setItem('pencilduel.logOpen',UI.log?'1':'0'); }catch(e){} break;
+    case 'toggleLog': UI.log=!UI.log; savePref('pencilduel.logOpen',UI.log?'1':'0'); break;
+    case 'toggleAuto': UI.auto=!UI.auto; savePref('pencilduel.auto',UI.auto?'1':'0'); break;
   }
   render();
 }

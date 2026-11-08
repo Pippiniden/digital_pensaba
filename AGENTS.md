@@ -21,7 +21,7 @@ It was written from the code (`js/*.js`). If you find a mismatch, the code is th
 | `js/common.js` | **Shared by game and editor**: data normalization, validation, load/save/export, HTML/string builders (cards, effect descriptions) |
 | `js/engine.js` | **Game logic**: state `G`, `ACTIONS`, damage/effect resolution, turn flow |
 | `js/cpu.js` | CPU brain. `cpuDecide()` only returns the next single move |
-| `js/fx.js` | Visual effects (speech bubbles, damage numbers, ultimate cut-in). Plays `FXQ` in order |
+| `js/fx.js` | Visual effects (speech bubbles, damage numbers, ultimate cut-in, phase banners, pencil-roll animation, attack-card zoom). Plays `FXQ` in order |
 | `js/game-ui.js` | Game screen rendering (`render`) and input (click handling) |
 | `js/editor.js` | Editor rendering, input, auto-save |
 | `css/base.css` | Shared styles (CSS variables, buttons, header) |
@@ -78,6 +78,7 @@ Editor (editor.html): rules → units → common → editor
 | `pencilduel.units` | Character array applied from the editor via "apply to game". If present, the game prefers it over the default data |
 | `pencilduel.editorDraft` | The editor's draft (auto-saved) |
 | `pencilduel.logOpen` | Whether the battle log is open |
+| `pencilduel.auto` | Whether auto-advance is on (`'1'`) |
 
 If the applied data has validation errors, `loadUnits()` falls back to the default data and returns `broken:true`.
 
@@ -145,10 +146,13 @@ Damage over time (`endPhase`): ignores atk/def, invul, evade and crits; blocked 
 3. **UI-only state belongs in `UI` (game-ui.js)**, not in `G`.
 4. **`render()` rebuilds `#app.innerHTML` from scratch every time.** Events are delegated on `document` (`data-a` = game action, `data-ui` = UI action; the editor uses `data-act` / `data-p`). Do not attach listeners directly to elements.
 5. **Effects go through `FXQ`** (`fxEmit`/`say`), and `fx.js` plays them on `#fx`. Rule processing does not wait for effects to finish; only the CPU waits via `fxBusy()`.
+   - Event types (`ev.t`): `say` (line bubble), `dmg` (damage number / "無効" text), `cutin` (ultimate), `phase` (banner over `.stage`; `big` for turn start / game end), `banner` (chain banners), `roll` (spinning pencil over a portrait, lands on `f`; shows `n` actions or the `cmd` card), `atk` (command card zooms to the stage center and flies to `tgt`), `pop` (text over a portrait, e.g. ascension). Any event may carry `w` to override the wait before the next one (e.g. `say(u,'attack',{w:250})` overlaps the bubble with the attack card). Helpers in engine.js: `say`, `phaseFx`, `rollFx`.
+   - Roll results are hidden until the roll animation lands: `rollFx(uid,f,{keys})` adds keys to `FXHIDE` (`'f:<uid>'` = the portrait's die badge / alloc control, `'r:<idx>'` = that card in the command lane); `reveal()` in fx.js deletes them and redraws. `rollBadge` / `ctlHTML` / `laneHTML` check `FXHIDE`.
    - Displayed HP lags behind `G` on purpose: a `dmg` event carries `hp0` (before), `hp` and `out` (after). `fxEmit` puts the unit into `FXHOLD` at `hp0`; `fx.js` (`stepHold`) advances it per event and redraws only that card (`redrawSvt`); when the unit has no more queued `dmg` events the hold is removed. Cards read HP / retreated state via `shown(u)` in `game-ui.js`. Any new code that changes HP through damage must go through `dealDamage` (or emit the same fields) or the bar will jump.
 6. Always wrap user data in `esc()` when embedding it in HTML. `log()` messages are rendered as HTML, so insert names via `nm()`/`dn()`.
 7. Pull on-screen terms from `TERMS` (rules.js); do not hard-code them.
-8. **The CPU does not know the rules.** Tune strength via `cpuSkillScore` (when to use skills), `cpuBestTarget` (attack target) and `cpuAlloc` (action allocation). When you add a new effect to `FX`, also add a score to the `switch` in `cpuSkillScore` (otherwise it counts as worth 0).
+8. **Auto-advance (`UI.auto`, header button) only presses buttons that leave no choice**: `autoMove()` in game-ui.js (roll actions, confirm a forced allocation, finish the skill phase when no skill/ultimate is usable, roll each allocated action, attack the only possible target, end the turn). It runs only on human turns, waits for `fxBusy()`, and goes through `act()`. If you add a phase or a button with no choice, add it there too.
+9. **The CPU does not know the rules.** Tune strength via `cpuSkillScore` (when to use skills), `cpuBestTarget` (attack target) and `cpuAlloc` (action allocation). When you add a new effect to `FX`, also add a score to the `switch` in `cpuSkillScore` (otherwise it counts as worth 0).
 
 ## 7. I want to… → where to edit
 
@@ -166,7 +170,8 @@ Damage over time (`endPhase`): ignores atk/def, invul, evade and crits; blocked 
 | Add a new ACTION (operation) | Add it to `ACTIONS` in `engine.js` → a button with `data-a="name"` in the UI → `cpuDecide` if the CPU uses it. To accept it after the game is decided, add it to the allow-list inside `act()` in `engine.js`; to let it be pressed during the CPU's turn, add it to `FREE_ACTIONS` in `game-ui.js` (two lists with different purposes) |
 | Make the CPU smarter / weaker | `js/cpu.js` (`level` is `'easy'` / `'normal'`; `easy` uses the deterministic pseudo-random `rnd01`) |
 | Game screen layout / look | `js/game-ui.js` (HTML generation) + `css/game.css` |
-| Effects (bubbles, numbers, cut-in) | `js/fx.js`; wait times in `FX_WAIT`; CSS in `game.css` |
+| Effects (bubbles, numbers, cut-in, phase banners, roll, attack card) | Emit from `engine.js` (`fxEmit` / `say` / `phaseFx` / `rollFx`), play in `fxPlay` in `js/fx.js`; wait times in `FX_WAIT`; CSS in the "演出" section of `game.css` |
+| Auto-advance rules | `autoMove` / `hasSkillChoice` in `js/game-ui.js` |
 | Command card look / shared assets | `cmdCardHTML` / `cardLayers` in `common.js`; asset paths in `CARD_LAYERS` in `rules.js` |
 | Editor form / preview | `js/editor.js` (`renderForm` / `effRow` / `renderSide`) + `css/editor.css` |
 | Data validation rules (errors / warnings) | `validateUnits` / `checkEffs` in `common.js` |
