@@ -93,7 +93,7 @@ turn: actRoll → skill → action → target → end → (endPhase → swap tur
 |---|---|---|
 | `mode` | Mode select (vs CPU / 2-player) | `chooseMode` |
 | `setup` | Party building (total cost ≤ 10, up to 3 units) | `setupToggle` `setupRandom` `setupCpu` `setupConfirm` |
-| `actRoll` | ② Each unit rolls its max action count from `actsTable` (0 is possible); +1 per retreated ally, −1 with fear, capped at 3. Allocate up to 3 in total | `rollActs` `alloc` `setAlloc` `confirmAlloc` |
+| `actRoll` | ② Each unit rolls its max action count from `actsTable` (0 is possible); +1 per knocked-out (戦闘不能) ally, −1 with fear, capped at 3. Allocate up to 3 in total: clicking an own servant adds one action (its card flies into the center lane), clicking a lane card removes one | `rollActs` `alloc` `setAlloc` `confirmAlloc` |
 | `skill` | ③ Skills (once each per battle) and ultimate (NP ≥ 100, once per turn). Skills with `pick` wait for target selection (`G.pending`) | `useSkill` `useUlt` `cancelPick` `skillDone` |
 | `action` | ④ Roll the pencil for each allocated action to decide commands. If the face is a `copyRoll` special, `G.copy` waits for the player to click another alive servant (either side); its post-ascension face is rolled and replaces the command | `rollAction` `cardClick` `toTarget` |
 | `target` | ⑤ Choose the attack target (only `taunt` units if any) | `cardClick` `resolve` |
@@ -111,7 +111,7 @@ Per command, `resolveCommand` does, in order:
 2. Skill modifiers via `dmgMods()`: own `atk` (color-filtered) − `atkDown` + target `defDown` − target `def` (skipped if the attacker has `ignoreDef`). Floors at 0.
 3. Buster Chain +30.
 4. Critical step (only if the player holds stars; never on extra attacks or ultimates): roll 1d100 ≤ `critChance(critLevel(stars) + critRoll)`. On success: damage + 30 (Buster + 60) + `critPow` total + color buffs again (color buffs count double), and NP gain / star generation ×2.
-5. Final damage, unless blocked by `invul` / `evade` (`blocked()`). Overkill (target already retreated): NP / stars ×2. Overkill and critical **stack** (×4).
+5. Final damage, unless blocked by `invul` / `evade` (`blocked()`). Overkill (target already knocked out): NP / stars ×2. Overkill and critical **stack** (×4).
 
 Extra attack (Brave Chain): no modifiers, no critical, but evade/invul still apply.
 Damage over time (`endPhase`): ignores atk/def, invul, evade and crits; blocked by `debuffImmune`. Poison and burn each don't stack (the highest value applies); `spread` doubles burn.
@@ -134,7 +134,7 @@ Damage over time (`endPhase`): ignores atk/def, invul, evade and crits; blocked 
 | `stun` / `charm` | Can't act, use skills or ultimate | `disabled()` |
 | `debuffImmune` / `buffImmune` | Blocks debuffs (incl. DoT) / buffs; consumes one time per block | `immuneTo()` in `applyOne`, `endPhase` |
 | `ignoreDef` | Ignore the target's `def` | `dmgMods()` |
-| `instantDeath` | HP → 0 and retreat, **ignores guts** | `applyOne` (`doSkill` then calls `checkWin`) |
+| `instantDeath` | HP → 0 and knocked out, **ignores guts** | `applyOne` (`doSkill` then calls `checkWin`) |
 | `starLoss` | Target's master loses x stars (min 0) | `applyOne` / `changeStars` |
 | `onAtkStar` / `onAtkNp` | "On attack": each damaging command (optionally only of `color`) generates x stars / gains x% NP. Not on extra attacks or ultimates | end of `resolveCommand` |
 | `copyRoll` | Special-action only. Roll another servant's pencil and use its post-ascension command (rerolls if it lands on another `copyRoll`). On an extra attack the servant is picked at random. Brave Chain still counts it as the roller's action | `isCopyCmd` / `copyCands` / `doCopy` (engine), `cardClick`, CPU `cpuDecide` |
@@ -147,12 +147,14 @@ Damage over time (`endPhase`): ignores atk/def, invul, evade and crits; blocked 
 4. **`render()` rebuilds `#app.innerHTML` from scratch every time.** Events are delegated on `document` (`data-a` = game action, `data-ui` = UI action; the editor uses `data-act` / `data-p`). Do not attach listeners directly to elements.
 5. **Effects go through `FXQ`** (`fxEmit`/`say`), and `fx.js` plays them on `#fx`. Rule processing does not wait for effects to finish; only the CPU waits via `fxBusy()`.
    - Event types (`ev.t`): `say` (line bubble), `dmg` (damage number / "無効" text), `cutin` (ultimate), `phase` (banner over `.stage`; `big` for turn start / game end), `banner` (chain banners), `roll` (spinning pencil over a portrait, lands on `f`; shows `n` actions or the `cmd` card), `atk` (command card zooms to the stage center and flies to `tgt`), `pop` (text over a portrait, e.g. ascension). Any event may carry `w` to override the wait before the next one (e.g. `say(u,'attack',{w:250})` overlaps the bubble with the attack card). Helpers in engine.js: `say`, `phaseFx`, `rollFx`.
+   - Knock-outs are shown late on purpose: `retreat()` (engine name for KO) sets `u.out` at once but only queues the uid in `KO_PEND`; `flushKo()` — called at the end of `resolveDamage`, `doSkill` and `endPhase`, before `checkWin` — emits one `ko` event and the `defeat` lines. Until then `stepHold` keeps the card at HP 0 but not darkened, so later attacks (overkill hits, which emit a `dmg` with `over:true`) still play on it. If you add another place that can KO a unit, call `flushKo()` after it.
    - Roll results are hidden until the roll animation lands: `rollFx(uid,f,{keys})` adds keys to `FXHIDE` (`'f:<uid>'` = the portrait's die badge / alloc control, `'r:<idx>'` = that card in the command lane); `reveal()` in fx.js deletes them and redraws. `rollBadge` / `ctlHTML` / `laneHTML` check `FXHIDE`.
-   - Displayed HP lags behind `G` on purpose: a `dmg` event carries `hp0` (before), `hp` and `out` (after). `fxEmit` puts the unit into `FXHOLD` at `hp0`; `fx.js` (`stepHold`) advances it per event and redraws only that card (`redrawSvt`); when the unit has no more queued `dmg` events the hold is removed. Cards read HP / retreated state via `shown(u)` in `game-ui.js`. Any new code that changes HP through damage must go through `dealDamage` (or emit the same fields) or the bar will jump.
+   - Displayed HP lags behind `G` on purpose: a `dmg` event carries `hp0` (before), `hp` and `out` (after). `fxEmit` puts the unit into `FXHOLD` at `hp0`; `fx.js` (`stepHold`) advances it per event and redraws only that card (`redrawSvt`); when the unit has no more queued `dmg` events the hold is removed. Cards read HP / knocked-out state via `shown(u)` in `game-ui.js`. Any new code that changes HP through damage must go through `dealDamage` (or emit the same fields) or the bar will jump.
 6. Always wrap user data in `esc()` when embedding it in HTML. `log()` messages are rendered as HTML, so insert names via `nm()`/`dn()`.
 7. Pull on-screen terms from `TERMS` (rules.js); do not hard-code them.
-8. **Auto-advance (`UI.auto`, header button) only presses buttons that leave no choice**: `autoMove()` in game-ui.js (roll actions, confirm a forced allocation, finish the skill phase when no skill/ultimate is usable, roll each allocated action, attack the only possible target, end the turn). It runs only on human turns, waits for `fxBusy()`, and goes through `act()`. If you add a phase or a button with no choice, add it there too.
-9. **The CPU does not know the rules.** Tune strength via `cpuSkillScore` (when to use skills), `cpuBestTarget` (attack target) and `cpuAlloc` (action allocation). When you add a new effect to `FX`, also add a score to the `switch` in `cpuSkillScore` (otherwise it counts as worth 0).
+8. The allocation lane (`allocLaneHTML` / `animateLane` in game-ui.js) flies newly added cards from the servant's portrait; `laneSeen` remembers which cards were already shown so a re-render does not replay it.
+9. **Auto-advance (`UI.auto`, header button) only presses buttons that leave no choice**: `autoMove()` in game-ui.js (roll actions, confirm a forced allocation, finish the skill phase when no skill/ultimate is usable, roll each allocated action, attack the only possible target, end the turn). It runs only on human turns, waits for `fxBusy()`, and goes through `act()`. If you add a phase or a button with no choice, add it there too.
+10. **The CPU does not know the rules.** Tune strength via `cpuSkillScore` (when to use skills), `cpuBestTarget` (attack target) and `cpuAlloc` (action allocation). When you add a new effect to `FX`, also add a score to the `switch` in `cpuSkillScore` (otherwise it counts as worth 0).
 
 ## 7. I want to… → where to edit
 
@@ -181,7 +183,7 @@ Damage over time (`endPhase`): ignores atk/def, invul, evade and crits; blocked 
 ## 8. Verification
 
 There are no automated tests in the repo, so verify manually in a browser. For rule changes, also consider a quick headless check: load `rules/units/common/engine/cpu` into a Node `vm` context with a no-op `render()`, call `newGame()`, then loop `act(...cpuDecide())` with `G.cpu=[true,true]` for a few hundred games and look for hangs or `NaN` in `G.log`.
-- Game: open `index.html` and play one full match each in vs-CPU (easy / normal) and 2-player. Depending on your change, also exercise ultimates, ascension, chains, skill target selection, and retreat.
+- Game: open `index.html` and play one full match each in vs-CPU (easy / normal) and 2-player. Depending on your change, also exercise ultimates, ascension, chains, skill target selection, and knock-outs.
 - Editor: edit in `editor.html` → confirm the "validation" panel on the right shows no errors → "apply to game" → confirm it shows up on the game's mode-select screen → "reset to default data".
 - Confirm there are no console errors in the browser dev tools. To see how a broken `pencilduel.units` behaves, edit `localStorage` directly.
 
@@ -193,4 +195,5 @@ There are no automated tests in the repo, so verify manually in a browser. For r
 - Many Japanese strings and log messages are hard-coded in the logic (the `log(...)` calls in `engine.js`). The intent is to centralize terms in `TERMS`, but not everything has been moved there.
 - The UI text, character data, and log messages in the game itself remain in Japanese; only this document is in English.
 - Default roster (9 units, all at official-SPS scale: HP 400–1000, damage 10–140): アルトリア C5, エミヤ C4, ヘラクレス C4, クー・フーリン C3, メドゥーサ C3, メディア C3, 呪腕のハサン C2, 佐々木小次郎 C1, マシュ C0. No placeholder samples remain.
+- Terminology: knocked out is `u.out` / `retreat()` in code and shown as `TERMS.out` = 戦闘不能 (never 撤退).
 - Terminology: "ascension" in code (`asc`, `ASC`, `ascend`) is shown as `TERMS.asc` = 再臨 (short, for badges/tables) or `TERMS.ascFull` = 霊基再臨 (logs, editor explanations, detail views). Never hard-code 覚醒/再臨 in UI strings.

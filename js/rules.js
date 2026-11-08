@@ -5,7 +5,7 @@
    ===================================================================== */
 
 // ---------- 用語（画面上の呼び名） ----------
-const TERMS = { unit:'サーヴァント', player:'マスター', gauge:'NP', ult:'宝具', asc:'再臨', ascFull:'霊基再臨', star:'スター',
+const TERMS = { unit:'サーヴァント', player:'マスター', gauge:'NP', ult:'宝具', asc:'再臨', ascFull:'霊基再臨', star:'スター', out:'戦闘不能',
   R:'Buster', B:'Arts', G:'Quick', W:'特殊' };
 
 // ---------- 画像 ----------
@@ -32,7 +32,7 @@ const UI_IMG = { circleOut:'img/ui/mcircleo.webp', circleIn:'img/ui/mcirclei.web
 // 泥ペンサバ「チームバトルルール」（3on3・合計コスト10）準拠。クラス相性はなし
 const RULES = {
   costCap:10, partyMax:3, actionsMax:3,
-  // 行動回数決定フェイズ：出目1〜6 → 行動回数（全サーヴァント共通）。撤退した味方1騎ごとに+1
+  // 行動回数決定フェイズ：出目1〜6 → 行動回数（全サーヴァント共通）。戦闘不能の味方1騎ごとに+1
   // null にすると、鉛筆の各面の acts（サーヴァントごとの値）を使う
   actsTable:[0,1,1,3,2,2],
   gaugeOnHit:10, gaugeMax:300, ultCost:100,
@@ -116,7 +116,7 @@ const FX = {
   cleanse:{name:'弱体解除',inst:true}, cleanseMental:{name:'精神異常解除',inst:true}, strip:{name:'強化解除',inst:true},
   instantDeath:{name:'即死',inst:true},                      // 対象のHPを0にする（ガッツ無効）
   dmg:{name:'ダメージ',val:true,inst:true,only:'ult'},
-  // 特殊行動専用：自分以外の撤退していないサーヴァント1体（敵味方どちらでも）を選び、その鉛筆を代わりにロールして
+  // 特殊行動専用：自分以外の戦闘不能でないサーヴァント1体（敵味方どちらでも）を選び、その鉛筆を代わりにロールして
   // 出た再臨後コマンドをこの行動として使う
   copyRoll:{name:'他のサーヴァントをロール',inst:true,only:'special'},
 };

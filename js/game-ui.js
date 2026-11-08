@@ -40,7 +40,8 @@ function ctlHTML(u){
   if(G.phase==='actRoll' && G.actRolled){
     if(FXHIDE.has(`f:${u.uid}`)) return `<div class="ctl"><span class="sub">ロール中…</span></div>`;
     const m=G.maxActs[u.uid]||0, a=G.alloc[u.uid]||0;
-    return `<div class="ctl"><span class="sub">行動</span><button data-a="alloc" data-uid="${u.uid}" data-d="-1" ${a<=0?'disabled':''}>−</button><b>${a}</b><button data-a="alloc" data-uid="${u.uid}" data-d="1" ${a>=m||totalAlloc()>=RULES.actionsMax?'disabled':''}>＋</button><span class="sub">最大${m}</span></div>`;
+    // 配分はカードのクリックで行う（自分のカード＝1回追加、中央のカード＝1回戻す）。ここは回数の表示だけ
+    return `<div class="ctl alloc"><span class="sub">行動</span>${Array.from({length:m},(_,i)=>`<i class="pip ${i<a?'on':''}"></i>`).join('')||'<span class="sub">なし</span>'}<b>${a}<small>/${m}</small></b></div>`;
   }
   if(G.phase==='action'){
     const a=G.alloc[u.uid]||0, done=G.rolled.filter(r=>r.uid===u.uid).length;
@@ -48,19 +49,25 @@ function ctlHTML(u){
   }
   return '';
 }
-// 画面に出すHP・撤退状態（ダメージ演出の再生中は演出に合わせて遅れて変わる）
+// 行動配分：このサーヴァントにもう1回行動を割り振れるか
+function canAllocMore(u){
+  return G.phase==='actRoll'&&G.actRolled&&u.pid===G.cur&&!u.out&&!cpuActing()&&!FXHIDE.has(`f:${u.uid}`)
+    &&(G.alloc[u.uid]||0)<(G.maxActs[u.uid]||0)&&totalAlloc()<RULES.actionsMax;
+}
+// 画面に出すHP・戦闘不能の状態（ダメージ演出の再生中は演出に合わせて遅れて変わる）
 const shown = u=>FXHOLD[u.uid]||{hp:u.hp,out:u.out};
 function svtHTML(u){
   const d=D(u.def), ph=G.phase, sh=shown(u);
-  const pickable=(G.copy&&copyCands(U(G.copy.uid)).includes(u)) || (G.pending&&pickValid(u)) || (!G.pending&&!G.copy&&ph==='target'&&targetCandidates().includes(u));
+  const allocable=canAllocMore(u);
+  const pickable=allocable || (G.copy&&copyCands(U(G.copy.uid)).includes(u)) || (G.pending&&pickValid(u)) || (!G.pending&&!G.copy&&ph==='target'&&targetCandidates().includes(u));
   const acting=G.ult?G.ult===u.uid:(G.alloc[u.uid]||0)>0;
-  const cls=['svt',sh.out?'out':'',pickable?'pickable':'',G.target===u.uid&&!u.out?'targeted':'',acting&&u.pid===G.cur?'acting':''].join(' ');
+  const cls=['svt',sh.out?'out':'',pickable?'pickable':'',G.target===u.uid&&!sh.out?'targeted':'',acting&&u.pid===G.cur?'acting':''].join(' ');
   const fx=u.fx.map(e=>`<span class="chip fx ${FX[e.k].buff?'buff':'debuff'}">${fxText(e)}</span>`).join('');
-  return `<div class="${cls}" data-uid="${u.uid}" ${pickable?`data-a="cardClick"`:''}>
+  return `<div class="${cls}${allocable?' allocable':''}" data-uid="${u.uid}" ${allocable?`data-a="alloc" data-d="1" title="クリックで行動を1回追加"`:pickable?`data-a="cardClick"`:''}>
     <div class="portrait">${imgTag(imgSrc(d,'face'),IMG_PLACEHOLDER.face,'pimg',d.name)}
       ${clsIconTag(d.cls,'pcls')}<span class="pord">${ORD[u.idx]}</span>
       ${u.asc?`<span class="pasc">${TERMS.asc}</span>`:''}
-      ${sh.out?`<span class="pout">撤退</span>`:''}
+      ${sh.out?`<span class="pout">${TERMS.out}</span>`:''}
       ${rollBadge(u,d)}
     </div>
     <div class="sinfo">
@@ -89,7 +96,7 @@ function promptHTML(){
     case 'actRoll':
       return !G.actRolled
         ? `<p>全${TERMS.unit}の鉛筆を転がして、最大行動回数を決めます。</p><button class="primary big" data-a="rollActs">🎲 行動回数ロール</button>`
-        : `<p>誰を何回行動させるか決めます（合計 <b>${totalAlloc()}</b> / ${RULES.actionsMax}）。</p><button class="primary big" data-a="confirmAlloc">決定</button>`;
+        : `<p>行動させる${TERMS.unit}を選ぶと中央に並びます。中央のカードを選ぶと戻せます（合計 <b>${totalAlloc()}</b> / ${RULES.actionsMax}）。</p><button class="primary big" data-a="confirmAlloc">決定</button>`;
     case 'skill':
       return G.pending
         ? `<p class="hl">「${esc(pendingSkill().name)}」の対象を選んでください</p><button data-a="cancelPick">キャンセル</button>`
@@ -107,7 +114,36 @@ function promptHTML(){
   }
   return '';
 }
+// 行動配分中のコマンド列：割り振った回数ぶんサーヴァントのカードを並べる（クリックで1回戻す）
+function allocCards(){
+  return G.players[G.cur].party.filter(u=>!u.out&&!FXHIDE.has(`f:${u.uid}`))
+    .flatMap(u=>Array.from({length:G.alloc[u.uid]||0},(_,k)=>({u,k})));
+}
+function allocLaneHTML(){
+  const cs=allocCards(), own=!cpuActing();
+  if(!cs.length) return `<span class="sub small lanehint">${TERMS.unit}を選ぶとここに並びます</span>`;
+  const slots=Array.from({length:RULES.actionsMax-cs.length},()=>`<div class="it"><div class="aslot"></div><span>&nbsp;</span></div>`).join('');
+  return cs.map(({u,k})=>{ const d=D(u.def);
+    return `<div class="it al" data-key="${u.uid}#${k}" ${own?`data-a="alloc" data-uid="${u.uid}" data-d="-1" title="クリックで戻す"`:''}>
+      <div class="acard">${imgTag(imgSrc(d,'card'),IMG_PLACEHOLDER.face,'pimg',d.name)}${clsIconTag(d.cls,'pcls')}<span class="aord">${ORD[u.idx]}</span></div>
+      <span title="${dn(u)}">${dn(u)}</span></div>`; }).join('')+slots;
+}
+// 新しく並んだカードを、そのサーヴァントの肖像の位置から飛ばしてくる（描き直しても既にあるカードは動かさない）
+let laneSeen=new Set();
+function animateLane(){
+  const items=[...document.querySelectorAll('.lane .it.al')], now=new Set(items.map(e=>e.dataset.key));
+  items.forEach(el=>{
+    if(laneSeen.has(el.dataset.key)) { el.style.animation='none'; return; }
+    const p=document.querySelector(`.svt[data-uid="${el.dataset.key.split('#')[0]}"] .portrait`); if(!p) return;
+    const a=p.getBoundingClientRect(), b=el.getBoundingClientRect();
+    el.style.animation='none';
+    el.animate([{transform:`translate(${a.left+a.width/2-b.left-b.width/2}px,${a.top+a.height/2-b.top-b.height/2}px) scale(.6)`,opacity:.3},{transform:'none',opacity:1}],
+      {duration:380,easing:'cubic-bezier(.2,.8,.2,1)'});
+  });
+  laneSeen=now;
+}
 function laneHTML(){
+  if(G.phase==='actRoll') return G.actRolled?allocLaneHTML():`<span class="sub small lanehint">ここにこのターンのコマンドが並びます</span>`;
   if(G.ult){ const d=D(U(G.ult).def); return `<div class="it">${cmdCardHTML(d,{c:'ULT',col:d.ult.c})}<span title="${dn(U(G.ult))}">${dn(U(G.ult))}</span></div>`; }
   const vis=G.rolled.filter((r,i)=>!FXHIDE.has(`r:${i}`)); // ロール演出の着地前のカードはまだ出さない
   if(!vis.length) return `<span class="sub small lanehint">${G.rolled.length?'ロール中…':'ここにこのターンのコマンドが並びます'}</span>`;
@@ -245,6 +281,7 @@ function render(){
     app.innerHTML=`<div class="battle ${UI.log?'':'nolog'}"><main class="field">${sideHTML(1,'top')}${stageHTML()}${sideHTML(0,'bottom')}</main>${UI.log?logHTML():''}</div>${UI.detail?detailModalHTML():''}`;
     hinfo.textContent=`ターン${G.turn}`;
     const l=document.querySelector('#log'); if(l) l.scrollTop=l.scrollHeight;
+    animateLane();
   }
   scheduleCpu();
   scheduleAuto();

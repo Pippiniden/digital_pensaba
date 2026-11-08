@@ -17,7 +17,7 @@ function newGame(){
     players:[{name:TERMS.player+'1',party:[],stars:0},{name:TERMS.player+'2',party:[],stars:0}],
     cur:0, turn:0, actRolled:false, maxActs:{}, alloc:{}, rolled:[], ult:null, target:null,
     gen:0, pending:null, copy:null, log:[], winner:null };
-  FXQ.length=0; for(const k in FXHOLD) delete FXHOLD[k]; FXHIDE.clear();
+  FXQ.length=0; for(const k in FXHOLD) delete FXHOLD[k]; FXHIDE.clear(); KO_PEND.length=0;
 }
 
 // ---------- 演出イベント ----------
@@ -115,7 +115,16 @@ function immuneTo(t,k){
   consume(t,[g]); log(`${nm(t)}は${FX[guard].name}で「${FX[k].name}」を防いだ`,'sub');
   return true;
 }
-function retreat(u){ u.hp=0; u.out=true; u.fx=[]; log(`${nm(u)} 撤退`,'bad'); say(u,'defeat'); }
+// 戦闘不能：ルール上はその場で倒れるが、画面で暗くするのは一連の攻撃が終わってから（flushKo）
+const KO_PEND=[];
+function retreat(u){ u.hp=0; u.out=true; u.fx=[]; log(`${nm(u)} ${TERMS.out}`,'bad'); KO_PEND.push(u.uid); }
+// 攻撃・スキル・終了フェイズの処理が終わったところで呼ぶ：戦闘不能の演出とセリフをまとめて出す
+function flushKo(){
+  if(!KO_PEND.length) return;
+  const uids=KO_PEND.splice(0);
+  fxEmit({t:'ko',uids});
+  uids.forEach(uid=>say(U(uid),'defeat'));
+}
 function applyOne(src,t,e){
   const d=D(t.def);
   if(immuneTo(t,e.k)) return;
@@ -226,7 +235,7 @@ function resolveCommand(att,cmd,tgt,o={}){
     // ダメージを持つ特殊行動は無属性の攻撃として続けて処理する（チェインには数えない）
   }
   say(att,'attack',{w:250}); // 吹き出しと攻撃カードを重ねて見せる
-  atkFx(tgt.out?null:tgt.uid);
+  atkFx(tgt.uid); // 戦闘不能の相手にも（オーバーキル）カードを飛ばす
   let dmg=cmd.dmg; const note=[`基本${dmg}`]; let usedA=[], usedT=[], colorBuff=0;
   // 2. スキル効果補正 / 3. Busterチェイン
   if(!o.extra){
@@ -253,6 +262,7 @@ function resolveCommand(att,cmd,tgt,o={}){
   const mult=(crit?2:1)*(tgt.out?2:1);
   if(tgt.out){
     log(`${n} ${cmdChip(cmd)} → オーバーキル（${TERMS.gauge}・${TERMS.star}${mult}倍）`);
+    fxEmit({t:'dmg',uid:tgt.uid,v:fmt(dmg),crit,over:true});
   } else {
     const b=blocked(att,tgt);
     if(b){ log(`${n} ${cmdChip(cmd)} → ${nm(tgt)}：${b}で無効 <span class="sub">(${note.join(' / ')})</span>`); fxEmit({t:'dmg',uid:tgt.uid,text:b}); }
@@ -316,6 +326,7 @@ function resolveDamage(){
     }
     if(!tgt.out && tgt.hp<hp0) say(tgt,'damage');
   }
+  flushKo();
   checkWin();
   if(G.winner==null) G.phase='end';
 }
@@ -366,6 +377,7 @@ function endPhase(){
   }));
   G.players[G.cur].stars=G.gen;
   log(`${esc(G.players[G.cur].name)}：${TERMS.star}を${G.gen}個獲得（次のターンに使用）`);
+  flushKo();
   checkWin(); if(G.winner!=null) return;
   G.cur=1-G.cur; G.turn++;
   beginTurn();
@@ -386,6 +398,7 @@ function doSkill(u,si,picked){
   log(`${nm(u)} スキル「${esc(s.name)}」`);
   say(u,'skill');
   applyEffects(u,s.eff,picked);
+  flushKo();
   checkWin(); // 即死などでスキルだけで決着することがある
 }
 function toTargetPhase(){
@@ -457,7 +470,7 @@ const ACTIONS = {
         const f=roll(); u.face={i:f,kind:'acts'}; rolls.push({uid:u.uid,f});
         const fear=has(u,'fear')?1:0, up=mods(u,'actsUp'); consume(u,up.list);
         m=Math.max(0,Math.min(RULES.actionsMax, faceActs(D(u.def),f)+bonus+up.sum-fear));
-        log(`${nm(u)} 出目${f+1} → 最大行動${m}${bonus?`（撤退ボーナス+${bonus}）`:''}${up.sum?`（最大行動回数+${up.sum}）`:''}${fear?'（恐怖-1）':''}`, m?'':'bad');
+        log(`${nm(u)} 出目${f+1} → 最大行動${m}${bonus?`（${TERMS.out}ボーナス+${bonus}）`:''}${up.sum?`（最大行動回数+${up.sum}）`:''}${fear?'（恐怖-1）':''}`, m?'':'bad');
       }
       G.maxActs[u.uid]=m; const a=Math.min(m,left); G.alloc[u.uid]=a; left-=a;
     });

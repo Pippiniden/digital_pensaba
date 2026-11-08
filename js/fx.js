@@ -7,7 +7,7 @@
    ===================================================================== */
 
 // 次のイベントまでの待ち時間(ms)。イベントに w があればそちらを優先
-const FX_WAIT = { say:950, dmg:420, cutin:2000, phase:420, phaseBig:900, banner:700, roll:780, rollGrp:110, atk:640, pop:520 };
+const FX_WAIT = { say:950, dmg:420, cutin:2000, phase:420, phaseBig:900, banner:700, roll:780, rollGrp:110, atk:640, pop:520, ko:900 };
 const ROLL_SPIN = 520;                             // ロール演出で出目が回っている時間(ms)
 const BUBBLE_MS = 2600;                            // 吹き出しの表示時間(ms)
 let fxRunning=false;
@@ -16,7 +16,7 @@ const fxBusy = ()=>fxRunning||FXQ.length>0;
 function fxKick(){ if(!fxRunning&&FXQ.length){ fxRunning=true; setTimeout(fxNext,30); } }
 function fxNext(){
   const ev=FXQ.shift();
-  if(!ev){ fxRunning=false; return; }
+  if(!ev){ fxRunning=false; clearKoHolds(); return; }
   let wait=0;
   try{ wait=fxPlay(ev); }catch(e){ console.error(e); if(ev.t==='roll') reveal(ev); }
   if(ev.w!=null) wait=ev.w;
@@ -26,7 +26,8 @@ const fxLayer = ()=>document.querySelector('#fx');
 const portraitOf = uid=>document.querySelector(`.svt[data-uid="${uid}"] .portrait`);
 
 function fxPlay(ev){
-  const L=fxLayer(); if(!L){ if(ev.t==='dmg') stepHold(ev); if(ev.t==='roll') reveal(ev); return 0; }
+  const L=fxLayer(); if(!L){ if(ev.t==='dmg') stepHold(ev); if(ev.t==='roll') reveal(ev); if(ev.t==='ko') ev.uids.forEach(uid=>{ delete FXHOLD[uid]; redrawSvt(uid); }); return 0; }
+  if(ev.t==='ko'){ showKo(L,ev); return FX_WAIT.ko; }
   if(ev.t==='cutin'){ showCutin(L,ev); return FX_WAIT.cutin; }
   if(ev.t==='phase'||ev.t==='banner'){ showPhase(L,ev); return ev.t==='banner'?FX_WAIT.banner:ev.big?FX_WAIT.phaseBig:FX_WAIT.phase; }
   if(ev.t==='atk'){ showAtk(L,ev); return FX_WAIT.atk; }
@@ -85,9 +86,9 @@ function reveal(ev){
   const uids=new Set(); let lane=false;
   ev.keys.forEach(k=>{ FXHIDE.delete(k); if(k.startsWith('f:')) uids.add(k.slice(2)); else lane=true; });
   uids.forEach(redrawSvt);
-  if(lane) redrawLane();
+  if(lane||G.phase==='actRoll') redrawLane(); // 行動配分中は、出目が出たサーヴァントのカードを中央に並べる
 }
-function redrawLane(){ const l=document.querySelector('.lane'); if(l) l.innerHTML=laneHTML(); }
+function redrawLane(){ const l=document.querySelector('.lane'); if(l){ l.innerHTML=laneHTML(); animateLane(); } }
 
 // 攻撃：コマンドカードを中央で大きく見せ、攻撃対象へ飛ばす
 function showAtk(L,ev){
@@ -148,16 +149,30 @@ function showBubble(L,ev,r){
 }
 
 // ダメージ数値：肖像の中央から浮き上がって消える
-// 表示HPをこのダメージのぶんだけ減らす（HP0以下になったらここで撤退表示になる）
+// 表示HPをこのダメージのぶんだけ減らす。
+// HP0になっても、ここではまだ暗くしない（ko イベント＝一連の攻撃が終わったところで戦闘不能の表示にする）
 function stepHold(ev){
   if(ev.hp==null) return;
-  if(FXQ.some(e=>e.t==='dmg'&&e.uid===ev.uid&&e.hp!=null)) FXHOLD[ev.uid]={hp:ev.hp,out:ev.out};
+  const ko=ev.out||(FXHOLD[ev.uid]&&FXHOLD[ev.uid].ko);
+  if(ko||FXQ.some(e=>e.t==='dmg'&&e.uid===ev.uid&&e.hp!=null)) FXHOLD[ev.uid]={hp:ev.hp,out:false,ko:!!ko};
   else delete FXHOLD[ev.uid];
   redrawSvt(ev.uid);
 }
+// 戦闘不能の演出：カードを暗くして「戦闘不能」の文字を出す
+function showKo(L,ev){
+  ev.uids.forEach(uid=>{
+    delete FXHOLD[uid]; redrawSvt(uid);
+    const el=document.querySelector(`.svt[data-uid="${uid}"]`); if(el) el.classList.add('ko');
+    const p=portraitOf(uid); if(p) showPop(L,{text:TERMS.out,cls:'ko'},p.getBoundingClientRect());
+  });
+}
+// 念のため：演出が全部終わったのに戦闘不能待ちが残っていたら表示を戻す
+function clearKoHolds(){
+  for(const uid in FXHOLD) if(FXHOLD[uid].ko){ delete FXHOLD[uid]; redrawSvt(uid); }
+}
 function showDmg(L,ev,r){
   const n=document.createElement('div');
-  n.className='dmgpop'+(ev.crit?' crit':'')+(ev.np?' np':'')+(ev.text?' miss':'');
+  n.className='dmgpop'+(ev.crit?' crit':'')+(ev.np?' np':'')+(ev.text?' miss':'')+(ev.over?' over':'');
   n.textContent=ev.text||ev.v;
   n.style.left=`${r.left+r.width/2+(Math.random()*24-12)}px`;
   n.style.top=`${r.top+r.height*.45}px`;
