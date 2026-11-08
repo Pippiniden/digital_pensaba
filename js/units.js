@@ -84,10 +84,10 @@ const DEFAULT_UNITS = [
     ],
     "skills":[
       {"name":"影縫い","eff":[{"k":"stun","t":"picked","v":0,"turns":1,"chance":3}],"pick":"enemy"},
-      {"name":"毒針","eff":[{"k":"poison","t":"picked","v":0,"turns":3}],"pick":"enemy"},
+      {"name":"毒針","eff":[{"k":"poison","t":"picked","v":20,"turns":3}],"pick":"enemy"},
       {"name":"隠形","eff":[{"k":"evade","t":"self","v":0,"turns":2,"times":2},{"k":"critRoll","t":"self","v":1,"turns":3}]}
     ],
-    "ult":{"name":"千影","c":"G","eff":[{"k":"dmg","t":"target","v":90},{"k":"poison","t":"target","v":0,"turns":3}]}
+    "ult":{"name":"千影","c":"G","eff":[{"k":"dmg","t":"target","v":90},{"k":"poison","t":"target","v":20,"turns":3}]}
   },
   {
     "id":"selen", "name":"流星射手セレン", "cls":"アーチャー", "cost":4, "hp":100,
@@ -111,7 +111,7 @@ const DEFAULT_UNITS = [
       {"acts":2,"pre":{"c":"G","dmg":10,"np":0,"star":4},"post":{"c":"G","dmg":15,"np":0,"star":5}}
     ],
     "skills":[
-      {"name":"鷹の目","eff":[{"k":"critPow","t":"self","v":3,"turns":3}]},
+      {"name":"鷹の目","eff":[{"k":"critPow","t":"self","v":30,"turns":3}]},
       {"name":"星読み","eff":[{"k":"star","t":"master","v":10}]},
       {"name":"流星群","eff":[{"k":"sureHit","t":"self","v":0,"turns":3},{"k":"atk","t":"self","v":15,"turns":3}]}
     ],

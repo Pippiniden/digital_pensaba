@@ -36,7 +36,7 @@ function cpuDecide(){
       return s ? ['useSkill',{uid:s.u.uid,si:String(s.si)}] : ['skillDone'];
     }
     case 'action': {
-      const uid=Object.keys(G.alloc).find(id=>G.rolled.filter(r=>r.uid===id).length<G.alloc[id]);
+      const uid=Object.keys(G.alloc).find(id=>!U(id).out&&G.rolled.filter(r=>r.uid===id).length<G.alloc[id]);
       return uid ? ['rollAction',{uid}] : ['toTarget'];
     }
     case 'target': {
@@ -74,12 +74,12 @@ function ultPower(u){
   return D(u.def).ult.eff.filter(e=>e.k==='dmg').reduce((s,e)=>s+e.v*(e.t==='enemy_all'?alive(1-u.pid).length:1),0);
 }
 function cpuUltUser(){
-  const c=alive(G.cur).filter(u=>!disabled(u)&&u.np>=RULES.ultCost);
+  const c=alive(G.cur).filter(u=>canUlt(u)&&u.np>=RULES.ultCost);
   return c.sort((a,b)=>ultPower(b)-ultPower(a))[0]||null;
 }
 function usableSkills(){
   const out=[];
-  alive(G.cur).forEach(u=>{ if(disabled(u)) return;
+  alive(G.cur).forEach(u=>{ if(!canSkill(u)) return;
     D(u.def).skills.forEach((s,si)=>{ if(!u.used[si]&&(si<2||u.asc)) out.push({u,si}); }); });
   return out;
 }
@@ -98,9 +98,18 @@ function cpuSkillScore(u,si){
   let sc=0;
   for(const e of s.eff){
     const ts=e.t==='master'?[]:resolveTargets(u,e.t,picked), acting=ts.some(isActing);
+    const foes=ts.filter(t=>t.pid!==u.pid);
     switch(e.k){
       case 'atk': sc+=acting?3:0; break;
-      case 'critPow': sc+=acting&&!G.ult&&stars>=7?3:0; break;
+      case 'critPow': sc+=acting&&!G.ult&&critLevel(stars)>=3?3:0; break;
+      case 'ignoreDef': sc+=acting&&enemies.some(x=>has(x,'def'))?3:.5; break;
+      case 'debuffImmune': sc+=ts.some(t=>hpR(t)<.7)?1.5:.5; break;
+      case 'buffImmune': sc+=foes.length?2:-1; break;
+      case 'fear': case 'sealSkill': sc+=foes.length?2:-1; break;
+      case 'sealUlt': sc+=foes.some(t=>t.np>=RULES.ultCost-30)?4:foes.length?1:-1; break;
+      case 'spread': sc+=foes.some(t=>has(t,'burn'))?2:.5; break;
+      case 'instantDeath': sc+=foes.length?5:-5; break;
+      case 'starLoss': sc+=foes.some(t=>G.players[t.pid].stars>0)?2:0; break;
       case 'critRoll': sc+=acting&&!G.ult&&stars>0?2:0; break;
       case 'sureHit': sc+=acting&&enemies.some(x=>has(x,'evade'))?4:.5; break;
       case 'pierce': sc+=acting&&enemies.some(x=>has(x,'evade')||has(x,'invul'))?4:.5; break;
@@ -127,21 +136,20 @@ function cpuPickTarget(uid,si,easy){
   const k=s.eff.map(e=>e.k);
   if(k.includes('heal')||k.includes('cleanse')) return [...cands].sort((a,b)=>hpR(a)-hpR(b))[0];
   if(k.includes('np')){ const below=cands.filter(c=>c.np<RULES.ultCost); return [...(below.length?below:cands)].sort((a,b)=>b.np-a.np)[0]; }
-  if(k.includes('stun')||k.includes('charm')) return [...cands].sort((a,b)=>b.np-a.np||b.hp-a.hp)[0];
+  if(['stun','charm','fear','sealSkill','sealUlt','instantDeath'].some(x=>k.includes(x))) return [...cands].sort((a,b)=>b.np-a.np||b.hp-a.hp)[0];
   if(k.includes('poison')||k.includes('burn')){ const c=cands.filter(x=>!has(x,'poison')&&!has(x,'burn')); return [...(c.length?c:cands)].sort((a,b)=>b.hp-a.hp)[0]; }
   return cands[0];
 }
 // 攻撃対象：倒し切れる相手（NPが高い・コストが高い方）を優先、無理なら削れる割合が大きい相手
 function estDamage(t){
-  const red=()=>mods(t,'defDown').sum-mods(t,'def').sum;
   if(G.ult){
     const u=U(G.ult), ud=D(u.def).ult;
-    return ud.eff.filter(e=>e.k==='dmg').reduce((s,e)=>s+Math.max(0,e.v+mods(u,'atk',ud.c).sum-mods(u,'atkDown').sum+red()),0);
+    return ud.eff.filter(e=>e.k==='dmg').reduce((s,e)=>s+Math.max(0,e.v+dmgMods(u,t,ud.c).sum),0);
   }
   const cols=G.rolled.map(r=>r.cmd.c), chainR=G.rolled.length===3&&cols.every(c=>c==='R');
   return G.rolled.reduce((s,r)=>{
     const c=r.cmd; if(!c.dmg) return s;
-    const a=U(r.uid), d=Math.max(0,c.dmg+mods(a,'atk',c.c).sum-mods(a,'atkDown').sum+red())+(chainR?RULES.chainR:0);
+    const a=U(r.uid), d=Math.max(0,c.dmg+dmgMods(a,t,c.c).sum)+(chainR?RULES.chainR:0);
     return s+d;
   },0);
 }

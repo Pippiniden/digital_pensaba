@@ -68,7 +68,7 @@ function validateUnits(units){
     if(!ascN) add('warn',`${TERMS.asc}面がないため、スキル3が使えません`);
     if(ascN>1) add('warn',`${TERMS.asc}面が${ascN}つあります`);
     u.faces.forEach((f,fi)=>{
-      if(![1,2,3].includes(f.acts)) add('error',`出目${fi+1}：行動回数は1〜3にしてください`);
+      if(!RULES.actsTable&&![1,2,3].includes(f.acts)) add('error',`出目${fi+1}：行動回数は1〜3にしてください`);
       if(f.post.c==='ASC') add('error',`出目${fi+1}：${TERMS.asc}後のコマンドに${TERMS.asc}面は置けません`);
       [['pre',`${TERMS.asc}前`],['post',`${TERMS.asc}後`]].forEach(([k,lab])=>{
         const c=f[k], where=`出目${fi+1}・${lab}`;
@@ -106,7 +106,8 @@ function checkEffs(effs,ctx,where,add){
     if(e.t==='master'&&e.k!=='star') add('warn',`${w}：${TERMS.player}が対象だと、${TERMS.star}獲得以外は効果がありません`);
     if(FX[e.k].val&&e.v===0) add('warn',`${w}：値が0です`);
     if(!FX[e.k].inst&&e.turns==null&&e.times==null) add('warn',`${w}：効果時間がないため、ずっと続きます`);
-    if(e.k==='critPow'&&e.v<2) add('warn',`${w}：クリティカル威力が2倍未満です`);
+    if(FX[e.k].timesOnly&&e.turns!=null) add('warn',`${w}：${FX[e.k].name}は回数で指定します（ターンは使われません）`);
+    if(e.k==='instantDeath'&&['self','ally_all'].includes(e.t)) add('warn',`${w}：味方に即死効果がかかります`);
     if(e.chance&&e.chance>=6) add('warn',`${w}：ロール6以下は必ず成功します`);
   });
 }
@@ -221,9 +222,12 @@ function fxText(e){
     case 'atkDown': s=`攻撃ダメージ-${e.v}`; break;
     case 'def': s=`被ダメージ-${e.v}`; break;
     case 'defDown': s=`被ダメージ+${e.v}`; break;
-    case 'critPow': s=`クリティカル威力${e.v}倍`; break;
+    case 'critPow': s=`クリティカル威力+${e.v}`; break;
     case 'guts': s=`ガッツ(HP${e.v})`; break;
-    case 'critRoll': s=`クリティカルロール-${e.v}`; break;
+    case 'critRoll': s=`クリティカルロール-${e.v}(Lv+${e.v})`; break;
+    case 'poison': s=`毒${e.v||RULES.dot}`; break;
+    case 'burn': s=`やけど${e.v||RULES.dot}`; break;
+    case 'starLoss': s=`${TERMS.star}${e.v}個消失`; break;
     case 'heal': s=`HP${e.v}回復`; break;
     case 'np': s=`${TERMS.gauge}${e.v>=0?'+':''}${e.v}%`; break;
     case 'star': s=`${TERMS.star}${e.v}個獲得`; break;
@@ -248,7 +252,7 @@ function cmdChip(c){
 function facesTableHTML(d){
   const cell=c=>cmdChip(c)+(c.c==='W'?`<div class="sub">${esc(effsText(c.eff))}</div>`:'');
   return `<table class="faces"><tr><th>出目</th><th>行動</th><th>${TERMS.asc}前</th><th>${TERMS.asc}後</th></tr>
-    ${d.faces.map((f,i)=>`<tr><td>${i+1}</td><td>${f.acts}</td><td>${cell(f.pre)}</td><td>${cell(f.post)}</td></tr>`).join('')}</table>`;
+    ${d.faces.map((f,i)=>`<tr><td>${i+1}</td><td>${faceActs(d,i)}</td><td>${cell(f.pre)}</td><td>${cell(f.post)}</td></tr>`).join('')}</table>`;
 }
 // 操作できないスキル一覧（編成画面・エディタのプレビュー用）
 function skillListHTML(d){

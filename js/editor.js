@@ -65,7 +65,9 @@ function fixEff(e){
   const f=FX[e.k]||{};
   if(!f.val) e.v=0;
   if(f.inst){ delete e.turns; delete e.times; }
+  else if(f.timesOnly){ delete e.turns; if(e.times==null) e.times=1; }
   else if(e.turns==null&&e.times==null) e.turns=3;
+  if((e.k==='poison'||e.k==='burn')&&!e.v) e.v=RULES.dot;
   if(e.k!=='atk') delete e.color;
   if(e.k==='star'&&e.t==='self') e.t='master';
 }
@@ -145,12 +147,14 @@ function renderForm(){
       <textarea data-p="lines.${k}" data-t="lines" rows="${Math.max(2,LINE_MIN[k]||0,u.lines[k].length)}" placeholder="${esc(lab)}のセリフ">${esc(u.lines[k].join(String.fromCharCode(10)))}</textarea></label>`).join('')}</div>
   </section>
   <section class="sec"><h2>鉛筆の6面</h2>
-    <p class="sub small nm">行動回数は行動回数決定フェイズで、コマンドは行動決定フェイズで使います。${TERMS.asc}面は${TERMS.asc}前に1つ置くのが基本です。</p>
+    <p class="sub small nm">行動回数は行動回数決定フェイズで、コマンドは行動決定フェイズで使います。${RULES.actsTable?'行動回数は全サーヴァント共通の値です。':''}${TERMS.asc}面は${TERMS.asc}前に1つ置くのが基本です。</p>
     <div class="faceed">
       <div class="facerow head"><span>出目</span><span>行動回数</span><span>${TERMS.asc}前のコマンド</span><span>${TERMS.asc}後のコマンド</span></div>
       ${u.faces.map((f,i)=>`<div class="facerow">
         <span class="die">${i+1}</span>
-        <label class="mini acts"><span class="only-narrow">行動回数</span><select data-p="faces.${i}.acts" data-t="num">${[1,2,3].map(n=>opt(n,`${n}回`,f.acts)).join('')}</select></label>
+        ${RULES.actsTable
+          ? `<span class="mini acts" title="行動回数は全サーヴァント共通（rules.js の RULES.actsTable）"><span class="only-narrow">行動回数</span>${RULES.actsTable[i]}回</span>`
+          : `<label class="mini acts"><span class="only-narrow">行動回数</span><select data-p="faces.${i}.acts" data-t="num">${[1,2,3].map(n=>opt(n,`${n}回`,f.acts)).join('')}</select></label>`}
         ${cmdEd(`faces.${i}.pre`,f.pre,true)}
         ${cmdEd(`faces.${i}.post`,f.post,false)}
       </div>`).join('')}
@@ -203,7 +207,7 @@ function effRow(path,j,e,ctx,n){
     <select data-p="${p}.k" data-act="effKind" aria-label="効果の種類">${kinds.map(k=>opt(k,FX[k].name,e.k)).join('')}</select>
     <select data-p="${p}.t" aria-label="対象">${tg.map(t=>opt(t,TARGETS[t]||t,e.t)).join('')}</select>
     ${f.val?numIn(p+'.v',e.v,'値'):''}
-    ${f.inst?'':optNum(p+'.turns',e.turns,'ターン')+optNum(p+'.times',e.times,'回数')}
+    ${f.inst?'':(f.timesOnly?'':optNum(p+'.turns',e.turns,'ターン'))+optNum(p+'.times',e.times,'回数')}
     ${e.k==='atk'?`<label class="mini"><span>色</span><select data-p="${p}.color" data-t="optstr">${opt('','すべて',e.color||'')}${['R','B','G'].map(c=>opt(c,TERMS[c],e.color)).join('')}</select></label>`:''}
     <label class="mini"><span>確率</span><select data-p="${p}.chance" data-t="optnum">${opt('','必ず',e.chance??'')}${[1,2,3,4,5].map(k=>opt(k,`ロール${k}以下`,e.chance)).join('')}</select></label>
     <span class="effops">
@@ -235,7 +239,7 @@ function updatePreviews(){
 function faceStats(u,post){
   const cs=u.faces.map(f=>post?f.post:f.pre), avg=a=>a.reduce((s,x)=>s+x,0)/a.length;
   return { dmg:avg(cs.map(c=>c.dmg||0)), np:avg(cs.map(c=>c.np||0)), star:avg(cs.map(c=>c.star||0)),
-    asc:cs.filter(c=>c.c==='ASC').length/6, acts:avg(u.faces.map(f=>f.acts)), hp:u.hp, cost:u.cost,
+    asc:cs.filter(c=>c.c==='ASC').length/6, acts:avg(u.faces.map((f,i)=>faceActs(u,i))), hp:u.hp, cost:u.cost,
     mix:CMD_TYPES.map(t=>[t,cs.filter(c=>c.c===t).length]).filter(x=>x[1]) };
 }
 function renderSide(){
@@ -277,15 +281,15 @@ function renderSide(){
 function pencilHTML(u){
   return `<div class="pencil" aria-label="鉛筆の6面">
     <div class="peraser"></div><div class="pferrule"></div>
-    <div class="pbody">${u.faces.map((f,i)=>`<div class="pface ${rollIdx===i?'hit':''}">
-      <span class="dieb">${i+1}</span><span class="pips" title="行動回数${f.acts}">${'●'.repeat(f.acts)}${'○'.repeat(Math.max(0,3-f.acts))}</span>${cmdChip(rollPost?f.post:f.pre)}</div>`).join('')}</div>
+    <div class="pbody">${u.faces.map((f,i)=>{ const n=faceActs(u,i); return `<div class="pface ${rollIdx===i?'hit':''}">
+      <span class="dieb">${i+1}</span><span class="pips" title="行動回数${n}">${'●'.repeat(n)}${'○'.repeat(Math.max(0,3-n))}</span>${cmdChip(rollPost?f.post:f.pre)}</div>`; }).join('')}</div>
     <div class="ptip"><i></i></div></div>`;
 }
 function rollResultHTML(u){
   if(rollIdx==null) return '<span class="sub small">「転がす」で1回ロールを試せます。</span>';
   if(rollTimer) return '<span class="sub small">ころころ…</span>';
   const f=u.faces[rollIdx], c=rollPost?f.post:f.pre;
-  return `出目<b>${rollIdx+1}</b> ・ 行動回数<b>${f.acts}</b> ・ ${cmdChip(c)}${c.c==='W'?`<div class="sub small">${esc(effsText(c.eff))}</div>`:''}`;
+  return `出目<b>${rollIdx+1}</b> ・ 行動回数<b>${faceActs(u,rollIdx)}</b> ・ ${cmdChip(c)}${c.c==='W'?`<div class="sub small">${esc(effsText(c.eff))}</div>`:''}`;
 }
 function doRoll(){
   clearInterval(rollTimer);

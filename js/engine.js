@@ -33,14 +33,16 @@ const U = uid=>ALL().find(u=>u.uid===uid);
 const alive = pid=>G.players[pid].party.filter(u=>!u.out);
 const roll = ()=>Math.floor(Math.random()*6);       // 面index(0-5)、出目は+1
 const has = (u,k)=>u.fx.some(e=>e.k===k);
-const disabled = u=>has(u,'stun')||has(u,'charm');
+const disabled = u=>has(u,'stun')||has(u,'charm');           // 行動・スキル・宝具すべて不可
+const canSkill = u=>!u.out&&!disabled(u)&&!has(u,'sealSkill');
+const canUlt = u=>!u.out&&!disabled(u)&&!has(u,'sealUlt');
 const fmt = n=>Number.isInteger(n)?n:Math.round(n*10)/10;
 const dn = u=>esc(D(u.def).name);
 const nm = u=>`<span class="p${u.pid}">${dn(u)}</span>`;
 const log = (msg,cls='')=>G.log.push({msg,cls});
 const sumCost = ids=>ids.reduce((s,id)=>s+D(id).cost,0);
 const totalAlloc = ()=>Object.values(G.alloc).reduce((a,b)=>a+b,0);
-const remainingRolls = ()=>Object.entries(G.alloc).reduce((s,[uid,n])=>s+n-G.rolled.filter(r=>r.uid===uid).length,0);
+const remainingRolls = ()=>Object.entries(G.alloc).reduce((s,[uid,n])=>U(uid).out?s:s+n-G.rolled.filter(r=>r.uid===uid).length,0);
 function makeUnit(pid,idx,id){ return {uid:`p${pid}u${idx}`,pid,idx,def:id,hp:D(id).hp,np:0,asc:false,out:false,used:[false,false,false],fx:[],face:null}; }
 function targetCandidates(){ const es=alive(1-G.cur); const t=es.filter(u=>has(u,'taunt')); return t.length?t:es; }
 function pendingSkill(){ return G.pending ? D(U(G.pending.uid).def).skills[G.pending.si] : null; }
@@ -58,6 +60,7 @@ function consume(u,list){
   list.forEach(e=>{ if(e.times!=null) e.times--; });
   u.fx=u.fx.filter(e=>e.times==null||e.times>0);
 }
+const dotVal = e=>e.v||RULES.dot; // 毒・やけどの値（0は旧データなので RULES.dot）
 function addNp(u,v){ if(!u.out) u.np=Math.max(0,Math.min(RULES.gaugeMax,u.np+v)); }
 
 // =====================================================================
@@ -80,23 +83,44 @@ function applyEffects(src,effs,picked){
       if(!ok) continue;
     }
     if(e.t==='master'){
-      if(e.k==='star'){ G.players[src.pid].stars+=e.v; log(`${esc(G.players[src.pid].name)}が${TERMS.star}${e.v}個獲得`); }
+      if(e.k==='star'||e.k==='starLoss') changeStars(src.pid,e.k==='star'?e.v:-e.v);
       continue;
     }
     resolveTargets(src,e.t,picked).forEach(t=>applyOne(src,t,e));
   }
 }
+function changeStars(pid,v){
+  const P=G.players[pid]; P.stars=Math.max(0,P.stars+v);
+  log(`${esc(P.name)}：${TERMS.star}${Math.abs(v)}個${v>=0?'獲得':'消失'}`, v>=0?'':'bad');
+}
+// 強化無効・弱体無効で防がれたら true（防いだ効果に回数があれば1減らす）
+function immuneTo(t,k){
+  const b=FX[k].buff, guard=b===true?'buffImmune':b===false?'debuffImmune':null;
+  const g=guard&&t.fx.find(x=>x.k===guard); if(!g) return false;
+  consume(t,[g]); log(`${nm(t)}は${FX[guard].name}で「${FX[k].name}」を防いだ`,'sub');
+  return true;
+}
+function retreat(u){ u.hp=0; u.out=true; u.fx=[]; log(`${nm(u)} 撤退`,'bad'); say(u,'defeat'); }
 function applyOne(src,t,e){
   const d=D(t.def);
+  if(immuneTo(t,e.k)) return;
   switch(e.k){
     case 'heal': t.hp=Math.min(d.hp,t.hp+e.v); log(`${nm(t)} HP${e.v}回復`,'good'); return;
     case 'np': addNp(t,e.v); log(`${nm(t)} ${TERMS.gauge}${e.v>=0?'+':''}${e.v}%`); return;
-    case 'star': G.players[t.pid].stars+=e.v; log(`${TERMS.star}${e.v}個獲得`); return;
+    case 'star': changeStars(t.pid,e.v); return;
+    case 'starLoss': changeStars(t.pid,-e.v); return;
     case 'cleanse': t.fx=t.fx.filter(x=>FX[x.k].buff!==false); log(`${nm(t)}の弱体を解除`,'good'); return;
     case 'strip': t.fx=t.fx.filter(x=>FX[x.k].buff!==true); log(`${nm(t)}の強化を解除`,'bad'); return;
+    case 'instantDeath': log(`${nm(t)}に即死効果`,'bad'); fxEmit({t:'dmg',uid:t.uid,text:FX.instantDeath.name}); retreat(t); return;
     case 'dmg': return; // 宝具側で処理
   }
   if(e.k==='guts') t.fx=t.fx.filter(x=>x.k!=='guts'); // ガッツは重複不可
+  if(e.k==='curse'){ // 呪いは回数のみ。重ねると回数が増える
+    const n=e.times||1, c=t.fx.find(x=>x.k==='curse');
+    if(c){ c.times+=n; log(`${nm(t)}の呪いが${c.times}回に`,'bad'); return; }
+    const inst={k:'curse',v:0,color:null,turns:null,times:n,owner:src.pid};
+    t.fx.push(inst); log(`${nm(t)}に ${fxText(inst)}`,'bad'); return;
+  }
   const inst={k:e.k,v:e.v,color:e.color||null,turns:e.turns??null,times:e.times??null,owner:src.pid};
   t.fx.push(inst);
   log(`${nm(t)}に ${fxText(inst)}`, FX[e.k].buff?'good':'bad');
@@ -120,9 +144,27 @@ function dealDamage(u,dmg,isHit,o={}){
   if(u.hp<=0){
     const g=u.fx.find(e=>e.k==='guts');
     if(g){ u.hp=g.v; u.fx=u.fx.filter(e=>e!==g); log(`${nm(u)} ガッツ発動！ HP${g.v}で踏みとどまった`,'good'); }
-    else { u.hp=0; u.out=true; u.fx=[]; log(`${nm(u)} 撤退`,'bad'); say(u,'defeat'); return; }
+    else { retreat(u); return; }
   }
-  if(isHit) addNp(u,RULES.gaugeOnHit);
+  if(isHit){
+    const c=u.fx.find(e=>e.k==='curse');
+    if(c){ consume(u,[c]); log(`${nm(u)}は呪いで${TERMS.gauge}が増えない`,'sub'); }
+    else addNp(u,RULES.gaugeOnHit);
+  }
+}
+// 攻撃側の補正（被ダメージ減少無視なら相手の def を見ない）。使った効果も返す
+function dmgMods(att,tgt,color){
+  const a=mods(att,'atk',color), ad=mods(att,'atkDown');
+  let sum=a.sum-ad.sum; const usedA=[...a.list,...ad.list], usedT=[];
+  if(tgt&&!tgt.out){
+    const dd=mods(tgt,'defDown'); sum+=dd.sum; usedT.push(...dd.list);
+    const ig=att.fx.find(e=>e.k==='ignoreDef');
+    if(ig){ if(mods(tgt,'def').list.length) usedA.push(ig); }
+    else { const df=mods(tgt,'def'); sum-=df.sum; usedT.push(...df.list); }
+  }
+  // 色指定のある攻撃ダメージ+（色バフ）の合計：クリティカルで2倍
+  const colorBuff=a.list.filter(e=>e.color).reduce((s,e)=>s+e.v,0);
+  return {sum, usedA, usedT, colorBuff};
 }
 function gainNpStar(att,cmd,mult){
   if(cmd.np) addNp(att,cmd.np*mult);
@@ -133,30 +175,32 @@ function resolveCommand(att,cmd,tgt,o={}){
   if(cmd.c==='ASC'){ log(`${n}：${TERMS.asc}（1行動）`,'sub'); return; }
   if(cmd.c==='W'){ log(`${n}：特殊行動「${esc(cmd.label)}」`); applyEffects(att,cmd.eff||[],null); gainNpStar(att,cmd,1); return; }
   say(att,'attack');
-  let dmg=cmd.dmg; const note=[`基本${dmg}`]; let usedA=[], usedT=[];
+  let dmg=cmd.dmg; const note=[`基本${dmg}`]; let usedA=[], usedT=[], colorBuff=0;
   // 2. スキル効果補正 / 3. Busterチェイン
   if(!o.extra){
-    const a=mods(att,'atk',cmd.c), ad=mods(att,'atkDown');
-    let mod=a.sum-ad.sum; usedA=[...a.list,...ad.list];
-    if(!tgt.out){ const dd=mods(tgt,'defDown'), df=mods(tgt,'def'); mod+=dd.sum-df.sum; usedT=[...dd.list,...df.list]; }
-    if(mod){ dmg=Math.max(0,dmg+mod); note.push(`補正${mod>0?'+':''}${mod}`); }
+    const m=dmgMods(att,tgt,cmd.c); usedA=m.usedA; usedT=m.usedT; colorBuff=m.colorBuff;
+    if(m.sum){ dmg=Math.max(0,dmg+m.sum); note.push(`補正${m.sum>0?'+':''}${m.sum}`); }
     if(o.chain==='R'){ dmg+=RULES.chainR; note.push(`チェイン+${RULES.chainR}`); }
   } else note.push('エクストラ：補正なし');
-  // 4. クリティカル（クラス相性はなし）
+  // 4. クリティカル（クラス相性はなし）：スターがあれば1d100で判定。成功でダメージ+30（Buster+60）、色バフ2倍
   let crit=false;
   if(!o.extra){
     const st=G.players[att.pid].stars;
-    if(st>=30){ crit=true; note.push('確定クリ'); }
-    else if(st>0){
-      const r=roll()+1, m=mods(att,'critRoll').sum, th=critThreshold(st);
-      crit=(r-m)<=th; note.push(`クリ判定 ${r}${m?`-${m}`:''}≤${th} ${crit?'成功':'失敗'}`);
+    if(st>0){
+      const cr=mods(att,'critRoll'), lv=Math.min(CRIT_TABLE.length,critLevel(st)+cr.sum), p=critChance(lv);
+      const r=Math.floor(Math.random()*100)+1;
+      crit=r<=p; consume(att,cr.list);
+      note.push(`クリ判定 Lv${lv}(${p}%) 出目${r} ${crit?'成功':'失敗'}`);
     }
-    if(crit){ const cp=mods(att,'critPow'); const x=cp.list.length?Math.max(...cp.list.map(e=>e.v)):2; dmg*=x; note.push(`クリ×${x}`); consume(att,cp.list); }
+    if(crit){
+      const cp=mods(att,'critPow'), add=(cmd.c==='R'?RULES.critDmgR:RULES.critDmg)+cp.sum+colorBuff;
+      dmg+=add; note.push(`クリ+${add}${colorBuff?`(色バフ+${colorBuff}含む)`:''}`); consume(att,cp.list);
+    }
   }
-  // 6. 最終ダメージ
-  const mult=(crit||tgt.out)?2:1;
+  // 6. 最終ダメージ（クリティカルとオーバーキルは重複：獲得NP・発生スターがそれぞれ2倍）
+  const mult=(crit?2:1)*(tgt.out?2:1);
   if(tgt.out){
-    log(`${n} ${cmdChip(cmd)} → オーバーキル（${TERMS.gauge}・${TERMS.star}2倍）`);
+    log(`${n} ${cmdChip(cmd)} → オーバーキル（${TERMS.gauge}・${TERMS.star}${mult}倍）`);
   } else {
     const b=blocked(att,tgt);
     if(b){ log(`${n} ${cmdChip(cmd)} → ${nm(tgt)}：${b}で無効 <span class="sub">(${note.join(' / ')})</span>`); fxEmit({t:'dmg',uid:tgt.uid,text:b}); }
@@ -173,15 +217,15 @@ function resolveUlt(u,tgt){
   for(const e of ud.eff){
     if(e.k!=='dmg'){ applyEffects(u,[e],null); continue; }
     const ts = e.t==='enemy_all' ? alive(1-u.pid) : [tgt].filter(x=>x&&!x.out);
-    const a=mods(u,'atk',ud.c), ad=mods(u,'atkDown');
+    const usedA=new Set();
     for(const t of ts){
-      const dd=mods(t,'defDown'), df=mods(t,'def');
-      let dmg=Math.max(0,e.v+a.sum-ad.sum+dd.sum-df.sum);
+      const m=dmgMods(u,t,ud.c); m.usedA.forEach(x=>usedA.add(x));
+      let dmg=Math.max(0,e.v+m.sum);
       const b=blocked(u,t);
       if(b){ log(`→ ${nm(t)}：${b}で無効`); fxEmit({t:'dmg',uid:t.uid,text:b}); }
-      else { log(`→ ${nm(t)}：<b>${fmt(dmg)}</b>ダメージ`); consume(t,[...dd.list,...df.list]); dealDamage(t,dmg,true,{np:true}); if(!t.out) say(t,'npDamage'); }
+      else { log(`→ ${nm(t)}：<b>${fmt(dmg)}</b>ダメージ`); consume(t,m.usedT); dealDamage(t,dmg,true,{np:true}); if(!t.out) say(t,'npDamage'); }
     }
-    consume(u,[...a.list,...ad.list]);
+    consume(u,[...usedA]);
   }
 }
 function resolveDamage(){
@@ -241,12 +285,15 @@ function beginTurn(){
 function endPhase(){
   log('⑦ 終了フェイズ','h');
   const pids = RULES.dotTiming==='all' ? [0,1] : [G.cur];
+  // 弱体ダメージ：攻防補正・無敵・回避・クリティカルの影響なし。弱体無効で防がれる。毒・やけどはそれぞれ重複せず最大値
   pids.forEach(pid=>alive(pid).forEach(u=>{
-    let d=0;
-    if(has(u,'poison')) d+=RULES.dot;
-    if(has(u,'burn')) d+=RULES.dot;
-    d+=RULES.dot*u.fx.filter(e=>e.k==='curse').length;
-    if(d){ log(`${nm(u)} 状態異常で${d}ダメージ`,'bad'); dealDamage(u,d,false); }
+    const top=k=>Math.max(0,...u.fx.filter(e=>e.k===k).map(dotVal));
+    const ps=top('poison'), bs=top('burn')*(has(u,'spread')?2:1), d=ps+bs;
+    if(!d) return;
+    const g=u.fx.find(e=>e.k==='debuffImmune');
+    if(g){ consume(u,[g]); log(`${nm(u)}は弱体無効で弱体ダメージを防いだ`,'sub'); return; }
+    log(`${nm(u)} 弱体ダメージ${d}（${[ps?`毒${ps}`:'',bs?`やけど${bs}`:''].filter(Boolean).join('・')}）`,'bad');
+    dealDamage(u,d,false);
   }));
   G.players[G.cur].stars=G.gen;
   log(`${esc(G.players[G.cur].name)}：${TERMS.star}を${G.gen}個獲得（次のターンに使用）`);
@@ -269,6 +316,7 @@ function doSkill(u,si,picked){
   log(`${nm(u)} スキル「${esc(s.name)}」`);
   say(u,'skill');
   applyEffects(u,s.eff,picked);
+  checkWin(); // 即死などでスキルだけで決着することがある
 }
 function toTargetPhase(){
   G.phase='target'; log('⑤ 攻撃対象決定','h');
@@ -337,8 +385,9 @@ const ACTIONS = {
       if(disabled(u)){ u.face=null; log(`${nm(u)}は行動不能`,'bad'); }
       else {
         const f=roll(); u.face={i:f,kind:'acts'};
-        m=Math.min(RULES.actionsMax, D(u.def).faces[f].acts+bonus);
-        log(`${nm(u)} 出目${f+1} → 最大行動${m}${bonus?`（撤退ボーナス+${bonus}）`:''}`);
+        const fear=has(u,'fear')?1:0;
+        m=Math.max(0,Math.min(RULES.actionsMax, faceActs(D(u.def),f)+bonus-fear));
+        log(`${nm(u)} 出目${f+1} → 最大行動${m}${bonus?`（撤退ボーナス+${bonus}）`:''}${fear?'（恐怖-1）':''}`, m?'':'bad');
       }
       G.maxActs[u.uid]=m; const a=Math.min(m,left); G.alloc[u.uid]=a; left-=a;
     });
@@ -363,14 +412,14 @@ const ACTIONS = {
   confirmAlloc(){ if(G.phase==='actRoll'&&G.actRolled){ G.phase='skill'; log(`③ スキル・${TERMS.ult}使用`,'h'); } },
   useSkill({uid,si}){
     si=Number(si); const u=U(uid), s=D(u.def).skills[si];
-    if(G.phase!=='skill'||G.pending||u.pid!==G.cur||u.out||disabled(u)||u.used[si]||(si===2&&!u.asc)) return;
+    if(G.phase!=='skill'||G.pending||u.pid!==G.cur||!canSkill(u)||u.used[si]||(si===2&&!u.asc)) return;
     if(s.pick){ G.pending={uid,si}; return; }
     doSkill(u,si,null);
   },
   cancelPick(){ G.pending=null; },
   useUlt({uid}){
     const u=U(uid);
-    if(G.phase!=='skill'||G.pending||G.ult||u.pid!==G.cur||u.out||disabled(u)||u.np<RULES.ultCost) return;
+    if(G.phase!=='skill'||G.pending||G.ult||u.pid!==G.cur||!canUlt(u)||u.np<RULES.ultCost) return;
     G.ult=uid; u.np=0;
     log(`${nm(u)}が${TERMS.ult}「${esc(D(u.def).ult.name)}」を使用（このターンの行動になります）`,'good');
   },

@@ -29,16 +29,28 @@ const CARD_LAYERS = {
 const UI_IMG = { circleOut:'img/ui/mcircleo.webp', circleIn:'img/ui/mcirclei.webp' };
 
 // ---------- ルール定数 ----------
+// 泥ペンサバ「チームバトルルール」（3on3・合計コスト10）準拠。クラス相性はなし
 const RULES = {
   costCap:10, partyMax:3, actionsMax:3,
+  // 行動回数決定フェイズ：出目1〜6 → 行動回数（全サーヴァント共通）。撤退した味方1騎ごとに+1
+  // null にすると、鉛筆の各面の acts（サーヴァントごとの値）を使う
+  actsTable:[0,1,1,3,2,2],
   gaugeOnHit:10, gaugeMax:300, ultCost:100,
   chainR:30,   // Busterチェイン：各コマンドのダメージ+30
   chainB:20,   // Artsチェイン：行動した全サーヴァントのNP+20%
   chainG:10,   // Quickチェイン：スター10個発生
-  dot:20,
-  dotTiming:'current', // 毒・やけど・呪いの減少対象: 'current'=手番側のみ / 'all'=全ユニット
+  critDmg:30, critDmgR:60, // クリティカル：ダメージ+30（Busterは+60）。獲得NP・発生スター・色バフは2倍
+  dot:20,      // 毒・やけどの値が0（旧データ）のときのダメージ
+  dotTiming:'current', // 毒・やけどの減少対象: 'current'=手番側のみ / 'all'=全ユニット
 };
-function critThreshold(stars){ if(stars>=30) return 99; if(stars>=14) return 4; if(stars>=7) return 2; if(stars>=1) return 1; return 0; }
+// クリティカルレベル：スター数で決まり、1d100 で確率以下ならクリティカル
+const CRIT_TABLE = [ // [必要スター, 確率%]  index+1 がレベル
+  [1,10],[6,20],[11,35],[16,50],[21,75],[26,90],[31,100],
+];
+function critLevel(stars){ let lv=0; CRIT_TABLE.forEach(([s],i)=>{ if(stars>=s) lv=i+1; }); return lv; }
+const critChance = lv=>lv<=0?0:CRIT_TABLE[Math.min(lv,CRIT_TABLE.length)-1][1];
+// 出目index(0-5)の行動回数
+const faceActs = (d,i)=>RULES.actsTable ? RULES.actsTable[i] : d.faces[i].acts;
 
 // ---------- セリフ ----------
 // 各サーヴァントの lines に、場面ごとのセリフを配列で書きます（複数あればランダムに1つ）
@@ -71,16 +83,31 @@ const CMD_TYPES = ['R','B','G','W','ASC']; // W=白(特殊行動) / ASC=覚醒�
 
 // ---------- 効果の種類 ----------
 // buff: 強化(true)/弱体(false)/どちらでもない(undefined)  val: 値を使う  inst: 即時効果（効果時間なし）
+// timesOnly: 効果時間は回数だけで指定する
 const FX = {
   atk:{name:'攻撃ダメージ+',buff:true,val:true}, atkDown:{name:'攻撃ダメージ-',buff:false,val:true},
   def:{name:'被ダメージ-',buff:true,val:true},   defDown:{name:'被ダメージ+',buff:false,val:true},
-  critPow:{name:'クリティカル威力',buff:true,val:true}, evade:{name:'回避',buff:true}, invul:{name:'無敵',buff:true},
+  critPow:{name:'クリティカル威力+',buff:true,val:true},   // クリティカル時のダメージ増加量に+x
+  evade:{name:'回避',buff:true}, invul:{name:'無敵',buff:true},
   sureHit:{name:'必中',buff:true}, pierce:{name:'無敵貫通',buff:true}, guts:{name:'ガッツ',buff:true,val:true},
-  taunt:{name:'ターゲット集中',buff:true}, critRoll:{name:'クリティカルロール-',buff:true,val:true},
-  poison:{name:'毒',buff:false}, burn:{name:'やけど',buff:false}, curse:{name:'呪い',buff:false},
+  taunt:{name:'ターゲット集中',buff:true},
+  critRoll:{name:'クリティカルロール-',buff:true,val:true}, // クリティカルレベル+x
+  ignoreDef:{name:'被ダメージ減少無視',buff:true},           // 相手の[被ダメージ-x]を受けずに攻撃
+  debuffImmune:{name:'弱体無効',buff:true},                  // 弱体効果・弱体ダメージを受けない
+  // 弱体
+  buffImmune:{name:'強化無効',buff:false},                   // 強化効果を受けない
+  poison:{name:'毒',buff:false,val:true}, burn:{name:'やけど',buff:false,val:true}, // ターン終了時に値ぶんの弱体ダメージ
+  spread:{name:'延焼',buff:false},                           // やけどのダメージ2倍
+  curse:{name:'呪い',buff:false,timesOnly:true},             // 被弾時にNPが増えない。重ねると回数が増える
   stun:{name:'スタン',buff:false}, charm:{name:'魅了',buff:false},
+  fear:{name:'恐怖',buff:false},                             // 行動回数-1
+  sealSkill:{name:'スキル封印',buff:false}, sealUlt:{name:'宝具封印',buff:false},
+  // 即時
   heal:{name:'HP回復',val:true,inst:true}, np:{name:'NP増減',val:true,inst:true}, star:{name:'スター獲得',val:true,inst:true},
-  cleanse:{name:'弱体解除',inst:true}, strip:{name:'強化解除',inst:true}, dmg:{name:'ダメージ',val:true,inst:true},
+  starLoss:{name:'スター消失',val:true,inst:true},             // 対象のマスターがスターを失う
+  cleanse:{name:'弱体解除',inst:true}, strip:{name:'強化解除',inst:true},
+  instantDeath:{name:'即死',inst:true},                      // 対象のHPを0にする（ガッツ無効）
+  dmg:{name:'ダメージ',val:true,inst:true},
 };
 
 // ---------- 効果の対象 ----------

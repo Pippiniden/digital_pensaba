@@ -16,21 +16,22 @@ const pctOf=(a,b)=>Math.max(0,Math.min(100,a/b*100));
 
 // ---------- 対戦画面：サーヴァント ----------
 function skillBtns(u,d){
-  const own=u.pid===G.cur && G.phase==='skill' && !u.out && !disabled(u) && !G.pending;
+  const own=u.pid===G.cur && G.phase==='skill' && !u.out && !G.pending;
+  const sealed=!canSkill(u)&&!u.out;
   const sk=d.skills.map((s,i)=>{
-    const locked=i===2&&!u.asc, used=u.used[i], ok=own&&!used&&!locked;
-    const tip=`S${i+1}「${s.name}」 ${effsText(s.eff,s.pick)}${locked?`（${TERMS.asc}後に使用可）`:''}${used?'（使用済み）':''}`;
+    const locked=i===2&&!u.asc, used=u.used[i], ok=own&&canSkill(u)&&!used&&!locked;
+    const tip=`S${i+1}「${s.name}」 ${effsText(s.eff,s.pick)}${locked?`（${TERMS.asc}後に使用可）`:''}${used?'（使用済み）':''}${sealed?'（使用不可）':''}`;
     return `<span class="skw" title="${esc(tip)}"><button class="sk ${used?'used':''} ${locked?'locked':''}" data-a="useSkill" data-uid="${u.uid}" data-si="${i}" ${ok?'':'disabled'}><i>S${i+1}</i><span>${locked?'🔒':''}${esc(s.name)}</span></button></span>`;
   }).join('');
-  const ready=u.np>=RULES.ultCost&&!u.out, ok=own&&!G.ult&&ready;
+  const ready=u.np>=RULES.ultCost&&!u.out, ok=own&&canUlt(u)&&!G.ult&&ready;
   const tip=`${TERMS.ult}「${d.ult.name}」 [${TERMS[d.ult.c]}] ${effsText(d.ult.eff)}（${TERMS.gauge}${RULES.ultCost}%で使用可）`;
   const ult=`<span class="skw" title="${esc(tip)}"><button class="sk np ${d.ult.c} ${ready?'ready':''}" data-a="useUlt" data-uid="${u.uid}" ${ok?'':'disabled'}><i>${TERMS.ult}</i><span>${esc(d.ult.name)}</span></button></span>`;
   return `<div class="sks">${sk}${ult}</div>`;
 }
 function rollBadge(u,d){
   if(!u.face) return '';
-  const f=d.faces[u.face.i];
-  return `<div class="proll"><span class="die">${u.face.i+1}</span>${u.face.kind==='acts'?`<span class="actn">×${f.acts}</span>`:''}${u.face.kind==='cmd'?cmdCardHTML(d,u.face.cmd,{small:true}):''}</div>`;
+  const n=u.face.kind==='acts'?(G.maxActs[u.uid]??faceActs(d,u.face.i)):0;
+  return `<div class="proll"><span class="die">${u.face.i+1}</span>${u.face.kind==='acts'?`<span class="actn">×${n}</span>`:''}${u.face.kind==='cmd'?cmdCardHTML(d,u.face.cmd,{small:true}):''}</div>`;
 }
 function ctlHTML(u){
   if(u.pid!==G.cur || u.out) return '';
@@ -127,14 +128,14 @@ function stageHTML(){
   const stepNo={actRoll:2,skill:3,action:4,target:5,end:7,over:8}[ph]||1;
   const names=['開始','行動回数','スキル','行動','対象','ダメージ','終了'];
   const steps=names.map((s,i)=>`<span class="${i+1===stepNo?'on':i+1<stepNo?'done':''}">${s}</span>`).join('');
-  const stars=me.stars, th=critThreshold(stars);
+  const stars=me.stars, lv=critLevel(stars);
   return `<section class="stage">
     ${magicCircleHTML()}
     <div class="stagetop"><span class="turnno">TURN <b>${G.turn}</b></span><span class="p${G.cur} who">${esc(me.name)}の手番</span><div class="steps">${steps}</div></div>
     <div class="stagebody">
       <div class="prompt">${promptHTML()}</div>
       <div class="lane">${laneHTML()}</div>
-      <div class="critbox"><span>クリティカル</span><b>★${stars}</b><small>${stars>=30?'確定':th?`出目${th}以下`:'判定なし'}</small></div>
+      <div class="critbox"><span>クリティカル</span><b>★${stars}</b><small>${lv?`Lv${lv}・${critChance(lv)}%`:'判定なし'}</small></div>
     </div>
   </section>`;
 }

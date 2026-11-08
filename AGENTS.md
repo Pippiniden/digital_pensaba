@@ -49,6 +49,7 @@ Editor (editor.html): rules → units → common → editor
   img:   { face, card },                 // empty card → face; if that is also the placeholder → card.svg
   lines: { start, attack, damage, skill, np, npDamage, defeat, win },  // each string[] (LINE_KEYS)
   faces: [ {acts:1|2|3, pre:Cmd, post:Cmd} ×6 ],   // pencil faces 1–6. pre = before ascension / post = after
+                                                   // acts is IGNORED while RULES.actsTable is set (the default)
   skills:[ {name, eff:Eff[], pick?:'ally'|'enemy'|'any'} ×3 ],   // skill 3 is usable only after ascension
   ult:   { name, c:'R'|'B'|'G', eff:Eff[] } }                    // Noble Phantasm (ultimate)
 ```
@@ -65,8 +66,10 @@ Editor (editor.html): rules → units → common → editor
 - Look up the definition with `D(u.def)` and a unit by uid with `U(uid)`.
 
 ### 4.3 Rule constants — `RULES` (rules.js)
-`costCap:10, partyMax:3, actionsMax:3, gaugeOnHit:10, gaugeMax:300, ultCost:100, chainR:30, chainB:20, chainG:10, dot:20, dotTiming:'current'|'all'`.
-The critical threshold is `critThreshold(stars)` (★30+ = guaranteed, 14+ = roll ≤4, 7+ = ≤2, 1+ = ≤1).
+`costCap:10, partyMax:3, actionsMax:3, actsTable:[0,1,1,3,2,2], gaugeOnHit:10, gaugeMax:300, ultCost:100, chainR:30, chainB:20, chainG:10, critDmg:30, critDmgR:60, dot:20, dotTiming:'current'|'all'`.
+- `actsTable`: action count per pencil face (index 0–5 = face 1–6), shared by all units. Set to `null` to use each face's own `acts` instead. Always read it through `faceActs(d, i)`.
+- Critical: `critLevel(stars)` → level 0–7 from `CRIT_TABLE`, `critChance(level)` → % (Lv1 10 / Lv2 20 / Lv3 35 / Lv4 50 / Lv5 75 / Lv6 90 / Lv7 100; thresholds at 1/6/11/16/21/26/31 stars).
+- `dot` is only the fallback damage for poison/burn effects whose value is 0 (old data).
 
 ### 4.4 Storage (localStorage)
 | Key | Contents |
@@ -88,7 +91,7 @@ turn: actRoll → skill → action → target → end → (endPhase → swap tur
 |---|---|---|
 | `mode` | Mode select (vs CPU / 2-player) | `chooseMode` |
 | `setup` | Party building (total cost ≤ 10, up to 3 units) | `setupToggle` `setupRandom` `setupCpu` `setupConfirm` |
-| `actRoll` | ② Each unit rolls its max action count; allocate up to 3 in total. Retreated allies grant a bonus to action counts | `rollActs` `alloc` `setAlloc` `confirmAlloc` |
+| `actRoll` | ② Each unit rolls its max action count from `actsTable` (0 is possible); +1 per retreated ally, −1 with fear, capped at 3. Allocate up to 3 in total | `rollActs` `alloc` `setAlloc` `confirmAlloc` |
 | `skill` | ③ Skills (once each per battle) and ultimate (NP ≥ 100, once per turn). Skills with `pick` wait for target selection (`G.pending`) | `useSkill` `useUlt` `cancelPick` `skillDone` |
 | `action` | ④ Roll the pencil for each allocated action to decide commands | `rollAction` `toTarget` |
 | `target` | ⑤ Choose the attack target (only `taunt` units if any) | `cardClick` `resolve` |
@@ -96,6 +99,37 @@ turn: actRoll → skill → action → target → end → (endPhase → swap tur
 | `over` | Game decided. Only `restart` `rematch` `toggleSpeed` `useDefaultData` are accepted | |
 
 Damage resolution (`resolveDamage`) in brief: `resolveCommand` per command in order → three same-color commands trigger a chain (R: damage +30 / B: acting units' NP +20 / G: 10 stars generated) → three actions by the same character trigger a Brave Chain (extra attack). There are no class matchups.
+
+### 5.1 Rule source: 泥ペンサバ "Team Battle" rules
+
+The rules follow the 泥ペンサバ wiki's チームバトルルール (3v3, total cost 10), an arrangement of the official Fate/Grand Order -SUMMON PENCIL SERVANT-, **without class matchups**. When a request says "match the rules", this is the reference.
+
+Per command, `resolveCommand` does, in order:
+1. Base damage from the face.
+2. Skill modifiers via `dmgMods()`: own `atk` (color-filtered) − `atkDown` + target `defDown` − target `def` (skipped if the attacker has `ignoreDef`). Floors at 0.
+3. Buster Chain +30.
+4. Critical step (only if the player holds stars; never on extra attacks or ultimates): roll 1d100 ≤ `critChance(critLevel(stars) + critRoll)`. On success: damage + 30 (Buster + 60) + `critPow` total + color buffs again (color buffs count double), and NP gain / star generation ×2.
+5. Final damage, unless blocked by `invul` / `evade` (`blocked()`). Overkill (target already retreated): NP / stars ×2. Overkill and critical **stack** (×4).
+
+Extra attack (Brave Chain): no modifiers, no critical, but evade/invul still apply.
+Damage over time (`endPhase`): ignores atk/def, invul, evade and crits; blocked by `debuffImmune`. Poison and burn each don't stack (the highest value applies); `spread` doubles burn.
+
+### 5.2 Effect kinds that need special handling (`FX` in rules.js)
+
+| key | Meaning | Where it is implemented |
+|---|---|---|
+| `critPow` | Critical damage **+x** (additive, not a multiplier) | `resolveCommand` |
+| `critRoll` | "Critical roll −x" = critical level **+x** | `resolveCommand` |
+| `poison` / `burn` | DoT of value v at turn end (0 → `RULES.dot`) | `endPhase`, `dotVal` |
+| `spread` | Burn damage ×2 | `endPhase` |
+| `curse` | **Times only** (`timesOnly`). No NP gain when hit; each hit uses one time; reapplying adds times | `applyOne`, `dealDamage` |
+| `fear` | Action count −1 | `ACTIONS.rollActs` |
+| `sealSkill` / `sealUlt` | Can't use skills / ultimate | `canSkill` / `canUlt` (engine), UI buttons, CPU |
+| `stun` / `charm` | Can't act, use skills or ultimate | `disabled()` |
+| `debuffImmune` / `buffImmune` | Blocks debuffs (incl. DoT) / buffs; consumes one time per block | `immuneTo()` in `applyOne`, `endPhase` |
+| `ignoreDef` | Ignore the target's `def` | `dmgMods()` |
+| `instantDeath` | HP → 0 and retreat, **ignores guts** | `applyOne` (`doSkill` then calls `checkWin`) |
+| `starLoss` | Target's master loses x stars (min 0) | `applyOne` / `changeStars` |
 
 ## 6. Design rules (do not break these)
 
@@ -113,14 +147,14 @@ Damage resolution (`resolveDamage`) in brief: `resolveCommand` per command in or
 | I want to… | File / place |
 |---|---|
 | Add or tune a character (numbers / skills / lines) | `js/units.js` (or edit in the editor, export, and replace). `id` is half-width alphanumerics, `_`, `-`, unique. Cost ≤ `RULES.costCap` |
-| Balance numbers (NP amounts, chains, poison damage, etc.) | `RULES` in `js/rules.js` |
+| Balance numbers (NP amounts, chains, crit bonus, action-count table, etc.) | `RULES` and `CRIT_TABLE` in `js/rules.js` |
 | Change terminology / display names | `TERMS` in `js/rules.js` |
 | Add a class | `CLASS_ICONS` in `js/rules.js` (icons in `img/classes/`). Names not in the list also work and get `extra.webp` |
 | Add a new line scene | `LINE_KEYS` in `rules.js` → call `say(u,'newKey')` in `engine.js`. The editor and export read `LINE_KEYS` automatically |
 | **Add a new effect kind** (e.g. a new status) | ① define it in `FX` in `rules.js` ② apply it in `engine.js` (instant effects in `applyOne`; lasting effects wherever they are read via `mods()`: `resolveCommand` / `resolveUlt` / `blocked`, etc.) ③ display text in `fxText` in `common.js` (the `default` branch uses `FX[k].name`) ④ add a score in `cpuSkillScore` in `cpu.js` ⑤ add validation to `checkEffs` in `common.js` if needed. The editor's choices are generated from `FX` automatically |
 | Add a new effect target | `TARGETS` and `TGT_BY_CTX` in `rules.js` → `resolveTargets` in `engine.js` |
 | Change turn flow / phases | `ACTIONS` plus `beginTurn` / `endPhase` / `toTargetPhase` in `engine.js`. On the display side: `promptHTML` / `stageHTML` (`stepNo`) / `ctlHTML` in `game-ui.js`. Update `cpuDecide` in `cpu.js` to match |
-| Damage calculation / crits / chains | `resolveCommand` (normal), `resolveUlt` (ultimate), `resolveDamage` (chains) in `engine.js`. Keep the CPU's estimate `estDamage` (cpu.js) in sync |
+| Damage calculation / crits / chains | `resolveCommand` (normal), `resolveUlt` (ultimate), `resolveDamage` (chains), shared modifiers in `dmgMods` in `engine.js`. The CPU's estimate `estDamage` (cpu.js) reuses `dmgMods` |
 | Add a new ACTION (operation) | Add it to `ACTIONS` in `engine.js` → a button with `data-a="name"` in the UI → `cpuDecide` if the CPU uses it. To accept it after the game is decided, add it to the allow-list inside `act()` in `engine.js`; to let it be pressed during the CPU's turn, add it to `FREE_ACTIONS` in `game-ui.js` (two lists with different purposes) |
 | Make the CPU smarter / weaker | `js/cpu.js` (`level` is `'easy'` / `'normal'`; `easy` uses the deterministic pseudo-random `rnd01`) |
 | Game screen layout / look | `js/game-ui.js` (HTML generation) + `css/game.css` |
@@ -133,7 +167,7 @@ Damage resolution (`resolveDamage`) in brief: `resolveCommand` per command in or
 
 ## 8. Verification
 
-There are no automated tests, so verify manually in a browser.
+There are no automated tests in the repo, so verify manually in a browser. For rule changes, also consider a quick headless check: load `rules/units/common/engine/cpu` into a Node `vm` context with a no-op `render()`, call `newGame()`, then loop `act(...cpuDecide())` with `G.cpu=[true,true]` for a few hundred games and look for hangs or `NaN` in `G.log`.
 - Game: open `index.html` and play one full match each in vs-CPU (easy / normal) and 2-player. Depending on your change, also exercise ultimates, ascension, chains, skill target selection, and retreat.
 - Editor: edit in `editor.html` → confirm the "validation" panel on the right shows no errors → "apply to game" → confirm it shows up on the game's mode-select screen → "reset to default data".
 - Confirm there are no console errors in the browser dev tools. To see how a broken `pencilduel.units` behaves, edit `localStorage` directly.
