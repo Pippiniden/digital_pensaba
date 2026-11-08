@@ -21,6 +21,7 @@
   <button data-act="exportJSON">JSON を書き出し</button>
   <button data-act="import">読み込み</button>
   <button data-act="resetDefault">標準データに戻す</button>
+  <button data-act="simOpen">バランス検証</button>
   <a class="btn" href="index.html">ゲームへ</a>
   <input type="file" id="file" accept=".json,.js,application/json,text/javascript" hidden>
 </header>
@@ -29,11 +30,14 @@
   <main id="form"></main>
   <section id="side"></section>
 </div>
+<dialog id="simdlg" aria-label="バランス検証"></dialog>
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script src="js/rules.js"></script>
 <script src="js/units.js"></script>
 <script src="js/common.js"></script>
 <script src="js/editor.js"></script>
+<script src="js/sim.js"></script>
+<script src="js/editor-sim.js"></script>
 </body>
 </html>

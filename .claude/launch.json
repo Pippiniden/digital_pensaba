@@ -21,6 +21,17 @@
       ],
       "port": 8767,
       "autoPort": false
+    },
+    {
+      "name": "static-sim",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8771"
+      ],
+      "port": 8771,
+      "autoPort": false
     }
   ]
 }

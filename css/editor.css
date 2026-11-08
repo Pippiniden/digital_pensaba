@@ -114,3 +114,47 @@ table.stats td:first-child{white-space:nowrap;color:var(--sub)}
 #toast{position:fixed;left:50%;bottom:20px;transform:translate(-50%,16px);opacity:0;transition:.2s;background:var(--panel);color:var(--ink);border:1px solid var(--gold);box-shadow:var(--frame),var(--shadow);padding:10px 16px;border-radius:10px;font-size:13px;max-width:calc(100% - 32px);z-index:20;pointer-events:none}
 #toast.show{opacity:1;transform:translate(-50%,0)}
 #toast.err{background:var(--r);color:#fff}
+
+/* バランス検証 */
+#simdlg{width:min(1100px,calc(100% - 32px));max-height:calc(100vh - 48px);padding:16px 20px;color:var(--ink);border:1px solid var(--gold);border-radius:6px;
+  background:linear-gradient(160deg,#16295a,var(--panel) 40%,var(--panel2));box-shadow:var(--frame),var(--shadow)}
+#simdlg::backdrop{background:rgba(3,7,20,.7)}
+.simhead{display:flex;align-items:center;gap:8px}
+.simhead h2{font-size:17px;margin:0;color:var(--gold-hi);font-family:var(--serif)}
+.simopts{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-end;margin:12px 0}
+.simopts label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--sub)}
+.simopts label.chk{flex-direction:row;align-items:center;gap:6px;align-self:center}
+.simopts label.dim{opacity:.45}
+.simprog{position:relative;height:20px;border:1px solid var(--line);border-radius:4px;background:var(--panel2);overflow:hidden;margin-bottom:10px}
+.simprog i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,var(--gold-lo),var(--gold));transition:width .2s}
+.simprog span{position:relative;display:block;text-align:center;font-size:12px;line-height:18px}
+.simsums{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch;margin-bottom:8px}
+.simme{flex:1;min-width:200px;margin-bottom:6px}
+.simsum{display:flex;flex-direction:column;align-items:center;padding:6px 14px;border:1px solid var(--line);border-radius:4px;background:var(--panel2);min-width:110px}
+.simsum b{font-size:22px;line-height:1.2}
+.simtbl{overflow:auto;max-width:100%;margin-bottom:8px}
+table.stats.sim td,table.stats.sim th{white-space:nowrap}
+table.stats.sim td.num{text-align:right;font-variant-numeric:tabular-nums}
+#simdlg .ok{color:var(--g)} #simdlg .wrn{color:var(--warn)} #simdlg .bad{color:#ff8a80}
+table.sim tr.ok td.rate b,.simsum.ok b{color:var(--g)}
+table.sim tr.wrn td.rate b,.simsum.wrn b{color:var(--warn)}
+table.sim tr.bad td.rate b,.simsum.bad b{color:#ff8a80}
+#simdlg table.sim tr.ok,#simdlg table.sim tr.wrn,#simdlg table.sim tr.bad{color:var(--ink)}
+.simbar{display:inline-block;width:110px;height:8px;border-radius:4px;background:var(--panel2);border:1px solid var(--line);position:relative;vertical-align:middle;overflow:hidden}
+.simbar i{position:absolute;inset:0 auto 0 0;background:var(--blue-hi)}
+.simbar::after{content:'';position:absolute;left:50%;top:-1px;bottom:-1px;width:1px;background:var(--gold)}
+.tag{font-size:10.5px;padding:0 5px;border:1px solid var(--gold-lo);border-radius:3px;color:var(--gold-hi)}
+table.simmx{border-collapse:collapse;font-size:12px}
+table.simmx th,table.simmx td{border:1px solid var(--line);padding:3px 5px;text-align:center;font-weight:normal}
+table.simmx thead th{vertical-align:bottom}
+table.simmx .vert{writing-mode:vertical-rl;display:block;margin:0 auto;max-height:9em;overflow:hidden}
+table.simmx th.rh{text-align:left;white-space:nowrap}
+table.simmx td.hm{min-width:34px;font-variant-numeric:tabular-nums;color:#fff;
+  background:color-mix(in srgb,var(--b) calc(var(--p) * 100%),var(--r))}
+#simdlg table.simmx td.hm{color:#fff}
+table.simmx td.hm.bad{outline:2px solid #ff8a80;outline-offset:-2px}
+table.simmx td.self{color:var(--sub)}
+.simexcl{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;margin:-2px 0 12px}
+.simexcl>.sub{margin-right:4px}
+.xchip{background:var(--panel2);box-shadow:none;border-color:var(--line);gap:5px}
+.xchip.on{opacity:.55;text-decoration:line-through;border-style:dashed}
