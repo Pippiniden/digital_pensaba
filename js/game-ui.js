@@ -152,7 +152,7 @@ function unitDetailHTML(d,u){
     <div class="udtop">
       <div class="udimg">${imgTag(imgSrc(d,'face'),IMG_PLACEHOLDER.face,'pimg',d.name)}</div>
       <div class="udinfo">${clsBadge(d.cls)}<h3>${esc(d.name)}</h3>
-        <div class="sub small">コスト ${d.cost} ・ HP ${u?`${fmt(u.hp)} / `:''}${d.hp}${u?` ・ ${TERMS.gauge} ${u.np}%`:''}${u&&u.asc?` ・ <span class="hl">${TERMS.asc}済み</span>`:''}</div>
+        <div class="sub small">コスト ${d.cost} ・ HP ${u?`${fmt(u.hp)} / `:''}${d.hp}${u?` ・ ${TERMS.gauge} ${u.np}%`:''}${u&&u.asc?` ・ <span class="hl">${TERMS.ascFull}済み</span>`:''}</div>
         <div class="ccrow">${['R','B','G'].map(k=>cmdCardHTML(d,{c:k},{small:true})).join('')}</div>
       </div>
     </div>

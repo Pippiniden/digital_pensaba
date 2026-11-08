@@ -53,7 +53,7 @@ Editor (editor.html): rules → units → common → editor
   skills:[ {name, eff:Eff[], pick?:'ally'|'enemy'|'any'} ×3 ],   // skill 3 is usable only after ascension
   ult:   { name, c:'R'|'B'|'G', eff:Eff[] } }                    // Noble Phantasm (ultimate)
 ```
-- `Cmd`: `{c:'R'|'B'|'G', dmg, np, star}` / `{c:'W', label, eff:Eff[], dmg, np, star}` (special action; with `dmg>0` it is also a colorless attack that does not count toward chains — `eff` is applied first) / `{c:'ASC'}` (ascension face; allowed only in `pre`). R = Buster, B = Arts, G = Quick.
+- `Cmd`: `{c:'R'|'B'|'G', dmg, np, star, eff?:Eff[]}` (optional `eff` is applied to the attacker's side after the attack, e.g. self-cleanse; `normCmd` only keeps it when non-empty) / `{c:'W', label, eff:Eff[], dmg, np, star}` (special action; with `dmg>0` it is also a colorless attack that does not count toward chains — `eff` is applied first) / `{c:'ASC'}` (ascension face; allowed only in `pre`). R = Buster, B = Arts, G = Quick.
 - `Eff`: `{k:effectKind, t:target, v:value, turns?, times?, chance?, color?}`
   - `k` is a key of `FX` in `rules.js`. `t` is a key of `TARGETS`; the allowed targets depend on where the effect lives (`TGT_BY_CTX`: skill / ult / special).
   - `chance` = succeeds on a roll ≤ N (1–5). `color` only applies to effects with `FX[k].color` (`atk`, `onAtkStar`, `onAtkNp`). Effects with `FX[k].only` are restricted to that place (`dmg` → ultimate, `copyRoll` → special action).
@@ -125,6 +125,8 @@ Damage over time (`endPhase`): ignores atk/def, invul, evade and crits; blocked 
 | `spread` | Burn damage ×2 | `endPhase` |
 | `curse` | **Times only** (`timesOnly`). No NP gain when hit; each hit uses one time; reapplying adds times | `applyOne`, `dealDamage` |
 | `fear` | Action count −1 | `ACTIONS.rollActs` |
+| `actsUp` | Next action-count roll +x; used up on that roll (give it `times:1`) | `ACTIONS.rollActs` |
+| `drain` | "HP decrease": DoT of value v at turn end. **Stacks** (all instances add up), permanent is normal (`perm` flag, no duration warning). A debuff, so cleanse / debuffImmune apply | `endPhase` |
 | `sealSkill` / `sealUlt` | Can't use skills / ultimate | `canSkill` / `canUlt` (engine), UI buttons, CPU |
 | `stun` / `charm` | Can't act, use skills or ultimate | `disabled()` |
 | `debuffImmune` / `buffImmune` | Blocks debuffs (incl. DoT) / buffs; consumes one time per block | `immuneTo()` in `applyOne`, `endPhase` |
@@ -182,4 +184,5 @@ There are no automated tests in the repo, so verify manually in a browser. For r
 - `G.phase==='init'` is only set momentarily by `setupConfirm`; `startGame()` → `beginTurn()` immediately moves to `actRoll` (there is no screen for it).
 - Many Japanese strings and log messages are hard-coded in the logic (the `log(...)` calls in `engine.js`). The intent is to centralize terms in `TERMS`, but not everything has been moved there.
 - The UI text, character data, and log messages in the game itself remain in Japanese; only this document is in English.
-- Default roster: アルトリア (C5), エミヤ (C4) and マシュ (C0) use official-SPS-scale numbers (HP 400–1000, damage 10–140); the other four samples (rio, kagari, tsubaki, bard) are still at the old placeholder scale (HP ~100), so mixed parties are unbalanced until those are replaced.
+- Default roster: アルトリア (C5), エミヤ (C4), クー・フーリン / メドゥーサ / メディア (C3) and マシュ (C0) use official-SPS-scale numbers (HP 400–1000, damage 10–140). Only the sample バルド (`bard`, C1) is still at the old placeholder scale (HP 110).
+- Terminology: "ascension" in code (`asc`, `ASC`, `ascend`) is shown as `TERMS.asc` = 再臨 (short, for badges/tables) or `TERMS.ascFull` = 霊基再臨 (logs, editor explanations, detail views). Never hard-code 覚醒/再臨 in UI strings.

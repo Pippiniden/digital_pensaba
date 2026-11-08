@@ -2,8 +2,8 @@
 // サーヴァントデータ（ペンシルエディタで書き出し）
 // img: キャラクター画像(face)・カード用キャラ画像(card、空欄ならfaceを使う) のパス
 // lines: 場面ごとのセリフ
-// faces: 出目1〜6の面 / acts: 行動回数 / pre・post: 覚醒前・後のコマンド
-// c: R=Buster B=Arts G=Quick W=特殊 ASC=覚醒
+// faces: 出目1〜6の面 / acts: 行動回数 / pre・post: 再臨前・後のコマンド
+// c: R=Buster B=Arts G=Quick W=特殊 ASC=再臨
 const DEFAULT_UNITS = [
   {
     "id":"artoria", "name":"アルトリア・ペンドラゴン", "cls":"セイバー", "cost":5, "hp":1000,
@@ -34,60 +34,60 @@ const DEFAULT_UNITS = [
     "ult":{"name":"約束された勝利の剣","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":400},{"k":"np","t":"self","v":20}]}
   },
   {
-    "id":"rio", "name":"灯火のリオ", "cls":"キャスター", "cost":3, "hp":90,
+    "id":"medea", "name":"メディア", "cls":"キャスター", "cost":3, "hp":500,
     "img":{"face":"img/placeholder/face.svg","card":""},
     "lines":{
-      "start":["灯りを絶やさずにいきましょう！"],
-      "attack":["えいっ！","灯よ、走って！","燃えて！"],
-      "damage":["きゃっ！"],
-      "skill":["みんな、温まって！"],
-      "np":["小さな火でも、祈れば篝火に――『篝火の祈り』！"],
-      "npDamage":["火が……揺らいで……！"],
-      "defeat":["灯が……消え……"],
-      "win":["みんな無事で、よかった！"]
+      "start":["キャスター、参上よ。"],
+      "attack":["えいっ。","焼き払いなさい。","邪魔よ。"],
+      "damage":["きゃっ……！"],
+      "skill":["少し本気を出しましょうか。"],
+      "np":["その契り、断ち切ってあげる。"],
+      "npDamage":["くうっ……！"],
+      "defeat":["こんな、ところで……"],
+      "win":["ふふ、当然ね。"]
     },
     "faces":[
-      {"acts":2,"pre":{"c":"B","dmg":15,"np":30,"star":0},"post":{"c":"B","dmg":20,"np":40,"star":0}},
-      {"acts":1,"pre":{"c":"G","dmg":10,"np":0,"star":4},"post":{"c":"G","dmg":15,"np":0,"star":6}},
-      {"acts":3,"pre":{"c":"ASC"},"post":{"c":"B","dmg":30,"np":30,"star":0}},
-      {"acts":2,"pre":{"c":"R","dmg":20,"np":0,"star":0},"post":{"c":"R","dmg":30,"np":0,"star":0}},
-      {"acts":1,"pre":{"c":"B","dmg":15,"np":30,"star":0},"post":{"c":"B","dmg":20,"np":40,"star":0}},
-      {"acts":2,"pre":{"c":"W","label":"癒しの灯","eff":[{"k":"heal","t":"self","v":20}],"dmg":0,"np":0,"star":0},"post":{"c":"W","label":"癒しの大灯","eff":[{"k":"heal","t":"ally_all","v":20}],"dmg":0,"np":0,"star":0}}
+      {"acts":1,"pre":{"c":"R","dmg":60,"np":0,"star":0},"post":{"c":"R","dmg":70,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":40,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":40,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"ASC"},"post":{"c":"W","label":"呪詛","eff":[{"k":"drain","t":"enemy_all","v":20}],"dmg":0,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":50,"np":10,"star":0},"post":{"c":"B","dmg":70,"np":15,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":2},"post":{"c":"G","dmg":40,"np":0,"star":4}}
     ],
     "skills":[
-      {"name":"導きの灯","eff":[{"k":"np","t":"picked","v":30}],"pick":"ally"},
-      {"name":"護りの火","eff":[{"k":"def","t":"ally_all","v":10,"turns":2}]},
-      {"name":"再燃","eff":[{"k":"heal","t":"picked","v":40},{"k":"cleanse","t":"picked","v":0}],"pick":"ally"}
+      {"name":"高速神言A","eff":[{"k":"np","t":"self","v":80}]},
+      {"name":"金羊の皮","eff":[{"k":"heal","t":"self","v":50}]},
+      {"name":"キルケーの教えA","eff":[{"k":"cleanse","t":"picked","v":0},{"k":"onAtkNp","t":"picked","v":15,"turns":1}],"pick":"ally"}
     ],
-    "ult":{"name":"篝火の祈り","c":"B","eff":[{"k":"atk","t":"ally_all","v":20,"turns":3},{"k":"heal","t":"ally_all","v":30}]}
+    "ult":{"name":"破戒すべき全ての符","c":"B","eff":[{"k":"dmg","t":"target","v":250},{"k":"strip","t":"target","v":0},{"k":"np","t":"self","v":20}]}
   },
   {
-    "id":"kagari", "name":"影縫いのカガリ", "cls":"アサシン", "cost":3, "hp":80,
+    "id":"medusa", "name":"メドゥーサ", "cls":"ライダー", "cost":3, "hp":500,
     "img":{"face":"img/placeholder/face.svg","card":""},
     "lines":{
-      "start":["……影は既に、お前の足元だ。"],
-      "attack":["遅い。","そこだ。","縫い止める。"],
-      "damage":["ちっ……"],
-      "skill":["……仕込みは済んだ。"],
-      "np":["千の影よ、喰らい尽くせ――『千影』。"],
-      "npDamage":["見誤った、か……"],
-      "defeat":["影に……還る……"],
-      "win":["……任務完了。"]
+      "start":["ライダー、参ります。"],
+      "attack":["ふっ……！","逃がしません。","そこです。"],
+      "damage":["くっ……"],
+      "skill":["動かないでください。"],
+      "np":["駆けなさい……！"],
+      "npDamage":["ああっ……！"],
+      "defeat":["ここまで、ですね……"],
+      "win":["終わりました。"]
     },
     "faces":[
-      {"acts":1,"pre":{"c":"G","dmg":15,"np":0,"star":5},"post":{"c":"G","dmg":20,"np":0,"star":6}},
-      {"acts":2,"pre":{"c":"R","dmg":25,"np":0,"star":0},"post":{"c":"R","dmg":35,"np":0,"star":0}},
-      {"acts":1,"pre":{"c":"ASC"},"post":{"c":"G","dmg":30,"np":0,"star":8}},
-      {"acts":3,"pre":{"c":"B","dmg":10,"np":20,"star":0},"post":{"c":"B","dmg":15,"np":30,"star":0}},
-      {"acts":2,"pre":{"c":"G","dmg":15,"np":0,"star":5},"post":{"c":"G","dmg":20,"np":0,"star":7}},
-      {"acts":2,"pre":{"c":"R","dmg":25,"np":0,"star":0},"post":{"c":"R","dmg":35,"np":0,"star":0}}
+      {"acts":1,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":90,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":50,"np":10,"star":0},"post":{"c":"B","dmg":70,"np":15,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":40,"np":15,"star":0},"post":{"c":"B","dmg":70,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"ASC"},"post":{"c":"G","dmg":70,"np":0,"star":0,"eff":[{"k":"actsUp","t":"self","v":1,"times":1}]}},
+      {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":2},"post":{"c":"G","dmg":50,"np":0,"star":4}},
+      {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":2},"post":{"c":"G","dmg":50,"np":0,"star":4}}
     ],
     "skills":[
-      {"name":"影縫い","eff":[{"k":"stun","t":"picked","v":0,"turns":1,"chance":3}],"pick":"enemy"},
-      {"name":"毒針","eff":[{"k":"poison","t":"picked","v":20,"turns":3}],"pick":"enemy"},
-      {"name":"隠形","eff":[{"k":"evade","t":"self","v":0,"turns":2,"times":2},{"k":"critRoll","t":"self","v":1,"turns":3}]}
+      {"name":"魔眼A+","eff":[{"k":"stun","t":"picked","v":0,"turns":1,"chance":3}],"pick":"enemy"},
+      {"name":"怪力B","eff":[{"k":"atk","t":"self","v":30,"turns":1}]},
+      {"name":"鮮血神殿B","eff":[{"k":"np","t":"self","v":20},{"k":"onAtkNp","t":"self","v":10,"turns":3}]}
     ],
-    "ult":{"name":"千影","c":"G","eff":[{"k":"dmg","t":"target","v":90},{"k":"poison","t":"target","v":20,"turns":3}]}
+    "ult":{"name":"騎英の手綱","c":"G","eff":[{"k":"dmg","t":"enemy_all","v":200},{"k":"onAtkStar","t":"ally_all","v":3,"turns":3}]}
   },
   {
     "id":"emiya", "name":"エミヤ", "cls":"アーチャー", "cost":4, "hp":650,
@@ -118,32 +118,32 @@ const DEFAULT_UNITS = [
     "ult":{"name":"無限の剣製","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":350},{"k":"atkDown","t":"enemy_all","v":30,"turns":3}]}
   },
   {
-    "id":"tsubaki", "name":"槍兵ツバキ", "cls":"ランサー", "cost":2, "hp":90,
+    "id":"cu", "name":"クー・フーリン", "cls":"ランサー", "cost":3, "hp":550,
     "img":{"face":"img/placeholder/face.svg","card":""},
     "lines":{
-      "start":["槍兵ツバキ、推参！"],
-      "attack":["せいっ！","穿つ！","まだまだぁ！"],
-      "damage":["ぐっ……効かないね！"],
-      "skill":["さあ、かかってきな！"],
-      "np":["一閃にて咲き誇れ――『一閃・椿』！"],
-      "npDamage":["がはっ……！"],
-      "defeat":["ここまで、か……"],
-      "win":["椿は散らず、ってね！"]
+      "start":["ランサー、推参だ。"],
+      "attack":["おらよっ！","遅えっ！","もらった！"],
+      "damage":["やるじゃねえか……！"],
+      "skill":["まだまだ、これからよ。"],
+      "np":["この槍、外しはしねえ！"],
+      "npDamage":["ぐっ……！"],
+      "defeat":["ちっ……ここまでか。"],
+      "win":["いい勝負だったぜ。"]
     },
     "faces":[
-      {"acts":1,"pre":{"c":"R","dmg":20,"np":0,"star":0},"post":{"c":"R","dmg":30,"np":0,"star":0}},
-      {"acts":2,"pre":{"c":"B","dmg":15,"np":20,"star":0},"post":{"c":"B","dmg":20,"np":30,"star":0}},
-      {"acts":1,"pre":{"c":"G","dmg":15,"np":0,"star":4},"post":{"c":"G","dmg":20,"np":0,"star":5}},
-      {"acts":2,"pre":{"c":"R","dmg":20,"np":0,"star":0},"post":{"c":"R","dmg":30,"np":0,"star":0}},
-      {"acts":3,"pre":{"c":"ASC"},"post":{"c":"R","dmg":50,"np":0,"star":0}},
-      {"acts":1,"pre":{"c":"B","dmg":15,"np":20,"star":0},"post":{"c":"B","dmg":20,"np":30,"star":0}}
+      {"acts":1,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":90,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":80,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":70,"np":25,"star":0}},
+      {"acts":1,"pre":{"c":"ASC"},"post":{"c":"B","dmg":60,"np":20,"star":0,"eff":[{"k":"cleanse","t":"self","v":0}]}},
+      {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":2},"post":{"c":"G","dmg":50,"np":0,"star":4}},
+      {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":2},"post":{"c":"G","dmg":60,"np":0,"star":4}}
     ],
     "skills":[
-      {"name":"不屈","eff":[{"k":"guts","t":"self","v":20,"turns":3,"times":1}]},
-      {"name":"挑発","eff":[{"k":"taunt","t":"self","v":0,"turns":1},{"k":"def","t":"self","v":20,"turns":1}]},
-      {"name":"穿ち","eff":[{"k":"pierce","t":"self","v":0,"turns":3},{"k":"np","t":"self","v":30}]}
+      {"name":"戦闘続行A","eff":[{"k":"guts","t":"self","v":80,"turns":5,"times":1}]},
+      {"name":"矢避けの加護B","eff":[{"k":"evade","t":"self","v":0,"times":3},{"k":"def","t":"self","v":10,"turns":3}]},
+      {"name":"仕切り直しC","eff":[{"k":"cleanse","t":"self","v":0},{"k":"heal","t":"self","v":200}]}
     ],
-    "ult":{"name":"一閃・椿","c":"R","eff":[{"k":"strip","t":"target","v":0},{"k":"dmg","t":"target","v":90}]}
+    "ult":{"name":"刺し穿つ死棘の槍","c":"R","eff":[{"k":"dmg","t":"target","v":400},{"k":"instantDeath","t":"target","v":0,"chance":1}]}
   },
   {
     "id":"bard", "name":"狂嵐のバルド", "cls":"バーサーカー", "cost":1, "hp":110,

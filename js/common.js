@@ -25,7 +25,9 @@ function normCmd(c){
   c=c||{};
   if(c.c==='ASC') return {c:'ASC'};
   if(c.c==='W') return {c:'W', label:String(c.label||''), eff:(c.eff||[]).map(normEff), dmg:num(c.dmg), np:num(c.np), star:num(c.star)};
-  return {c:String(c.c||'R'), dmg:num(c.dmg), np:num(c.np), star:num(c.star)};
+  const o={c:String(c.c||'R'), dmg:num(c.dmg), np:num(c.np), star:num(c.star)};
+  if(c.eff&&c.eff.length) o.eff=c.eff.map(normEff); // 通常コマンドの付加効果（任意）
+  return o;
 }
 function normClass(c){ c=String(c||'').trim(); return CLASS_LEGACY[c]||c; }
 function normalizeUnit(u){
@@ -74,6 +76,7 @@ function validateUnits(units){
         const c=f[k], where=`出目${fi+1}・${lab}`;
         if(!CMD_TYPES.includes(c.c)) add('error',`${where}：コマンドの種類が不正です`);
         if(['R','B','G'].includes(c.c) && !(c.dmg>0)) add('warn',`${where}：ダメージが0です`);
+        if(['R','B','G'].includes(c.c) && c.eff) checkEffs(c.eff,'special',where,add);
         if(c.c==='W'){
           if(!c.label.trim()) add('warn',`${where}：特殊行動の名前が空です`);
           if(!c.eff.length&&!(c.dmg>0)) add('warn',`${where}：特殊行動に効果もダメージもありません`);
@@ -84,7 +87,7 @@ function validateUnits(units){
     });
     u.skills.forEach((s,si)=>{
       const where=`スキル${si+1}`;
-      if(si===2&&!ascN&&!s.eff.length) return; // 覚醒しないサーヴァントのスキル3は空でよい
+      if(si===2&&!ascN&&!s.eff.length) return; // 霊基再臨しないサーヴァントのスキル3は空でよい
       if(!s.name.trim()) add('warn',`${where}：名前が空です`);
       if(!s.eff.length) add('warn',`${where}：効果がありません`);
       const usesPicked=s.eff.some(e=>e.t==='picked');
@@ -108,7 +111,7 @@ function checkEffs(effs,ctx,where,add){
     if(!TGT_BY_CTX[ctx].includes(e.t)) add('error',`${w}：ここでは「${TARGETS[e.t]||e.t}」を対象にできません`);
     if(e.t==='master'&&e.k!=='star') add('warn',`${w}：${TERMS.player}が対象だと、${TERMS.star}獲得以外は効果がありません`);
     if(FX[e.k].val&&e.v===0) add('warn',`${w}：値が0です`);
-    if(!FX[e.k].inst&&e.turns==null&&e.times==null) add('warn',`${w}：効果時間がないため、ずっと続きます`);
+    if(!FX[e.k].inst&&!FX[e.k].perm&&e.turns==null&&e.times==null) add('warn',`${w}：効果時間がないため、ずっと続きます`);
     if(FX[e.k].timesOnly&&e.turns!=null) add('warn',`${w}：${FX[e.k].name}は回数で指定します（ターンは使われません）`);
     if(e.k==='instantDeath'&&['self','ally_all'].includes(e.t)) add('warn',`${w}：味方に即死効果がかかります`);
     if(e.chance&&e.chance>=6) add('warn',`${w}：ロール6以下は必ず成功します`);
@@ -196,7 +199,7 @@ function cardLayers(kind,col){
 }
 // コマンドカード
 //   Buster/Arts/Quick・宝具：背景(共通) → キャラ画像(サーヴァントごと) → 枠と種別名(共通) の3層
-//   特殊・覚醒：文字だけのカード
+//   特殊・霊基再臨：文字だけのカード
 function cmdCardHTML(d,c,opt={}){
   if(!c) return '';
   const sz=opt.small?' sm':'';
@@ -204,7 +207,7 @@ function cmdCardHTML(d,c,opt={}){
   if(isUlt||['R','B','G'].includes(c.c)){
     const col=isUlt?(c.col||'R'):c.c, L=cardLayers(isUlt?'ULT':col,col);
     const label=isUlt?TERMS.ult:TERMS[col];
-    const ex=[c.np?`${TERMS.gauge}+${c.np}`:'', c.star?`★${c.star}`:''].filter(Boolean).join(' ');
+    const ex=[c.np?`${TERMS.gauge}+${c.np}`:'', c.star?`★${c.star}`:'', c.eff&&c.eff.length?'＋効果':''].filter(Boolean).join(' ');
     return `<div class="ccard ${col}${isUlt?' ULT':''}${L.frame?' hasframe':''}${sz}" title="${esc(label)}${c.dmg!=null?` ${c.dmg}`:''}">
       ${L.bg?`<img class="cc-bg" src="${esc(L.bg)}" alt="">`:''}
       ${imgTag(imgSrc(d,'card'),IMG_PLACEHOLDER.card,'ccimg',d?d.name:'')}
@@ -231,6 +234,8 @@ function fxText(e){
     case 'poison': s=`毒${e.v||RULES.dot}`; break;
     case 'burn': s=`やけど${e.v||RULES.dot}`; break;
     case 'starLoss': s=`${TERMS.star}${e.v}個消失`; break;
+    case 'drain': s=`ターン終了時HP${e.v}減少`; break;
+    case 'actsUp': s=`最大行動回数+${e.v}`; break;
     case 'onAtkStar': s=`${e.color?TERMS[e.color]:''}攻撃時：${TERMS.star}${e.v}個発生`; break;
     case 'onAtkNp': s=`${e.color?TERMS[e.color]:''}攻撃時：${TERMS.gauge}+${e.v}%`; break;
     case 'heal': s=`HP${e.v}回復`; break;
@@ -252,10 +257,11 @@ function cmdChip(c){
   if(c.c==='ASC') return `<span class="cmd ASC">${TERMS.asc}</span>`;
   if(c.c==='W') return `<span class="cmd W">${esc(c.label||TERMS.W)}${c.dmg>0?` ${c.dmg}`:''}</span>`;
   const ex=[c.np?`${TERMS.gauge}+${c.np}`:'', c.star?`★${c.star}`:''].filter(Boolean).join(' ');
-  return `<span class="cmd ${esc(c.c)}">${TERMS[c.c]||esc(c.c)} ${c.dmg}${ex?` <small>${ex}</small>`:''}</span>`;
+  const fx=c.eff&&c.eff.length?` <small title="${esc(effsText(c.eff))}">＋効果</small>`:'';
+  return `<span class="cmd ${esc(c.c)}">${TERMS[c.c]||esc(c.c)} ${c.dmg}${ex?` <small>${ex}</small>`:''}${fx}</span>`;
 }
 function facesTableHTML(d){
-  const cell=c=>cmdChip(c)+(c.c==='W'?`<div class="sub">${esc(effsText(c.eff))}</div>`:'');
+  const cell=c=>cmdChip(c)+(c.eff&&c.eff.length?`<div class="sub">${esc(effsText(c.eff))}</div>`:'');
   return `<table class="faces"><tr><th>出目</th><th>行動</th><th>${TERMS.asc}前</th><th>${TERMS.asc}後</th></tr>
     ${d.faces.map((f,i)=>`<tr><td>${i+1}</td><td>${faceActs(d,i)}</td><td>${cell(f.pre)}</td><td>${cell(f.post)}</td></tr>`).join('')}</table>`;
 }

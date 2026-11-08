@@ -5,7 +5,7 @@
    ===================================================================== */
 
 // ---------- 用語（画面上の呼び名） ----------
-const TERMS = { unit:'サーヴァント', player:'マスター', gauge:'NP', ult:'宝具', asc:'覚醒', star:'スター',
+const TERMS = { unit:'サーヴァント', player:'マスター', gauge:'NP', ult:'宝具', asc:'再臨', ascFull:'霊基再臨', star:'スター',
   R:'Buster', B:'Arts', G:'Quick', W:'特殊' };
 
 // ---------- 画像 ----------
@@ -79,11 +79,11 @@ const classIcon = cls=>CLASS_ICONS[cls]||CLASS_ICON_EXTRA;
 const CLASS_LEGACY = { '剣士':'セイバー', '弓兵':'アーチャー', '槍兵':'ランサー', '騎兵':'ライダー', '術士':'キャスター', '暗殺者':'アサシン', '狂戦士':'バーサーカー' };
 
 // ---------- コマンドの種類 ----------
-const CMD_TYPES = ['R','B','G','W','ASC']; // W=白(特殊行動) / ASC=覚醒面
+const CMD_TYPES = ['R','B','G','W','ASC']; // W=白(特殊行動) / ASC=霊基再臨面
 
 // ---------- 効果の種類 ----------
 // buff: 強化(true)/弱体(false)/どちらでもない(undefined)  val: 値を使う  inst: 即時効果（効果時間なし）
-// timesOnly: 効果時間は回数だけで指定する  color: 色(R/B/G)で限定できる  only: その場所(ult/special)でだけ使える
+// timesOnly: 効果時間は回数だけで指定する  perm: 効果時間なし（永続）が正常  color: 色(R/B/G)で限定できる  only: その場所(ult/special)でだけ使える
 const FX = {
   atk:{name:'攻撃ダメージ+',buff:true,val:true,color:true}, atkDown:{name:'攻撃ダメージ-',buff:false,val:true},
   def:{name:'被ダメージ-',buff:true,val:true},   defDown:{name:'被ダメージ+',buff:false,val:true},
@@ -97,6 +97,7 @@ const FX = {
   // 攻撃時○○：ダメージを与えるコマンドを行うたびに発動（エクストラアタック・宝具では発動しない）。color で色を限定できる
   onAtkStar:{name:'攻撃時スター発生',buff:true,val:true,color:true},
   onAtkNp:{name:'攻撃時NP獲得',buff:true,val:true,color:true},
+  actsUp:{name:'最大行動回数+',buff:true,val:true},          // 次の行動回数決定フェイズで出た数に+x（使うと回数を1消費）
   // 弱体
   buffImmune:{name:'強化無効',buff:false},                   // 強化効果を受けない
   poison:{name:'毒',buff:false,val:true}, burn:{name:'やけど',buff:false,val:true}, // ターン終了時に値ぶんの弱体ダメージ
@@ -104,6 +105,7 @@ const FX = {
   curse:{name:'呪い',buff:false,timesOnly:true},             // 被弾時にNPが増えない。重ねると回数が増える
   stun:{name:'スタン',buff:false}, charm:{name:'魅了',buff:false},
   fear:{name:'恐怖',buff:false},                             // 行動回数-1
+  drain:{name:'HP減少',buff:false,val:true,perm:true},      // ターン終了時に値ぶんの弱体ダメージ。重複する（合計）。永続でよい
   sealSkill:{name:'スキル封印',buff:false}, sealUlt:{name:'宝具封印',buff:false},
   // 即時
   heal:{name:'HP回復',val:true,inst:true}, np:{name:'NP増減',val:true,inst:true}, star:{name:'スター獲得',val:true,inst:true},
@@ -112,7 +114,7 @@ const FX = {
   instantDeath:{name:'即死',inst:true},                      // 対象のHPを0にする（ガッツ無効）
   dmg:{name:'ダメージ',val:true,inst:true,only:'ult'},
   // 特殊行動専用：自分以外の撤退していないサーヴァント1体（敵味方どちらでも）を選び、その鉛筆を代わりにロールして
-  // 出た覚醒後コマンドをこの行動として使う
+  // 出た再臨後コマンドをこの行動として使う
   copyRoll:{name:'他のサーヴァントをロール',inst:true,only:'special'},
 };
 

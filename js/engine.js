@@ -173,7 +173,7 @@ function gainNpStar(att,cmd,mult){
 // ---------- 他のサーヴァントをロール（copyRoll） ----------
 const isCopyCmd = c=>!!c&&c.c==='W'&&(c.eff||[]).some(e=>e.k==='copyRoll');
 const copyCands = u=>G.players.flatMap(P=>P.party).filter(x=>!x.out&&x.uid!==u.uid);
-// 選んだサーヴァントの鉛筆をロールし、覚醒後コマンドを返す（同じ特殊行動が出たら振り直し）
+// 選んだサーヴァントの鉛筆をロールし、再臨後コマンドを返す（同じ特殊行動が出たら振り直し）
 function copyRollFrom(src){
   const d=D(src.def); let f, c;
   for(let i=0;i<20;i++){ f=roll(); c=d.faces[f].post; if(!isCopyCmd(c)) break; }
@@ -189,7 +189,7 @@ function doCopy(uid,src){
 }
 function resolveCommand(att,cmd,tgt,o={}){
   const n=nm(att);
-  if(cmd.c==='ASC'){ log(`${n}：${TERMS.asc}（1行動）`,'sub'); return; }
+  if(cmd.c==='ASC'){ log(`${n}：${TERMS.ascFull}（1行動）`,'sub'); return; }
   if(isCopyCmd(cmd)){ // エクストラアタックで出たときは対象をランダムに選んで、その場でロール
     const cs=copyCands(att); if(!cs.length) return;
     const src=cs[Math.floor(Math.random()*cs.length)], r=copyRollFrom(src);
@@ -243,6 +243,8 @@ function resolveCommand(att,cmd,tgt,o={}){
     if(p.sum){ addNp(att,p.sum); log(`${n} 攻撃時効果：${TERMS.gauge}+${p.sum}%`,'sub'); }
     consume(att,[...s.list,...p.list]);
   }
+  // コマンドに付いた効果（例：自身の弱体解除）。攻撃のあとに適用
+  if(cmd.c!=='W'&&cmd.eff&&cmd.eff.length) applyEffects(att,cmd.eff,null); // 特殊行動の効果は冒頭で適用済み
 }
 function resolveUlt(u,tgt){
   const ud=D(u.def).ult;
@@ -287,7 +289,7 @@ function resolveDamage(){
   checkWin();
   if(G.winner==null) G.phase='end';
 }
-function ascend(u){ u.asc=true; log(`${nm(u)} ${TERMS.asc}！ 以降は${TERMS.asc}後コマンド、スキル3解放`,'good'); }
+function ascend(u){ u.asc=true; log(`${nm(u)} ${TERMS.ascFull}！ 以降は${TERMS.asc}後コマンド、スキル3解放`,'good'); }
 
 // =====================================================================
 // ターン進行
@@ -323,11 +325,11 @@ function endPhase(){
   // 弱体ダメージ：攻防補正・無敵・回避・クリティカルの影響なし。弱体無効で防がれる。毒・やけどはそれぞれ重複せず最大値
   pids.forEach(pid=>alive(pid).forEach(u=>{
     const top=k=>Math.max(0,...u.fx.filter(e=>e.k===k).map(dotVal));
-    const ps=top('poison'), bs=top('burn')*(has(u,'spread')?2:1), d=ps+bs;
+    const ps=top('poison'), bs=top('burn')*(has(u,'spread')?2:1), ds=mods(u,'drain').sum, d=ps+bs+ds;
     if(!d) return;
     const g=u.fx.find(e=>e.k==='debuffImmune');
     if(g){ consume(u,[g]); log(`${nm(u)}は弱体無効で弱体ダメージを防いだ`,'sub'); return; }
-    log(`${nm(u)} 弱体ダメージ${d}（${[ps?`毒${ps}`:'',bs?`やけど${bs}`:''].filter(Boolean).join('・')}）`,'bad');
+    log(`${nm(u)} 弱体ダメージ${d}（${[ps?`毒${ps}`:'',bs?`やけど${bs}`:'',ds?`HP減少${ds}`:''].filter(Boolean).join('・')}）`,'bad');
     dealDamage(u,d,false);
   }));
   G.players[G.cur].stars=G.gen;
@@ -420,9 +422,9 @@ const ACTIONS = {
       if(disabled(u)){ u.face=null; log(`${nm(u)}は行動不能`,'bad'); }
       else {
         const f=roll(); u.face={i:f,kind:'acts'};
-        const fear=has(u,'fear')?1:0;
-        m=Math.max(0,Math.min(RULES.actionsMax, faceActs(D(u.def),f)+bonus-fear));
-        log(`${nm(u)} 出目${f+1} → 最大行動${m}${bonus?`（撤退ボーナス+${bonus}）`:''}${fear?'（恐怖-1）':''}`, m?'':'bad');
+        const fear=has(u,'fear')?1:0, up=mods(u,'actsUp'); consume(u,up.list);
+        m=Math.max(0,Math.min(RULES.actionsMax, faceActs(D(u.def),f)+bonus+up.sum-fear));
+        log(`${nm(u)} 出目${f+1} → 最大行動${m}${bonus?`（撤退ボーナス+${bonus}）`:''}${up.sum?`（最大行動回数+${up.sum}）`:''}${fear?'（恐怖-1）':''}`, m?'':'bad');
       }
       G.maxActs[u.uid]=m; const a=Math.min(m,left); G.alloc[u.uid]=a; left-=a;
     });

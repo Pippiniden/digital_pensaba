@@ -36,7 +36,7 @@ function cpuDecide(){
       return s ? ['useSkill',{uid:s.u.uid,si:String(s.si)}] : ['skillDone'];
     }
     case 'action': {
-      if(G.copy){ // 他のサーヴァントをロール：覚醒後コマンドの平均ダメージが高い相手を選ぶ
+      if(G.copy){ // 他のサーヴァントをロール：再臨後コマンドの平均ダメージが高い相手を選ぶ
         const cs=copyCands(U(G.copy.uid));
         const avgPost=u=>D(u.def).faces.reduce((s,f)=>s+(isCopyCmd(f.post)?0:f.post.dmg||0),0)/6;
         const best=G.level==='easy'?cs[Math.floor(rnd01()*cs.length)]:cs.sort((a,b)=>avgPost(b)-avgPost(a))[0];
@@ -115,6 +115,8 @@ function cpuSkillScore(u,si){
       case 'sealUlt': sc+=foes.some(t=>t.np>=RULES.ultCost-30)?4:foes.length?1:-1; break;
       case 'spread': sc+=foes.some(t=>has(t,'burn'))?2:.5; break;
       case 'instantDeath': sc+=foes.length?5:-5; break;
+      case 'drain': sc+=foes.length?2:-1; break;
+      case 'actsUp': sc+=ts.length&&!foes.length?2:0; break;
       case 'starLoss': sc+=foes.some(t=>G.players[t.pid].stars>0)?2:0; break;
       case 'critRoll': sc+=acting&&!G.ult&&stars>0?2:0; break;
       case 'sureHit': sc+=acting&&enemies.some(x=>has(x,'evade'))?4:.5; break;

@@ -66,7 +66,7 @@ function fixEff(e){
   if(!f.val) e.v=0;
   if(f.inst){ delete e.turns; delete e.times; }
   else if(f.timesOnly){ delete e.turns; if(e.times==null) e.times=1; }
-  else if(e.turns==null&&e.times==null) e.turns=3;
+  else if(!f.perm&&e.turns==null&&e.times==null) e.turns=3;
   if((e.k==='poison'||e.k==='burn')&&!e.v) e.v=RULES.dot;
   if(!f.color) delete e.color;
   if(e.k==='star'&&e.t==='self') e.t='master';
@@ -147,7 +147,7 @@ function renderForm(){
       <textarea data-p="lines.${k}" data-t="lines" rows="${Math.max(2,LINE_MIN[k]||0,u.lines[k].length)}" placeholder="${esc(lab)}のセリフ">${esc(u.lines[k].join(String.fromCharCode(10)))}</textarea></label>`).join('')}</div>
   </section>
   <section class="sec"><h2>鉛筆の6面</h2>
-    <p class="sub small nm">行動回数は行動回数決定フェイズで、コマンドは行動決定フェイズで使います。${RULES.actsTable?'行動回数は全サーヴァント共通の値です。':''}${TERMS.asc}面は${TERMS.asc}前に1つ置くのが基本です。</p>
+    <p class="sub small nm">行動回数は行動回数決定フェイズで、コマンドは行動決定フェイズで使います。${RULES.actsTable?'行動回数は全サーヴァント共通の値です。':''}${TERMS.ascFull}面は${TERMS.asc}前に1つ置くのが基本です（霊基再臨しないサーヴァントは置かなくてもかまいません）。</p>
     <div class="faceed">
       <div class="facerow head"><span>出目</span><span>行動回数</span><span>${TERMS.asc}前のコマンド</span><span>${TERMS.asc}後のコマンド</span></div>
       ${u.faces.map((f,i)=>`<div class="facerow">
@@ -174,20 +174,20 @@ function renderForm(){
 }
 function cmdEd(path,c,isPre){
   const types=CMD_TYPES.filter(t=>t!=='ASC'||isPre||c.c==='ASC');
-  const label=t=>t==='ASC'?`${TERMS.asc}面`:t==='W'?`${TERMS.W}（白）`:TERMS[t];
+  const label=t=>t==='ASC'?`${TERMS.ascFull}面`:t==='W'?`${TERMS.W}（白）`:TERMS[t];
   const select=`<select class="ctype" data-act="cmdType" data-path="${path}" aria-label="コマンドの種類">${types.map(t=>opt(t,label(t),c.c)).join('')}</select>`;
   let body='';
-  if(['R','B','G'].includes(c.c)) body=`<div class="cmdnums">${numIn(path+'.dmg',c.dmg,'ダメージ')}${numIn(path+'.np',c.np,TERMS.gauge)}${numIn(path+'.star',c.star,'★')}</div>`;
+  if(['R','B','G'].includes(c.c)) body=`<div class="cmdnums">${numIn(path+'.dmg',c.dmg,'ダメージ')}${numIn(path+'.np',c.np,TERMS.gauge)}${numIn(path+'.star',c.star,'★')}</div>${effList(path+'.eff',c.eff||[],'special')}`;
   else if(c.c==='W') body=`<input data-p="${path}.label" value="${esc(c.label)}" placeholder="特殊行動の名前">
     <div class="cmdnums">${numIn(path+'.dmg',c.dmg||0,'ダメージ')}${numIn(path+'.np',c.np,TERMS.gauge)}${numIn(path+'.star',c.star,'★')}</div>
     <p class="sub small nm">ダメージを入れると無属性の攻撃になります（チェインには数えません）。</p>${effList(path+'.eff',c.eff,'special')}`;
-  else if(c.c==='ASC') body=`<span class="sub small">出たら${TERMS.asc}する（1行動として数える）</span>`;
+  else if(c.c==='ASC') body=`<span class="sub small">出たら${TERMS.ascFull}する（1行動として数える）</span>`;
   return `<div class="cmded c-${esc(c.c)}">${select}${body}</div>`;
 }
 function skillEd(s,i){
   const p=`skills.${i}`;
   return `<div class="subcard">
-    <div class="row"><b>スキル${i+1}</b>${i===2?`<span class="sub small">${TERMS.asc}後に使えるスキル</span>`:''}</div>
+    <div class="row"><b>スキル${i+1}</b>${i===2?`<span class="sub small">${TERMS.ascFull}後に使えるスキル</span>`:''}</div>
     <div class="fields">
       <label>名前<input data-p="${p}.name" value="${esc(s.name)}"></label>
       <label>対象の選び方<select data-p="${p}.pick" data-t="optstr" data-act="structural">${Object.entries(PICKS).map(([k,v])=>opt(k,v,s.pick||'')).join('')}</select></label>
@@ -267,7 +267,7 @@ function renderSide(){
         <tr><td>ダメージ／ロール</td><td>${r(a.dmg)}</td><td>${r(b.dmg)}</td><td>${r(av('dmg'))}</td></tr>
         <tr><td>${TERMS.gauge}／ロール</td><td>${r(a.np)}%</td><td>${r(b.np)}%</td><td>${r(av('np'))}%</td></tr>
         <tr><td>${TERMS.star}／ロール</td><td>${r(a.star)}</td><td>${r(b.star)}</td><td>${r(av('star'))}</td></tr>
-        <tr><td>${TERMS.asc}する確率</td><td>${pct(a.asc)}</td><td>-</td><td>${pct(av('asc'))}</td></tr>
+        <tr><td>${TERMS.ascFull}する確率</td><td>${pct(a.asc)}</td><td>-</td><td>${pct(av('asc'))}</td></tr>
         <tr><td>平均行動回数</td><td colspan="2">${r(a.acts)}</td><td>${r(av('acts'))}</td></tr>
         <tr><td>HP ／ コスト</td><td colspan="2">${u.hp} ／ ${u.cost}</td><td>${r(av('hp'))} ／ ${r(av('cost'))}</td></tr>
         <tr><td>面の内訳</td><td>${mix(a.mix)}</td><td>${mix(b.mix)}</td><td></td></tr>
@@ -290,7 +290,7 @@ function rollResultHTML(u){
   if(rollIdx==null) return '<span class="sub small">「転がす」で1回ロールを試せます。</span>';
   if(rollTimer) return '<span class="sub small">ころころ…</span>';
   const f=u.faces[rollIdx], c=rollPost?f.post:f.pre;
-  return `出目<b>${rollIdx+1}</b> ・ 行動回数<b>${faceActs(u,rollIdx)}</b> ・ ${cmdChip(c)}${c.c==='W'?`<div class="sub small">${esc(effsText(c.eff))}</div>`:''}`;
+  return `出目<b>${rollIdx+1}</b> ・ 行動回数<b>${faceActs(u,rollIdx)}</b> ・ ${cmdChip(c)}${c.eff&&c.eff.length?`<div class="sub small">${esc(effsText(c.eff))}</div>`:''}`;
 }
 function doRoll(){
   clearInterval(rollTimer);
@@ -346,7 +346,7 @@ document.addEventListener('click',e=>{
     case 'dup': { const c=clone(u); c.id=uniqueId(c.id); c.name+='（コピー）'; units.splice(sel+1,0,c); sel++; full(); break; }
     case 'del': if(confirm(`「${u.name||'名前なし'}」を削除しますか？`)){ units.splice(sel,1); sel=Math.max(0,Math.min(sel,units.length-1)); rollIdx=null; full(); } break;
     case 'move': { const j=sel+Number(b.dataset.d); if(j<0||j>=units.length) break; [units[sel],units[j]]=[units[j],units[sel]]; sel=j; full(); break; }
-    case 'effAdd': getPath(u,b.dataset.path).push(newEff(b.dataset.ctx)); full(); break;
+    case 'effAdd': { if(!getPath(u,b.dataset.path)) setPath(u,b.dataset.path,[]); getPath(u,b.dataset.path).push(newEff(b.dataset.ctx)); full(); break; }
     case 'effDel': getPath(u,b.dataset.path).splice(+b.dataset.i,1); full(); break;
     case 'effMove': { const l=getPath(u,b.dataset.path), i=+b.dataset.i, j=i+Number(b.dataset.d); [l[i],l[j]]=[l[j],l[i]]; full(); break; }
     case 'roll': doRoll(); break;
