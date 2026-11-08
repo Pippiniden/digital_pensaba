@@ -64,7 +64,8 @@ function simStart(){
   if(!team&&!pairs.length){ toast(SIM.range==='same'?'同じコストの相手がいません。範囲を「全コスト」にしてください':'対戦できる組み合わせがありません',true); return; }
   simStop();
   let w;
-  try{ w=new Worker('js/sim-worker.js'); }
+  // ?v= でブラウザのキャッシュを避ける（古い sim-worker.js / sim.js が残っていると新しい形式のメッセージを読めない）
+  try{ w=new Worker(`js/sim-worker.js?v=${Date.now()}`); }
   catch(e){ toast('検証を開始できませんでした（ローカルサーバーで開いてください）',true); return; }
   const snap=clone(units);
   SIM.run={w, total:team?job.targets.length:pairs.length, done:0, t0:Date.now()};
