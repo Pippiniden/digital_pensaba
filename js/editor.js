@@ -41,7 +41,7 @@ function uniqueId(base){
 }
 const C=(c,dmg,np=0,star=0)=>({c,dmg,np,star});
 function newUnit(){
-  return { id:uniqueId('unit'), name:'新しいサーヴァント', cls:CLASSES[0], cost:2, hp:100, lines:Object.fromEntries(Object.keys(LINE_KEYS).map(k=>[k,[]])),
+  return { id:uniqueId('unit'), name:'新しいサーヴァント', cls:CLASSES[0], cost:2, hp:100, fit:normFit(), lines:Object.fromEntries(Object.keys(LINE_KEYS).map(k=>[k,[]])),
     faces:[ {acts:1,pre:C('R',20),post:C('R',30)}, {acts:2,pre:C('B',15,20),post:C('B',20,30)}, {acts:1,pre:C('G',10,0,3),post:C('G',15,0,5)},
             {acts:2,pre:C('R',20),post:C('R',30)}, {acts:3,pre:{c:'ASC'},post:C('R',45)}, {acts:1,pre:C('B',15,20),post:C('B',20,30)} ],
     skills:[ {name:'スキル1',eff:[{k:'atk',t:'self',v:10,turns:3}]},
@@ -139,6 +139,12 @@ function renderForm(){
         <span class="imglab">${IMG_KEYS.card}（任意）</span>
         <code data-imgpath="card">${esc(IMG_DIR+u.id)}${IMG_CARD_SUFFIX}.${IMG_EXT}</code><small class="sub">なければキャラクター画像を使う。背景を透過すると共通背景が見えて映えます</small></div>
     </div>
+    <p class="sub small nm">画像がはみ出る・見切れるときは、表示位置と拡大で調整できます（ゲーム画面・カット・カードに反映）。</p>
+    <div class="fited">${['face','card'].map(k=>`<div class="fitgrp"><b>${IMG_KEYS[k]}</b>
+      ${[['x','左右'],['y','上下'],['z','拡大']].map(([a,lab])=>`<label class="fitrow"><span>${lab}</span>
+        <input type="range" min="${FIT_RANGE[a][0]}" max="${FIT_RANGE[a][1]}" step="1" data-p="fit.${k}.${a}" data-t="num" value="${u.fit[k][a]}">
+        <output data-fitout="${k}.${a}">${u.fit[k][a]}%</output></label>`).join('')}
+      <button class="small" data-act="fitReset" data-k="${k}">リセット</button></div>`).join('')}</div>
   </section>
   <section class="sec"><h2>セリフ</h2>
     <p class="sub small nm">1行に1つずつ書きます。複数あるときは、その場面でランダムに1つを吹き出しで表示します。</p>
@@ -229,11 +235,12 @@ function updatePreviews(){
   document.querySelectorAll('.eff[data-ep]').forEach(el=>{ const e=getPath(u,el.dataset.ep); if(e) el.querySelector('.effprev').textContent=fxText(e); });
   document.querySelectorAll('[data-prev="skill"]').forEach(el=>{ const s=u.skills[+el.dataset.i]; el.textContent=effsText(s.eff,s.pick); });
   document.querySelectorAll('[data-prev="ult"]').forEach(el=>el.textContent=effsText(u.ult.eff));
+  document.querySelectorAll('[data-fitout]').forEach(el=>{ const [k,a]=el.dataset.fitout.split('.'); el.textContent=`${u.fit[k][a]}%`; });
   document.querySelectorAll('[data-linecount]').forEach(el=>el.textContent=`${u.lines[el.dataset.linecount].length}件`);
   document.querySelectorAll('[data-clsprev] img').forEach(im=>{ const src=classIcon(u.cls); if(im.getAttribute('src')!==src){ im.onerror=()=>{ im.onerror=null; im.src=CLASS_ICON_EXTRA; }; im.src=src; } });
   // 画像のパスが変わったときだけプレビューを作り直す（同じパスなら読み込み直さない）
   document.querySelectorAll('[data-imgprev]').forEach(el=>{
-    const key=`${u.id}|${u.cls}`; if(el.dataset.key===key) return; el.dataset.key=key;
+    const key=`${u.id}|${u.cls}|${JSON.stringify(u.fit)}`; if(el.dataset.key===key) return; el.dataset.key=key;
     el.innerHTML = el.dataset.imgprev==='face' ? faceImg(u,'face lg') : cardPreviewHTML(u);
     const f=document.querySelector('[data-imgpath="face"]'), c=document.querySelector('[data-imgpath="card"]');
     if(f) f.textContent=`${IMG_DIR+u.id}.${IMG_EXT}`; if(c) c.textContent=`${IMG_DIR+u.id}${IMG_CARD_SUFFIX}.${IMG_EXT}`;
@@ -350,6 +357,7 @@ document.addEventListener('click',e=>{
     case 'dup': { const c=clone(u); c.id=uniqueId(c.id); c.name+='（コピー）'; units.splice(sel+1,0,c); sel++; full(); break; }
     case 'del': if(confirm(`「${u.name||'名前なし'}」を削除しますか？`)){ units.splice(sel,1); sel=Math.max(0,Math.min(sel,units.length-1)); rollIdx=null; full(); } break;
     case 'move': { const j=sel+Number(b.dataset.d); if(j<0||j>=units.length) break; [units[sel],units[j]]=[units[j],units[sel]]; sel=j; full(); break; }
+    case 'fitReset': { u.fit[b.dataset.k]={...FIT_DEF[b.dataset.k]}; full(); break; }
     case 'effAdd': { if(!getPath(u,b.dataset.path)) setPath(u,b.dataset.path,[]); getPath(u,b.dataset.path).push(newEff(b.dataset.ctx)); full(); break; }
     case 'effDel': getPath(u,b.dataset.path).splice(+b.dataset.i,1); full(); break;
     case 'effMove': { const l=getPath(u,b.dataset.path), i=+b.dataset.i, j=i+Number(b.dataset.d); [l[i],l[j]]=[l[j],l[i]]; full(); break; }

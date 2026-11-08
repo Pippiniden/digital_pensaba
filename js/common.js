@@ -30,6 +30,21 @@ function normCmd(c){
   return o;
 }
 function normClass(c){ c=String(c||'').trim(); return CLASS_LEGACY[c]||c; }
+// 画像の見せ方（はみ出し調整）。x,y = 表示位置(%) / z = 拡大率(%)。既定値のままなら書き出さない
+const FIT_DEF={ face:{x:50,y:18,z:100}, card:{x:50,y:12,z:100} };
+const FIT_RANGE={ x:[0,100], y:[0,100], z:[100,300] };
+function normFit(f){
+  f=f||{};
+  const one=k=>Object.fromEntries(['x','y','z'].map(a=>{ const v=Number(((f[k]||{})[a])); const [lo,hi]=FIT_RANGE[a];
+    return [a, Number.isFinite(v)?Math.min(hi,Math.max(lo,Math.round(v))):FIT_DEF[k][a]]; }));
+  return { face:one('face'), card:one('card') };
+}
+const fitIsDef=(f,k)=>!f||!f[k]||['x','y','z'].every(a=>f[k][a]===FIT_DEF[k][a]);
+function fitStyle(d,k){
+  const f=d&&d.fit; if(fitIsDef(f,k)) return '';
+  const {x,y,z}=f[k];
+  return `object-position:${x}% ${y}%;transform-origin:${x}% ${y}%;scale:${z/100}`;
+}
 function normalizeUnit(u){
   u=u||{};
   const faces=Array.from({length:6},(_,i)=>{ const f=(u.faces||[])[i]||{}; return {acts:num(f.acts,1), pre:normCmd(f.pre), post:normCmd(f.post||f.pre)}; });
@@ -39,7 +54,7 @@ function normalizeUnit(u){
   const ln=u.lines||{};
   const lines=Object.fromEntries(Object.keys(LINE_KEYS).map(k=>[k,(Array.isArray(ln[k])?ln[k]:[ln[k]]).map(x=>String(x??'').trim()).filter(Boolean)]));
   return { id:String(u.id||''), name:String(u.name||''), cls:normClass(u.cls), cost:num(u.cost), hp:num(u.hp,100),
-    lines, faces, skills, ult:Object.assign({name:String(ult.name||''), c:String(ult.c||'R'), eff:(ult.eff||[]).map(normEff)}, String(ult.ruby||'').trim()?{ruby:String(ult.ruby).trim()}:{}) };
+    fit:normFit(u.fit), lines, faces, skills, ult:Object.assign({name:String(ult.name||''), c:String(ult.c||'R'), eff:(ult.eff||[]).map(normEff)}, String(ult.ruby||'').trim()?{ruby:String(ult.ruby).trim()}:{}) };
 }
 // 宝具名（ルビがあれば <ruby> で表示）／スキルランク
 function ultNameHTML(ult){ return ult.ruby?`<ruby>${esc(ult.name)}<rt>${esc(ult.ruby)}</rt></ruby>`:esc(ult.name); }
@@ -141,6 +156,7 @@ function unitsToJS(units){
   const body=units.map(u=>[
     '  {',
     `    "id":${j(u.id)}, "name":${j(u.name)}, "cls":${j(u.cls)}, "cost":${u.cost}, "hp":${u.hp},`,
+    ...(['face','card'].every(k=>fitIsDef(u.fit,k))?[]:[`    "fit":${j(u.fit)},`]),
     '    "lines":{',
     Object.keys(LINE_KEYS).map(k=>`      ${j(k)}:${j(u.lines[k])}`).join(',\n'),
     '    },',
@@ -196,8 +212,8 @@ function imgFail(el){
   if(!fb.length){ el.onerror=null; return; }
   el.dataset.fb=fb.slice(1).join('|'); el.src=fb[0];
 }
-const imgTag=(src,fallback,cls,alt='')=>`<img class="${cls}" src="${esc(src)}" alt="${esc(alt)}" loading="lazy" data-fb="${esc([].concat(fallback).join('|'))}" onerror="imgFail(this)">`;
-function unitImg(d,k,cls,alt=''){ const c=imgCandidates(d,k); return imgTag(c[0],c.slice(1),cls,alt); }
+const imgTag=(src,fallback,cls,alt='',style='')=>`<img class="${cls}" src="${esc(src)}" alt="${esc(alt)}" loading="lazy" data-fb="${esc([].concat(fallback).join('|'))}" onerror="imgFail(this)"${style?` style="${style}"`:''}>`;
+function unitImg(d,k,cls,alt=''){ const c=imgCandidates(d,k); return imgTag(c[0],c.slice(1),cls,alt,fitStyle(d,k)); }
 function faceImg(d,cls='face'){ return `<span class="${cls}">${unitImg(d,'face','',d?d.name:'')}</span>`; }
 // コマンドカードの共通素材（rules.js の CARD_LAYERS）。宝具は bg が空なら宝具の色の bg を借りる
 function cardLayers(kind,col){

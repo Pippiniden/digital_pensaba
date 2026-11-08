@@ -47,6 +47,7 @@ Editor (editor.html): rules → units → common → editor
 ### 4.1 Character ("servant") definition — `DEFAULT_UNITS[i]` / `UNITS[i]`
 ```
 { id, name, cls, cost, hp,
+  fit?: { face:{x,y,z}, card:{x,y,z} },   // image framing set in the editor (x/y = object-position %, z = zoom %, 100–300). Defaults in FIT_DEF (common.js); omitted from export when default. Applied by unitImg() via fitStyle()
                                          // images are NOT data: img/units/{id}.webp (face) and {id}_card.webp (card, optional)
                                          // card chain: {id}_card → {id} → card.svg / face chain: {id} → face.svg (see imgCandidates)
   lines: { start, attack, extra, damage, skill, np, npDamage, defeat, win },  // each string[] (LINE_KEYS)
