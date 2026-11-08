@@ -49,6 +49,24 @@ function newUnit(){
              {name:'スキル3',eff:[{k:'star',t:'master',v:5}]} ],
     ult:{name:TERMS.ult,c:'R',eff:[{k:'dmg',t:'target',v:80}]} };
 }
+// カード構成テンプレを今のコストに合わせて適用（HP・6面。霊基再臨面の再臨後は既存を残す）
+let tplKey=CARD_TPL_KEYS[0];
+function parseTplCmd(t){
+  const m=/^([BAQ])(\d+)(?:\/(\d+))?$/.exec(t), c={B:'R',A:'B',Q:'G'}[m[1]], v=+(m[3]||0);
+  return {c,dmg:+m[2],np:c==='B'?v:0,star:c==='G'?v:0};
+}
+function applyCardTpl(u){
+  const cost=u.cost, tpl=CARD_TPL[cost];
+  if(!tpl) return `コスト${cost}のテンプレはありません（コスト1〜5）`;
+  const rows=tpl[tplKey].split(',');
+  u.hp=CARD_TPL_HP[cost];
+  rows.forEach((r,i)=>{
+    const f=u.faces[i];
+    if(r==='ASC'){ f.pre={c:'ASC'}; if(f.post.c==='ASC'||f.post.c==='W') f.post=C('R',u.faces[0].post.dmg||30); }
+    else { const [a,b]=r.split('>'); f.pre=parseTplCmd(a); f.post=parseTplCmd(b); }
+  });
+  return '';
+}
 function makeCmd(t,old){
   old=old||{};
   if(t==='ASC') return {c:'ASC'};
@@ -127,6 +145,10 @@ function renderForm(){
       <label>コスト<input type="number" min="0" max="${RULES.costCap}" data-p="cost" data-t="num" value="${u.cost}"></label>
       <label>HP<input type="number" min="1" step="5" data-p="hp" data-t="num" value="${u.hp}"></label>
     </div>
+    <div class="row tplrow"><label>カード構成テンプレ
+      <select id="tplsel">${CARD_TPL_KEYS.map(k=>opt(k,k,tplKey)).join('')}</select></label>
+      <button class="small" data-act="applyTpl">このコストのテンプレを適用</button>
+      <small class="sub">HPと6面を、コストとカード構成に合わせた標準値に置き換えます（${TERMS.asc}面の${TERMS.asc}後・スキル・セリフは変えません）</small></div>
   </section>
   <section class="sec"><h2>画像</h2>
     <p class="sub small nm">画像は専用フォルダ <code>${IMG_DIR}</code> に、キャラクターのIDと同じ名前の ${IMG_EXT} を置くと自動で使われます（エディタでの指定は不要）。
@@ -337,6 +359,7 @@ document.addEventListener('input',e=>{
 });
 document.addEventListener('change',e=>{
   const el=e.target;
+  if(el.id==='tplsel') tplKey=el.value;
   if(el.id==='rollPost'){ rollPost=el.checked; renderSide(); }
   if(el.id==='file'&&el.files[0]){
     const f=el.files[0], rd=new FileReader();
@@ -361,6 +384,10 @@ document.addEventListener('click',e=>{
     case 'effAdd': { if(!getPath(u,b.dataset.path)) setPath(u,b.dataset.path,[]); getPath(u,b.dataset.path).push(newEff(b.dataset.ctx)); full(); break; }
     case 'effDel': getPath(u,b.dataset.path).splice(+b.dataset.i,1); full(); break;
     case 'effMove': { const l=getPath(u,b.dataset.path), i=+b.dataset.i, j=i+Number(b.dataset.d); [l[i],l[j]]=[l[j],l[i]]; full(); break; }
+    case 'applyTpl': {
+      if(!confirm(`コスト${u.cost}・${tplKey} のテンプレで、HPと鉛筆の6面を置き換えますか？`)) break;
+      const err=applyCardTpl(u); if(err){ toast(err,true); break; }
+      full(); toast(`${tplKey}（コスト${u.cost}）のテンプレを適用しました`); break; }
     case 'roll': doRoll(); break;
     case 'apply':
       if(hasErrors(units)){ toast('エラーがあるため反映できません。一覧の赤い数字と右の「検証」を確認してください',true); break; }

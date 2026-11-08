@@ -159,3 +159,4 @@ table.simmx td.self{color:var(--sub)}
 .xchip{background:var(--panel2);box-shadow:none;border-color:var(--line);gap:5px}
 .xchip.on{opacity:.55;text-decoration:line-through;border-style:dashed}
 .simgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:0 14px}
+.tplrow{margin-top:10px;align-items:center;gap:10px;flex-wrap:wrap}.tplrow label{display:flex;align-items:center;gap:6px}
