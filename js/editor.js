@@ -52,8 +52,8 @@ function newUnit(){
 function makeCmd(t,old){
   old=old||{};
   if(t==='ASC') return {c:'ASC'};
-  if(t==='W') return {c:'W',label:old.label||'特殊行動',eff:old.eff||[{k:'heal',t:'self',v:20}],dmg:0,np:old.np||0,star:old.star||0};
-  return {c:t,dmg:old.dmg||20,np:old.np||0,star:old.star||0};
+  if(t==='W') return {c:'W',label:old.label||'特殊行動',eff:old.eff||[{k:'heal',t:'self',v:20}],dmg:0,np:0,star:0};
+  return {c:t,dmg:old.dmg||20,np:0,star:0}; // 属性を変えたらNP・スターは0に戻す
 }
 function newEff(ctx){
   if(ctx==='ult') return {k:'dmg',t:'target',v:80};
@@ -165,6 +165,7 @@ function renderForm(){
     <div class="subcard">
       <div class="fields">
         <label>名前<input data-p="ult.name" value="${esc(u.ult.name)}"></label>
+        <label>ルビ（任意）<input data-p="ult.ruby" value="${esc(u.ult.ruby||'')}" placeholder="よみがな"></label>
         <label>コマンドの色<select data-p="ult.c">${['R','B','G'].map(c=>opt(c,TERMS[c],u.ult.c)).join('')}</select></label>
       </div>
       ${effList('ult.eff',u.ult.eff,'ult')}
@@ -190,6 +191,7 @@ function skillEd(s,i){
     <div class="row"><b>スキル${i+1}</b>${i===2?`<span class="sub small">${TERMS.ascFull}後に使えるスキル</span>`:''}</div>
     <div class="fields">
       <label>名前<input data-p="${p}.name" value="${esc(s.name)}"></label>
+      <label>ランク（任意）<input data-p="${p}.rank" value="${esc(s.rank||'')}" placeholder="A+ など"></label>
       <label>対象の選び方<select data-p="${p}.pick" data-t="optstr" data-act="structural">${Object.entries(PICKS).map(([k,v])=>opt(k,v,s.pick||'')).join('')}</select></label>
     </div>
     ${effList(p+'.eff',s.eff,'skill')}

@@ -299,7 +299,7 @@ function resolveCommand(att,cmd,tgt,o={}){
 function resolveUlt(u,tgt){
   const ud=D(u.def).ult;
   log(`${nm(u)}の${TERMS.ult}「${esc(ud.name)}」！`,'good');
-  fxEmit({t:'cutin',uid:u.uid,title:ud.name,col:ud.c});
+  fxEmit({t:'cutin',uid:u.uid,title:ud.name,ruby:ud.ruby,col:ud.c});
   say(u,'np');
   for(const e of ud.eff){
     if(e.k!=='dmg'){ applyEffects(u,[e],null); continue; }
@@ -384,7 +384,7 @@ function npWinCheck(){
     if(!canUlt(u)){ log(`${nm(u)}は${TERMS.gauge}${RULES.ultCost}%だが、${TERMS.ult}を発動できない`,'bad'); continue; }
     const ud=D(u.def).ult;
     log(`${nm(u)}：${TERMS.gauge}${RULES.ultCost}%で手番開始 → ${TERMS.ult}「${esc(ud.name)}」発動！`,'good');
-    fxEmit({t:'cutin',uid:u.uid,title:ud.name,col:ud.c});
+    fxEmit({t:'cutin',uid:u.uid,title:ud.name,ruby:ud.ruby,col:ud.c});
     say(u,'np');
     // 演出上、宝具の威力に関わらず相手のHPを0にする（ガッツ・無敵なども無視）
     alive(1-G.cur).forEach(t=>{

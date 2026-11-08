@@ -34,13 +34,16 @@ function normalizeUnit(u){
   u=u||{};
   const faces=Array.from({length:6},(_,i)=>{ const f=(u.faces||[])[i]||{}; return {acts:num(f.acts,1), pre:normCmd(f.pre), post:normCmd(f.post||f.pre)}; });
   const skills=Array.from({length:3},(_,i)=>{ const s=(u.skills||[])[i]||{};
-    const o={name:String(s.name||''), eff:(s.eff||[]).map(normEff)}; if(['ally','enemy','any'].includes(s.pick)) o.pick=s.pick; return o; });
+    const o={name:String(s.name||''), eff:(s.eff||[]).map(normEff)}; const rk=String(s.rank||'').trim(); if(rk) o.rank=rk; if(['ally','enemy','any'].includes(s.pick)) o.pick=s.pick; return o; });
   const ult=u.ult||{};
   const ln=u.lines||{};
   const lines=Object.fromEntries(Object.keys(LINE_KEYS).map(k=>[k,(Array.isArray(ln[k])?ln[k]:[ln[k]]).map(x=>String(x??'').trim()).filter(Boolean)]));
   return { id:String(u.id||''), name:String(u.name||''), cls:normClass(u.cls), cost:num(u.cost), hp:num(u.hp,100),
-    lines, faces, skills, ult:{name:String(ult.name||''), c:String(ult.c||'R'), eff:(ult.eff||[]).map(normEff)} };
+    lines, faces, skills, ult:Object.assign({name:String(ult.name||''), c:String(ult.c||'R'), eff:(ult.eff||[]).map(normEff)}, String(ult.ruby||'').trim()?{ruby:String(ult.ruby).trim()}:{}) };
 }
+// 宝具名（ルビがあれば <ruby> で表示）／スキルランク
+function ultNameHTML(ult){ return ult.ruby?`<ruby>${esc(ult.name)}<rt>${esc(ult.ruby)}</rt></ruby>`:esc(ult.name); }
+function skillNameHTML(s){ return esc(s.name)+(s.rank?` <small class="srank">${esc(s.rank)}</small>`:''); }
 function normalizeUnits(raw){
   if(!Array.isArray(raw)) throw new Error('サーヴァントデータは配列である必要があります');
   return raw.map(normalizeUnit);
@@ -271,7 +274,7 @@ function facesTableHTML(d){
 }
 // 操作できないスキル一覧（編成画面・エディタのプレビュー用）
 function skillListHTML(d){
-  const rows=d.skills.map((s,i)=>`<div class="skill"><span class="sname">S${i+1} ${i===2?'🔒':''}${esc(s.name)}</span><span class="desc">${esc(effsText(s.eff,s.pick))}${i===2?`（${TERMS.asc}後に使用可）`:''}</span></div>`).join('');
-  const ult=`<div class="skill ult"><span class="sname">${TERMS.ult}「${esc(d.ult.name)}」</span><span class="desc">[${TERMS[d.ult.c]||esc(d.ult.c)}] ${esc(effsText(d.ult.eff))}</span></div>`;
+  const rows=d.skills.map((s,i)=>`<div class="skill"><span class="sname">S${i+1} ${i===2?'🔒':''}${skillNameHTML(s)}</span><span class="desc">${esc(effsText(s.eff,s.pick))}${i===2?`（${TERMS.asc}後に使用可）`:''}</span></div>`).join('');
+  const ult=`<div class="skill ult"><span class="sname">${TERMS.ult}「${ultNameHTML(d.ult)}」</span><span class="desc">[${TERMS[d.ult.c]||esc(d.ult.c)}] ${esc(effsText(d.ult.eff))}</span></div>`;
   return `<div class="skills">${rows}${ult}</div>`;
 }

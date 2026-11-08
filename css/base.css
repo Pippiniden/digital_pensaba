@@ -139,3 +139,7 @@ table.faces th{color:var(--sub)}
 .ccard.sm .ccname{font-size:7.5px;bottom:2px;letter-spacing:0}
 .ccard.sm .ccdmg{font-size:8.5px;padding:0 2px;top:1px;left:1px}
 .ccrow{display:flex;gap:5px;margin-top:6px}
+
+/* スキルランク・宝具ルビ */
+.srank{font-size:.75em;opacity:.8;font-weight:normal}
+ruby rt{font-size:.5em;letter-spacing:.05em}

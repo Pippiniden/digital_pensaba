@@ -24,11 +24,11 @@ function skillBtns(u,d){
   const sk=d.skills.map((s,i)=>{
     const locked=i===2&&!u.asc, used=u.used[i], ok=own&&canSkill(u)&&!used&&!locked;
     const tip=`S${i+1}「${s.name}」 ${effsText(s.eff,s.pick)}${locked?`（${TERMS.asc}後に使用可）`:''}${used?'（使用済み）':''}${sealed?'（使用不可）':''}`;
-    return `<span class="skw" title="${esc(tip)}"><button class="sk ${used?'used':''} ${locked?'locked':''}" data-a="useSkill" data-uid="${u.uid}" data-si="${i}" ${ok?'':'disabled'}><i>S${i+1}</i><span>${locked?'🔒':''}${esc(s.name)}</span></button></span>`;
+    return `<span class="skw" title="${esc(tip)}"><button class="sk ${used?'used':''} ${locked?'locked':''}" data-a="useSkill" data-uid="${u.uid}" data-si="${i}" ${ok?'':'disabled'}><i>S${i+1}</i><span>${locked?'🔒':''}${skillNameHTML(s)}</span></button></span>`;
   }).join('');
   const ready=u.np>=RULES.ultCost&&!u.out, ok=own&&ultManual()&&canUlt(u)&&!G.ult&&ready;
   const tip=`${TERMS.ult}「${d.ult.name}」 [${TERMS[d.ult.c]}] ${effsText(d.ult.eff)}（${ultManual()?`${TERMS.gauge}${RULES.ultCost}%で使用可`:`${TERMS.gauge}${RULES.ultCost}%で手番を迎えると発動して勝利`}）`;
-  const ult=`<span class="skw" title="${esc(tip)}"><button class="sk np ${d.ult.c} ${ready?'ready':''}" data-a="useUlt" data-uid="${u.uid}" ${ok?'':'disabled'}><i>${TERMS.ult}</i><span>${esc(d.ult.name)}</span></button></span>`;
+  const ult=`<span class="skw" title="${esc(tip)}"><button class="sk np ${d.ult.c} ${ready?'ready':''}" data-a="useUlt" data-uid="${u.uid}" ${ok?'':'disabled'}><i>${TERMS.ult}</i><span>${ultNameHTML(d.ult)}</span></button></span>`;
   return `<div class="sks">${sk}${ult}</div>`;
 }
 function rollBadge(u,d){
