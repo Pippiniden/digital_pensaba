@@ -18,7 +18,10 @@ function fxNext(){
   const ev=FXQ.shift();
   if(!ev){
     fxRunning=false; clearKoHolds();
-    if(G.phase==='over'&&!UI.resultShown){ UI.resultShown=true; setTimeout(()=>{ if(G.phase==='over'){ UI.result=true; render(); } },1600); }
+    // 決着：VICTORY などの帯（showPhase の end は 3200ms 表示）が消えるころに「もう一度」などのボタン、続いてリザルトを出す
+    if(G.phase==='over'&&!UI.resultShown){ UI.resultShown=true;
+      setTimeout(()=>{ if(G.phase==='over'){ UI.endReady=true; render(); } },1400);
+      setTimeout(()=>{ if(G.phase==='over'){ UI.result=true; render(); } },2000); }
     return;
   }
   let wait=0;

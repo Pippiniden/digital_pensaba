@@ -185,6 +185,8 @@ Chosen on the mode screen (`setRule`, plus `toggleHandicap`; both kept by `resta
 | Make the CPU smarter / weaker | `js/cpu.js` (`level` is `'easy'` / `'normal'`; `easy` uses the deterministic pseudo-random `rnd01`) |
 | Game screen layout / look | `js/game-ui.js` (HTML generation) + `css/game.css`. At ≤860px (last `@media` block in game.css) servant cards show only portrait, name, HP and NP; skills/effects are hidden and reached through the ⓘ detail modal, which also holds the usable skill/ultimate buttons (`.udops`; using one closes the modal). `.pfx` shows the buff/debuff counts on the portrait there |
 | Effects (bubbles, numbers, cut-in, phase banners, roll, attack card) | Emit from `engine.js` (`fxEmit` / `say` / `phaseFx` / `rollFx`), play in `fxPlay` in `js/fx.js`; wait times in `FX_WAIT`; CSS in the "演出" section of `game.css` |
+| Character select: sort / filter | `UI.roster` + `ROSTER_SORTS` / `rosterList` / `rosterFilterHTML` / `rosterTilesHTML` in `game-ui.js`. Field changes (`data-uif`) only redraw `.roster` (`redrawRoster`) so the search box keeps focus |
+| End-of-game timing | `fxNext` in `fx.js`: when the queue empties with `G.phase==='over'`, `UI.endReady` (shows the rematch / result buttons in `promptHTML`) turns on after the VICTORY banner fades, then the result modal opens |
 | Auto-advance rules | `autoMove` / `hasSkillChoice` in `js/game-ui.js` |
 | Command card look / shared assets | `cmdCardHTML` / `cardLayers` in `common.js`; asset paths in `CARD_LAYERS` in `rules.js` |
 | Editor form / preview | `js/editor.js` (`renderForm` / `effRow` / `renderSide`) + `css/editor.css` |

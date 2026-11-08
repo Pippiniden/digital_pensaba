@@ -198,7 +198,19 @@ body[data-screen="battle"] #app{overflow:auto}
 .costm .bar i{background:linear-gradient(90deg,var(--gold),var(--gold-hi))}
 .setbtns{display:flex;gap:8px}
 .setbody{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:12px}
-.roster{min-height:0;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;align-content:start;padding:4px 6px 4px 2px}
+.rosterwrap{min-height:0;display:flex;flex-direction:column;gap:8px}
+.rfilter{flex:none;display:flex;flex-direction:column;gap:6px;padding:8px 10px;border-radius:6px;border:1px solid var(--gold-lo);background:rgba(6,13,34,.6)}
+.rcls{display:flex;flex-wrap:wrap;gap:4px}
+.rchip{width:34px;height:34px;padding:0;justify-content:center;font:700 12px var(--serif)}
+.rchip img{width:24px;height:24px}
+.rchip.on{border-color:var(--gold-hi);background:linear-gradient(180deg,var(--gold-hi),var(--gold));color:#1a1206;box-shadow:0 0 8px rgba(246,227,161,.5)}
+.rrow2{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.rfilter input[type=search],.rfilter select{font:inherit;font-size:13px;color:var(--ink);padding:4px 8px;border-radius:4px;border:1px solid var(--gold-lo);background:#0d1a40}
+.rfilter .rq{flex:1 1 140px;min-width:0}
+.rok{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;cursor:pointer}
+.rcount{margin-left:auto}
+.rempty{grid-column:1/-1;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.roster{flex:1;min-height:0;overflow:auto;grid-auto-rows:max-content;display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;align-content:start;padding:4px 6px 4px 2px}
 .tile{position:relative;display:block;width:100%;aspect-ratio:3/4;padding:0;overflow:hidden;border-radius:5px;border:1px solid var(--gold);background:var(--panel2);box-shadow:var(--frame);text-align:left;transition:transform .12s,box-shadow .12s}
 .tile:hover:not(:disabled),.tile.viewing{transform:translateY(-3px);border-color:var(--gold-hi);box-shadow:var(--frame),0 0 16px rgba(127,166,255,.45)}
 .tile.sel{outline:2px solid var(--gold-hi);outline-offset:2px;box-shadow:var(--frame),0 0 18px rgba(246,227,161,.55)}
@@ -366,7 +378,7 @@ body[data-screen="battle"] #app{overflow:auto}
   .field{grid-template-rows:auto auto auto}
   .svt{min-height:200px}
   .setbody{grid-template-columns:1fr}
-  .roster{overflow:visible}
+  .roster{overflow:visible;flex:none}
 }
 @media (max-width:860px){
   .svts{grid-template-columns:1fr}

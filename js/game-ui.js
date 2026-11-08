@@ -6,7 +6,8 @@
    - 画面だけの状態（詳細ウィンドウ・ログの開閉など）は UI に持ち、G には入れない
    ===================================================================== */
 
-const UI = { menu:false, result:false, resultShown:false, detail:null, setupView:null, log:readLogPref(), auto:readPref('pencilduel.auto')==='1' };
+const UI = { menu:false, result:false, resultShown:false, endReady:false,
+  roster:{ sort:'default', cls:'', cost:'', q:'', ok:false }, /* キャラクター選択の並べ替え・絞り込み */ detail:null, setupView:null, log:readLogPref(), auto:readPref('pencilduel.auto')==='1' };
 function readPref(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
 function savePref(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
 function readLogPref(){
@@ -113,6 +114,7 @@ function promptHTML(){
     case 'end':
       return `<p>ダメージフェイズが終わりました。</p><button class="primary big" data-a="endTurn">ターン終了</button>`;
     case 'over':
+      if(!UI.endReady) return ''; // 決着の演出（VICTORY の帯）が終わってから出す
       return `<p class="win">${G.mode==='cpu'?(G.winner===0?'勝利！':'敗北…'):`${esc(G.players[G.winner].name)} の勝利！`}</p><div class="row"><button class="primary" data-a="rematch">もう一度</button><button data-ui="openResult">リザルト</button><button data-a="restart">モード選択へ</button></div>`;
   }
   return '';
@@ -245,13 +247,6 @@ function setupHTML(){
     return d ? `<button class="slot filled" data-a="setupToggle" data-id="${esc(d.id)}" data-view="${esc(d.id)}" title="外す">${unitImg(d,'face','pimg',d.name)}<span>${ORD[i]}</span><b>${esc(d.name)}</b></button>`
              : `<div class="slot"><span>${ORD[i]}</span></div>`;
   }).join('');
-  const tiles=UNITS.map(d=>{
-    const i=picks.indexOf(d.id), sel=i>=0, over=!sel&&!solo&&(picks.length>=rs.partyMax||cost+d.cost>RULES.costCap);
-    return `<button class="tile ${sel?'sel':''} ${over?'dim':''} ${view&&view.id===d.id?'viewing':''}" data-a="setupToggle" data-id="${esc(d.id)}" data-view="${esc(d.id)}">
-      ${unitImg(d,'face','pimg',d.name)}${clsIconTag(d.cls,'pcls')}
-      <span class="tcost">C${d.cost}</span>${sel?`<span class="order">${i+1}</span>`:''}
-      <span class="tname">${esc(d.name)}<small>${esc(d.cls)} ・ HP${d.hp}</small></span></button>`;
-  }).join('');
   return `<div class="setup">
     <div class="sethead">
       <div class="settitle"><h2><span class="p${pid}">${esc(G.players[pid].name)}</span> の${solo?`${TERMS.unit}選択`:'パーティ編成'}</h2>
@@ -262,11 +257,70 @@ function setupHTML(){
     </div>
     ${G.setupMsg?`<p class="warn nm">${G.setupMsg}</p>`:''}
     <div class="setbody">
-      <div class="roster">${tiles}</div>
+      <div class="rosterwrap">${rosterFilterHTML()}<div class="roster">${rosterTilesHTML(view)}</div></div>
       <div class="sdetail">${view?unitDetailHTML(view):''}</div>
     </div>
   </div>`;
 }
+
+// ---------- キャラクター選択：並べ替え・絞り込み ----------
+const ROSTER_SORTS = { default:'標準', costDesc:'コストが高い順', costAsc:'コストが低い順', hpDesc:'HPが高い順', hpAsc:'HPが低い順', name:'名前順', cls:'クラス順' };
+// 編成に加えられない（選択済みでなく、上限やコストを超える）
+function rosterOver(d){
+  const picks=G.picks[G.setupPid], rs=ruleset();
+  return !picks.includes(d.id)&&rs.partyMax>1&&(picks.length>=rs.partyMax||sumCost(picks)+d.cost>RULES.costCap);
+}
+function rosterList(){
+  const f=UI.roster, q=f.q.trim().toLowerCase();
+  const list=UNITS.filter(d=>(!f.cls||d.cls===f.cls)&&(f.cost===''||d.cost===Number(f.cost))
+    &&(!q||d.name.toLowerCase().includes(q)||d.cls.toLowerCase().includes(q))&&(!f.ok||!rosterOver(d)));
+  const ci=c=>{ const i=CLASSES.indexOf(c); return i<0?CLASSES.length:i; };
+  const by={ costDesc:(a,b)=>b.cost-a.cost, costAsc:(a,b)=>a.cost-b.cost, hpDesc:(a,b)=>b.hp-a.hp, hpAsc:(a,b)=>a.hp-b.hp,
+    name:(a,b)=>a.name.localeCompare(b.name,'ja'), cls:(a,b)=>ci(a.cls)-ci(b.cls)||b.cost-a.cost }[f.sort];
+  return by?[...list].sort((a,b)=>by(a,b)||UNITS.indexOf(a)-UNITS.indexOf(b)):list;
+}
+function rosterTilesHTML(view){
+  const picks=G.picks[G.setupPid], list=rosterList();
+  if(!list.length) return `<p class="sub rempty">条件に合う${TERMS.unit}がいません。<button data-ui="rosterReset">絞り込みを解除</button></p>`;
+  return list.map(d=>{
+    const i=picks.indexOf(d.id), sel=i>=0, over=rosterOver(d);
+    return `<button class="tile ${sel?'sel':''} ${over?'dim':''} ${view&&view.id===d.id?'viewing':''}" data-a="setupToggle" data-id="${esc(d.id)}" data-view="${esc(d.id)}">
+      ${unitImg(d,'face','pimg',d.name)}${clsIconTag(d.cls,'pcls')}
+      <span class="tcost">C${d.cost}</span>${sel?`<span class="order">${i+1}</span>`:''}
+      <span class="tname">${esc(d.name)}<small>${esc(d.cls)} ・ HP${d.hp}</small></span></button>`;
+  }).join('');
+}
+function rosterFilterHTML(){
+  const f=UI.roster;
+  const clss=[...new Set(UNITS.map(d=>d.cls))].sort((a,b)=>(CLASSES.indexOf(a)+1||99)-(CLASSES.indexOf(b)+1||99));
+  const costs=[...new Set(UNITS.map(d=>d.cost))].sort((a,b)=>a-b);
+  const chip=(v,label,body)=>`<button class="rchip ${f.cls===v?'on':''}" data-ui="rosterCls" data-v="${esc(v)}" title="${esc(label)}">${body}</button>`;
+  const n=rosterList().length;
+  return `<div class="rfilter">
+    <div class="rcls">${chip('','すべてのクラス','全')}${clss.map(c=>chip(c,c,`<img src="${esc(classIcon(c))}" alt="${esc(c)}">`)).join('')}</div>
+    <div class="rrow2">
+      <input type="search" class="rq" data-uif="q" placeholder="名前・クラスで検索" value="${esc(f.q)}">
+      <select data-uif="cost" title="コストで絞り込み"><option value="">コスト：すべて</option>${costs.map(c=>`<option value="${c}" ${String(c)===f.cost?'selected':''}>コスト ${c}</option>`).join('')}</select>
+      <select data-uif="sort" title="並べ替え">${Object.entries(ROSTER_SORTS).map(([k,v])=>`<option value="${k}" ${f.sort===k?'selected':''}>${v}</option>`).join('')}</select>
+      ${ruleset().partyMax>1?`<label class="rok"><input type="checkbox" data-uif="ok" ${f.ok?'checked':''}>編成できるものだけ</label>`:''}
+      <span class="sub small rcount">${n} / ${UNITS.length}騎</span>
+    </div>
+  </div>`;
+}
+// 絞り込みを変えたら一覧だけ描き直す（検索欄の入力中にフォーカスを失わないように）
+function redrawRoster(){
+  const r=document.querySelector('.roster'); if(!r){ render(); return; }
+  const picks=G.picks[G.setupPid];
+  r.innerHTML=rosterTilesHTML(D(UI.setupView)||D(picks[picks.length-1])||UNITS[0]);
+  const c=document.querySelector('.rcount'); if(c) c.textContent=`${rosterList().length} / ${UNITS.length}騎`;
+}
+function onRosterField(e){
+  const el=e.target.closest('[data-uif]'); if(!el) return;
+  const k=el.dataset.uif; UI.roster[k]=el.type==='checkbox'?el.checked:el.value;
+  redrawRoster();
+}
+document.addEventListener('input',onRosterField);
+document.addEventListener('change',e=>{ if(e.target.matches('select[data-uif],input[type=checkbox][data-uif]')) onRosterField(e); });
 
 // シンプルルール：相手のコストとハンデの説明
 function handicapNote(pid){
@@ -306,7 +360,7 @@ function render(){
   const app=document.querySelector('#app'), hinfo=document.querySelector('#hinfo'), spd=document.querySelector('#spd'), lb=document.querySelector('#logbtn'), ab=document.querySelector('#autobtn');
   const screen=G.phase==='mode'?'mode':G.phase==='setup'?'setup':'battle';
   document.body.dataset.screen=screen;
-  if(G.phase!=='over'){ UI.result=false; UI.resultShown=false; }
+  if(G.phase!=='over'){ UI.result=false; UI.resultShown=false; UI.endReady=false; }
   document.body.classList.toggle('lock',cpuActing());
   spd.hidden=!(G.mode==='cpu'&&G.phase!=='mode');
   spd.textContent=`CPU速度：${G.speed<500?'速い':'普通'}`;
@@ -375,6 +429,8 @@ function uiAct(a,ds){
     case 'toggleLog': UI.log=!UI.log; savePref('pencilduel.logOpen',UI.log?'1':'0'); break;
     case 'toggleAuto': UI.auto=!UI.auto; savePref('pencilduel.auto',UI.auto?'1':'0'); break;
     case 'toggleMenu': UI.menu=!UI.menu; break;
+    case 'rosterCls': UI.roster.cls=ds.v; break;
+    case 'rosterReset': UI.roster={...UI.roster, cls:'', cost:'', q:'', ok:false}; break;
   }
   render();
 }
