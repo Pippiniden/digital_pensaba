@@ -266,7 +266,7 @@ const DEFAULT_UNITS = [
     "ult":{"name":"疑似展開/人理の礎","c":"B","eff":[{"k":"def","t":"ally_all","v":30,"turns":3}],"ruby":"ロード・カルデアス"}
   },
   {
-    "id":"athelstan", "name":"エゼルスタン", "cls":"セイバー", "cost":5, "hp":750,
+    "id":"athelstan", "name":"エゼルスタン", "cls":"セイバー", "cost":5, "hp":850,
     "fit":{"face":{"x":50,"y":0,"z":120},"card":{"x":50,"y":12,"z":100}},
     "lines":{
       "start":["私に剣を持たせるのなら……受けて立ちます！","平和のためであれば、私は決して躊躇いません！"],
@@ -281,7 +281,7 @@ const DEFAULT_UNITS = [
     },
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":90,"np":0,"star":0},"post":{"c":"R","dmg":120,"np":0,"star":0}},
-      {"acts":2,"pre":{"c":"R","dmg":90,"np":0,"star":0},"post":{"c":"R","dmg":120,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"R","dmg":90,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
       {"acts":1,"pre":{"c":"B","dmg":60,"np":10,"star":0},"post":{"c":"B","dmg":70,"np":15,"star":0}},
       {"acts":2,"pre":{"c":"ASC"},"post":{"c":"R","dmg":110,"np":0,"star":0,"eff":[{"k":"ignoreDef","t":"self","v":0,"turns":1}]}},
       {"acts":3,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
@@ -289,14 +289,14 @@ const DEFAULT_UNITS = [
     ],
     "skills":[
       {"name":"信仰の加護","eff":[{"k":"debuffImmune","t":"self","v":0,"turns":5},{"k":"heal","t":"self","v":150},{"k":"def","t":"self","v":10,"turns":3},{"k":"atk","t":"self","v":10,"turns":3}],"rank":"B"},
-      {"name":"統一王","eff":[{"k":"atk","t":"self","v":20,"turns":1},{"k":"def","t":"self","v":20,"turns":1},{"k":"onAtkStar","t":"self","v":2,"turns":1},{"k":"onAtkNp","t":"self","v":10,"turns":1}],"rank":"A"},
-      {"name":"獅子の紋章","eff":[{"k":"atk","t":"self","v":10,"turns":1},{"k":"invul","t":"self","v":0,"turns":1}],"rank":"D-"}
+      {"name":"獅子の紋章","eff":[{"k":"atk","t":"self","v":20,"turns":1},{"k":"invul","t":"self","v":0,"turns":1},{"k":"mentalImmune","t":"self","v":0,"turns":3},{"k":"def","t":"ally_all","v":10,"turns":3}],"rank":"D-"},
+      {"name":"統一王","eff":[{"k":"atk","t":"self","v":20,"turns":1},{"k":"def","t":"self","v":20,"turns":1},{"k":"onAtkStar","t":"self","v":3,"turns":1},{"k":"onAtkNp","t":"self","v":20,"turns":1}],"rank":"A"}
     ],
-    "ult":{"name":"統一王の覇光","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":350},{"k":"pierce","t":"self","v":0,"turns":1},{"k":"ignoreDef","t":"self","v":0,"turns":1}],"ruby":"ユナイテッド・キングス・レガリア"}
+    "ult":{"name":"統一王の覇光","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":400},{"k":"pierce","t":"self","v":0,"turns":1},{"k":"ignoreDef","t":"self","v":0,"turns":1}],"ruby":"ユナイテッド・キングス・レガリア"}
   },
   {
     "id":"mnesarete", "name":"ネサレテ", "cls":"アーチャー", "cost":5, "hp":700,
-    "fit":{"face":{"x":100,"y":0,"z":113},"card":{"x":50,"y":12,"z":100}},
+    "fit":{"face":{"x":100,"y":0,"z":113},"card":{"x":93,"y":12,"z":100}},
     "lines":{
       "start":["邪魔するなら、殺しちゃおうかしら……","こういうの、美しくないわねえ"],
       "attack":["どきなさい","そこよ","せっかちねえ","あら、見惚れたの？"],
