@@ -3,6 +3,8 @@
    - 対戦・編成は画面の高さに収める（スクロール不要）。狭い画面では縦に並べてスクロール
    ===================================================================== */
 body.game{height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+/* スマホで画面を下に引っぱったときの「更新」（ページの読み込み直し）で試合が途切れないようにする */
+html:has(body.game),body.game{overscroll-behavior:none}
 body.game>header{flex:none}
 body.game #app{flex:1;min-height:0;overflow:auto}
 body[data-screen="setup"] #app{overflow:hidden}

@@ -292,7 +292,7 @@ const DEFAULT_UNITS = [
       {"name":"獅子の紋章","eff":[{"k":"atk","t":"self","v":20,"turns":1},{"k":"invul","t":"self","v":0,"turns":1},{"k":"mentalImmune","t":"self","v":0,"turns":3},{"k":"def","t":"ally_all","v":10,"turns":3}],"rank":"D-"},
       {"name":"統一王","eff":[{"k":"atk","t":"self","v":20,"turns":1},{"k":"def","t":"self","v":20,"turns":1},{"k":"onAtkStar","t":"self","v":3,"turns":1},{"k":"onAtkNp","t":"self","v":20,"turns":1}],"rank":"A"}
     ],
-    "ult":{"name":"統一王の覇光","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":400},{"k":"pierce","t":"self","v":0,"turns":1},{"k":"ignoreDef","t":"self","v":0,"turns":1}],"ruby":"ユナイテッド・キングス・レガリア"}
+    "ult":{"name":"統一王の覇光","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":400},{"k":"pierce","t":"self","v":0,"turns":1,"at":"pre"},{"k":"ignoreDef","t":"self","v":0,"turns":1,"at":"pre"}],"ruby":"ユナイテッド・キングス・レガリア"}
   },
   {
     "id":"mnesarete", "name":"ネサレテ", "cls":"アーチャー", "cost":5, "hp":700,

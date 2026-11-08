@@ -60,8 +60,9 @@ Worker (sim-worker.js, importScripts): rules → units → common → engine →
   skills:[ {name, eff:Eff[], pick?:'ally'|'enemy'|'any'} ×3 ],   // skill 3 is usable only after ascension
   ult:   { name, c:'R'|'B'|'G', eff:Eff[] } }                    // Noble Phantasm (ultimate)
 ```
-- `Cmd`: `{c:'R'|'B'|'G', dmg, np, star, eff?:Eff[]}` (optional `eff` is applied to the attacker's side after the attack, e.g. self-cleanse; `normCmd` only keeps it when non-empty) / `{c:'W', label, eff:Eff[], dmg, np, star}` (special action; with `dmg>0` it is also a colorless attack that does not count toward chains — `eff` is applied first) / `{c:'ASC'}` (ascension face; allowed only in `pre`). R = Buster, B = Arts, G = Quick.
-- `Eff`: `{k:effectKind, t:target, v:value, turns?, times?, chance?, color?}`
+- `Cmd`: `{c:'R'|'B'|'G', dmg, np, star, eff?:Eff[]}` (optional `eff`, e.g. self-cleanse; applied **after** the attack by default; `normCmd` only keeps it when non-empty) / `{c:'W', label, eff:Eff[], dmg, np, star}` (special action; with `dmg>0` it is also a colorless attack that does not count toward chains — `eff` is applied **before** the attack by default) / `{c:'ASC'}` (ascension face; allowed only in `pre`). R = Buster, B = Arts, G = Quick.
+- `Eff`: `{k:effectKind, t:target, v:value, turns?, times?, chance?, color?, at?:'pre'|'post'}`
+  - `at` (commands and ultimates only; ignored with a warning on skills and on `dmg`): apply before / after the attack. Unset = default from `EFF_AT_DEFAULT` (rules.js): special action → before, R/B/G command → after, ultimate → array order. Engine: `splitEffs` (commands) and `ultEffOrder` (ultimates: `pre` effects → array order of `dmg` and unset effects → `post` effects). Editor: the "タイミング" select in `effRow` (`effAtSel`).
   - `k` is a key of `FX` in `rules.js`. `t` is a key of `TARGETS`; the allowed targets depend on where the effect lives (`TGT_BY_CTX`: skill / ult / special).
   - `chance` = succeeds on a roll ≤ N (1–5). `color` only applies to effects with `FX[k].color` (`atk`, `onAtkStar`, `onAtkNp`). Effects with `FX[k].only` are restricted to that place (`dmg` → ultimate, `copyRoll` → special action).
   - A unit without an ascension face (e.g. Mash) may leave skill 3 empty; validation skips it.
@@ -77,7 +78,7 @@ Worker (sim-worker.js, importScripts): rules → units → common → engine →
 `costCap:10, partyMax:3, actionsMax:3, actsTable:[0,1,1,3,2,2], gaugeOnHit:10, gaugeMax:100, ultCost:100, chainR:30, chainB:20, chainG:10, critDmg:30, critDmgR:60, dot:20, dotTiming:'current'|'all'`.
 - `actsTable`: action count per pencil face (index 0–5 = face 1–6), shared by all units. Set to `null` to use each face's own `acts` instead. Always read it through `faceActs(d, i)`.
 - Critical: `critLevel(stars)` → level 0–7 from `CRIT_TABLE`, `critChance(level)` → % (Lv1 10 / Lv2 20 / Lv3 35 / Lv4 50 / Lv5 75 / Lv6 90 / Lv7 100; thresholds at 1/6/11/16/21/26/31 stars).
-- `RULESETS` (rules.js) holds per-rule settings: `team` (3 units, d100 crit) and `simple` (1 unit, d6 crit via `CRIT_D6_TABLE` / `critNeedD6`, `npWin`, `handicapAsc:2`). The active one is `G.rule`; read it through `ruleset()` (engine.js). Party size comes from `ruleset().partyMax`, not `RULES`.
+- `RULESETS` (rules.js) holds per-rule settings: `team` (3 units, d100 crit) and `simple` (1 unit, d6 crit via `CRIT_D6_TABLE` / `critNeedD6`, `handicapAsc:2`). The active one is `G.rule`; read it through `ruleset()` (engine.js). Party size comes from `ruleset().partyMax`, not `RULES`.
 - `dot` is only the fallback damage for poison/burn effects whose value is 0 (old data).
 
 ### 4.4 Storage (localStorage)
@@ -88,6 +89,7 @@ Worker (sim-worker.js, importScripts): rules → units → common → engine →
 | `pencilduel.logOpen` | Whether the battle log is open |
 | `pencilduel.auto` | Whether auto-advance is on (`'1'`) |
 | `pencilduel.simExclude` | Character ids excluded from the editor's balance test |
+| `pencilduel.match` (**sessionStorage**) | The match in progress (`G`, log trimmed to 200). Saved by `saveMatch()` at the end of every `render()`, removed on the mode screen. `restoreMatch()` at page load resumes it in the same tab after any reload (mobile pull-to-refresh, the browser reloading the tab under memory pressure, going to the editor and back). Skipped if the unit source changed or a character is missing |
 
 If the applied data has validation errors, `loadUnits()` falls back to the default data and returns `broken:true`.
 
@@ -101,8 +103,8 @@ turn: actRoll → skill → action → target → end → (endPhase → swap tur
 | phase | What happens | Main ACTIONS |
 |---|---|---|
 | `mode` | Mode select (vs CPU / 2-player) | `chooseMode` |
-| `setup` | Party building (total cost ≤ 10, up to 3 units) | `setupToggle` `setupRandom` `setupCpu` `setupConfirm` |
-| `actRoll` | ② Each unit rolls its max action count from `actsTable` (0 is possible); +1 per knocked-out (戦闘不能) ally, −1 with fear, capped at 3. Allocate up to 3 in total: clicking an own servant adds one action (its card flies into the center lane), clicking a lane card removes one | `rollActs` `alloc` `setAlloc` `confirmAlloc` |
+| `setup` | Party building (total cost ≤ 10, up to 3 units). On the CPU's side "おまかせ" has two buttons: `setupCpu {how:'same'}` (same cost as the opponent; team: same total cost and size, nearest if impossible, `setupMsg` says so) and `{how:'random'}` (= `setupRandom`) | `setupToggle` `setupRandom` `setupCpu` `setupConfirm` |
+| `actRoll` | ② Each unit rolls its max action count from `actsTable` (0 is possible); +1 per knocked-out (戦闘不能) ally, −1 with fear, capped at 3. **Actions must be used up**: the total must equal `requiredAlloc()` = min(3, sum of max actions); `confirmAlloc` / `setAlloc` refuse anything else and the 決定 button stays disabled. Clicking an own servant adds one action (its card flies into the center lane), clicking a lane card removes one | `rollActs` `alloc` `setAlloc` `confirmAlloc` |
 | `skill` | ③ Skills (once each per battle) and ultimate (NP ≥ 100, once per turn). Skills with `pick` wait for target selection (`G.pending`) | `useSkill` `useUlt` `cancelPick` `skillDone` |
 | `action` | ④ Roll the pencil for each allocated action to decide commands. If the face is a `copyRoll` special, `G.copy` waits for the player to click another alive servant (either side); its post-ascension face is rolled and replaces the command | `rollAction` `cardClick` `toTarget` |
 | `target` | ⑤ Choose the attack target (only `taunt` units if any). For an ultimate with no `t:'target'` effect (`ultNoTarget`: AoE or support), `toTargetPhase` sets `G.targetAll` so every enemy is already targeted; clicking an enemy or `resolve` fires it | `cardClick` `resolve` |
@@ -122,15 +124,17 @@ Per command, `resolveCommand` does, in order:
 4. Critical step (only if the player holds stars; never on extra attacks or ultimates): roll 1d100 ≤ `critChance(critLevel(stars) + critRoll)`. On success: damage + 30 (Buster + 60) + `critPow` total + color buffs again (color buffs count double), and NP gain / star generation ×2.
 5. Final damage, unless blocked by `invul` / `evade` (`blocked()`). Overkill (target already knocked out): NP / stars ×2. Overkill and critical **stack** (×4).
 
+The command's own `eff` is split by `splitEffs`: "before" effects run before step 1, "after" effects after step 5 (see `at` in §4.1). Ultimates apply their effects in `ultEffOrder` (before → array order → after).
+
 Extra attack (Brave Chain): no modifiers, no critical, but evade/invul still apply.
 Damage over time (`endPhase`): ignores atk/def, invul, evade and crits; blocked by `debuffImmune`. Poison and burn each don't stack (the highest value applies); `spread` doubles burn.
 
 ### 5.2 Simple rule — シンプルルール (`G.rule==='simple'`)
 
-Chosen on the mode screen (`setRule`, plus `toggleHandicap`; both kept by `restart`/`rematch` via `keepRule()`). Same flow as the team rule, with:
-- 1 servant per side (picking another replaces it); the normal CPU picks the same (or nearest) cost as the opponent.
+Chosen on the mode screen (`setRule`, plus `toggleHandicap`; both kept by `restart`/`rematch` via `keepRule()`). Same flow as the team rule (including using the ultimate manually in the skill phase), with:
+- 1 servant per side (picking another replaces it). The CPU's "おまかせ（同コスト）" picks the same (or nearest) cost as the opponent.
 - Critical: if the player holds stars, roll 1d6; success when roll − `critRoll` ≤ `critNeedD6(stars)` (1–6★: 2, 7–13: 3, 14–29: 5, 30+: certain). Effects of a success are the same as the team rule.
-- NP win: `npWinCheck()` at the end of `beginTurn` — if the turn player's servant has NP ≥ 100 and `canUlt`, its ultimate fires (cut-in), every enemy servant's HP is set to 0 regardless of the ultimate's power (presentation only; ignores guts/invul), and that player wins (`G.winBy='np'`). The ultimate **cannot be used manually** in the skill phase (`ultManual()` is false; UI, auto-advance and CPU respect it).
+- Win only by knocking out the enemy servant. (The old "NP 100% at turn start = ultimate win" rule was removed.)
 - Handicap (`G.handicap`, default ON): `applyHandicap()` in `startGame` ascends the lower-cost side when the cost gap ≥ `handicapAsc`. The rule's optional "3+ cost gap → NP / attack bonus" is not implemented.
 
 ### 5.3 Effect kinds that need special handling (`FX` in rules.js)
@@ -161,7 +165,7 @@ Chosen on the mode screen (`setRule`, plus `toggleHandicap`; both kept by `resta
 1. **All state lives in `G`, and changes go only through `act(type, payload)` → `ACTIONS[type]`.** `act()` ends by calling `render()`. Humans, the CPU, and (future) online play are meant to share this path, so never mutate `G` directly outside `ACTIONS`.
 2. **Always re-validate rules inside `ACTIONS`** (phase, turn, already used, etc.). Merely `disabled`-ing a button in the UI is not enough.
 3. **UI-only state belongs in `UI` (game-ui.js)**, not in `G`.
-4. **`render()` rebuilds `#app.innerHTML` from scratch every time.** Events are delegated on `document` (`data-a` = game action, `data-ui` = UI action; the editor uses `data-act` / `data-p`). Do not attach listeners directly to elements.
+4. **`render()` rebuilds `#app` from scratch every time**, through `setHTML(el, html)` (common.js), which moves already-loaded `<img>` elements with the same `src` + class + style from the old DOM into the new one, so portraits do not flicker or get re-decoded on every phase change (`.mc-o` / `.mc-i` are matched without style so the magic circle keeps spinning). Use `setHTML` / `replaceHTML` instead of `innerHTML` / `replaceWith` when redrawing anything with images (`redrawSvt`, `redrawLane`, `redrawRoster` do). Image URLs that failed once go into `IMG_BAD` and are skipped by `imgCandidates` from then on (so a missing `{id}_card.webp` is not re-requested on every render). Do not add `loading="lazy"` to these images (it causes a blank frame on each re-render). Events are delegated on `document` (`data-a` = game action, `data-ui` = UI action; the editor uses `data-act` / `data-p`). Do not attach listeners directly to elements.
 5. **Effects go through `FXQ`** (`fxEmit`/`say`), and `fx.js` plays them on `#fx`. Rule processing does not wait for effects to finish; only the CPU waits via `fxBusy()`.
    - Event types (`ev.t`): `say` (line bubble), `dmg` (damage number / "無効" text), `cutin` (ultimate), `phase` (banner over `.stage`; `big` for turn start / game end), `banner` (chain banners), `roll` (spinning pencil over a portrait, lands on `f`; shows `n` actions or the `cmd` card), `atk` (command card zooms to the stage center and flies to `tgt`), `pop` (text over a portrait, e.g. ascension), `skill` (panel over `.stage` with the skill name, user, picked target and one line per effect; emitted by `doSkill`). Any event may carry `w` to override the wait before the next one (e.g. `say(u,'attack',{w:250})` overlaps the bubble with the attack card). Helpers in engine.js: `say`, `phaseFx`, `rollFx`.
    - Pencil faces (`u.face`, the die / command badge on a portrait) are cleared for every unit in `endPhase` and at the start of `rollActs`, so a card never lingers into the next turn.
@@ -179,7 +183,7 @@ Chosen on the mode screen (`setRule`, plus `toggleHandicap`; both kept by `resta
 | I want to… | File / place |
 |---|---|
 | Add or tune a character (numbers / skills / lines) | `js/units.js` (or edit in the editor, export, and replace). `id` is half-width alphanumerics, `_`, `-`, unique. Cost ≤ `RULES.costCap` |
-| Add or change a rule variant (party size, crit method, win conditions) | `RULESETS` in `js/rules.js` → `ruleset()` checks in `engine.js` (`resolveCommand` crit, `npWinCheck`, `applyHandicap`, setup ACTIONS) → `critInfo` / `setupHTML` / `modeHTML` in `game-ui.js` |
+| Add or change a rule variant (party size, crit method, win conditions) | `RULESETS` in `js/rules.js` → `ruleset()` checks in `engine.js` (`resolveCommand` crit, `checkWin`, `applyHandicap`, setup ACTIONS) → `critInfo` / `setupHTML` / `modeHTML` in `game-ui.js` |
 | Balance numbers (NP amounts, chains, crit bonus, action-count table, etc.) | `RULES` and `CRIT_TABLE` in `js/rules.js` |
 | Change terminology / display names | `TERMS` in `js/rules.js` |
 | Add a class | `CLASS_ICONS` in `js/rules.js` (icons in `img/classes/`). Names not in the list also work and get `extra.webp` |

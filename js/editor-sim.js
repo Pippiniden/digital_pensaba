@@ -142,14 +142,12 @@ function simOneHTML(R,ud){
       <td class="num rate"><b>${simPct(p)}</b> <span class="sub small">±${simCi(p,g)}</span></td><td>${simBar(p)}</td>
       <td class="num">${r.win}-${r.lose}${r.draw?`-${r.draw}`:''}</td>
       <td class="num">${(r.turns/Math.max(1,g)).toFixed(1)}</td>
-      <td class="num">${r.win?simPct(r.npWin/r.win):'-'}</td><td class="num">${r.lose?simPct(r.npLose/r.lose):'-'}</td>
       <td class="num">${r.firstGames?simPct(r.firstWin/r.firstGames):'-'}</td>
       <td class="num">${Math.round(r.dealtA/Math.max(1,g))} / ${Math.round(r.dealtB/Math.max(1,g))}</td></tr>`;
   }).join('');
   return `<div class="simsums"><div class="simme"><b>${esc(me.name)}</b> <span class="sub small">C${me.cost} ・ HP${me.hp}</span><div class="sub small">%COND%</div></div>
       ${sum(same,'同コスト勝率',true)}${R.range==='all'?sum(all,'全体勝率',false):''}</div>
     <div class="simtbl"><table class="stats sim"><thead><tr><th>相手</th><th>勝率</th><th></th><th>勝-敗${R.pairs.some(r=>r.draw)?'-分':''}</th><th>平均ターン</th>
-      <th title="勝った試合のうち${TERMS.ult}発動（NP勝利）の割合">宝具で勝ち</th><th title="負けた試合のうち相手の${TERMS.ult}発動で負けた割合">宝具で負け</th>
       <th title="自分が先攻だった試合の勝率">先攻時勝率</th><th title="1試合あたりの与ダメージ / 被ダメージ">与 / 被ダメ</th></tr></thead>
       <tbody>${rows}</tbody></table></div>`;
 }

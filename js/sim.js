@@ -25,19 +25,19 @@ function simGame(picks,rule,handicap){
     if(G.log.length>400) G.log.length=0;
   }
   const asc=[0,1].map(p=>G.players[p].party[0].asc);
-  return { winner:G.phase==='over'?G.winner:null, turns:G.turn, np:G.winBy==='np', first, asc, dealt:G.dealt.slice(),
+  return { winner:G.phase==='over'?G.winner:null, turns:G.turn, first, asc, dealt:G.dealt.slice(),
     out0:G.players[0].party.map(u=>u.out) };
 }
 const simErr = (r,e)=>{ r.errors++; r.errMsg=r.errMsg||String(e&&e.message||e); };
 
 // シンプルルール：n試合を集計（a 視点）
 function simPair(a,b,n,handicap){
-  const r={a,b,n,win:0,lose:0,draw:0,turns:0,npWin:0,npLose:0,firstWin:0,firstGames:0,ascA:0,ascB:0,dealtA:0,dealtB:0,errors:0};
+  const r={a,b,n,win:0,lose:0,draw:0,turns:0,firstWin:0,firstGames:0,ascA:0,ascB:0,dealtA:0,dealtB:0,errors:0};
   for(let i=0;i<n;i++){
     let g;
     try{ g=simGame([[a],[b]],'simple',handicap); }catch(e){ simErr(r,e); continue; }
-    if(g.winner===0){ r.win++; if(g.np) r.npWin++; }
-    else if(g.winner===1){ r.lose++; if(g.np) r.npLose++; }
+    if(g.winner===0) r.win++;
+    else if(g.winner===1) r.lose++;
     else r.draw++;
     if(g.first===0){ r.firstGames++; if(g.winner===0) r.firstWin++; }
     r.turns+=g.turns; r.ascA+=g.asc[0]; r.ascB+=g.asc[1]; r.dealtA+=g.dealt[0]; r.dealtB+=g.dealt[1];

@@ -58,14 +58,13 @@ function critNeedD6(stars){ let n=0; CRIT_D6_TABLE.forEach(([s,v])=>{ if(stars>=
 
 // ---------- ルールの種類 ----------
 // team  : チームバトルルール（3on3・合計コスト10・クリティカルは1d100）
-// simple: シンプルルール（1on1・クリティカルは1d6・NP100%でターン開始を迎えると宝具発動で勝利）
-//         宝具はターン開始時の勝利判定でだけ発動する（スキルフェイズでは使えない）
+// simple: シンプルルール（1on1・クリティカルは1d6）。宝具はチームバトルと同じくスキルフェイズで使う
 //         handicapAsc：ハンデ戦ON のとき、この値以上のコスト差があれば低コスト側が最初から霊基再臨済み
 const RULESETS = {
-  team:  { name:'チームバトル', partyMax:3, crit:'d100', npWin:false,
+  team:  { name:'チームバトル', partyMax:3, crit:'d100',
     desc:'3騎まで・コスト合計10以下で編成する基本ルール。' },
-  simple:{ name:'シンプル', partyMax:1, crit:'d6', npWin:true, handicapAsc:2,
-    desc:`1騎どうしで戦う簡易ルール。${TERMS.gauge}100%で手番を迎えると${TERMS.ult}発動で勝利。` },
+  simple:{ name:'シンプル', partyMax:1, crit:'d6', handicapAsc:2,
+    desc:`1騎どうしで戦う簡易ルール。相手の${TERMS.unit}を${TERMS.out}にすれば勝利。` },
 };
 
 // 出目index(0-5)の行動回数
@@ -149,3 +148,11 @@ const TGT_BY_CTX = {
   special:['self','target','ally_all','enemy_all','master'],
 };
 const PICKS = { '':'選ばない', ally:'味方単体', enemy:'敵単体', any:'単体（敵味方）' };
+
+// ---------- 攻撃に付いた効果のタイミング（効果ごとの at） ----------
+// コマンド（特殊行動・Buster/Arts/Quick の付加効果）と宝具の効果で使う。スキルでは使わない
+//   pre ：攻撃の前に適用（例：防御無視・無敵貫通を付けてから攻撃する）
+//   post：攻撃の後に適用（例：攻撃してから自身の弱体を解除する）
+//   未指定：既定のタイミング … 特殊行動は攻撃前／通常コマンドは攻撃後／宝具は効果の並び順
+const EFF_AT = { pre:'攻撃前', post:'攻撃後' };
+const EFF_AT_DEFAULT = { W:'pre', cmd:'post', ult:'order' };

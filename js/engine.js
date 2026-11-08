@@ -12,7 +12,7 @@ reloadUnits();
 
 let G;
 function newGame(o={}){
-  G = { phase:'mode', mode:null, rule:o.rule||'team', handicap:o.handicap??true, winBy:null, cpu:[false,false], level:'normal', speed:700, seed:String(Math.random()),
+  G = { phase:'mode', mode:null, rule:o.rule||'team', handicap:o.handicap??true, cpu:[false,false], level:'normal', speed:700, seed:String(Math.random()),
     setupPid:0, picks:[[],[]], setupMsg:'',
     players:[{name:TERMS.player+'1',party:[],stars:0},{name:TERMS.player+'2',party:[],stars:0}],
     cur:0, turn:0, actRolled:false, maxActs:{}, alloc:{}, rolled:[], ult:null, target:null,
@@ -42,7 +42,6 @@ function rollFx(uid,f,o={}){ (o.keys||[]).forEach(k=>FXHIDE.add(k)); fxEmit({t:'
 // ---------- ヘルパー ----------
 const D = id=>UNITS.find(u=>u.id===id);
 const ruleset = ()=>RULESETS[G.rule]||RULESETS.team;
-const ultManual = ()=>!ruleset().npWin;  // スキルフェイズで宝具を使えるか（シンプルルールはターン開始時の勝利判定だけ）
 const keepRule = ()=>({rule:G.rule, handicap:G.handicap});
 const ALL = ()=>[...G.players[0].party,...G.players[1].party];
 const U = uid=>ALL().find(u=>u.uid===uid);
@@ -58,6 +57,8 @@ const nm = u=>`<span class="p${u.pid}">${dn(u)}</span>`;
 const log = (msg,cls='')=>G.log.push({msg,cls});
 const sumCost = ids=>ids.reduce((s,id)=>s+D(id).cost,0);
 const totalAlloc = ()=>Object.values(G.alloc).reduce((a,b)=>a+b,0);
+// 行動回数は必ず使い切る：割り振る合計は「最大行動回数の合計」と上限（actionsMax）の小さい方ちょうど
+const requiredAlloc = ()=>Math.min(RULES.actionsMax, Object.values(G.maxActs).reduce((a,b)=>a+b,0));
 const remainingRolls = ()=>Object.entries(G.alloc).reduce((s,[uid,n])=>U(uid).out?s:s+n-G.rolled.filter(r=>r.uid===uid).length,0);
 function makeUnit(pid,idx,id){ return {uid:`p${pid}u${idx}`,pid,idx,def:id,hp:D(id).hp,np:0,asc:false,out:false,used:[false,false,false],fx:[],face:null}; }
 // 宝具に「攻撃対象」を使う効果がない（全体宝具・補助宝具）なら、対象を選ばず敵全体が対象
@@ -223,6 +224,17 @@ function doCopy(uid,src){
   log(`${nm(u)}：${nm(src)}の鉛筆をロール 出目${f+1} → ${cmdChip(cmd)}`);
   G.copy=null;
 }
+// 攻撃に付いた効果を「攻撃前」と「攻撃後」に分ける（at が未指定なら def＝既定のタイミング）
+function splitEffs(effs,def){
+  const pre=[], post=[];
+  (effs||[]).forEach(e=>((e.at||def)==='pre'?pre:post).push(e));
+  return [pre,post];
+}
+// 宝具の効果の適用順：攻撃前 → 並び順（ダメージと未指定の効果） → 攻撃後
+function ultEffOrder(effs){
+  const at=e=>e.k==='dmg'?'':e.at||'';
+  return [...effs.filter(e=>at(e)==='pre'), ...effs.filter(e=>!at(e)), ...effs.filter(e=>at(e)==='post')];
+}
 function resolveCommand(att,cmd,tgt,o={}){
   const n=nm(att);
   const atkFx=to=>fxEmit({t:'atk',uid:att.uid,tgt:to,cmd,ri:o.ri,extra:!!o.extra});
@@ -234,13 +246,14 @@ function resolveCommand(att,cmd,tgt,o={}){
     rollFx(src.uid,r.f,{cmd:r.cmd,def:src.def});
     return resolveCommand(att,r.cmd,tgt,o);
   }
+  // 付加効果のタイミング：既定は特殊行動＝攻撃前、通常コマンド＝攻撃後（効果ごとの at で変えられる）
+  const [preE,postE]=splitEffs(cmd.eff,EFF_AT_DEFAULT[cmd.c==='W'?'W':'cmd']);
   if(cmd.c==='W'){
     log(`${n}：特殊行動「${esc(cmd.label)}」${cmd.from?`（${esc(cmd.from)}）`:''}`);
-    if(!(cmd.dmg>0)) atkFx(null);
-    applyEffects(att,cmd.eff||[],null);
-    if(!(cmd.dmg>0)){ gainNpStar(att,cmd,1); return; }
+    if(!(cmd.dmg>0)){ atkFx(null); applyEffects(att,[...preE,...postE],null); gainNpStar(att,cmd,1); return; }
     // ダメージを持つ特殊行動は無属性の攻撃として続けて処理する（チェインには数えない）
   }
+  applyEffects(att,preE,null); // 攻撃前の効果（防御無視・無敵貫通などを付けてから攻撃）
   say(att,(o.extra&&(D(att.def).lines.extra||[]).length)?'extra':'attack',{w:250}); // 吹き出しと攻撃カードを重ねて見せる（エクストラ用が空なら通常の攻撃セリフ）
   atkFx(tgt.uid); // 戦闘不能の相手にも（オーバーキル）カードを飛ばす
   let dmg=cmd.dmg; const note=[`基本${dmg}`]; let usedA=[], usedT=[], colorBuff=0;
@@ -293,15 +306,15 @@ function resolveCommand(att,cmd,tgt,o={}){
     if(p.sum){ addNp(att,p.sum); log(`${n} 攻撃時効果：${TERMS.gauge}+${p.sum}%`,'sub'); }
     consume(att,[...s.list,...p.list]);
   }
-  // コマンドに付いた効果（例：自身の弱体解除）。攻撃のあとに適用
-  if(cmd.c!=='W'&&cmd.eff&&cmd.eff.length) applyEffects(att,cmd.eff,null); // 特殊行動の効果は冒頭で適用済み
+  // 攻撃後の効果（例：自身の弱体解除）
+  applyEffects(att,postE,null);
 }
 function resolveUlt(u,tgt){
   const ud=D(u.def).ult;
   log(`${nm(u)}の${TERMS.ult}「${esc(ud.name)}」！`,'good');
   fxEmit({t:'cutin',uid:u.uid,title:ud.name,ruby:ud.ruby,col:ud.c});
   say(u,'np');
-  for(const e of ud.eff){
+  for(const e of ultEffOrder(ud.eff)){
     if(e.k!=='dmg'){ applyEffects(u,[e],null); continue; }
     const ts = e.t==='enemy_all' ? alive(1-u.pid) : [tgt].filter(x=>x&&!x.out);
     const usedA=new Set();
@@ -376,25 +389,6 @@ function applyHandicap(){
   log(`ハンデ戦：コスト差${diff}のため ${esc(G.players[low].name)} は${TERMS.ascFull}済みで開始`,'h');
   G.players[low].party.forEach(ascend);
 }
-// シンプルルール：NP100%で自分の手番を迎えたら宝具発動で勝利
-function npWinCheck(){
-  if(!ruleset().npWin) return;
-  for(const u of alive(G.cur)){
-    if(u.np<RULES.ultCost) continue;
-    if(!canUlt(u)){ log(`${nm(u)}は${TERMS.gauge}${RULES.ultCost}%だが、${TERMS.ult}を発動できない`,'bad'); continue; }
-    const ud=D(u.def).ult;
-    log(`${nm(u)}：${TERMS.gauge}${RULES.ultCost}%で手番開始 → ${TERMS.ult}「${esc(ud.name)}」発動！`,'good');
-    fxEmit({t:'cutin',uid:u.uid,title:ud.name,ruby:ud.ruby,col:ud.c});
-    say(u,'np');
-    // 演出上、宝具の威力に関わらず相手のHPを0にする（ガッツ・無敵なども無視）
-    alive(1-G.cur).forEach(t=>{
-      fxEmit({t:'dmg',uid:t.uid,v:fmt(t.hp),np:true,hp0:t.hp,hp:0,out:true});
-      G.dealt[G.cur]+=t.hp; retreat(t);
-    });
-    flushKo();
-    G.winBy='np'; win(G.cur); return;
-  }
-}
 function beginTurn(){
   Object.assign(G,{phase:'actRoll',actRolled:false,maxActs:{},alloc:{},rolled:[],ult:null,target:null,targetAll:false,gen:0,pending:null,copy:null});
   log(`━ ターン${G.turn}：${esc(G.players[G.cur].name)} ━`,'h');
@@ -405,7 +399,6 @@ function beginTurn(){
     const ex=u.fx.filter(e=>e.turns!=null&&e.turns<=0);
     if(ex.length){ u.fx=u.fx.filter(e=>!ex.includes(e)); log(`${nm(u)}の ${ex.map(e=>FX[e.k].name).join('・')} が終了`,'sub'); }
   });
-  npWinCheck();
 }
 function endPhase(){
   log('⑦ 終了フェイズ','h');
@@ -432,7 +425,7 @@ function checkWin(){
   if(alive(1-G.cur).length===0) win(G.cur);      // 同時全滅は手番側の勝ち
   else if(alive(G.cur).length===0) win(1-G.cur);
 }
-function win(pid){ G.winner=pid; G.phase='over'; log(`${esc(G.players[pid].name)} の勝利！${G.winBy==='np'?`（${TERMS.ult}発動）`:''}`,'good');
+function win(pid){ G.winner=pid; G.phase='over'; log(`${esc(G.players[pid].name)} の勝利！`,'good');
   phaseFx(G.mode==='cpu'?(pid===0?'VICTORY':'DEFEAT'):'WINNER',G.mode==='cpu'?'':`${G.players[pid].name}の勝利`,{big:true,pid,end:true}); const w=alive(pid)[0]; if(w) say(w,'win'); }
 function applyMode(cfg){
   Object.assign(G,{mode:cfg.mode, level:cfg.level, cpu:cfg.cpu, speed:cfg.speed||G.speed, phase:'setup'});
@@ -497,23 +490,29 @@ const ACTIONS = {
     }
     G.picks[G.setupPid]=best; G.setupMsg='';
   },
-  setupCpu(){
-    const pid=G.setupPid;
-    if(G.level==='easy'){ ACTIONS.setupRandom(); return; }
+  // CPUのおまかせ編成。how='random'：完全ランダム（setupRandom と同じ） / how='same'：相手と同じコストになるように選ぶ
+  setupCpu({how}={}){
+    if(G.phase!=='setup') return;
+    const pid=G.setupPid; G.setupMsg='';
+    if(how==='random'){ ACTIONS.setupRandom(); return; }
+    const opp=G.picks[1-pid], pick=a=>a[Math.floor(Math.random()*a.length)];
     if(ruleset().partyMax===1){ // 1騎のルール：相手と同じ（なければ一番近い）コストからランダム
-      const opp=G.picks[1-pid][0], want=opp?D(opp).cost:Math.max(...UNITS.map(d=>d.cost));
+      const want=opp.length?D(opp[0]).cost:Math.max(...UNITS.map(d=>d.cost));
       const gap=Math.min(...UNITS.map(d=>Math.abs(d.cost-want))), c=UNITS.filter(d=>Math.abs(d.cost-want)===gap);
-      G.picks[pid]=[c[Math.floor(Math.random()*c.length)].id]; return;
+      G.picks[pid]=[pick(c).id]; return;
     }
-    // コスト合計が最大になる3体の組み合わせからランダム（HPが高い順に1st）
-    const combos=[];
-    for(let i=0;i<UNITS.length;i++) for(let j=i+1;j<UNITS.length;j++) for(let k=j+1;k<UNITS.length;k++){
-      const ids=[UNITS[i].id,UNITS[j].id,UNITS[k].id], c=sumCost(ids);
-      if(c<=RULES.costCap) combos.push({ids,c});
-    }
+    // チーム：相手と合計コストが同じ（なければ一番近い）編成からランダム。人数も相手に合わせ、相手が未編成ならコスト最大の3騎
+    const combos=[], max=ruleset().partyMax;
+    const rec=(start,ids,c)=>{ if(ids.length) combos.push({ids,c}); if(ids.length>=max) return;
+      for(let i=start;i<UNITS.length;i++){ const c2=c+UNITS[i].cost; if(c2<=RULES.costCap) rec(i+1,[...ids,UNITS[i].id],c2); } };
+    rec(0,[],0);
     if(!combos.length){ ACTIONS.setupRandom(); return; }
-    const max=Math.max(...combos.map(x=>x.c)), top=combos.filter(x=>x.c===max);
-    G.picks[pid]=top[Math.floor(Math.random()*top.length)].ids.sort((a,b)=>D(b).hp-D(a).hp);
+    const size=opp.length||Math.max(...combos.map(x=>x.ids.length));
+    const sized=combos.filter(x=>x.ids.length===size), pool=sized.length?sized:combos;
+    const want=opp.length?sumCost(opp):Math.max(...pool.map(x=>x.c));
+    const gap=Math.min(...pool.map(x=>Math.abs(x.c-want))), top=pool.filter(x=>Math.abs(x.c-want)===gap);
+    G.picks[pid]=pick(top).ids.sort((a,b)=>D(b).hp-D(a).hp); // HPが高い順に1st
+    if(gap) G.setupMsg=`合計コスト${want}の編成が作れないため、いちばん近いコスト${top[0].c}で編成しました`;
   },
   setupConfirm(){
     if(!G.picks[G.setupPid].length) return;
@@ -548,13 +547,17 @@ const ACTIONS = {
   setAlloc({alloc}){
     if(G.phase!=='actRoll'||!G.actRolled) return;
     const a=JSON.parse(alloc); let tot=0, ok=true;
-    for(const [uid,n] of Object.entries(a)){ if(n<0||n>(G.maxActs[uid]||0)) ok=false; tot+=n; }
-    if(ok && tot<=RULES.actionsMax) G.alloc=a;
-    const txt=Object.entries(G.alloc).filter(([,n])=>n).map(([uid,n])=>`${dn(U(uid))}×${n}`).join('、');
-    log(`配分：${txt||'なし'}`,'sub');
+    for(const [uid,n] of Object.entries(a)){ if(!Number.isInteger(n)||n<0||n>(G.maxActs[uid]||0)) ok=false; tot+=n; }
+    if(!ok || tot!==requiredAlloc()) return; // 使い切っていない配分は受け付けない
+    G.alloc=a;
     ACTIONS.confirmAlloc();
   },
-  confirmAlloc(){ if(G.phase==='actRoll'&&G.actRolled){ G.phase='skill'; log(`③ スキル・${TERMS.ult}使用`,'h'); phaseFx('SKILL',`スキル・${TERMS.ult}`); } },
+  confirmAlloc(){
+    if(G.phase!=='actRoll'||!G.actRolled||totalAlloc()!==requiredAlloc()) return;
+    const txt=Object.entries(G.alloc).filter(([,n])=>n).map(([uid,n])=>`${dn(U(uid))}×${n}`).join('、');
+    log(`配分：${txt||'なし'}`,'sub');
+    G.phase='skill'; log(`③ スキル・${TERMS.ult}使用`,'h'); phaseFx('SKILL',`スキル・${TERMS.ult}`);
+  },
   useSkill({uid,si}){
     si=Number(si); const u=U(uid), s=D(u.def).skills[si];
     if(G.phase!=='skill'||G.pending||u.pid!==G.cur||!canSkill(u)||u.used[si]||(si===2&&!u.asc)) return;
@@ -564,7 +567,7 @@ const ACTIONS = {
   cancelPick(){ G.pending=null; },
   useUlt({uid}){
     const u=U(uid);
-    if(G.phase!=='skill'||G.pending||G.ult||!ultManual()||u.pid!==G.cur||!canUlt(u)||u.np<RULES.ultCost) return;
+    if(G.phase!=='skill'||G.pending||G.ult||u.pid!==G.cur||!canUlt(u)||u.np<RULES.ultCost) return;
     G.ult=uid; u.np=0;
     log(`${nm(u)}が${TERMS.ult}「${esc(D(u.def).ult.name)}」を使用（このターンの行動になります）`,'good');
   },
