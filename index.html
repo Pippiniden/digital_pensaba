@@ -15,11 +15,14 @@
 <header>
   <h1>PENCIL DUEL</h1><span id="hinfo"></span>
   <span class="grow"></span>
-  <button id="logbtn" data-ui="toggleLog" hidden>バトルログ</button>
-  <button id="autobtn" data-ui="toggleAuto" hidden title="選ぶ余地のない操作（ロール・決定だけのボタン）を自動で進めます">オート：OFF</button>
-  <button id="spd" data-a="toggleSpeed" hidden></button>
-  <a class="btn" href="editor.html">ペンシルエディタ</a>
-  <button data-a="restart">最初から</button>
+  <button id="menubtn" data-ui="toggleMenu" title="メニュー" aria-label="メニュー" aria-controls="menu" aria-expanded="false"><i></i><i></i><i></i></button>
+  <nav id="menu">
+    <button id="logbtn" data-ui="toggleLog" hidden>バトルログ</button>
+    <button id="autobtn" data-ui="toggleAuto" hidden title="選ぶ余地のない操作（ロール・決定だけのボタン）を自動で進めます">オート：OFF</button>
+    <button id="spd" data-a="toggleSpeed" hidden></button>
+    <a class="btn" href="editor.html">ペンシルエディタ</a>
+    <button data-a="restart">最初から</button>
+  </nav>
 </header>
 <div id="app"></div>
 <div id="fx" aria-hidden="true"></div>

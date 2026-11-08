@@ -37,6 +37,7 @@ body[data-screen="battle"] #app{overflow:auto}
 .stars{font-size:12px;color:var(--gold-hi);padding:0 10px;border:1px solid var(--gold-lo);border-radius:999px;background:rgba(6,13,34,.6)}
 .stars b{font-size:14px}
 .svts{flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.svts.solo{grid-template-columns:minmax(0,440px);justify-content:center} /* 1騎だけのルール：中央に置く */
 
 .svt{position:relative;min-height:0;display:grid;grid-template-columns:clamp(80px,34%,150px) minmax(0,1fr);gap:8px;padding:6px;border-radius:6px;border:1px solid var(--gold);
   background:linear-gradient(160deg,#16295a,var(--panel) 45%,var(--panel2));box-shadow:var(--frame),var(--shadow);transition:box-shadow .15s,transform .15s}
@@ -336,6 +337,21 @@ body[data-screen="battle"] #app{overflow:auto}
 /* オートボタン */
 #autobtn.on{color:#1a1206;font-weight:700;border-color:var(--gold-hi);background:linear-gradient(180deg,var(--gold-hi),var(--gold))}
 
+/* 拡大ウィンドウの操作ボタン */
+.udops .sks{grid-template-columns:repeat(4,minmax(0,1fr))}
+.udops .sk{padding:5px 8px;font-size:12px}
+/* 効果の数（スマホの簡易表示だけで出す） */
+.pfx{display:none;position:absolute;right:4px;bottom:4px;z-index:2;gap:2px;font-size:10px}
+.pfx b{padding:0 4px;border-radius:2px;background:rgba(6,13,34,.85);border:1px solid currentColor}
+
+/* ヘッダーのメニュー：広い画面は横並び、狭い画面はハンバーガーで折りたたむ */
+#menu{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#menubtn{display:none;width:38px;height:34px;padding:0;flex-direction:column;justify-content:center;gap:4px}
+#menubtn i{display:block;width:18px;height:2px;background:var(--gold-hi);border-radius:1px;transition:transform .15s,opacity .15s}
+.menuopen #menubtn i:nth-child(1){transform:translateY(6px) rotate(45deg)}
+.menuopen #menubtn i:nth-child(2){opacity:0}
+.menuopen #menubtn i:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
+
 /* ---------- 狭い画面：縦に並べてスクロール ---------- */
 @media (max-width:1100px){
   .battle,.battle.nolog{grid-template-columns:minmax(0,1fr)}
@@ -358,4 +374,50 @@ body[data-screen="battle"] #app{overflow:auto}
   .lane{min-width:0}
   .steps{margin-left:0}
   .sethead{grid-template-columns:1fr}
+}
+/* ---------- スマホ：ユニットはカード・HP・NPだけ。スキルや効果は拡大（i）ウィンドウで ---------- */
+@media (max-width:860px){
+  #menubtn{display:inline-flex}
+  #menu{display:none;position:absolute;top:100%;right:8px;z-index:30;flex-direction:column;align-items:stretch;gap:6px;min-width:200px;padding:10px;
+    border:1px solid var(--gold);border-radius:6px;background:linear-gradient(180deg,#152a5e,#0a1636);box-shadow:0 10px 24px rgba(0,0,0,.6)}
+  .menuopen #menu{display:flex}
+  #menu>*{justify-content:center}
+  #menu [hidden]{display:none}
+  header{padding:8px 12px;flex-wrap:nowrap;gap:8px}
+  header h1{font-size:16px;flex:none}
+  #hinfo{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11.5px}
+  .svts.solo{grid-template-columns:minmax(0,140px)}
+
+  .field{gap:6px;padding:8px}
+  .svts{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+  .svt{min-height:0;grid-template-columns:1fr;gap:4px;padding:4px}
+  .portrait{aspect-ratio:1}
+  .pcls{width:20px;height:20px}
+  .pasc{top:26px}
+  .pout{font-size:14px;letter-spacing:.1em}
+  .pfx{display:flex}
+  .proll .ccard{width:44px}
+  .sname b{font-size:11px}
+  .info{width:24px;height:24px}
+  /* HP・NP はバーの上に文字を重ねて1行に */
+  .gauge{position:relative;display:block}
+  .gauge .bar{height:14px}
+  .gauge>span,.gauge>b{position:absolute;top:0;z-index:1;line-height:14px;text-shadow:0 1px 2px #000,0 0 3px #000}
+  .gauge>span{left:4px;font-size:9px;color:#fff}
+  .gauge>b{right:4px;min-width:0;font-size:10.5px}
+  .gauge>b small{color:#dfe6f5}
+  .svt .fxs,.svt .sks{display:none}
+  .ctl{flex-wrap:wrap;gap:4px;font-size:11px}
+  .ctl .primary{padding:2px 8px;font-size:12px}
+  .sidebar{font-size:13px}
+  .stage{padding:6px 10px 8px}
+  .stagetop{gap:4px 10px;margin-bottom:4px}
+  .steps span{font-size:9.5px;padding:1px 6px}
+  .stagebody{gap:6px}
+  .prompt p{font-size:12px;margin-bottom:4px}
+  .lane{height:auto;min-height:100px;gap:6px}
+  .lane .it,.lane .ccard{width:64px}
+  .critbox{justify-self:center;flex-direction:row;gap:8px;min-width:0;padding:3px 10px}
+  .critbox b{font-size:16px}
+  .udops .sks{grid-template-columns:1fr 1fr}
 }

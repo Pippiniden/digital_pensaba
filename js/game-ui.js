@@ -6,7 +6,7 @@
    - 画面だけの状態（詳細ウィンドウ・ログの開閉など）は UI に持ち、G には入れない
    ===================================================================== */
 
-const UI = { result:false, resultShown:false, detail:null, setupView:null, log:readLogPref(), auto:readPref('pencilduel.auto')==='1' };
+const UI = { menu:false, result:false, resultShown:false, detail:null, setupView:null, log:readLogPref(), auto:readPref('pencilduel.auto')==='1' };
 function readPref(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
 function savePref(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
 function readLogPref(){
@@ -63,12 +63,15 @@ function svtHTML(u){
   const acting=G.ult?G.ult===u.uid:(G.alloc[u.uid]||0)>0;
   const cls=['svt',sh.out?'out':'',pickable?'pickable':'',G.target===u.uid&&!sh.out?'targeted':'',acting&&u.pid===G.cur?'acting':''].join(' ');
   const fx=u.fx.map(e=>`<span class="chip fx ${FX[e.k].buff?'buff':'debuff'}">${fxText(e)}</span>`).join('');
+  // スマホの簡易表示用：効果の数（強化▲・弱体▼）。中身は拡大ウィンドウで見る
+  const nb=u.fx.filter(e=>FX[e.k].buff===true).length, nd=u.fx.filter(e=>FX[e.k].buff===false).length;
+  const pfx=nb||nd?`<span class="pfx">${nb?`<b class="buff">▲${nb}</b>`:''}${nd?`<b class="debuff">▼${nd}</b>`:''}</span>`:'';
   return `<div class="${cls}${allocable?' allocable':''}" data-uid="${u.uid}" ${allocable?`data-a="alloc" data-d="1" title="クリックで行動を1回追加"`:pickable?`data-a="cardClick"`:''}>
     <div class="portrait">${unitImg(d,'face','pimg',d.name)}
       ${clsIconTag(d.cls,'pcls')}<span class="pord">${ORD[u.idx]}</span>
       ${u.asc?`<span class="pasc">${TERMS.asc}</span>`:''}
       ${sh.out?`<span class="pout">${TERMS.out}</span>`:''}
-      ${rollBadge(u,d)}
+      ${pfx}${rollBadge(u,d)}
     </div>
     <div class="sinfo">
       <div class="sname"><b title="${esc(d.name)}">${esc(d.name)}</b><button class="info" data-ui="detail" data-uid="${u.uid}" title="詳細を見る">i</button></div>
@@ -84,7 +87,7 @@ function sideHTML(pid,pos){
   const P=G.players[pid], turn=pid===G.cur&&G.phase!=='over';
   return `<section class="side ${pos} ${turn?'turn':''}">
     <div class="sidebar"><b class="p${pid}">${esc(P.name)}</b>${turn?'<span class="turnbadge">手番</span>':''}<span class="grow"></span><span class="stars" title="${TERMS.star}">★ <b>${P.stars}</b></span></div>
-    <div class="svts">${P.party.map(svtHTML).join('')}</div>
+    <div class="svts ${P.party.length===1?'solo':''}">${P.party.map(svtHTML).join('')}</div>
   </section>`;
 }
 
@@ -204,6 +207,7 @@ function unitDetailHTML(d,u){
       </div>
     </div>
     ${fx}
+    ${u?`<h4>操作</h4><div class="udops">${skillBtns(u,d)}</div>`:''}
     <h4>スキル・${TERMS.ult}</h4>${skillListHTML(d)}
     <h4>鉛筆の面</h4>${facesTableHTML(d)}
   </div>`;
@@ -309,6 +313,8 @@ function render(){
   lb.hidden=screen!=='battle'||UI.log;
   ab.hidden=screen!=='battle';
   ab.textContent=`オート：${UI.auto?'ON':'OFF'}`; ab.classList.toggle('on',UI.auto);
+  document.body.classList.toggle('menuopen',UI.menu);
+  document.querySelector('#menubtn').setAttribute('aria-expanded',UI.menu?'true':'false');
   if(screen==='mode'){ app.innerHTML=modeHTML(); hinfo.textContent=''; }
   else if(screen==='setup'){ app.innerHTML=setupHTML(); hinfo.textContent=ruleset().partyMax===1?`${ruleset().name}ルール ・ ${TERMS.unit}選択`:'パーティ編成'; }
   else {
@@ -368,10 +374,15 @@ function uiAct(a,ds){
     case 'closeResult': UI.result=false; break;
     case 'toggleLog': UI.log=!UI.log; savePref('pencilduel.logOpen',UI.log?'1':'0'); break;
     case 'toggleAuto': UI.auto=!UI.auto; savePref('pencilduel.auto',UI.auto?'1':'0'); break;
+    case 'toggleMenu': UI.menu=!UI.menu; break;
   }
   render();
 }
 document.addEventListener('click',e=>{
+  // メニュー（ハンバーガー）：中のボタンを押したとき・外側を押したときは閉じる
+  if(UI.menu&&!e.target.closest('#menubtn')){ UI.menu=false; document.body.classList.remove('menuopen'); document.querySelector('#menubtn').setAttribute('aria-expanded','false'); }
+  // 拡大ウィンドウの中でスキル・宝具を使ったら、盤面で結果（や対象選択）を見られるよう閉じる
+  if(UI.detail&&e.target.closest('.udops [data-a]')) UI.detail=null;
   const u=e.target.closest('[data-ui]');
   if(u){ uiAct(u.dataset.ui,u.dataset); return; }
   const b=e.target.closest('[data-a]'); if(!b||b.disabled) return;

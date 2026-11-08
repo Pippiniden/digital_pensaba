@@ -384,7 +384,12 @@ function npWinCheck(){
     log(`${nm(u)}：${TERMS.gauge}${RULES.ultCost}%で手番開始 → ${TERMS.ult}「${esc(ud.name)}」発動！`,'good');
     fxEmit({t:'cutin',uid:u.uid,title:ud.name,col:ud.c});
     say(u,'np');
-    alive(1-G.cur).forEach(t=>say(t,'npDamage'));
+    // 演出上、宝具の威力に関わらず相手のHPを0にする（ガッツ・無敵なども無視）
+    alive(1-G.cur).forEach(t=>{
+      fxEmit({t:'dmg',uid:t.uid,v:fmt(t.hp),np:true,hp0:t.hp,hp:0,out:true});
+      G.dealt[G.cur]+=t.hp; retreat(t);
+    });
+    flushKo();
     G.winBy='np'; win(G.cur); return;
   }
 }

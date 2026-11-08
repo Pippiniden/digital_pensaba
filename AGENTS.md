@@ -14,7 +14,7 @@ It was written from the code (`js/*.js`). If you find a mismatch, the code is th
 
 | Path | Role |
 |---|---|
-| `index.html` | Game page shell. Only has `#app` (render target) and `#fx` (effects layer) |
+| `index.html` | Game page shell. `#app` (render target), `#fx` (effects layer), and the header whose buttons live in `#menu` (collapsed behind `#menubtn` ☰ at ≤860px; open state is `UI.menu` → `body.menuopen`) |
 | `editor.html` | Editor page shell. Three columns: `#list` `#form` `#side` |
 | `js/rules.js` | **Rule definitions**: terms `TERMS`, numbers `RULES`, effect kinds `FX`, targets `TARGETS`, line kinds `LINE_KEYS`, classes, image settings |
 | `js/units.js` | **Default character data** `DEFAULT_UNITS` (same format the editor's "export units.js" produces) |
@@ -124,7 +124,7 @@ Damage over time (`endPhase`): ignores atk/def, invul, evade and crits; blocked 
 Chosen on the mode screen (`setRule`, plus `toggleHandicap`; both kept by `restart`/`rematch` via `keepRule()`). Same flow as the team rule, with:
 - 1 servant per side (picking another replaces it); the normal CPU picks the same (or nearest) cost as the opponent.
 - Critical: if the player holds stars, roll 1d6; success when roll − `critRoll` ≤ `critNeedD6(stars)` (1–6★: 2, 7–13: 3, 14–29: 5, 30+: certain). Effects of a success are the same as the team rule.
-- NP win: `npWinCheck()` at the end of `beginTurn` — if the turn player's servant has NP ≥ 100 and `canUlt`, its ultimate fires (cut-in) and that player wins (`G.winBy='np'`). The ultimate **cannot be used manually** in the skill phase (`ultManual()` is false; UI, auto-advance and CPU respect it).
+- NP win: `npWinCheck()` at the end of `beginTurn` — if the turn player's servant has NP ≥ 100 and `canUlt`, its ultimate fires (cut-in), every enemy servant's HP is set to 0 regardless of the ultimate's power (presentation only; ignores guts/invul), and that player wins (`G.winBy='np'`). The ultimate **cannot be used manually** in the skill phase (`ultManual()` is false; UI, auto-advance and CPU respect it).
 - Handicap (`G.handicap`, default ON): `applyHandicap()` in `startGame` ascends the lower-cost side when the cost gap ≥ `handicapAsc`. The rule's optional "3+ cost gap → NP / attack bonus" is not implemented.
 
 ### 5.3 Effect kinds that need special handling (`FX` in rules.js)
@@ -183,7 +183,7 @@ Chosen on the mode screen (`setRule`, plus `toggleHandicap`; both kept by `resta
 | Damage calculation / crits / chains | `resolveCommand` (normal), `resolveUlt` (ultimate), `resolveDamage` (chains), shared modifiers in `dmgMods` in `engine.js`. The CPU's estimate `estDamage` (cpu.js) reuses `dmgMods` |
 | Add a new ACTION (operation) | Add it to `ACTIONS` in `engine.js` → a button with `data-a="name"` in the UI → `cpuDecide` if the CPU uses it. To accept it after the game is decided, add it to the allow-list inside `act()` in `engine.js`; to let it be pressed during the CPU's turn, add it to `FREE_ACTIONS` in `game-ui.js` (two lists with different purposes) |
 | Make the CPU smarter / weaker | `js/cpu.js` (`level` is `'easy'` / `'normal'`; `easy` uses the deterministic pseudo-random `rnd01`) |
-| Game screen layout / look | `js/game-ui.js` (HTML generation) + `css/game.css` |
+| Game screen layout / look | `js/game-ui.js` (HTML generation) + `css/game.css`. At ≤860px (last `@media` block in game.css) servant cards show only portrait, name, HP and NP; skills/effects are hidden and reached through the ⓘ detail modal, which also holds the usable skill/ultimate buttons (`.udops`; using one closes the modal). `.pfx` shows the buff/debuff counts on the portrait there |
 | Effects (bubbles, numbers, cut-in, phase banners, roll, attack card) | Emit from `engine.js` (`fxEmit` / `say` / `phaseFx` / `rollFx`), play in `fxPlay` in `js/fx.js`; wait times in `FX_WAIT`; CSS in the "演出" section of `game.css` |
 | Auto-advance rules | `autoMove` / `hasSkillChoice` in `js/game-ui.js` |
 | Command card look / shared assets | `cmdCardHTML` / `cardLayers` in `common.js`; asset paths in `CARD_LAYERS` in `rules.js` |
