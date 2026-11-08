@@ -162,11 +162,11 @@ body[data-screen="battle"] #app{overflow:auto}
 .rturn{margin:0 0 12px}
 .rsides{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;text-align:left}
 .rside{padding:8px;border:1px solid rgba(246,227,161,.25);border-radius:4px;background:rgba(6,13,34,.5)}
-.rside.win{border-color:var(--gold-hi);box-shadow:0 0 14px rgba(246,227,161,.35)}
+.rside.rwin{border-color:var(--gold-hi);box-shadow:0 0 14px rgba(246,227,161,.35)}
 .rside h4{margin:0 0 6px;display:flex;justify-content:space-between;align-items:center}
 .rside h4 em{font:700 11px var(--serif);color:var(--gold-hi);letter-spacing:.15em}
 .rrow{display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:6px;align-items:center;margin-bottom:4px;font-size:13px}
-.rrow .pimg{width:36px;height:36px;object-fit:cover;border-radius:3px}
+.rrow .pimg{position:static;inset:auto;width:36px;height:36px;object-fit:cover;border-radius:3px}
 .rrow b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rrow.out{opacity:.5}
 .rrow.out span{color:#ff8a80}

@@ -217,7 +217,7 @@ function resultHTML(){
   const side=pid=>{ const P=G.players[pid];
     const rows=P.party.map(u=>{ const d=D(u.def);
       return `<div class="rrow ${u.out?'out':''}">${unitImg(d,'face','pimg',d.name)}<b>${esc(d.name)}</b><span>${u.out?TERMS.out:`HP ${fmt(u.hp)}<small>/${d.hp}</small>`}</span></div>`; }).join('');
-    return `<div class="rside ${pid===w?'win':''}"><h4><span class="p${pid}">${esc(P.name)}</span>${pid===w?'<em>WIN</em>':''}</h4>${rows}
+    return `<div class="rside ${pid===w?'rwin':''}"><h4><span class="p${pid}">${esc(P.name)}</span>${pid===w?'<em>WIN</em>':''}</h4>${rows}
       <p class="sub small">与えたダメージ合計 <b>${fmt(G.dealt[pid])}</b></p></div>`; };
   return `<div class="modal result"><div class="mback"></div>
     <div class="mbody"><h2 class="rtitle ${w===0?'p0':'p1'}">${title}</h2><p class="rsub">${sub}</p>
