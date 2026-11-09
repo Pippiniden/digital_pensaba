@@ -166,7 +166,7 @@ function renderList(){
 
 // ---------- マスターの編集（マスタールール・マスターチーム用） ----------
 function newMaster(){
-  return { id:uniqueId('master'), name:'新しいマスター', cls:TERMS.player, cost:2, hp:120, master:true, fit:normFit(), lines:Object.fromEntries(Object.keys(LINE_KEYS).map(k=>[k,[]])),
+  return { id:uniqueId('master'), name:'新しいマスター', cls:TERMS.player, cost:2, hp:120, master:true, fit:normFit(), lines:Object.fromEntries(Object.keys(MASTER_LINE_KEYS).map(k=>[k,[]])),
     faces:[ {label:'無',eff:[]}, {label:'強化魔術',eff:[{k:'atk',t:'svt',v:20}]}, {label:'治癒魔術',eff:[{k:'heal',t:'svt',v:80}]},
             {label:'無',eff:[]}, {label:'魔力供給',eff:[{k:'np',t:'svt',v:20}]}, {label:'魔弾',eff:[{k:'dmg',t:'enemy_master',v:40}]} ],
     spells:[ {name:'令呪：宝具解放',eff:[{k:'np',t:'svt',v:100}]}, {name:'令呪：回復',eff:[{k:'heal',t:'svt',v:200}]}, {name:'令呪：強化',eff:[{k:'atk',t:'svt',v:30,turns:3}]} ] };
@@ -202,8 +202,15 @@ function renderMasterForm(el){
       <span class="die">${i+1}</span>
       <div class="mfbody"><input data-p="faces.${i}.label" value="${esc(f.label)}" placeholder="面の名前（効果がなければ「無」）">
         ${effList(`faces.${i}.eff`,f.eff,'master')}
-        <div class="preview mprev" data-prev="mface" data-i="${i}">${esc(mFaceText(f))}</div></div>
+        <div class="preview mprev" data-prev="mface" data-i="${i}">${esc(mFaceText(f))}</div>
+        ${ownLineIn(`faces.${i}.line`,f.line,MASTER_LINE_KEYS.support)}</div>
     </div>`).join('')}</div>
+  </section>
+  <section class="sec"><h2>セリフ</h2>
+    <p class="sub small nm">1行に1つずつ書きます。複数あるときは、その場面でランダムに1つを${TERMS.player}の帯から吹き出しで表示します。補助の面・令呪ごとの専用セリフは、各項目の欄で設定できます（空ならここのセリフ）。</p>
+    <div class="lineed">${Object.entries(MASTER_LINE_KEYS).map(([k,lab])=>`<label class="linefield">
+      <span class="linelab">${lab}<span class="sub small" data-linecount="${k}">${m.lines[k].length}件</span></span>
+      <textarea data-p="lines.${k}" data-t="lines" rows="${Math.max(2,m.lines[k].length)}" placeholder="${esc(lab)}のセリフ">${esc(m.lines[k].join(String.fromCharCode(10)))}</textarea></label>`).join('')}</div>
   </section>
   <section class="sec"><h2>令呪</h2>
     <p class="sub small nm">マスタールールは1試合1回・3つから1つ。マスターチームは3画で、同じ効果は1回まで（使うと行動回数-1）。マスターチームでは「自軍${TERMS.unit}」の効果は選んだ1騎にかかります。</p>
@@ -212,6 +219,7 @@ function renderMasterForm(el){
       <div class="fields"><label>名前<input data-p="spells.${i}.name" value="${esc(s.name)}"></label></div>
       ${effList(`spells.${i}.eff`,s.eff,'master')}
       <div class="preview mprev" data-prev="spell" data-i="${i}">${esc(effsText(s.eff))}</div>
+      ${ownLineIn(`spells.${i}.line`,s.line,MASTER_LINE_KEYS.spell)}
     </div>`).join('')}
   </section>
   ${traitDatalist()}`;
@@ -392,6 +400,7 @@ function updatePreviews(){
     document.querySelectorAll('[data-prev="mface"]').forEach(el=>el.textContent=mFaceText(u.faces[+el.dataset.i]));
     document.querySelectorAll('[data-prev="spell"]').forEach(el=>el.textContent=effsText(u.spells[+el.dataset.i].eff));
     document.querySelectorAll('[data-fitout]').forEach(el=>{ const [k,a]=el.dataset.fitout.split('.'); el.textContent=`${u.fit[k][a]}%`; });
+    document.querySelectorAll('[data-linecount]').forEach(el=>el.textContent=`${u.lines[el.dataset.linecount].length}件`);
     const ma=RULESETS.master.masterAtk, at=document.querySelector('[data-mprev="atk"]'); if(at) at.textContent=`攻撃：相手${TERMS.player}へ${u.cost*ma.master}・相手${TERMS.unit}へ${u.cost*ma.svt}（マスタールール）`;
     document.querySelectorAll('[data-imgprev]').forEach(el=>{ const key=`${u.id}|${JSON.stringify(u.fit)}`; if(el.dataset.key===key) return; el.dataset.key=key; el.innerHTML=faceImg(u,'face lg');
       const f=document.querySelector('[data-imgpath="face"]'); if(f) f.textContent=`${IMG_DIR+u.id}.${IMG_EXT}`; });

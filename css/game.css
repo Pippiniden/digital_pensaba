@@ -42,6 +42,7 @@ body[data-screen="battle"] #app{overflow:hidden}
 .sidebar{flex:none}
 .side.bottom{flex-direction:column-reverse}
 .sidebar{display:flex;align-items:center;gap:8px;font-family:var(--serif);font-size:14px;padding:0 4px}
+.sidebar>b{flex:none;white-space:nowrap}
 .stars{font-size:12px;color:var(--gold-hi);padding:0 10px;border:1px solid var(--gold-lo);border-radius:999px;background:rgba(6,13,34,.6)}
 .stars b{font-size:14px}
 .svts{flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:minmax(0,1fr);gap:10px}
@@ -375,7 +376,12 @@ body[data-screen="battle"] #app{overflow:hidden}
 .sf-head{display:flex;align-items:baseline;gap:8px}
 .sf-head i{font:normal 700 12px var(--serif);color:var(--sub)}
 .sf-head b{font:900 20px "Noto Serif JP",serif;color:var(--gold-hi);letter-spacing:.06em;text-shadow:0 0 10px rgba(246,227,161,.5)}
-.sf-who{display:flex;align-items:center;gap:6px;margin-top:2px;font-size:12px;color:var(--sub)}
+.sf-main{display:flex;align-items:center;gap:10px}
+.sf-img{width:56px;height:56px;border:1px solid var(--gold)}
+.sf-text{min-width:0;display:flex;flex-direction:column;gap:2px}
+.sf-who{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:14px;color:#fff}
+.sf-who>b{font-weight:700;font-family:var(--serif)}
+.sf-to{font-size:12px;color:var(--sub)}
 .sf-cls{width:18px;height:18px}
 .skillfx ul{margin:6px 0 0;padding:6px 0 0;list-style:none;border-top:1px solid var(--gold-lo);display:flex;flex-direction:column;gap:2px}
 .skillfx li{font-size:13.5px;color:#fff}
@@ -453,6 +459,8 @@ body[data-screen="battle"] #app{overflow:hidden}
 
   .field{gap:6px;padding:8px 8px calc(14px + env(safe-area-inset-bottom))} /* 下端は余白を多めに（iPhone のバーに近すぎないよう） */
   .svts{gap:6px}
+  .gauge.hp>span{display:none} /* スマホでは「HP」の文字を出さない（数字と重なるため。緑のバーがHP） */
+  .gauge.hp{grid-template-columns:minmax(0,1fr) auto}
   .svt{padding:4px}
   .svt .pcls{display:none} /* クラスアイコンは顔を隠すのでスマホでは出さない */
   .ctl{flex-wrap:wrap;gap:4px;font-size:11px}

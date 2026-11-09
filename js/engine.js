@@ -618,6 +618,7 @@ function useSpell(m,i,picked){
   const s=D(m.def).spells[i], P=G.players[m.pid];
   log(`${nm(m)}：「${esc(s.name)}」${picked?` → ${nm(picked)}`:''}`,'good');
   fxEmit({t:'skill',uid:m.uid,head:'令呪',name:s.name,picked:picked?D(picked.def).name:'',lines:s.eff.map(e=>`${spellTgt(e.t)}：${fxText(e)}`)});
+  say(m,'spell',{own:s.line});
   P.spellUsed[i]=true; P.spellLeft--; P.spell=null;
   return masterEffects(m,s.eff,{},picked);
 }
@@ -792,6 +793,7 @@ const ACTIONS = {
     log(`${MASTER_ACTS.support}：${nm(m)} 出目${f+1} → ${face.eff.length?`「${esc(face.label)}」（このターンのみ）`:'無'}`, face.eff.length?'good':'sub');
     fxEmit({t:'skill',uid:m.uid,head:`${MASTER_ACTS.support}・出目${f+1}`,name:face.eff.length?face.label:'無',
       lines:face.eff.length?face.eff.map(e=>`${tLabel(e.t)}：${fxText(e)}`):['何も起きない']});
+    if(face.eff.length) say(m,'support',{own:face.line});
     const side=supPickSide(face.eff);
     if(side){ G.spellPick={sup:{label:face.label,eff:face.eff},side}; return; } // 「選んだ敵1体」：対象の選択待ち
     if(!masterEffects(m,face.eff,{tmp:true})) masterDone();
@@ -809,7 +811,7 @@ const ACTIONS = {
     const em=masterOf(1-G.cur), t=to==='master'?em:alive(1-G.cur)[0];
     if(!t||t.out) return;
     const dmg=masterAtkDmg(m,t);
-    log(`${MASTER_ACTS.attack}：${nm(m)} → ${nm(t)}`,'');
+    log(`${MASTER_ACTS.attack}：${nm(m)} → ${nm(t)}`,''); say(m,'attack');
     if(t.master&&G.players[t.pid].evac){ log(`${nm(t)}は退避中のため当たらない`,'sub'); fxEmit({t:'dmg',uid:t.uid,text:'退避'}); masterDone(); return; }
     // マスターからマスターへの攻撃は、相手が令呪1画でサーヴァントに守らせて無効にできる（宣言中は不可）
     if(t.master&&dmg>0&&canGuardSpell(t.pid)){ G.guard={kind:'spell',dmg}; G.phase='guard'; return; }

@@ -90,6 +90,8 @@ const faceActs = (d,i)=>RULES.actsTable ? RULES.actsTable[i] : d.faces[i].acts;
 // ---------- セリフ ----------
 // 各サーヴァントの lines に、場面ごとのセリフを配列で書きます（複数あればランダムに1つ）
 // スキル・鉛筆の面ごとの専用セリフ（line）は、あればその場面の通常セリフの代わりに使う
+// マスター用のセリフの場面（ペンシルエディタのマスター編集と masters.js の lines）
+const MASTER_LINE_KEYS = { support:'補助', attack:'攻撃（マスタールール）', spell:'令呪使用' };
 const LINE_KEYS = { start:'戦闘開始', attack:'攻撃', extra:'エクストラアタック', damage:'被ダメージ', skill:'スキル使用', np:'宝具使用', npDamage:'宝具で被ダメージ', defeat:'敗退', win:'勝利' };
 const LINE_MIN = { attack:3 };   // 最低限そろえたい種類数（足りないと注意を出す）
 

@@ -208,8 +208,12 @@ function showSkill(L,ev){
   L.querySelectorAll('.skillfx').forEach(x=>x.remove());
   const el=document.createElement('div');
   el.className=`skillfx p${u.pid}`;
-  el.innerHTML=`<div class="sf-head"><i>${esc(ev.head||`S${ev.si+1}`)}</i><b>${esc(ev.name)}</b></div>
-    <div class="sf-who">${clsIconTag(d.cls,'sf-cls')}${esc(d.name)}${ev.picked?` → ${esc(ev.picked)}`:''}</div>
+  // 誰が使ったか分かるように、使用者の顔と名前を左に出す（サーヴァントもマスターも）
+  el.innerHTML=`<div class="sf-main">${faceImg(d,'face sf-img')}
+      <div class="sf-text">
+        <div class="sf-who">${clsIconTag(d.cls,'sf-cls')}<b>${esc(d.name)}</b>${ev.picked?`<span class="sf-to">→ ${esc(ev.picked)}</span>`:''}</div>
+        <div class="sf-head"><i>${esc(ev.head||`S${ev.si+1}`)}</i><b>${esc(ev.name)}</b></div>
+      </div></div>
     <ul>${ev.lines.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`;
   L.appendChild(el);
   el.style.left=`${r.left+r.width/2}px`; el.style.top=`${r.top+r.height/2}px`;

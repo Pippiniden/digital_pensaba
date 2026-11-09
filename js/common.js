@@ -169,10 +169,12 @@ const hasErrors = units=>validateUnits(units).some(x=>x.level==='error');
 // 効果の対象は TGT_BY_CTX.master（self＝マスター自身）
 function normalizeMaster(m){
   m=m||{};
-  const faces=Array.from({length:6},(_,i)=>{ const f=(m.faces||[])[i]||{}; return {label:String(f.label||''), eff:(f.eff||[]).map(normEff)}; });
-  const spells=Array.from({length:3},(_,i)=>{ const s=(m.spells||[])[i]||{}; return {name:String(s.name||''), eff:(s.eff||[]).map(normEff)}; });
+  const own=o=>{ const a=strList(o.line); return a.length?{line:a}:{}; }; // 専用セリフ（空なら項目ごと持たない）
+  const faces=Array.from({length:6},(_,i)=>{ const f=(m.faces||[])[i]||{}; return {label:String(f.label||''), eff:(f.eff||[]).map(normEff), ...own(f)}; });
+  const spells=Array.from({length:3},(_,i)=>{ const s=(m.spells||[])[i]||{}; return {name:String(s.name||''), eff:(s.eff||[]).map(normEff), ...own(s)}; });
+  const ln=m.lines||{};
   return { id:String(m.id||''), name:String(m.name||''), cls:TERMS.player, traits:[], cost:num(m.cost), hp:num(m.hp,100), master:true,
-    fit:normFit(m.fit), lines:Object.fromEntries(Object.keys(LINE_KEYS).map(k=>[k,[]])), faces, spells };
+    fit:normFit(m.fit), lines:Object.fromEntries(Object.keys(MASTER_LINE_KEYS).map(k=>[k,strList(ln[k])])), faces, spells };
 }
 // units を渡すと、サーヴァントとIDが重なっていないかも確かめる（ゲームはIDでサーヴァント→マスターの順に探すため）
 function validateMasters(ms,units=[]){
@@ -216,17 +218,19 @@ function mastersToJS(ms){
     '  {',
     `    "id":${j(m.id)}, "name":${j(m.name)}, "cost":${m.cost}, "hp":${m.hp},`,
     ...(fitIsDef(m.fit,'face')?[]:[`    "fit":${j({face:m.fit.face})},`]),
+    ...(Object.keys(MASTER_LINE_KEYS).some(k=>m.lines[k].length)?[`    "lines":${j(Object.fromEntries(Object.keys(MASTER_LINE_KEYS).map(k=>[k,m.lines[k]])))},`]:[]),
     '    "faces":[',
-    m.faces.map(f=>`      ${j({label:f.label,eff:f.eff})}`).join(',\n'),
+    m.faces.map(f=>`      ${j({label:f.label,eff:f.eff,...(f.line?{line:f.line}:{})})}`).join(',\n'),
     '    ],',
     '    "spells":[',
-    m.spells.map(s=>`      ${j({name:s.name,eff:s.eff})}`).join(',\n'),
+    m.spells.map(s=>`      ${j({name:s.name,eff:s.eff,...(s.line?{line:s.line}:{})})}`).join(',\n'),
     '    ]',
     '  }'].join('\n')).join(',\n');
   return `'use strict';
 // ${TERMS.player}データ（ペンシルエディタで書き出し）。マスタールール・マスターチームで使う
 // faces : 補助で振る鉛筆の面1〜6。eff が空なら「無」（何も起きない）。効果はそのターンだけ
 // spells: 令呪3種
+// lines : セリフ（support=補助 / attack=攻撃 / spell=令呪使用）。faces・spells の line は、その面・令呪だけの専用セリフ（任意）
 // 効果の対象（t）: svt=自軍${TERMS.unit} / self=${TERMS.player}自身 / ally_all=味方全体（${TERMS.player}含む）
 //                  enemy_all=敵${TERMS.unit} / enemy_master=敵${TERMS.player} / master=自陣の${TERMS.star}
 const DEFAULT_MASTERS = [
