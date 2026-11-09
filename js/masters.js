@@ -12,7 +12,7 @@ const DEFAULT_MASTERS = [
     "lines":{"support":["行くわよっ！"],"attack":[],"spell":[]},
     "faces":[
       {"label":"連環腿","eff":[{"k":"dmg","t":"enemy_master","v":120}],"line":["絶対領域っ！"]},
-      {"label":"宝石魔術・強化","eff":[{"k":"atk","t":"svt","v":30,"color":"B"}]},
+      {"label":"宝石魔術・強化","eff":[{"k":"atk","t":"ally_svt","v":30,"color":"B"}]},
       {"label":"ガンド","eff":[{"k":"stun","t":"enemy_svt","v":0,"chance":3}],"line":["こんにゃろっ"]},
       {"label":"エアグレネード","eff":[{"k":"dmg","t":"enemy_svt","v":100}]},
       {"label":"アイスグレネード","eff":[{"k":"dmg","t":"enemy_master","v":120}],"line":["Fünf！"]},
@@ -28,7 +28,7 @@ const DEFAULT_MASTERS = [
     "id":"m_kiritsugu", "name":"衛宮切嗣", "cost":4, "hp":400,
     "fit":{"face":{"x":50,"y":17,"z":100}},
     "faces":[
-      {"label":"息を潜める","eff":[]},
+      {"label":"息を潜める","eff":[{"k":"desc","t":"svt","v":0,"text":"息を潜めて様子を見る"}]},
       {"label":"狙撃","eff":[{"k":"dmg","t":"enemy_master","v":100}],"line":["ここで、仕留める"]},
       {"label":"キャリコM950","eff":[{"k":"stun","t":"enemy_all","v":0,"chance":1}],"line":["こっちだ！"]},
       {"label":"狙撃","eff":[{"k":"dmg","t":"enemy_master","v":150}],"line":["ここで、仕留める"]},
@@ -45,12 +45,12 @@ const DEFAULT_MASTERS = [
     "id":"m_shirou", "name":"衛宮士郎", "cost":3, "hp":350,
     "fit":{"face":{"x":50,"y":45,"z":100}},
     "faces":[
-      {"label":"深呼吸","eff":[]},
-      {"label":"強化魔術","eff":[{"k":"atk","t":"svt","v":20}]},
+      {"label":"深呼吸","eff":[{"k":"desc","t":"svt","v":0,"text":"深呼吸で息を整える"}]},
+      {"label":"強化魔術","eff":[{"k":"atk","t":"ally_svt","v":20}]},
       {"label":"精密狙撃","eff":[{"k":"dmg","t":"enemy_master","v":100}]},
-      {"label":"投影魔術","eff":[{"k":"atk","t":"svt","v":20,"color":"R"},{"k":"onAtkNp","t":"svt","v":10,"color":"B"},{"k":"onAtkStar","t":"svt","v":3,"color":"G"}],"line":["トレース……オン"]},
+      {"label":"投影魔術","eff":[{"k":"atk","t":"ally_svt","v":20,"color":"R"},{"k":"onAtkNp","t":"ally_svt","v":10,"color":"B"},{"k":"onAtkStar","t":"ally_svt","v":3,"color":"G"}],"line":["トレース……オン"]},
       {"label":"干将・莫耶","eff":[{"k":"dmg","t":"enemy_svt","v":50},{"k":"def","t":"enemy_svt","v":10}]},
-      {"label":"魔力供給","eff":[{"k":"np","t":"svt","v":10}]}
+      {"label":"魔力供給","eff":[{"k":"np","t":"ally_svt","v":10}]}
     ],
     "spells":[
       {"name":"鶴翼三連","eff":[{"k":"sureHit","t":"self","v":0,"turns":3},{"k":"dmg","t":"enemy_master","v":250}],"line":["トレース、オン！"]},
@@ -62,12 +62,12 @@ const DEFAULT_MASTERS = [
     "id":"m_ritsuka", "name":"藤丸立香", "cost":3, "hp":350,
     "fit":{"face":{"x":50,"y":19,"z":100}},
     "faces":[
-      {"label":"応急手当","eff":[{"k":"heal","t":"svt","v":30}]},
-      {"label":"瞬間強化","eff":[{"k":"atk","t":"svt","v":10}]},
-      {"label":"緊急回避","eff":[{"k":"evade","t":"svt","v":0,"times":1}]},
-      {"label":"ガンド","eff":[{"k":"stun","t":"svt","v":0,"chance":2}]},
+      {"label":"応急手当","eff":[{"k":"heal","t":"ally_svt","v":30}]},
+      {"label":"瞬間強化","eff":[{"k":"atk","t":"ally_svt","v":10}]},
+      {"label":"緊急回避","eff":[{"k":"evade","t":"ally_svt","v":0,"times":1}]},
+      {"label":"ガンド","eff":[{"k":"stun","t":"enemy_svt","v":0,"chance":2}]},
       {"label":"勝利への確信","eff":[{"k":"star","t":"master","v":4}]},
-      {"label":"魔力放出","eff":[{"k":"atk","t":"svt","v":20,"color":"R"}]}
+      {"label":"魔力放出","eff":[{"k":"atk","t":"ally_svt","v":20,"color":"R"}]}
     ],
     "spells":[
       {"name":"令呪：宝具解放","eff":[{"k":"np","t":"svt","v":30}]},
@@ -79,9 +79,9 @@ const DEFAULT_MASTERS = [
     "id":"m_celenike", "name":"セレニケ・アイスコル・ユグドミレニア", "cost":2, "hp":300,
     "fit":{"face":{"x":50,"y":15,"z":100}},
     "faces":[
-      {"label":"観察","eff":[]},
-      {"label":"観察","eff":[]},
-      {"label":"観察","eff":[]},
+      {"label":"何もしない","eff":[{"k":"desc","t":"svt","v":0,"text":"セレニケは地下で何かやっている"}]},
+      {"label":"何もしない","eff":[],"line":["セレニケは地下で何かやっている"]},
+      {"label":"観察","eff":[{"k":"desc","t":"svt","v":0,"text":"セレニケは地下で何かやっている"}]},
       {"label":"黒魔術","eff":[{"k":"defDown","t":"enemy_all","v":20}]},
       {"label":"呪殺","eff":[{"k":"curse","t":"enemy_svt","v":0,"times":1}]},
       {"label":"鞭打ち","eff":[{"k":"dmg","t":"enemy_master","v":100}]}
@@ -96,15 +96,15 @@ const DEFAULT_MASTERS = [
     "id":"m_shinji", "name":"間桐慎二", "cost":1, "hp":250,
     "fit":{"face":{"x":50,"y":15,"z":100}},
     "faces":[
-      {"label":"無","eff":[]},
+      {"label":"無","eff":[{"k":"desc","t":"svt","v":0,"text":"兄さんは何も出来ないみたいです"}]},
       {"label":"無","eff":[]},
       {"label":"偽臣の書","eff":[{"k":"atk","t":"svt","v":10}]},
-      {"label":"無","eff":[]},
+      {"label":"無","eff":[{"k":"desc","t":"svt","v":0,"text":"ワカメ養殖場は豊作のようです"}]},
       {"label":"虚勢","eff":[{"k":"star","t":"master","v":3}]},
       {"label":"無","eff":[]}
     ],
     "spells":[
-      {"name":"僕のワカメ～死んでもいい2006～","eff":[]},
+      {"name":"僕のワカメ～死んでもいい2006～","eff":[{"k":"desc","t":"svt","v":0}]},
       {"name":"僕のワカメ～ひとりのビッグ・ショウ2006～","eff":[{"k":"actsUp","t":"svt","v":3,"times":1}]},
       {"name":"令呪：回避","eff":[{"k":"evade","t":"svt","v":0,"times":3}]}
     ]
@@ -113,12 +113,12 @@ const DEFAULT_MASTERS = [
     "id":"m_kariya", "name":"間桐雁夜", "cost":0, "hp":50,
     "fit":{"face":{"x":50,"y":20,"z":100}},
     "faces":[
-      {"label":"無","eff":[]},
-      {"label":"吐血","eff":[]},
-      {"label":"無","eff":[]},
+      {"label":"無","eff":[{"k":"desc","t":"svt","v":0,"text":"雁夜は苦しみに耐え、うずくまっている"}]},
+      {"label":"吐血","eff":[{"k":"desc","t":"svt","v":0,"text":"雁夜は血を吐いた"}]},
+      {"label":"吐血","eff":[{"k":"desc","t":"self","v":0,"text":"雁夜の胃から血液が逆流している"}]},
       {"label":"刻印虫の魔力","eff":[{"k":"atk","t":"svt","v":20},{"k":"np","t":"svt","v":10}]},
-      {"label":"無","eff":[]},
-      {"label":"吐血","eff":[]}
+      {"label":"無","eff":[{"k":"desc","t":"svt","v":0,"text":"雁夜は動くことができない"}]},
+      {"label":"吐血","eff":[{"k":"desc","t":"svt","v":0,"text":"雁夜は血を吐いた"}]}
     ],
     "spells":[
       {"name":"令呪：宝具解放","eff":[{"k":"np","t":"svt","v":50}]},
@@ -126,4 +126,5 @@ const DEFAULT_MASTERS = [
       {"name":"翅刃虫","eff":[{"k":"defDown","t":"enemy_all","v":20,"turns":3}]}
     ]
   }
+];
 ];
