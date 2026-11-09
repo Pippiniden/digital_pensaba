@@ -14,7 +14,7 @@ const TERMS = { unit:'サーヴァント', player:'マスター', gauge:'NP', ul
 //   card: img/units/{id}_card.webp   コマンドカード用（任意。なければ face を使う。背景透過だと映えます）
 const IMG_DIR = 'img/units/', IMG_EXT = 'webp', IMG_CARD_SUFFIX = '_card';
 const IMG_KEYS = { face:'キャラクター画像', card:'カード用キャラ画像' };
-const IMG_PLACEHOLDER = { face:'img/placeholder/face.webp', card:'img/placeholder/card.svg' }; // card は背景透過の仮画像
+const IMG_PLACEHOLDER = { face:'img/placeholder/face.webp', card:'img/placeholder/card.webp' }; // card は背景透過の仮画像
 
 // コマンドカードは3枚の重ね合わせ： 背景（bg） → キャラ画像 → 枠と種別名（frame）
 // bg と frame は全サーヴァント共通の素材です。空欄の間は CSS で描いた背景・枠・文字を使います

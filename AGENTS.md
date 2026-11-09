@@ -30,7 +30,7 @@ It was written from the code (`js/*.js`). If you find a mismatch, the code is th
 | `css/base.css` | Shared styles (CSS variables, buttons, header) |
 | `css/game.css` / `css/editor.css` | Per-screen styles |
 | `img/units/` | **Character images by id**: `{id}.webp` (face), `{id}_card.webp` (command card, optional). Names/extension set by `IMG_DIR` / `IMG_EXT` / `IMG_CARD_SUFFIX` in rules.js |
-| `img/classes/` | Class icons (webp) / `img/placeholder/` placeholder images (face.webp / card.svg) / `img/ui/` magic circle |
+| `img/classes/` | Class icons (webp) / `img/placeholder/` placeholder images (face.webp / card.webp) / `img/ui/` magic circle |
 
 ## 3. Script load order and dependencies
 
@@ -53,7 +53,7 @@ Worker (sim-worker.js, importScripts): rules → units → common → engine →
 { id, name, cls, cost, hp,
   fit?: { face:{x,y,z}, card:{x,y,z} },   // image framing set in the editor (x/y = object-position %, z = zoom %, 100–300). Defaults in FIT_DEF (common.js); omitted from export when default. Applied by unitImg() via fitStyle()
                                          // images are NOT data: img/units/{id}.webp (face) and {id}_card.webp (card, optional)
-                                         // card chain: {id}_card → {id} → card.svg / face chain: {id} → face.webp (see imgCandidates)
+                                         // card chain: {id}_card → {id} → card.webp / face chain: {id} → face.webp (see imgCandidates)
   lines: { start, attack, extra, damage, skill, np, npDamage, defeat, win },  // each string[] (LINE_KEYS)
   faces: [ {acts:1|2|3, pre:Cmd, post:Cmd} ×6 ],   // pencil faces 1–6. pre = before ascension / post = after
                                                    // acts is IGNORED while RULES.actsTable is set (the default)
