@@ -2,7 +2,7 @@
    ゲーム画面
    - 対戦・編成は画面の高さに収める（スクロール不要）。狭い画面では縦に並べてスクロール
    ===================================================================== */
-body.game{height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+body.game{height:100vh;height:100dvh;height:var(--app-h,100dvh);display:flex;flex-direction:column;overflow:hidden}
 /* スマホで画面を下に引っぱったときの「更新」（ページの読み込み直し）で試合が途切れないようにする */
 html:has(body.game),body.game{overscroll-behavior:none}
 body.game>header{flex:none}
@@ -446,7 +446,7 @@ body[data-screen="battle"] #app{overflow:hidden}
   #hinfo{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11.5px}
   .svts.solo{grid-template-columns:minmax(0,1fr)} /* 1対1は横に余裕があるので幅いっぱいに */
 
-  .field{gap:6px;padding:8px}
+  .field{gap:6px;padding:8px 8px calc(14px + env(safe-area-inset-bottom))} /* 下端は余白を多めに（iPhone のバーに近すぎないよう） */
   .svts{gap:6px}
   .svt{padding:4px}
   .svt .pcls{display:none} /* クラスアイコンは顔を隠すのでスマホでは出さない */

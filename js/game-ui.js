@@ -627,6 +627,16 @@ document.addEventListener('mouseover',e=>{
   document.querySelectorAll('.tile.viewing').forEach(x=>x.classList.remove('viewing')); t.classList.add('viewing');
 });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&UI.detail){ UI.detail=null; render(); } });
+
+// iPhone Safari: 下部のアドレスバーに隠れないよう、実際に見えている高さを --app-h に入れる（dvh が効かない環境の保険）
+function fitViewportH(){
+  const h=(window.visualViewport&&window.visualViewport.height)||window.innerHeight;
+  if(h) document.documentElement.style.setProperty('--app-h',Math.round(h)+'px');
+}
+fitViewportH();
+window.addEventListener('resize',fitViewportH);
+window.addEventListener('orientationchange',fitViewportH);
+if(window.visualViewport) window.visualViewport.addEventListener('resize',fitViewportH);
 // エディタで反映したデータを、別タブから戻ってきたときに読み直す（モード選択画面にいるときだけ）
 window.addEventListener('storage',e=>{ if((e.key===STORE.units||e.key===STORE.masters) && G.phase==='mode'){ reloadUnits(); render(); } });
 newGame(); restoreMatch(); render();
