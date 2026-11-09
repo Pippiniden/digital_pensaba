@@ -18,7 +18,7 @@ It was written from the code (`js/*.js`). If you find a mismatch, the code is th
 | `editor.html` | Editor page shell. Three columns: `#list` `#form` `#side` |
 | `js/rules.js` | **Rule definitions**: terms `TERMS`, numbers `RULES`, effect kinds `FX`, targets `TARGETS`, line kinds `LINE_KEYS`, classes, image settings |
 | `js/units.js` | **Default character data** `DEFAULT_UNITS` (same format the editor's "export units.js" produces) |
-| `js/masters.js` | **Master data** `DEFAULT_MASTERS` for the master rule (§5.4). Currently 7 **test-only** canon masters (遠坂凛 C5 … 間桐雁夜 C0), expected to be replaced/removed. Not editable in the editor yet |
+| `js/masters.js` | **Master data** `DEFAULT_MASTERS` for the master rules (§5.4, §5.5). Currently 7 **test-only** canon masters (遠坂凛 C5 … 間桐雁夜 C0), expected to be replaced/removed. Not editable in the editor yet |
 | `js/common.js` | **Shared by game and editor**: data normalization, validation, load/save/export, HTML/string builders (cards, effect descriptions) |
 | `js/engine.js` | **Game logic**: state `G`, `ACTIONS`, damage/effect resolution, turn flow |
 | `js/cpu.js` | CPU brain. `cpuDecide()` only returns the next single move. Difficulties in `CPU_LEVELS` (`easy` / `normal` / `hard` つよい / `expert` 超つよい) |
@@ -79,7 +79,7 @@ Worker (sim-worker.js, importScripts): rules → units → masters → common �
 `costCap:10, partyMax:3, actionsMax:3, actsTable:[0,1,1,3,2,2], gaugeOnHit:10, gaugeMax:100, ultCost:100, chainR:30, chainB:20, chainG:10, critDmg:30, critDmgR:60, dot:20, dotTiming:'current'|'all'`.
 - `actsTable`: action count per pencil face (index 0–5 = face 1–6), shared by all units. Set to `null` to use each face's own `acts` instead. Always read it through `faceActs(d, i)`.
 - Critical: `critLevel(stars)` → level 0–7 from `CRIT_TABLE`, `critChance(level)` → % (Lv1 10 / Lv2 20 / Lv3 35 / Lv4 50 / Lv5 75 / Lv6 90 / Lv7 100; thresholds at 1/6/11/16/21/26/31 stars).
-- `RULESETS` (rules.js) holds per-rule settings: `team` (3 units, d100 crit), `simple` (1 unit, d6 crit via `CRIT_D6_TABLE` / `critNeedD6`, `handicapAsc:2`) and `master` (simple + a master per side, `master:true`, see §5.4). The active one is `G.rule`; read it through `ruleset()` (engine.js). Party size comes from `ruleset().partyMax`, not `RULES`.
+- `RULESETS` (rules.js) holds per-rule settings: `team` (3 units, d100 crit), `simple` (1 unit, d6 crit via `CRIT_D6_TABLE` / `critNeedD6`, `handicapAsc:2`) `master` (simple + a master per side, `master:true`, see §5.4) and `mteam` (team + master, `mTeam:true`, `costCap:13`, see §5.5). The active one is `G.rule`; read it through `ruleset()` (engine.js). Party size comes from `ruleset().partyMax`, not `RULES`.
 - `dot` is only the fallback damage for poison/burn effects whose value is 0 (old data).
 
 ### 4.4 Storage (localStorage)
@@ -149,7 +149,14 @@ Simple rule + one master (泥ペンマス) per side. Setup picks a servant (`set
 - Action count: +1 from `G.turn>=lateBonus` (6 = 3rd round, second player) and +1 after a turn with 0 actions (`P.zeroNext`).
 - Non-damage ult (no `dmg` effect): used in the skill phase immediately, costs one allocated action, `G.ultDone`, then normal action phase.
 - CPU: `cpuMaster` / `cpuGuard` (cpu.js); it never aims servant attacks at the master (the defender would pick the better side anyway). Log phase numbers go through `PN()`.
-- Not implemented: マスターチームバトル (3 servants + master, cost 13).
+- Spell state: `P.spellLeft` (画 left), `P.spellUsed[i]`, `P.spell==='decl'` (master rule declaration only). `canGuardSpell(pid)` / `canDeclareSpell()`. Support/spell effects go through `masterEffects()`, which turns `dmg` on `enemy_master` into a `guard` (kind `spell`) when the defender can still spend a 画.
+
+### 5.5 Master team battle — マスターチームバトル (`G.rule==='mteam'`, `mTeam()`)
+
+`RULESETS.mteam`: team rule (3 servants, d100 crit, KO bonus) + a master, total cost ≤ `costCap` 13 **including the master** (`costCap()` / `mcost(pid)` in setup, `setupMaster` refuses an over-cap master; CPU おまかせ enumerates master × servant combos). Everything in §5.4 applies except:
+- Master phase is only `masterSupport` and `masterSpell {i}` (`masterAttack` / `masterEvac` are refused). 令呪: `spells` = 3 画, each effect once (`P.spellUsed`), used immediately at the cost of one allocated action; unusable when any alive servant rolled 0 actions (`canDeclareSpell`). Guarding with a 画 against master-targeted damage still works.
+- Masters cannot be targeted by servant attacks (`masterTargetable()` → null), are not hit by enemy-all ults, and ignore debuffs (`applyOne`). Ally-all buffs still reach them.
+- 令呪 with a `svt` (自軍サーヴァント) effect target **one chosen servant** in this rule (`spellPicks(s)`): `masterSpell {i}` without `uid` sets `G.spellPick` and waits for a click on an own servant (`cardClick` → `masterSpell {i,uid}`; `cancelPick` clears it); the action and 画 are spent only after the pick. `resolveTargets('svt', picked)` returns just the picked unit. Display text via `spellTgt` / `spellText`. CPU (`spellBest` in `cpuMaster`) scores each spell × each ally and passes `uid`. 補助 effects with `svt` still hit all own servants.
 
 ### 5.3 Effect kinds that need special handling (`FX` in rules.js)
 

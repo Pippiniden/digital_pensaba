@@ -60,7 +60,7 @@ const shown = u=>FXHOLD[u.uid]||{hp:u.hp,out:u.out};
 function svtHTML(u){
   const d=D(u.def), ph=G.phase, sh=shown(u);
   const allocable=canAllocMore(u);
-  const pickable=allocable || (G.copy&&copyCands(U(G.copy.uid)).includes(u)) || (G.pending&&pickValid(u)) || (!G.pending&&!G.copy&&ph==='target'&&targetCandidates().includes(u));
+  const pickable=allocable || (G.spellPick&&u.pid===G.cur&&!u.out) || (G.copy&&copyCands(U(G.copy.uid)).includes(u)) || (G.pending&&pickValid(u)) || (!G.pending&&!G.copy&&ph==='target'&&targetCandidates().includes(u));
   const acting=G.ult?G.ult===u.uid:(G.alloc[u.uid]||0)>0;
   const tgt=(G.targetAll?u.pid!==G.cur&&!u.out&&['target','end'].includes(ph):G.target===u.uid)&&!sh.out;
   // スキルを使える自分のサーヴァント（スキル欄が隠れる小さい表示のとき、ⓘ を光らせて知らせる）
@@ -101,12 +101,12 @@ function masterChipHTML(m){
   const d=D(m.def), sh=shown(m), P=G.players[m.pid];
   const pick=G.phase==='target'&&!G.pending&&!G.copy&&!cpuActing()&&masterTargetable()===m;
   const tgt=G.phase==='target'&&G.target===m.uid&&!sh.out;
-  const sp=P.spell==='used'?'令呪 使用済み':P.spell==='decl'?'令呪 宣言中':'令呪 1画';
+  const sp=P.spell==='decl'?'令呪 宣言中':P.spellLeft>0?`令呪 ${P.spellLeft}画`:'令呪 使用済み';
   const nb=m.fx.filter(e=>FX[e.k].buff===true).length, nd=m.fx.filter(e=>FX[e.k].buff===false).length;
   return `<div class="mchip ${sh.out||m.out?'out':''} ${pick?'pickable':''} ${tgt?'targeted':''}" data-uid="${m.uid}" ${pick?'data-a="cardClick"':''} title="${esc(m.fx.map(fxText).join(' / '))}">
     <span class="mlab">${TERMS.player}</span><b class="mname" title="${esc(d.name)}">${esc(d.name)}</b>
     <span class="gauge hp"><div class="bar"><i style="width:${pctOf(sh.hp,maxHp(m))}%"></i></div><b>${fmt(sh.hp)}<small>/${maxHp(m)}</small></b></span>
-    <span class="mtag ${P.spell?'off':''}">${sp}</span>${P.evac?'<span class="mtag evac">退避中</span>':''}${m.out?'<span class="mtag dead">瀕死</span>':''}
+    <span class="mtag ${P.spellLeft>0&&P.spell!=='decl'?'':'off'}">${sp}</span>${P.evac?'<span class="mtag evac">退避中</span>':''}${m.out?'<span class="mtag dead">瀕死</span>':''}
     ${nb||nd?`<span class="pfx">${nb?`<b class="buff">▲${nb}</b>`:''}${nd?`<b class="debuff">▼${nd}</b>`:''}</span>`:''}
     <button class="info" data-ui="detail" data-uid="${m.uid}" title="詳細を見る">i</button></div>`;
 }
@@ -115,6 +115,15 @@ function masterPromptHTML(){
   const m=masterOf(G.cur), d=D(m.def), P=G.players[G.cur], em=masterOf(1-G.cur), es=alive(1-G.cur)[0], rs=ruleset();
   const spells=(a,extra='')=>d.spells.map((s,i)=>`<button class="primary" data-a="${a}" data-i="${i}" ${extra} title="${esc(effsText(s.eff))}">${esc(s.name)}</button>`).join('');
   if(P.spell==='decl') return `<p>宣言した<b class="hl">令呪</b>を1つ選んで発動します。</p><div class="row mopts">${spells('masterSpellUse')}</div>`;
+  if(rs.mTeam){ // マスターチーム：補助か令呪（3画・同じ効果は1回）
+    if(G.spellPick){ const s=d.spells[G.spellPick.i];
+      return `<p class="hl">「${esc(s.name)}」を使う${TERMS.unit}を選んでください</p><p class="sub small">${esc(spellText(s))}</p><button data-a="cancelPick">キャンセル</button>`; }
+    const can=canDeclareSpell();
+    return `<p>${TERMS.player}の行動を1つ選びます。</p><div class="row mopts">
+      <button class="primary" data-a="masterSupport" title="${TERMS.player}の鉛筆を振り、出た面の効果をこのターンだけ適用">🎲 ${MASTER_ACTS.support}</button>
+      ${d.spells.map((s,i)=>`<button data-a="masterSpell" data-i="${i}" ${can&&!P.spellUsed[i]?'':'disabled'} title="${esc(spellText(s))}（行動回数-1）">${esc(s.name)}${P.spellUsed[i]?'（使用済み）':''}</button>`).join('')}</div>
+      <p class="sub small">令呪は残り${P.spellLeft}画。使うと行動回数が1回減ります${can||!P.spellLeft?'':`（${TERMS.unit}が1騎でも行動0回のターンは使えません）`}。</p>`;
+  }
   if(UI.spellPick) return `<p>★${rs.spellNowStars}（クリティカルLv4）を消費して、令呪をすぐに使います。</p><div class="row mopts">${spells('masterSpell','data-now="1"')}<button data-ui="spellPick">戻る</button></div>`;
   const atkM=em&&!em.out, evac=atkM&&G.players[em.pid].evac, canSp=canDeclareSpell();
   return `<p>${TERMS.player}の行動を1つ選びます。</p><div class="row mopts">
@@ -124,8 +133,10 @@ function masterPromptHTML(){
     <button data-a="masterSpell" ${canSp?'':'disabled'} title="このターンの以降のフェイズをスキップし、次の${TERMS.player}フェイズに3つの中から1つ使う（1試合1回）">${MASTER_ACTS.spell}：宣言</button>
     <button data-ui="spellPick" ${canSp&&P.stars>=rs.spellNowStars?'':'disabled'} title="★${rs.spellNowStars}を消費して、スキップせずにすぐ使う">${MASTER_ACTS.spell}：即時 ★${rs.spellNowStars}</button>
     <button data-a="masterEvac" title="次の相手ターン、相手${TERMS.player}の攻撃と${TERMS.unit}の全体攻撃を受けない">${MASTER_ACTS.evac}</button></div>
-    ${P.spell?'<p class="sub small">令呪は使用済みです。</p>':!canSp?`<p class="sub small">このターンは${TERMS.unit}が行動できないため、令呪は使えません。</p>`:''}`;
+    ${!P.spellLeft?'<p class="sub small">令呪は使用済みです。</p>':!canSp?`<p class="sub small">このターンは${TERMS.unit}が行動できないため、令呪は使えません。</p>`:''}`;
 }
+// 令呪の効果の説明（マスターチームでは「自軍サーヴァント」が選んだ1騎になる）
+const spellText = s=>s.eff.map(e=>`${spellTgt(e.t)}：${fxText(e)}`).join(' ／ ')||'効果なし';
 // 守る側の選択（マスターへの攻撃）
 function guardPromptHTML(){
   const g=G.guard, dp=1-G.cur, em=masterOf(dp), who=`<b class="p${dp}">${esc(G.players[dp].name)}</b>`;
@@ -277,14 +288,14 @@ function masterDetailHTML(d,m){
       <div class="udimg">${unitImg(d,'face','pimg',d.name)}</div>
       <div class="udinfo">${clsBadge(TERMS.player)}<h3>${esc(d.name)}</h3>
         <div class="sub small">コスト ${d.cost} ・ HP ${m?`${fmt(m.hp)} / ${maxHp(m)}`:d.hp}${m&&m.out?' ・ <span class="hl">瀕死</span>':''}${P&&P.evac?' ・ 退避中':''}</div>
-        <div class="sub small">${MASTER_ACTS.attack}：相手${TERMS.player}へ ${d.cost*rs.masterAtk.master} ／ 相手${TERMS.unit}へ ${d.cost*rs.masterAtk.svt}</div>
+        ${ruleset().mTeam?'':`<div class="sub small">${MASTER_ACTS.attack}：相手${TERMS.player}へ ${d.cost*rs.masterAtk.master} ／ 相手${TERMS.unit}へ ${d.cost*rs.masterAtk.svt}</div>`}
       </div>
     </div>
     ${fx}
     <h4>${MASTER_ACTS.support}（出た面の効果をこのターンだけ）</h4>
     <table class="faces"><tr><th>出目</th><th>効果</th></tr>${d.faces.map((f,i)=>`<tr><td>${i+1}</td><td>${f.eff.length?`<b>${esc(f.label)}</b><div class="sub">${esc(effsText(f.eff))}</div>`:'<span class="sub">無</span>'}</td></tr>`).join('')}</table>
-    <h4>${MASTER_ACTS.spell}（1試合1回・3つから1つ）${P?`<small class="sub"> ${P.spell==='used'?'使用済み':P.spell==='decl'?'宣言中':'未使用'}</small>`:''}</h4>
-    <div class="skills">${d.spells.map(s=>`<div class="skill"><span class="sname">${esc(s.name)}</span><span class="desc">${esc(effsText(s.eff))}</span></div>`).join('')}</div>
+    <h4>${MASTER_ACTS.spell}（${ruleset().mTeam?`${ruleset().spells}画・同じ効果は1回・使うと行動-1`:'1試合1回・3つから1つ'}）${P?`<small class="sub"> ${P.spell==='decl'?'宣言中':`残り${P.spellLeft}画`}</small>`:''}</h4>
+    <div class="skills">${d.spells.map((s,i)=>`<div class="skill"><span class="sname">${esc(s.name)}${P&&P.spellUsed[i]?' <small class="sub">（使用済み）</small>':''}</span><span class="desc">${esc(spellText(s))}</span></div>`).join('')}</div>
   </div>`;
 }
 function detailModalHTML(){
@@ -313,7 +324,7 @@ function resultHTML(){
 
 // ---------- 編成画面 ----------
 function setupHTML(){
-  const pid=G.setupPid, picks=G.picks[pid], cost=sumCost(picks), rs=ruleset(), solo=rs.partyMax===1;
+  const pid=G.setupPid, picks=G.picks[pid], rs=ruleset(), solo=rs.partyMax===1, cost=sumCost(picks)+(rs.master?mcost(pid):0), cap=costCap();
   const view=D(UI.setupView)||D(picks[picks.length-1])||UNITS[0];
   const mr=masterRule(), mp=D(G.mpicks[pid]);
   const slots=Array.from({length:rs.partyMax},(_,i)=>i).map(i=>{
@@ -325,9 +336,9 @@ function setupHTML(){
   return `<div class="setup">
     <div class="sethead">
       <div class="settitle"><h2><span class="p${pid}">${esc(G.players[pid].name)}</span> の${solo?`${TERMS.unit}選択`:'パーティ編成'}</h2>
-        <p class="sub small nm">${solo?`${rs.name}ルール：${TERMS.unit}を1騎${rs.master?`と${TERMS.player}を1人`:''}選びます。${handicapNote(pid)}`:`コスト合計${RULES.costCap}以下・最大${rs.partyMax}騎。選んだ順に 1st / 2nd / 3rd。`}</p></div>
+        <p class="sub small nm">${solo?`${rs.name}ルール：${TERMS.unit}を1騎${rs.master?`と${TERMS.player}を1人`:''}選びます。${handicapNote(pid)}`:`${rs.master?`${TERMS.player}1人と`:''}コスト合計${cap}以下${rs.master?`（${TERMS.player}込み）`:''}・最大${rs.partyMax}騎。選んだ順に 1st / 2nd / 3rd。`}</p></div>
       <div class="slots">${slots}</div>
-      <div class="costm" ${solo?'hidden':''}><span>COST</span><b>${cost}</b><small>/ ${RULES.costCap}</small><div class="bar"><i style="width:${pctOf(cost,RULES.costCap)}%"></i></div></div>
+      <div class="costm" ${solo?'hidden':''}><span>COST</span><b>${cost}</b><small>/ ${cap}</small><div class="bar"><i style="width:${pctOf(cost,cap)}%"></i></div></div>
       <div class="setbtns">${isCpu(pid)
         ?`<button data-a="setupCpu" data-how="same" title="相手と同じ${solo?'コスト':'合計コスト・人数'}になるように選びます">おまかせ（同コスト）</button><button data-a="setupCpu" data-how="random" title="コスト上限の中から完全にランダムに選びます">おまかせ（ランダム）</button>`
         :`<button data-a="setupRandom">おまかせ</button>`}<button class="primary big" data-a="setupConfirm" ${picks.length&&(!masterRule()||G.mpicks[pid])?'':'disabled'}>決定</button></div>
@@ -354,7 +365,7 @@ const ROSTER_SORTS = { default:'標準', costDesc:'コストが高い順', costA
 // 編成に加えられない（選択済みでなく、上限やコストを超える）
 function rosterOver(d){
   const picks=G.picks[G.setupPid], rs=ruleset();
-  return !picks.includes(d.id)&&rs.partyMax>1&&(picks.length>=rs.partyMax||sumCost(picks)+d.cost>RULES.costCap);
+  return !picks.includes(d.id)&&rs.partyMax>1&&(picks.length>=rs.partyMax||sumCost(picks)+d.cost+mcost(G.setupPid)>costCap());
 }
 function rosterList(){
   const f=UI.roster, q=f.q.trim().toLowerCase();
@@ -469,7 +480,7 @@ function modeHTML(){
     </div>
     <div class="modes">
       <div class="card"><h3>CPU戦</h3>
-        <p class="sub">あなたとCPUの${ruleset().master?`${TERMS.unit}と${TERMS.player}`:ruleset().partyMax===1?TERMS.unit:'パーティ'}を選んで、1対1で戦います。</p>
+        <p class="sub">あなたとCPUの${ruleset().master?`${ruleset().partyMax===1?TERMS.unit:'パーティ'}と${TERMS.player}`:ruleset().partyMax===1?TERMS.unit:'パーティ'}を選んで、1対1で戦います。</p>
         <p class="sub small">${Object.values(CPU_LEVELS).map(l=>`${esc(l.name)}：${esc(l.desc)}`).join('<br>')}</p>
         <div class="row mt">${Object.entries(CPU_LEVELS).map(([k,l])=>`<button class="${k==='normal'?'primary':''}" data-a="chooseMode" data-mode="cpu" data-level="${k}">${esc(l.name)}</button>`).join('')}</div></div>
       <div class="card"><h3>2人対戦</h3>

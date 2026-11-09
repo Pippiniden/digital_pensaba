@@ -75,6 +75,12 @@ const RULESETS = {
     desc:`${TERMS.unit}1騎＋${TERMS.player}1人で戦うルール。行動回数の後に${TERMS.player}フェイズ（補助・攻撃・令呪・退避）。相手の${TERMS.unit}を${TERMS.out}にすれば勝利。` },
 };
 
+// mteam: マスターチームバトル（サーヴァント3騎＋マスター1人・合計コスト costCap 以下）。チームバトルが基本（クリティカル1d100）
+//   マスターフェイズは補助と令呪だけ（攻撃・退避なし）。令呪は spells 画、効果はそれぞれ1回。使うと行動回数-1
+//   マスターはサーヴァントの攻撃・全体攻撃の対象にならず、弱体も受けない（補助・令呪の「敵マスター」指定のダメージだけ受ける）
+RULESETS.mteam = { name:'マスターチーム', partyMax:3, crit:'d100', master:true, mTeam:true, costCap:13, spells:3, lateBonus:6,
+  desc:`${TERMS.unit}3騎＋${TERMS.player}1人・合計コスト13以下で戦うチームバトル。${TERMS.player}フェイズは補助と令呪（3画）。相手の${TERMS.unit}を全員${TERMS.out}にすれば勝利。` };
+
 // ---------- マスターフェイズ（マスタールール） ----------
 const MASTER_ACTS = { support:'補助', attack:'攻撃', spell:'令呪', evac:'退避' };
 

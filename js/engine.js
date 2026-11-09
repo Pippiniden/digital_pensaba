@@ -48,6 +48,9 @@ const keepRule = ()=>({rule:G.rule, handicap:G.handicap});
 const ALL = ()=>[...G.players[0].party,...G.players[1].party];
 const masterOf = pid=>G.players[pid].master;
 const masterRule = ()=>!!ruleset().master;
+const mTeam = ()=>!!ruleset().mTeam; // マスターチームバトル
+const costCap = ()=>ruleset().costCap||RULES.costCap;
+const mcost = pid=>G.mpicks[pid]&&D(G.mpicks[pid])?D(G.mpicks[pid]).cost:0; // 編成中のマスターのコスト
 const ALLM = ()=>[...ALL(),...G.players.map(P=>P.master).filter(Boolean)]; // サーヴァント＋マスター
 const U = uid=>ALLM().find(u=>u.uid===uid);
 const alive = pid=>G.players[pid].party.filter(u=>!u.out);
@@ -105,7 +108,7 @@ function resolveTargets(src,t,picked){
   else if(t==='ally_all') ts=[...alive(src.pid),...(m?[m]:[])]; // マスタールール：味方全体の効果はマスターにも
   else if(t==='enemy_all') ts=alive(1-src.pid);
   else if(t==='target') ts=G.target?[U(G.target)]:[];
-  else if(t==='svt') ts=alive(src.pid);
+  else if(t==='svt') ts=picked&&picked.pid===src.pid?[picked]:alive(src.pid); // マスターチームの令呪は選んだ1騎
   else if(t==='enemy_master') ts=em?[em]:[];
   return ts.filter(u=>u&&!u.out);
 }
@@ -155,6 +158,7 @@ function flushKo(){
   uids.forEach(uid=>say(U(uid),'defeat'));
 }
 function applyOne(src,t,e,o={}){
+  if(t.master&&mTeam()&&FX[e.k].buff===false){ log(`${nm(t)}は${TERMS.unit}に守られていて弱体を受けない`,'sub'); return; } // マスターチーム：マスターは弱体を受けない
   if(immuneTo(t,e.k)) return;
   switch(e.k){
     case 'heal': if(has(t,'healBlock')){ log(`${nm(t)}は回復無効でHPが回復しない`,'sub'); return; }
@@ -395,7 +399,7 @@ function resolveUlt(u,tgt){
     if(u.out) break; // 反撃で倒れたら残りの効果は出ない
     if(e.k!=='dmg'){ applyEffects(u,[e],null); continue; }
     // マスタールール：全体宝具は敵マスターにも当たる（退避中なら当たらない。無敵・回避などでは防げない）
-    const em=masterOf(1-u.pid), hitM=e.t==='enemy_all'&&em&&!em.out&&!G.players[em.pid].evac;
+    const em=masterOf(1-u.pid), hitM=e.t==='enemy_all'&&em&&!em.out&&!G.players[em.pid].evac&&!mTeam();
     const ts = e.t==='enemy_all' ? [...alive(1-u.pid),...(hitM?[em]:[])] : [tgt].filter(x=>x&&!x.out);
     const usedA=new Set();
     for(const t of ts){
@@ -449,7 +453,7 @@ function ascend(u){ u.asc=true; fxEmit({t:'pop',uid:u.uid,text:TERMS.ascFull,cls
 // =====================================================================
 function startGame(){
   G.players.forEach((P,pid)=>{ P.party=G.picks[pid].map((id,i)=>makeUnit(pid,i,id)); P.stars=0;
-    P.master=masterRule()&&G.mpicks[pid]?makeMaster(pid,G.mpicks[pid]):null; P.spell=null; P.evac=false; P.zeroNext=false; });
+    P.master=masterRule()&&G.mpicks[pid]?makeMaster(pid,G.mpicks[pid]):null; P.spell=null; P.spellLeft=ruleset().spells||1; P.spellUsed=[false,false,false]; P.evac=false; P.zeroNext=false; });
   applyHandicap();
   log('先攻・後攻の決定','h');
   let r0,r1;
@@ -487,7 +491,7 @@ const hcapText = ()=>G.hcap?`攻撃ダメージ+${G.hcap.atk}・獲得${TERMS.ga
 // 攻撃・被弾・チェインで得るNPに、ハンデのNP獲得量アップを掛ける（スキルなどで直接増えるNPには掛けない）
 const npRate = (u,v)=>hasHcap(u)&&G.hcap.np?Math.round(v*(100+G.hcap.np)/100):v;
 function beginTurn(){
-  Object.assign(G,{phase:'actRoll',actRolled:false,maxActs:{},alloc:{},rolled:[],ult:null,target:null,targetAll:false,gen:0,pending:null,copy:null,guard:null,mastered:false,ultDone:false});
+  Object.assign(G,{phase:'actRoll',actRolled:false,maxActs:{},alloc:{},rolled:[],ult:null,target:null,targetAll:false,gen:0,pending:null,copy:null,guard:null,mastered:false,ultDone:false,spellPick:null});
   const P=G.players[G.cur];
   if(P.evac){ P.evac=false; log(`${esc(P.name)}の${TERMS.player}が退避から戻った`,'sub'); }
   log(`━ ターン${G.turn}：${esc(G.players[G.cur].name)} ━`,'h');
@@ -586,19 +590,41 @@ function toSkillPhase(){ G.phase='skill'; log(`${PN(3)} スキル・${TERMS.ult}
 function masterReady(){ const m=masterOf(G.cur); return G.phase==='master'&&!G.mastered&&m&&!m.out?m:null; }
 function masterDone(){ G.mastered=true; flushKo(); checkWin(); if(G.winner==null&&G.phase==='master') toSkillPhase(); }
 const masterAtkDmg = (m,t)=>Math.max(0,D(m.def).cost*ruleset().masterAtk[t.master?'master':'svt']+dmgMods(m,t,'W').sum);
-// 令呪を使える（未使用・このターンにサーヴァントが1回以上行動できる）
-function canDeclareSpell(){ return G.players[G.cur].spell==null && Object.values(G.maxActs).some(n=>n>0); }
-function useSpell(m,i){
-  const s=D(m.def).spells[i];
-  log(`${nm(m)}：「${esc(s.name)}」`,'good');
-  fxEmit({t:'skill',uid:m.uid,head:'令呪',name:s.name,lines:s.eff.map(e=>`${tLabel(e.t)}：${fxText(e)}`)});
-  applyEffects(m,s.eff,null);
-  G.players[m.pid].spell='used';
+// 令呪の状態：P.spellLeft＝残りの画数 / P.spellUsed[i]＝その効果を使った / P.spell==='decl'＝宣言中（マスタールール）
+// 令呪を使える：マスタールールは未使用・このターンにサーヴァントが1回以上行動できる。
+// マスターチームは残りがあり、生存サーヴァントが全員1回以上行動でき、行動を1回減らせる
+function canDeclareSpell(){
+  const P=G.players[G.cur]; if(!(P.spellLeft>0)||P.spell==='decl') return false;
+  if(mTeam()) return P.spellUsed.some((u,i)=>!u&&D(P.master.def).spells[i].eff.length) && alive(G.cur).every(u=>(G.maxActs[u.uid]||0)>0) && totalAlloc()>0;
+  return Object.values(G.maxActs).some(n=>n>0);
 }
-// 攻撃対象にできる敵マスター（ターゲット集中の敵がいれば不可）
+// 相手マスターへのダメージを令呪で防げる（残りがあり、宣言中でない）
+const canGuardSpell = pid=>G.players[pid].spellLeft>0&&G.players[pid].spell!=='decl';
+// 令呪の効果を使う。守る側の選択待ちになったら true
+// picked：マスターチームで「自軍サーヴァント」の対象に選んだ1騎
+function useSpell(m,i,picked){
+  const s=D(m.def).spells[i], P=G.players[m.pid];
+  log(`${nm(m)}：「${esc(s.name)}」${picked?` → ${nm(picked)}`:''}`,'good');
+  fxEmit({t:'skill',uid:m.uid,head:'令呪',name:s.name,picked:picked?D(picked.def).name:'',lines:s.eff.map(e=>`${spellTgt(e.t)}：${fxText(e)}`)});
+  P.spellUsed[i]=true; P.spellLeft--; P.spell=null;
+  return masterEffects(m,s.eff,{},picked);
+}
+// マスターチームの令呪：「自軍サーヴァント」は全員ではなく選んだ1騎
+const spellPicks = s=>mTeam()&&s.eff.some(e=>e.t==='svt');
+const spellTgt = t=>t==='svt'&&mTeam()?`選んだ${TERMS.unit}`:tLabel(t);
+// マスターの補助・令呪の効果を適用。「敵マスター」へのダメージは、相手が令呪で防げるなら守る側の選択（guard）を挟む。待ちになったら true
+function masterEffects(m,effs,o={},picked=null){
+  const md=effs.filter(e=>e.k==='dmg'&&e.t==='enemy_master');
+  applyEffects(m,effs.filter(e=>!md.includes(e)),picked,o);
+  const em=masterOf(1-m.pid), dmg=md.reduce((s,e)=>s+e.v,0);
+  if(!dmg||!em||em.out) return false;
+  if(canGuardSpell(em.pid)){ G.guard={kind:'spell',dmg}; G.phase='guard'; return true; }
+  fixedHit(m,em,dmg); return false;
+}
+// 攻撃対象にできる敵マスター（ターゲット集中の敵がいれば不可。マスターチームでは対象にならない）
 function masterTargetable(){
   const em=masterOf(1-G.cur);
-  if(!em||em.out||G.targetAll||alive(1-G.cur).some(u=>has(u,'taunt'))) return null;
+  if(!em||em.out||mTeam()||G.targetAll||alive(1-G.cur).some(u=>has(u,'taunt'))) return null;
   return em;
 }
 
@@ -629,25 +655,29 @@ const ACTIONS = {
     const max=ruleset().partyMax;
     if(max===1){ picks.splice(0,1,id); return; } // 1騎だけのルールは選び直し
     if(picks.length>=max){ G.setupMsg=`最大${max}体までです`; return; }
-    if(sumCost(picks)+d.cost>RULES.costCap){ G.setupMsg=`コスト合計が${RULES.costCap}を超えます`; return; }
+    if(sumCost(picks)+d.cost+mcost(pid)>costCap()){ G.setupMsg=`コスト合計が${costCap()}を超えます${masterRule()?`（${TERMS.player}込み）`:''}`; return; }
     picks.push(id);
   },
   setupRandom(){
+    const pid=G.setupPid;
+    if(masterRule()&&MASTERS.length) G.mpicks[pid]=MASTERS[Math.floor(Math.random()*MASTERS.length)].id;
+    const room=costCap()-(ruleset().partyMax>1?mcost(pid):0); // チームはマスターのコストを引いた残りで編成
     let best=[];
     for(let t=0;t<50;t++){
       const pool=[...UNITS].sort(()=>Math.random()-.5), p=[];
-      for(const d of pool){ if(p.length<ruleset().partyMax && sumCost(p)+d.cost<=RULES.costCap) p.push(d.id); }
+      for(const d of pool){ if(p.length<ruleset().partyMax && sumCost(p)+d.cost<=room) p.push(d.id); }
       if(p.length>best.length) best=p;
       if(best.length===ruleset().partyMax) break;
     }
-    G.picks[G.setupPid]=best; G.setupMsg='';
-    if(masterRule()&&MASTERS.length) G.mpicks[G.setupPid]=MASTERS[Math.floor(Math.random()*MASTERS.length)].id;
+    G.picks[pid]=best; G.setupMsg='';
   },
   // マスタールール：マスターを選ぶ（もう一度押すと外す）
   setupMaster({id}){
     if(G.phase!=='setup'||!masterRule()||!MASTERS.some(m=>m.id===id)) return;
     const pid=G.setupPid; G.setupMsg='';
-    G.mpicks[pid]=G.mpicks[pid]===id?null:id;
+    if(G.mpicks[pid]===id){ G.mpicks[pid]=null; return; }
+    if(ruleset().partyMax>1&&sumCost(G.picks[pid])+D(id).cost>costCap()){ G.setupMsg=`コスト合計が${costCap()}を超えます（${TERMS.player}込み）`; return; }
+    G.mpicks[pid]=id;
   },
   // CPUのおまかせ編成。how='random'：完全ランダム（setupRandom と同じ） / how='same'：相手と同じコストになるように選ぶ
   setupCpu({how}={}){
@@ -655,7 +685,7 @@ const ACTIONS = {
     const pid=G.setupPid; G.setupMsg='';
     if(how==='random'){ ACTIONS.setupRandom(); return; }
     const opp=G.picks[1-pid], pick=a=>a[Math.floor(Math.random()*a.length)];
-    if(masterRule()){ // マスタールール：サーヴァント＋マスターの合計コストが相手と同じ（なければ一番近い）組み合わせからランダム
+    if(masterRule()&&ruleset().partyMax===1){ // マスタールール：サーヴァント＋マスターの合計コストが相手と同じ（なければ一番近い）組み合わせからランダム
       const om=G.mpicks[1-pid], combos=UNITS.flatMap(u=>MASTERS.map(m=>({u:u.id,m:m.id,c:u.cost+m.cost})));
       const want=opp.length&&om?D(opp[0]).cost+D(om).cost:Math.max(...combos.map(x=>x.c));
       const gap=Math.min(...combos.map(x=>Math.abs(x.c-want))), top=combos.filter(x=>Math.abs(x.c-want)===gap), c=pick(top);
@@ -669,16 +699,21 @@ const ACTIONS = {
       G.picks[pid]=[pick(c).id]; return;
     }
     // チーム：相手と合計コストが同じ（なければ一番近い）編成からランダム。人数も相手に合わせ、相手が未編成ならコスト最大の3騎
+    // マスターチームはマスターも含めた合計コストで比べる
     const combos=[], max=ruleset().partyMax;
-    const rec=(start,ids,c)=>{ if(ids.length) combos.push({ids,c}); if(ids.length>=max) return;
-      for(let i=start;i<UNITS.length;i++){ const c2=c+UNITS[i].cost; if(c2<=RULES.costCap) rec(i+1,[...ids,UNITS[i].id],c2); } };
-    rec(0,[],0);
+    for(const m of masterRule()?MASTERS:[null]){
+      const mc=m?m.cost:0;
+      const rec=(start,ids,c)=>{ if(ids.length) combos.push({ids,c:c+mc,m:m&&m.id}); if(ids.length>=max) return;
+        for(let i=start;i<UNITS.length;i++){ const c2=c+UNITS[i].cost; if(c2+mc<=costCap()) rec(i+1,[...ids,UNITS[i].id],c2); } };
+      rec(0,[],0);
+    }
     if(!combos.length){ ACTIONS.setupRandom(); return; }
     const size=opp.length||Math.max(...combos.map(x=>x.ids.length));
     const sized=combos.filter(x=>x.ids.length===size), pool=sized.length?sized:combos;
-    const want=opp.length?sumCost(opp):Math.max(...pool.map(x=>x.c));
-    const gap=Math.min(...pool.map(x=>Math.abs(x.c-want))), top=pool.filter(x=>Math.abs(x.c-want)===gap);
-    G.picks[pid]=pick(top).ids.sort((a,b)=>D(b).hp-D(a).hp); // HPが高い順に1st
+    const want=opp.length?sumCost(opp)+mcost(1-pid):Math.max(...pool.map(x=>x.c));
+    const gap=Math.min(...pool.map(x=>Math.abs(x.c-want))), top=pool.filter(x=>Math.abs(x.c-want)===gap), c=pick(top);
+    G.picks[pid]=c.ids.slice().sort((a,b)=>D(b).hp-D(a).hp); // HPが高い順に1st
+    if(c.m) G.mpicks[pid]=c.m;
     if(gap) G.setupMsg=`合計コスト${want}の編成が作れないため、いちばん近いコスト${top[0].c}で編成しました`;
   },
   setupConfirm(){
@@ -740,30 +775,41 @@ const ACTIONS = {
     log(`${MASTER_ACTS.support}：${nm(m)} 出目${f+1} → ${face.eff.length?`「${esc(face.label)}」（このターンのみ）`:'無'}`, face.eff.length?'good':'sub');
     fxEmit({t:'skill',uid:m.uid,head:`${MASTER_ACTS.support}・出目${f+1}`,name:face.eff.length?face.label:'無',
       lines:face.eff.length?face.eff.map(e=>`${tLabel(e.t)}：${fxText(e)}`):['何も起きない']});
-    applyEffects(m,face.eff,null,{tmp:true});
-    masterDone();
+    if(!masterEffects(m,face.eff,{tmp:true})) masterDone();
   },
   // 攻撃：相手マスターへはコスト×20、相手サーヴァントへはコスト×10（退避中のマスターには当たらない）
   masterAttack({to}){
-    const m=masterReady(); if(!m) return;
+    const m=masterReady(); if(!m||mTeam()) return;
     const em=masterOf(1-G.cur), t=to==='master'?em:alive(1-G.cur)[0];
     if(!t||t.out) return;
     const dmg=masterAtkDmg(m,t);
     log(`${MASTER_ACTS.attack}：${nm(m)} → ${nm(t)}`,'');
     if(t.master&&G.players[t.pid].evac){ log(`${nm(t)}は退避中のため当たらない`,'sub'); fxEmit({t:'dmg',uid:t.uid,text:'退避'}); masterDone(); return; }
     // マスターからマスターへの攻撃は、相手が令呪1画でサーヴァントに守らせて無効にできる（宣言中は不可）
-    if(t.master&&dmg>0&&G.players[t.pid].spell==null){ G.guard={kind:'spell',dmg}; G.phase='guard'; return; }
+    if(t.master&&dmg>0&&canGuardSpell(t.pid)){ G.guard={kind:'spell',dmg}; G.phase='guard'; return; }
     fixedHit(m,t,dmg); masterDone();
   },
   // 令呪：now=即時（スターを消費・スキップなし）なら i の効果をすぐ使う。宣言なら以降のフェイズをスキップして、次のマスターフェイズで使う
-  masterSpell({now,i}){
+  masterSpell({now,i,uid}){
     const m=masterReady(); if(!m) return;
     const P=G.players[G.cur], need=ruleset().spellNowStars;
     if(!canDeclareSpell()) return;
+    if(mTeam()){ // マスターチーム：その場で使い、行動回数-1（同じ効果は1回まで）
+      const k=Number(i), s=D(m.def).spells[k]; if(!s||P.spellUsed[k]) return;
+      let picked=null;
+      if(spellPicks(s)){ // 対象の1騎を選ぶ（uid がなければ選択待ちにする）
+        picked=uid&&U(uid);
+        if(!picked||picked.master||picked.pid!==G.cur||picked.out){ G.spellPick={i:k}; return; }
+      }
+      G.spellPick=null;
+      const top=Object.entries(G.alloc).filter(([,n])=>n>0).sort((a,b)=>b[1]-a[1])[0];
+      G.alloc[top[0]]--; log(`令呪を使用：行動回数-1（${dn(U(top[0]))}）・残り${P.spellLeft-1}画`,'sub');
+      if(!useSpell(m,k,picked)) masterDone(); return;
+    }
     if(now){
       const s=D(m.def).spells[Number(i)]; if(!s||P.stars<need) return;
       P.stars-=need; log(`${esc(P.name)}：${TERMS.star}${need}個（クリティカルLv4）を消費して令呪を即時発動`,'sub');
-      useSpell(m,Number(i)); masterDone(); return;
+      if(!useSpell(m,Number(i))) masterDone(); return;
     }
     P.spell='decl'; G.mastered=true;
     log(`${esc(P.name)}：令呪を宣言（このターンの以降のフェイズをスキップ。次の${TERMS.player}フェイズで発動）`,'good');
@@ -773,11 +819,11 @@ const ACTIONS = {
   // 宣言済みの令呪を使う（次のターンのマスターフェイズ）
   masterSpellUse({i}){
     const m=masterReady(); if(!m||G.players[G.cur].spell!=='decl'||!D(m.def).spells[Number(i)]) return;
-    useSpell(m,Number(i)); masterDone();
+    if(!useSpell(m,Number(i))) masterDone();
   },
   // 退避：次の相手ターン、相手マスターの通常攻撃と、サーヴァントの全体攻撃を受けない
   masterEvac(){
-    const m=masterReady(); if(!m) return;
+    const m=masterReady(); if(!m||mTeam()) return;
     G.players[G.cur].evac=true; log(`${MASTER_ACTS.evac}：${nm(m)}は次の相手ターンの間、退避する`,'good');
     fxEmit({t:'pop',uid:m.uid,text:MASTER_ACTS.evac,cls:'heal'});
     masterDone();
@@ -788,7 +834,7 @@ const ACTIONS = {
     const g=G.guard, dp=1-G.cur, em=masterOf(dp);
     if(g.kind==='spell'){
       G.guard=null; G.phase='master';
-      if(to==='block'){ G.players[dp].spell='used'; log(`${esc(G.players[dp].name)}：令呪1画で${TERMS.unit}が${nm(em)}を守った（ダメージ無効）`,'good'); fxEmit({t:'dmg',uid:em.uid,text:'令呪'}); }
+      if(to==='block'){ G.players[dp].spellLeft--; log(`${esc(G.players[dp].name)}：令呪1画で${TERMS.unit}が${nm(em)}を守った（ダメージ無効）`,'good'); fxEmit({t:'dmg',uid:em.uid,text:'令呪'}); }
       else fixedHit(masterOf(G.cur),em,g.dmg);
       masterDone(); return;
     }
@@ -805,7 +851,7 @@ const ACTIONS = {
     if(s.pick){ G.pending={uid,si}; return; }
     doSkill(u,si,null);
   },
-  cancelPick(){ G.pending=null; },
+  cancelPick(){ G.pending=null; G.spellPick=null; },
   useUlt({uid}){
     const u=U(uid);
     if(G.phase!=='skill'||G.pending||G.ult||G.ultDone||u.pid!==G.cur||!canUlt(u)||u.np<RULES.ultCost) return;
@@ -846,6 +892,7 @@ const ACTIONS = {
   cardClick({uid}){
     const u=U(uid);
     if(G.copy){ const c=U(G.copy.uid); if(copyCands(c).includes(u)) doCopy(c.uid,u); return; }
+    if(G.spellPick){ if(u&&!u.master&&u.pid===G.cur&&!u.out) ACTIONS.masterSpell({i:G.spellPick.i,uid}); return; } // 令呪の対象
     if(G.pending){ if(pickValid(u)){ const p=G.pending; G.pending=null; doSkill(U(p.uid),p.si,u); } return; }
     if(G.phase==='target' && G.targetAll){ if(u.pid!==G.cur&&!u.out&&!isCpu(G.cur)) resolveDamage(); return; } // 全体宝具：敵を押すと発動
     if(G.phase==='target' && targetCandidates().includes(u)){

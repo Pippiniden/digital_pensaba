@@ -72,8 +72,16 @@ function cpuDecide(){
 // 攻撃対象のマスターは守る側がサーヴァントで受けるか選べるので、CPU はサーヴァントの攻撃でマスターを狙わない
 function cpuMaster(easy){
   const m=masterOf(G.cur), d=D(m.def), P=G.players[G.cur], em=masterOf(1-G.cur), es=alive(1-G.cur)[0], rs=ruleset();
-  const spellBest=()=>{ let bi=0, bs=-Infinity; d.spells.forEach((s,i)=>{ const v=cpuEffScore(m,s.eff,null,-1); if(v>bs){ bs=v; bi=i; } }); return {i:bi,sc:bs}; };
+  // 令呪の価値が一番高いもの（マスターチームで対象を選ぶ令呪は、味方ごとに試して一番よい1騎）
+  const spellBest=()=>{ let best={i:0,sc:-Infinity,uid:null};
+    d.spells.forEach((s,i)=>{ if(P.spellUsed[i]||!s.eff.length) return;
+      (spellPicks(s)?alive(G.cur):[null]).forEach(t=>{ const v=cpuEffScore(m,s.eff,t,-1); if(v>best.sc) best={i,sc:v,uid:t&&t.uid}; }); });
+    return best; };
   if(P.spell==='decl') return ['masterSpellUse',{i:String(spellBest().i)}];
+  if(rs.mTeam){ // マスターチーム：補助か令呪（行動-1と引き換えなので、価値が高いときだけ）
+    if(!easy&&canDeclareSpell()){ const b=spellBest(); if(b.sc>=4) return ['masterSpell',{i:String(b.i),...(b.uid?{uid:b.uid}:{})}]; }
+    return ['masterSupport'];
+  }
   const opts=[['masterSupport']];
   if(es) opts.push(['masterAttack',{to:'svt'}]);
   if(em&&!em.out&&!G.players[em.pid].evac) opts.push(['masterAttack',{to:'master'}]);
