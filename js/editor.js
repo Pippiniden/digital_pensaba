@@ -177,7 +177,7 @@ function newMaster(){
             {label:'無',eff:[]}, {label:'魔力供給',eff:[{k:'np',t:'svt',v:20}]}, {label:'魔弾',eff:[{k:'dmg',t:'enemy_master',v:40}]} ],
     spells:[ {name:'令呪：宝具解放',eff:[{k:'np',t:'svt',v:100}]}, {name:'令呪：回復',eff:[{k:'heal',t:'svt',v:200}]}, {name:'令呪：強化',eff:[{k:'atk',t:'svt',v:30,turns:3}]} ] };
 }
-const mFaceText = f=>f.eff.length?effsText(f.eff):'無（何も起きない）';
+const mFaceText = f=>f.eff.length?effsText(f.eff,null,mTLabel):'無（何も起きない）';
 function renderMasterForm(el){
   const m=cur();
   if(!m){ el.innerHTML=`<section class="sec"><p>${TERMS.player}がいません。「＋ 追加」から作成してください。</p></section>`; return; }
@@ -224,7 +224,7 @@ function renderMasterForm(el){
       <div class="row"><b>令呪${i+1}</b></div>
       <div class="fields"><label>名前<input data-p="spells.${i}.name" value="${esc(s.name)}"></label></div>
       ${effList(`spells.${i}.eff`,s.eff,'master')}
-      <div class="preview mprev" data-prev="spell" data-i="${i}">${esc(effsText(s.eff))}</div>
+      <div class="preview mprev" data-prev="spell" data-i="${i}">${esc(effsText(s.eff,null,mTLabel))}</div>
       ${ownLineIn(`spells.${i}.line`,s.line,MASTER_LINE_KEYS.spell)}
     </div>`).join('')}
   </section>
@@ -394,7 +394,7 @@ function effRow(path,j,e,ctx,n,atKind){
   return `<div class="eff" data-ep="${p}">
     <select class="effgrp" data-act="effGrp" data-ep="${p}" data-ctx="${ctx}" aria-label="効果の分類">${groups.map(([g,ks])=>opt(g,`${g}（${ks.length}）`,grp)).join('')}</select>
     <select data-p="${p}.k" data-act="effKind" aria-label="効果の種類">${kinds.map(k=>opt(k,FX[k].name,e.k)).join('')}${kinds.includes(e.k)?'':opt(e.k,(FX[e.k]||{}).name||e.k,e.k)}</select>
-    ${f.noTgt?'':`<select data-p="${p}.t" aria-label="対象">${tg.map(t=>opt(t,TARGETS[t]||t,e.t)).join('')}</select>`}
+    ${f.noTgt?'':`<select data-p="${p}.t" aria-label="対象">${tg.map(t=>opt(t,(ctx==='master'?mTLabel(t):TARGETS[t])||t,e.t)).join('')}</select>`}
     ${val}
     ${f.inst?'':(f.timesOnly||(ctx==='master'&&/^faces./.test(path))?'':optNum(p+'.turns',e.turns,'ターン'))+optNum(p+'.times',e.times,'回数')}
     ${FX[e.k]&&FX[e.k].color?`<label class="mini"><span>色</span><select data-p="${p}.color" data-t="optstr">${opt('','すべて',e.color||'')}${['R','B','G'].map(c=>opt(c,TERMS[c],e.color)).join('')}</select></label>`:''}
@@ -418,7 +418,7 @@ function updatePreviews(){
   document.querySelectorAll('.eff[data-ep]').forEach(el=>{ const e=getPath(u,el.dataset.ep); if(e) el.querySelector('.effprev').textContent=fxText(e); });
   if(isM()){
     document.querySelectorAll('[data-prev="mface"]').forEach(el=>el.textContent=mFaceText(u.faces[+el.dataset.i]));
-    document.querySelectorAll('[data-prev="spell"]').forEach(el=>el.textContent=effsText(u.spells[+el.dataset.i].eff));
+    document.querySelectorAll('[data-prev="spell"]').forEach(el=>el.textContent=effsText(u.spells[+el.dataset.i].eff,null,mTLabel));
     document.querySelectorAll('[data-fitout]').forEach(el=>{ const [k,a]=el.dataset.fitout.split('.'); el.textContent=`${u.fit[k][a]}%`; });
     document.querySelectorAll('[data-linecount]').forEach(el=>el.textContent=`${u.lines[el.dataset.linecount].length}件`);
     const ma=RULESETS.master.masterAtk, at=document.querySelector('[data-mprev="atk"]'); if(at) at.textContent=`攻撃：相手${TERMS.player}へ${u.cost*ma.master}・相手${TERMS.unit}へ${u.cost*ma.svt}（マスタールール）`;
@@ -494,7 +494,7 @@ function pencilHTML(u){
 function rollResultHTML(u){
   if(rollIdx==null) return '<span class="sub small">「転がす」で1回ロールを試せます。</span>';
   if(rollTimer) return '<span class="sub small">ころころ…</span>';
-  if(isM()){ const f=u.faces[rollIdx]; return `出目<b>${rollIdx+1}</b> ・ ${f.eff.length?`<b>${esc(f.label)}</b><div class="sub small">${esc(effsText(f.eff))}</div>`:'無（何も起きない）'}`; }
+  if(isM()){ const f=u.faces[rollIdx]; return `出目<b>${rollIdx+1}</b> ・ ${f.eff.length?`<b>${esc(f.label)}</b><div class="sub small">${esc(effsText(f.eff,null,mTLabel))}</div>`:'無（何も起きない）'}`; }
   const f=u.faces[rollIdx], c=rollPost?f.post:f.pre;
   return `出目<b>${rollIdx+1}</b> ・ 行動回数<b>${faceActs(u,rollIdx)}</b> ・ ${cmdChip(c)}${c.eff&&c.eff.length?`<div class="sub small">${esc(effsText(c.eff))}</div>`:''}`;
 }

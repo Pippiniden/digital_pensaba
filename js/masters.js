@@ -4,7 +4,8 @@
 // spells: 令呪3種
 // lines : セリフ（support=補助 / attack=攻撃 / spell=令呪使用）。faces・spells の line は、その面・令呪だけの専用セリフ（任意）
 // 効果の対象（t）: svt=自軍サーヴァント / self=マスター自身 / ally_all=味方全体（マスター含む）
-//                  enemy_all=敵サーヴァント / enemy_master=敵マスター / master=自陣のスター
+//                  enemy_all=敵サーヴァント全員（敵マスターには当たらない） / enemy_both=敵全体（敵サーヴァント全員＋敵マスター）
+//                  enemy_svt=選んだ敵サーヴァント / enemy_master=敵マスター / master=自陣のスター
 const DEFAULT_MASTERS = [
   {
     "id":"m_rin", "name":"遠坂凛", "cost":5, "hp":500,

@@ -117,7 +117,7 @@ function masterChipHTML(m){
 // マスターフェイズの選択肢
 function masterPromptHTML(){
   const m=masterOf(G.cur), d=D(m.def), P=G.players[G.cur], em=masterOf(1-G.cur), es=alive(1-G.cur)[0], rs=ruleset();
-  const spells=(a,extra='')=>d.spells.map((s,i)=>`<button class="primary" data-a="${a}" data-i="${i}" ${extra} title="${esc(effsText(s.eff))}">${esc(s.name)}</button>`).join('');
+  const spells=(a,extra='')=>d.spells.map((s,i)=>`<button class="primary" data-a="${a}" data-i="${i}" ${extra} title="${esc(effsText(s.eff,null,mTLabel))}">${esc(s.name)}</button>`).join('');
   if(G.spellPick){ // 対象の選択待ち（令呪・補助）。補助はロール済みなのでキャンセル不可
     const sp=G.spellPick, s=sp.sup||d.spells[sp.i], who=sp.side==='enemy'?`敵の${TERMS.unit}`:sp.side==='own'?`自軍の${TERMS.unit}`:TERMS.unit;
     return `<p class="hl">「${esc(s.name||s.label)}」の対象にする${who}を選んでください</p><p class="sub small">${esc(spellText(s))}</p>${sp.sup?'':'<button data-a="cancelPick">キャンセル</button>'}`;
@@ -319,7 +319,7 @@ function masterDetailHTML(d,m){
     </div>
     ${fx}
     <h4>${MASTER_ACTS.support}（出た面の効果をこのターンだけ）</h4>
-    <table class="faces"><tr><th>出目</th><th>効果</th></tr>${d.faces.map((f,i)=>`<tr><td>${i+1}</td><td>${f.eff.length?`<b>${esc(f.label)}</b><div class="sub">${esc(effsText(f.eff))}</div>`:'<span class="sub">無</span>'}</td></tr>`).join('')}</table>
+    <table class="faces"><tr><th>出目</th><th>効果</th></tr>${d.faces.map((f,i)=>`<tr><td>${i+1}</td><td>${f.eff.length?`<b>${esc(f.label)}</b><div class="sub">${esc(effsText(f.eff,null,mTLabel))}</div>`:'<span class="sub">無</span>'}</td></tr>`).join('')}</table>
     <h4>${MASTER_ACTS.spell}（${ruleset().mTeam?`${ruleset().spells}画・同じ効果は1回・使うと行動-1`:'1試合1回・3つから1つ'}）${P?`<small class="sub"> ${P.spell==='decl'?'宣言中':`残り${P.spellLeft}画`}</small>`:''}</h4>
     <div class="skills">${d.spells.map((s,i)=>`<div class="skill"><span class="sname">${esc(s.name)}${P&&P.spellUsed[i]?' <small class="sub">（使用済み）</small>':''}</span><span class="desc">${esc(spellText(s))}</span></div>`).join('')}</div>
   </div>`;

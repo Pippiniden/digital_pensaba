@@ -207,14 +207,17 @@ function fxGroups(){ // 定義漏れの効果も「その他」として必ず�
 // ---------- 効果の対象 ----------
 // マスタールールでは「味方全体」に自分のマスターも含む（敵全体のダメージは敵マスターにも当たる。退避で防げる）
 const TARGETS = { self:'自身', picked:'選んだ1体', ally_all:'味方全体', enemy_all:'敵全体', target:'攻撃対象', master:TERMS.player,
-  svt:`自軍${TERMS.unit}`, enemy_master:`敵${TERMS.player}`, enemy_svt:`選んだ敵${TERMS.unit}`, ally_svt:`選んだ自軍${TERMS.unit}` };
+  svt:`自軍${TERMS.unit}`, enemy_master:`敵${TERMS.player}`, enemy_svt:`選んだ敵${TERMS.unit}`, ally_svt:`選んだ自軍${TERMS.unit}`,
+  enemy_both:`敵全体（${TERMS.unit}＋${TERMS.player}）` };
+// マスターの補助・令呪では、enemy_all は敵サーヴァントだけ（敵マスターには当たらない）。両方に当てたいときは enemy_both
+const mTLabel = t=>t==='enemy_all'?`敵${TERMS.unit}全体`:tLabel(t);
 // 場所ごとに使える対象（skill=スキル / ult=宝具 / special=白コマンドの特殊行動 / master=マスターの補助・令呪）
 // master の self はマスター自身。master（スター）は自分の陣営
 const TGT_BY_CTX = {
   skill:['self','picked','ally_all','enemy_all','master'],
   ult:['self','target','ally_all','enemy_all','master'],
   special:['self','target','ally_all','enemy_all','master'],
-  master:['svt','ally_svt','self','ally_all','enemy_all','enemy_svt','enemy_master','master'],
+  master:['svt','ally_svt','self','ally_all','enemy_all','enemy_both','enemy_svt','enemy_master','master'],
 };
 const fxOnlyIn = (k,ctx)=>!FX[k].only||[].concat(FX[k].only).includes(ctx); // その場所で使える効果か
 const PICKS = { '':'選ばない', ally:'味方単体', other:'自分以外の味方単体', enemy:'敵単体', any:'単体（敵味方）' };

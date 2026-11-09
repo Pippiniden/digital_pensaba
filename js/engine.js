@@ -127,7 +127,7 @@ const hitsOf = effs=>Math.min(10,Math.max(1,...(effs||[]).filter(e=>e.k==='multi
 const effVal = (e,t)=>e.max&&t?maxHp(t):e.v;
 // 全体にかかる効果の呼び名（スキル演出の「→ 全体」）
 function allLabel(effs){
-  const ts=new Set(effs.filter(e=>FX[e.k]&&!FX[e.k].noTgt).map(e=>e.t)), a=ts.has('ally_all'), en=ts.has('enemy_all');
+  const ts=new Set(effs.filter(e=>FX[e.k]&&!FX[e.k].noTgt).map(e=>e.t)), a=ts.has('ally_all'), en=ts.has('enemy_all')||ts.has('enemy_both');
   return a&&en?'全体':a?'味方全体':en?'敵全体':'';
 }
 function mods(u,k,color){
@@ -173,6 +173,7 @@ function resolveTargets(src,t,picked){
   else if(t==='svt') ts=picked&&picked.pid===src.pid?[picked]:alive(src.pid); // マスターチームの令呪は選んだ1騎
   else if(t==='ally_svt') ts=picked&&!picked.master&&picked.pid===src.pid?[picked]:[]; // マスターが選んだ自軍1騎
   else if(t==='enemy_master') ts=em?[em]:[];
+  else if(t==='enemy_both') ts=[...alive(1-src.pid),...(em?[em]:[])]; // マスターの補助・令呪：敵サーヴァント全員＋敵マスター
   else if(t==='enemy_svt') ts=picked&&!picked.master&&picked.pid!==src.pid?[picked]:[]; // マスターが選んだ敵1体
   return ts.filter(u=>u&&!u.out);
 }
@@ -746,9 +747,11 @@ const supPickSide = effs=>{ const own=effs.some(e=>e.t==='ally_svt')&&alive(G.cu
 const pickOk = (side,u,pid)=>!!(side&&u&&!u.master&&!u.out&&(side==='any'||(side==='own')===(u.pid===pid)));
 const pickCands = (side,pid)=>side==='own'?alive(pid):side==='enemy'?alive(1-pid):side==='any'?[...alive(pid),...alive(1-pid)]:[];
 const spellPicks = s=>!!pickSide(s.eff);
-const spellTgt = t=>t==='svt'&&mTeam()?`選んだ${TERMS.unit}`:tLabel(t);
+const spellTgt = t=>t==='svt'&&mTeam()?`選んだ${TERMS.unit}`:mTLabel(t);
 // マスターの補助・令呪の効果を適用。「敵マスター」へのダメージは、相手が令呪で防げるなら守る側の選択（guard）を挟む。待ちになったら true
 function masterEffects(m,effs,o={},picked=null){
+  // 敵全体（enemy_both）のダメージは、敵サーヴァント全員（enemy_all）と敵マスター（enemy_master＝令呪で守れる）に分けて処理する
+  effs=effs.flatMap(e=>e.k==='dmg'&&e.t==='enemy_both'?[{...e,t:'enemy_all'},{...e,t:'enemy_master'}]:[e]);
   const md=effs.filter(e=>e.k==='dmg'&&e.t==='enemy_master');
   applyEffects(m,effs.filter(e=>!md.includes(e)),picked,o);
   const em=masterOf(1-m.pid), dmg=md.reduce((s,e)=>s+effVal(e,em),0);
@@ -919,7 +922,7 @@ const ACTIONS = {
     const d=D(m.def), f=roll(), face=d.faces[f];
     log(`${MASTER_ACTS.support}：${nm(m)} 出目${f+1} → ${face.eff.length?`「${esc(face.label)}」（このターンのみ）`:'無'}`, face.eff.length?'good':'sub');
     fxEmit({t:'skill',uid:m.uid,head:`${MASTER_ACTS.support}・出目${f+1}`,name:face.eff.length?face.label:'無',picked:allLabel(face.eff),
-      lines:face.eff.length?effLines(face.eff):['何も起きない']});
+      lines:face.eff.length?effLines(face.eff,null,mTLabel):['何も起きない']});
     if(face.eff.length) say(m,'support',{own:face.line});
     const side=supPickSide(face.eff);
     if(side){ G.spellPick={sup:{label:face.label,eff:face.eff},side}; return; } // 「選んだ敵1体」：対象の選択待ち
