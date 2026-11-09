@@ -30,7 +30,7 @@ It was written from the code (`js/*.js`). If you find a mismatch, the code is th
 | `css/base.css` | Shared styles (CSS variables, buttons, header) |
 | `css/game.css` / `css/editor.css` | Per-screen styles |
 | `img/units/` | **Character images by id**: `{id}.webp` (face), `{id}_card.webp` (command card, optional). Names/extension set by `IMG_DIR` / `IMG_EXT` / `IMG_CARD_SUFFIX` in rules.js |
-| `img/classes/` | Class icons (webp) / `img/placeholder/` placeholder images (face.webp / card.webp) / `img/ui/` magic circle |
+| `img/classes/` | Class icons (webp) / `img/placeholder/` placeholder images (face.webp / card.webp) / `img/ui/` magic circle and `grail.webp` (the Holy Grail on the ascension card; paths in `UI_IMG`) |
 
 ## 3. Script load order and dependencies
 
@@ -143,6 +143,8 @@ Chosen on the mode screen (`setRule`, plus `toggleHandicap`; both kept by `resta
 |---|---|---|
 | `critPow` | Critical damage **+x** (additive, not a multiplier) | `resolveCommand` |
 | `critRoll` | "Critical roll −x" = critical level **+x** | `resolveCommand` |
+| `critMult` | "Crit multiplier": on a crit, damage becomes (damage before the crit step) × x% **instead of** +30/+60 and the color-buff doubling; `critPow` is still added after. Highest value wins. NP / stars keep the normal crit ×2 | `resolveCommand` |
+| `healBlock` | Debuff: blocks `heal` and `regenHp` (not the HP gained from `maxHp`) | `applyOne`, `endPhase` |
 | `poison` / `burn` | DoT of value v at turn end (0 → `RULES.dot`) | `endPhase`, `dotVal` |
 | `spread` | Burn damage ×2 | `endPhase` |
 | `curse` | **Times only** (`timesOnly`). No NP gain when hit; each hit uses one time; reapplying adds times | `applyOne`, `dealDamage` |
@@ -208,7 +210,7 @@ Chosen on the mode screen (`setRule`, plus `toggleHandicap`; both kept by `resta
 | Character select: sort / filter | `UI.roster` + `ROSTER_SORTS` / `rosterList` / `rosterFilterHTML` / `rosterTilesHTML` in `game-ui.js`. Field changes (`data-uif`) only redraw `.roster` (`redrawRoster`) so the search box keeps focus |
 | End-of-game timing | `fxNext` in `fx.js`: when the queue empties with `G.phase==='over'`, `UI.endReady` (shows the rematch / result buttons in `promptHTML`) turns on after the VICTORY banner fades, then the result modal opens |
 | Auto-advance rules | `autoMove` / `hasSkillChoice` in `js/game-ui.js` |
-| Command card look / shared assets | `cmdCardHTML` / `cardLayers` in `common.js`; asset paths in `CARD_LAYERS` in `rules.js` |
+| Command card look / shared assets | `cmdCardHTML` / `cardLayers` in `common.js`; asset paths in `CARD_LAYERS` in `rules.js`. The ascension (ASC) card shows `UI_IMG.grail` (`.cc-grail`, `.hasgrail` in base.css) |
 | Balance testing (simple-rule and 3v3 auto matches) | Rules of a match: `simGame` in `js/sim.js` (runs on the real engine/CPU, so rule changes apply automatically). Dialog / options / tables: `js/editor-sim.js` + "バランス検証" in `css/editor.css`. Needs the page served over http (Workers don't load from `file://`) |
 | Editor form / preview | `js/editor.js` (`renderForm` / `effRow` / `renderSide`) + `css/editor.css` |
 | Data validation rules (errors / warnings) | `validateUnits` / `checkEffs` in `common.js` |

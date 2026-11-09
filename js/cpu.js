@@ -135,6 +135,8 @@ function cpuSkillScore(u,si){
       case 'counter': sc+=ts.some(t=>t.pid===u.pid)?2:-1; break;
       case 'atkVs': sc+=acting&&enemies.some(x=>x.fx.some(f=>e.vs?f.k===e.vs:FX[f.k].buff===false))?3:.5; break;
       case 'critDown': sc+=foes.length?1.5:-1; break;
+      case 'critMult': sc+=acting&&!G.ult&&critLevel(stars)>=3?3:0; break;
+      case 'healBlock': sc+=foes.some(t=>hpR(t)<.7||t.fx.some(x=>x.k==='regenHp'))?2:1; break;
       case 'cardConv': sc+=acting?1.5:.5; break;
       case 'buffExtend': sc+=ts.some(t=>t.fx.some(x=>FX[x.k].buff===true&&x.turns!=null))?2:0; break;
       case 'skillCharge': sc+=ts.some(t=>t.used.some((x,i)=>x&&!(t===u&&i===si)))?3:-1; break;

@@ -89,6 +89,7 @@ function fixEff(e){
   if(!f.color) delete e.color;
   if(e.k!=='atkVs') delete e.vs;
   if(e.k==='cardConv'&&!e.color) e.color='R';
+  if(e.k==='critMult'&&!(e.v>100)) e.v=200;
   if(e.k==='dmg'||e.k==='copyRoll') delete e.at;
   if(e.k==='star'&&e.t==='self') e.t='master';
 }

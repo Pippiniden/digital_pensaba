@@ -136,6 +136,7 @@ function checkEffs(effs,ctx,where,add){
     if(e.chance&&e.chance>=6) add('warn',`${w}：ロール6以下は必ず成功します`);
     if(e.k==='cardConv'&&!e.color) add('error',`${w}：カード変換は変換先の色を指定してください`);
     if(e.vs&&e.k!=='atkVs') add('warn',`${w}：この効果では弱体の種類の指定は使われません`);
+    if(e.k==='critMult'&&e.v>0&&e.v<=100) add('warn',`${w}：クリティカル倍率が100%以下だと、クリティカルでダメージが増えません`);
     if(e.k==='maxHp'&&e.times!=null) add('warn',`${w}：最大HP+は回数では減りません（ターンで指定してください）`);
     if(['buffExtend','skillCharge'].includes(e.k)&&!(e.v>0)) add('error',`${w}：値は1以上にしてください`);
     if(e.at&&ctx==='skill') add('warn',`${w}：スキルでは「${EFF_AT[e.at]}」の指定は使われません`);
@@ -270,7 +271,7 @@ function cardLayers(kind,col){
 }
 // コマンドカード
 //   Buster/Arts/Quick・宝具：背景(共通) → キャラ画像(サーヴァントごと) → 枠と種別名(共通) の3層
-//   特殊・霊基再臨：文字だけのカード
+//   特殊：文字だけのカード / 霊基再臨：聖杯の画像（UI_IMG.grail）＋文字
 function cmdCardHTML(d,c,opt={}){
   if(!c) return '';
   const sz=opt.small?' sm':'';
@@ -286,7 +287,8 @@ function cmdCardHTML(d,c,opt={}){
       ${c.dmg!=null?`<span class="ccdmg">${c.dmg}</span>`:''}${ex&&!opt.small?`<span class="ccex">${ex}</span>`:''}</div>`;
   }
   const label=c.c==='ASC'?TERMS.asc:(c.label||TERMS.W);
-  return `<div class="ccard ${esc(c.c)} plain${sz}"><span class="ccname">${esc(label)}</span>${c.dmg>0?`<span class="ccdmg">${c.dmg}</span>`:''}</div>`;
+  const grail=c.c==='ASC'&&UI_IMG.grail?`<img class="cc-grail" src="${esc(UI_IMG.grail)}" alt="">`:'';
+  return `<div class="ccard ${esc(c.c)} plain${grail?' hasgrail':''}${sz}">${grail}<span class="ccname">${esc(label)}</span>${c.dmg>0?`<span class="ccdmg">${c.dmg}</span>`:''}</div>`;
 }
 
 // ---------- 表示用の文字列 ----------
@@ -299,6 +301,7 @@ function fxText(e){
     case 'def': s=`被ダメージ-${e.v}`; break;
     case 'defDown': s=`被ダメージ+${e.v}`; break;
     case 'critPow': s=`クリティカル威力+${e.v}`; break;
+    case 'critMult': s=`クリティカル時ダメージ×${e.v}%`; break;
     case 'guts': s=`ガッツ(HP${e.v})`; break;
     case 'critRoll': s=`クリティカルロール-${e.v}(Lv+${e.v})`; break;
     case 'poison': s=`毒${e.v||RULES.dot}`; break;

@@ -146,7 +146,8 @@ function applyOne(src,t,e){
   const d=D(t.def);
   if(immuneTo(t,e.k)) return;
   switch(e.k){
-    case 'heal': t.hp=Math.min(maxHp(t),t.hp+e.v); log(`${nm(t)} HP${e.v}回復`,'good'); return;
+    case 'heal': if(has(t,'healBlock')){ log(`${nm(t)}は回復無効でHPが回復しない`,'sub'); return; }
+      t.hp=Math.min(maxHp(t),t.hp+e.v); log(`${nm(t)} HP${e.v}回復`,'good'); return;
     case 'np': addNp(t,e.v); log(`${nm(t)} ${TERMS.gauge}${e.v>=0?'+':''}${e.v}%`); return;
     case 'star': changeStars(t.pid,e.v); return;
     case 'starLoss': changeStars(t.pid,-e.v); return;
@@ -317,8 +318,15 @@ function resolveCommand(att,cmd,tgt,o={}){
       consume(att,[...cr.list,...cd.list]);
     }
     if(crit){
-      const cp=mods(att,'critPow'), add=(cmd.c==='R'?RULES.critDmgR:RULES.critDmg)+cp.sum+colorBuff;
-      dmg+=add; note.push(`クリ+${add}${colorBuff?`(色バフ+${colorBuff}含む)`:''}`); consume(att,cp.list);
+      const cp=mods(att,'critPow'), cm=att.fx.filter(e=>e.k==='critMult');
+      if(cm.length){ // クリティカル倍率：+30/+60・色バフ2倍の代わりに、ここまでのダメージ×x%（威力+は最後に加算）
+        const pct=Math.max(...cm.map(e=>e.v)), add=Math.round(dmg*pct/100)-dmg+cp.sum;
+        dmg+=add; note.push(`クリ×${pct}%${cp.sum?`+${cp.sum}`:''}`); consume(att,cm);
+      } else {
+        const add=(cmd.c==='R'?RULES.critDmgR:RULES.critDmg)+cp.sum+colorBuff;
+        dmg+=add; note.push(`クリ+${add}${colorBuff?`(色バフ+${colorBuff}含む)`:''}`);
+      }
+      consume(att,cp.list);
     }
   }
   // 6. 最終ダメージ（クリティカルとオーバーキルは重複：獲得NP・発生スターがそれぞれ2倍）
@@ -453,7 +461,8 @@ function endPhase(){
   // 毎ターン○○：手番側の生存サーヴァントに付いているものが発動
   alive(G.cur).forEach(u=>{
     const h=mods(u,'regenHp').sum, n=mods(u,'regenNp').sum, s=mods(u,'regenStar').sum;
-    if(h&&u.hp<maxHp(u)){ const v=Math.min(h,maxHp(u)-u.hp); u.hp+=v; log(`${nm(u)} 毎ターン回復：HP${v}回復`,'good'); fxEmit({t:'pop',uid:u.uid,text:`HP+${v}`,cls:'heal'}); }
+    if(h&&has(u,'healBlock')) log(`${nm(u)}は回復無効で毎ターン回復しない`,'sub');
+    else if(h&&u.hp<maxHp(u)){ const v=Math.min(h,maxHp(u)-u.hp); u.hp+=v; log(`${nm(u)} 毎ターン回復：HP${v}回復`,'good'); fxEmit({t:'pop',uid:u.uid,text:`HP+${v}`,cls:'heal'}); }
     if(n){ addNp(u,n); log(`${nm(u)} 毎ターン：${TERMS.gauge}+${n}%`,'good'); }
     if(s){ G.gen+=s; log(`${nm(u)} 毎ターン：${TERMS.star}${s}個獲得`,'good'); }
   });

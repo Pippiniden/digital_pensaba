@@ -27,7 +27,7 @@ const CARD_LAYERS = {
 };
 
 // 画面の飾り
-const UI_IMG = { circleOut:'img/ui/mcircleo.webp', circleIn:'img/ui/mcirclei.webp' };
+const UI_IMG = { circleOut:'img/ui/mcircleo.webp', circleIn:'img/ui/mcirclei.webp', grail:'img/ui/grail.webp' }; // grail＝霊基再臨カードの聖杯
 
 // ---------- ルール定数 ----------
 // 泥ペンサバ「チームバトルルール」（3on3・合計コスト10）準拠。クラス相性はなし
@@ -107,6 +107,7 @@ const FX = {
   atk:{name:'攻撃ダメージ+',buff:true,val:true,color:true}, atkDown:{name:'攻撃ダメージ-',buff:false,val:true},
   def:{name:'被ダメージ-',buff:true,val:true},   defDown:{name:'被ダメージ+',buff:false,val:true},
   critPow:{name:'クリティカル威力+',buff:true,val:true},   // クリティカル時のダメージ増加量に+x
+  critMult:{name:'クリティカル倍率',buff:true,val:true},     // クリティカル時のダメージを「+30（Buster+60）・色バフ2倍」の代わりに、クリティカル前のダメージ×x%にする（複数なら最大値）。獲得NP・スターは通常どおり2倍
   evade:{name:'回避',buff:true}, invul:{name:'無敵',buff:true},
   sureHit:{name:'必中',buff:true}, pierce:{name:'無敵貫通',buff:true}, guts:{name:'ガッツ',buff:true,val:true},
   taunt:{name:'ターゲット集中',buff:true},
@@ -137,7 +138,8 @@ const FX = {
   fear:{name:'恐怖',buff:false,mental:true},                             // 行動回数-1
   drain:{name:'HP減少',buff:false,val:true,perm:true},      // ターン終了時に値ぶんの弱体ダメージ。重複する（合計）。永続でよい
   sealSkill:{name:'スキル封印',buff:false}, sealUlt:{name:'宝具封印',buff:false},
-  critDown:{name:'クリティカル発生率ダウン',buff:false,val:true}, // 攻撃時のクリティカルレベル-x（シンプルは出目+x）
+  critDown:{name:'クリティカル発生率ダウン',buff:false,val:true},
+  healBlock:{name:'回復無効',buff:false},                   // HP回復・毎ターンHP回復を受けない // 攻撃時のクリティカルレベル-x（シンプルは出目+x）
   // 即時
   heal:{name:'HP回復',val:true,inst:true}, np:{name:'NP増減',val:true,inst:true}, star:{name:'スター獲得',val:true,inst:true},
   starLoss:{name:'スター消失',val:true,inst:true},             // 対象のマスターがスターを失う
