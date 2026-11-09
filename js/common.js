@@ -220,6 +220,7 @@ function imgFail(el){
   const fb=(el.dataset.fb||'').split('|').filter(Boolean);
   if(!fb.length){ el.onerror=null; return; }
   el.dataset.fb=fb.slice(1).join('|'); el.src=fb[0];
+  if(Object.values(IMG_PLACEHOLDER).includes(fb[0])) el.removeAttribute('style'); // 仮画像にはトリミング設定を当てない
 }
 // loading="lazy" は付けない：描き直しで作り直した画像が、表示されるまで一瞬空白になるため
 const imgTag=(src,fallback,cls,alt='',style='')=>`<img class="${cls}" src="${esc(src)}" alt="${esc(alt)}" data-fb="${esc([].concat(fallback).join('|'))}" onerror="imgFail(this)"${style?` style="${style}"`:''}>`;
@@ -255,7 +256,7 @@ function replaceHTML(el,html){
   el.replaceWith(n);
   return n;
 }
-function unitImg(d,k,cls,alt=''){ const c=imgCandidates(d,k); return imgTag(c[0],c.slice(1),cls,alt,fitStyle(d,k)); }
+function unitImg(d,k,cls,alt=''){ const c=imgCandidates(d,k); const ph=Object.values(IMG_PLACEHOLDER).includes(c[0]); return imgTag(c[0],c.slice(1),cls,alt,ph?'':fitStyle(d,k)); }
 function faceImg(d,cls='face'){ return `<span class="${cls}">${unitImg(d,'face','',d?d.name:'')}</span>`; }
 // コマンドカードの共通素材（rules.js の CARD_LAYERS）。宝具は bg が空なら宝具の色の bg を借りる
 function cardLayers(kind,col){
