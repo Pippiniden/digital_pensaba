@@ -208,7 +208,7 @@ body[data-screen="battle"] #app{overflow:hidden}
 .costm .bar i{background:linear-gradient(90deg,var(--gold),var(--gold-hi))}
 .setbtns{display:flex;gap:8px}
 .setbody{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:12px}
-.rosterwrap{min-height:0;display:flex;flex-direction:column;gap:8px}
+.rosterwrap{min-height:0;min-width:0;display:flex;flex-direction:column;gap:8px}
 .rfilter{flex:none;display:flex;flex-direction:column;gap:6px;padding:8px 10px;border-radius:6px;border:1px solid var(--gold-lo);background:rgba(6,13,34,.6)}
 .rcls{display:flex;flex-wrap:wrap;gap:4px}
 .rchip{width:34px;height:34px;padding:0;justify-content:center;font:700 12px var(--serif)}
@@ -407,7 +407,7 @@ body[data-screen="battle"] #app{overflow:hidden}
   body.game:not([data-screen="battle"]){height:auto;min-height:100vh;overflow:auto}
   body.game:not([data-screen="battle"]) #app{overflow:visible}
   .setup{height:auto}
-  .setbody{grid-template-columns:1fr}
+  .setbody{grid-template-columns:minmax(0,1fr)}
   .roster{overflow:visible;flex:none}
 }
 @media (max-width:860px){
@@ -531,7 +531,7 @@ body[data-screen="battle"] #app{overflow:hidden}
 .mchip.hit{animation:none}
 .mopts{justify-content:center}
 .mopts button{white-space:nowrap}
-.mroster{flex:none;display:flex;flex-direction:column;gap:6px;margin-bottom:6px}
+.mroster{flex:none;min-width:0;display:flex;flex-direction:column;gap:6px;margin-bottom:6px}
 .mroster h4{margin:0;font:700 13px var(--serif);color:var(--gold-hi)}
 .mtiles{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 6px}
 .mtile{flex:none;width:96px}
