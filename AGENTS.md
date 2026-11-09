@@ -158,6 +158,15 @@ Chosen on the mode screen (`setRule`, plus `toggleHandicap`; both kept by `resta
 | `instantDeath` | HP → 0 and knocked out, **ignores guts** | `applyOne` (`doSkill` then calls `checkWin`) |
 | `starLoss` | Target's master loses x stars (min 0) | `applyOne` / `changeStars` |
 | `onAtkStar` / `onAtkNp` | "On attack": each damaging command (optionally only of `color`) generates x stars / gains x% NP. Not on extra attacks or ultimates | end of `resolveCommand` |
+| `regenHp` / `regenNp` / `regenStar` | "Every turn": at the end phase of the owner's turn (after DoT), alive units of `G.cur` heal (up to `maxHp`), gain NP, and add stars to `G.gen` | `endPhase` |
+| `atkVs` | Attack +x when the target has the debuff named by the effect's extra field `vs` (an `FX` key with `buff:false`; unset = any debuff). `vs` is kept by `normEff`, copied onto the runtime fx, and edited via the "弱体" select in `effRow` | `dmgMods()` |
+| `counter` | Each time the unit takes an attack hit (command or ultimate; `dealDamage(...,true,{att})`), the attacker takes x fixed damage (no modifiers / invul / evade / NP). An attacker knocked out by it stops: its remaining commands, Brave Chain and the rest of its ultimate are skipped | `dealDamage`, `resolveDamage`, `resolveUlt` |
+| `onHitNp` / `onHitStar` | On each attack hit: NP +x (blocked by `curse` like normal hit NP) / stars for the unit's master via `gainStars` (`G.gen` on the turn side, `stars` directly otherwise) | `dealDamage` |
+| `maxHp` | Max HP +x; HP also rises by x when applied. Read max HP via `maxHp(u)` (engine.js; UI bars, `heal`, CPU `hpR`), never `D(u.def).hp` for a runtime unit. `clampHp` lowers HP when it expires (`beginTurn`) or is stripped | `applyOne`, `maxHp` / `clampHp` |
+| `critDown` | Debuff on the attacker: crit level −x (simple rule: die roll +x, and the 30★ "certain" no longer applies) | `resolveCommand` |
+| `cardConv` | Requires `color`. Converts an R/B/G command rolled in `rollAction` to that color (one time per conversion; not on extra attacks or copied commands) | `ACTIONS.rollAction` |
+| `buffExtend` | Instant: the target's buffs that have `turns` get +x turns | `applyOne` |
+| `skillCharge` | Instant: resets up to x used skills of the target (lowest index first). `doSkill` marks the skill used **after** applying effects so it never resets itself; skills that contain `skillCharge` are never reset (prevents two units resetting each other forever) | `applyOne`, `doSkill` |
 | `copyRoll` | Special-action only. Roll another servant's pencil and use its post-ascension command (rerolls if it lands on another `copyRoll`). On an extra attack the servant is picked at random. Brave Chain still counts it as the roller's action | `isCopyCmd` / `copyCands` / `doCopy` (engine), `cardClick`, CPU `cpuDecide` |
 
 ## 6. Design rules (do not break these)

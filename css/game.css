@@ -358,6 +358,7 @@ body[data-screen="battle"] #app{overflow:hidden}
 /* 肖像の上に出る文字（霊基再臨など） */
 .txtpop{position:fixed;z-index:3;translate:-50% -50%;white-space:nowrap;font:900 22px "Noto Serif JP",serif;color:#fff;animation:pop 1.35s ease-out forwards}
 .txtpop.asc{color:var(--gold-hi);letter-spacing:.15em;text-shadow:0 0 3px #000,0 0 16px rgba(246,227,161,1),0 0 30px rgba(246,227,161,.7)}
+.txtpop.heal{color:#a6f3b5;text-shadow:0 0 3px #000,0 0 14px rgba(70,200,110,.9)}
 
 /* スキル使用：スキル名と効果のパネル（中央の帯の上） */
 .skillfx{position:fixed;z-index:4;translate:-50% -50%;width:max-content;padding:10px 18px 12px;border-radius:6px;border:1px solid var(--gold-hi);

@@ -19,6 +19,7 @@ function normEff(e){
   const o={k:String(e.k||'atk'), t:String(e.t||'self'), v:num(e.v)};
   for(const k of ['turns','times','chance']) if(num(e[k])>0) o[k]=num(e[k]);
   if(['R','B','G'].includes(e.color)) o.color=e.color;
+  if(e.vs&&FX[e.vs]&&FX[e.vs].buff===false) o.vs=String(e.vs); // 弱体状態特攻の対象の弱体
   if(EFF_AT[e.at]) o.at=e.at; // 攻撃の前/後（未指定なら既定のタイミング。rules.js の EFF_AT）
   return o;
 }
@@ -133,6 +134,10 @@ function checkEffs(effs,ctx,where,add){
     if(FX[e.k].timesOnly&&e.turns!=null) add('warn',`${w}：${FX[e.k].name}は回数で指定します（ターンは使われません）`);
     if(e.k==='instantDeath'&&['self','ally_all'].includes(e.t)) add('warn',`${w}：味方に即死効果がかかります`);
     if(e.chance&&e.chance>=6) add('warn',`${w}：ロール6以下は必ず成功します`);
+    if(e.k==='cardConv'&&!e.color) add('error',`${w}：カード変換は変換先の色を指定してください`);
+    if(e.vs&&e.k!=='atkVs') add('warn',`${w}：この効果では弱体の種類の指定は使われません`);
+    if(e.k==='maxHp'&&e.times!=null) add('warn',`${w}：最大HP+は回数では減りません（ターンで指定してください）`);
+    if(['buffExtend','skillCharge'].includes(e.k)&&!(e.v>0)) add('error',`${w}：値は1以上にしてください`);
     if(e.at&&ctx==='skill') add('warn',`${w}：スキルでは「${EFF_AT[e.at]}」の指定は使われません`);
     if(e.at&&e.k==='dmg') add('warn',`${w}：ダメージ効果には「${EFF_AT[e.at]}」の指定は使われません`);
   });
@@ -305,6 +310,18 @@ function fxText(e){
     case 'onAtkStar': s=`${e.color?TERMS[e.color]:''}攻撃時：${TERMS.star}${e.v}個発生`; break;
     case 'onAtkNp': s=`${e.color?TERMS[e.color]:''}攻撃時：${TERMS.gauge}+${e.v}%`; break;
     case 'heal': s=`HP${e.v}回復`; break;
+    case 'regenHp': s=`毎ターンHP${e.v}回復`; break;
+    case 'regenNp': s=`毎ターン${TERMS.gauge}+${e.v}%`; break;
+    case 'regenStar': s=`毎ターン${TERMS.star}${e.v}個獲得`; break;
+    case 'atkVs': s=`${e.vs&&FX[e.vs]?`〔${FX[e.vs].name}〕状態`:'弱体状態'}特攻+${e.v}`; break;
+    case 'counter': s=`反撃(${e.v}ダメージ)`; break;
+    case 'onHitNp': s=`被弾時${TERMS.gauge}+${e.v}%`; break;
+    case 'onHitStar': s=`被弾時${TERMS.star}${e.v}個獲得`; break;
+    case 'maxHp': s=`最大HP+${e.v}`; break;
+    case 'critDown': s=`クリティカル発生率ダウン(Lv-${e.v})`; break;
+    case 'cardConv': s=`カード変換→${e.color?TERMS[e.color]:'(色未指定)'}`; break;
+    case 'buffExtend': s=`強化の効果時間+${e.v}T`; break;
+    case 'skillCharge': s=`使用済みスキル${e.v}個を再使用可能に`; break;
     case 'np': s=`${TERMS.gauge}${e.v>=0?'+':''}${e.v}%`; break;
     case 'star': s=`${TERMS.star}${e.v}個獲得`; break;
     case 'dmg': s=`${e.v}ダメージ`; break;

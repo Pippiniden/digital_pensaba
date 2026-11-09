@@ -9,7 +9,7 @@
 const isCpu = pid=>!!(G.cpu&&G.cpu[pid]);
 const actor = ()=>G.phase==='setup'?G.setupPid:G.cur;
 const cpuActing = ()=>!['mode','setup','over'].includes(G.phase) && isCpu(actor()); // 編成はCPU分も人が選ぶ（おまかせ＝setupCpu）
-const hpR = u=>u.hp/D(u.def).hp;
+const hpR = u=>u.hp/maxHp(u);
 const isActing = u=>G.ult ? G.ult===u.uid : (G.alloc[u.uid]||0)>0;
 function rnd01(s){ // 「よわい」用：同じ局面では同じ答えになる疑似乱数
   let h=2166136261; for(const ch of s+G.seed){ h^=ch.charCodeAt(0); h=Math.imul(h,16777619); }
@@ -127,7 +127,17 @@ function cpuSkillScore(u,si){
       case 'def': case 'evade': case 'invul': sc+=ts.some(t=>hpR(t)<.6)?3:0; break;
       case 'guts': sc+=ts.some(t=>hpR(t)<.5)?4:0; break;
       case 'taunt': sc+=hpR(u)>=.5&&allies.some(a=>a!==u&&hpR(a)<.5)?3:0; break;
-      case 'heal': sc+=ts.some(t=>D(t.def).hp-t.hp>=e.v*.7)?3:0; break;
+      case 'heal': sc+=ts.some(t=>maxHp(t)-t.hp>=e.v*.7)?3:0; break;
+      case 'regenHp': case 'maxHp': sc+=ts.some(t=>hpR(t)<.8)?2:1; break;
+      case 'regenNp': sc+=ts.some(t=>t.np<RULES.ultCost)?2:.5; break;
+      case 'regenStar': case 'onHitStar': sc+=1.5; break;
+      case 'onHitNp': sc+=ts.some(t=>t.np<RULES.ultCost)?1.5:.5; break;
+      case 'counter': sc+=ts.some(t=>t.pid===u.pid)?2:-1; break;
+      case 'atkVs': sc+=acting&&enemies.some(x=>x.fx.some(f=>e.vs?f.k===e.vs:FX[f.k].buff===false))?3:.5; break;
+      case 'critDown': sc+=foes.length?1.5:-1; break;
+      case 'cardConv': sc+=acting?1.5:.5; break;
+      case 'buffExtend': sc+=ts.some(t=>t.fx.some(x=>FX[x.k].buff===true&&x.turns!=null))?2:0; break;
+      case 'skillCharge': sc+=ts.some(t=>t.used.some((x,i)=>x&&!(t===u&&i===si)))?3:-1; break;
       case 'cleanse': sc+=ts.some(t=>t.fx.some(x=>FX[x.k].buff===false))?2:0; break;
       case 'np': sc+=ts.some(t=>t.np<RULES.ultCost&&t.np+e.v>=RULES.ultCost)?4:ts.some(t=>t.np<RULES.ultCost)?1.5:0; break;
       case 'star': sc+=G.ult?.5:2; break;

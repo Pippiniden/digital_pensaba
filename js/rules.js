@@ -119,6 +119,15 @@ const FX = {
   onAtkStar:{name:'攻撃時スター発生',buff:true,val:true,color:true},
   onAtkNp:{name:'攻撃時NP獲得',buff:true,val:true,color:true},
   actsUp:{name:'最大行動回数+',buff:true,val:true},          // 次の行動回数決定フェイズで出た数に+x（使うと回数を1消費）
+  // 毎ターン○○：持ち主の手番の終了フェイズに発動（弱体ダメージの後）
+  regenHp:{name:'毎ターンHP回復',buff:true,val:true}, regenNp:{name:'毎ターンNP獲得',buff:true,val:true},
+  regenStar:{name:'毎ターンスター獲得',buff:true,val:true},
+  atkVs:{name:'弱体状態特攻',buff:true,val:true},           // 攻撃対象が弱体（vs で種類を限定、未指定なら何でも）を受けていれば攻撃ダメージ+x
+  counter:{name:'反撃',buff:true,val:true},                  // 攻撃（コマンド・宝具）を受けるたびに攻撃側へxダメージ（補正・無敵・回避の影響なし）
+  onHitNp:{name:'被弾時NP獲得',buff:true,val:true},          // 攻撃を受けるたびにNP+x%（呪いで止まる）
+  onHitStar:{name:'被弾時スター獲得',buff:true,val:true},    // 攻撃を受けるたびに自分のマスターがスターx個獲得
+  maxHp:{name:'最大HP+',buff:true,val:true},                 // 最大HP+x（付与時にHPもx増える。切れたら最大HPまで下がる）
+  cardConv:{name:'カード変換',buff:true,color:true},          // 行動決定で出たコマンド(R/B/G)を color の色に変える（1回変えるごとに回数を1消費）
   // 弱体
   buffImmune:{name:'強化無効',buff:false},                   // 強化効果を受けない
   poison:{name:'毒',buff:false,val:true}, burn:{name:'やけど',buff:false,val:true}, // ターン終了時に値ぶんの弱体ダメージ
@@ -128,11 +137,14 @@ const FX = {
   fear:{name:'恐怖',buff:false,mental:true},                             // 行動回数-1
   drain:{name:'HP減少',buff:false,val:true,perm:true},      // ターン終了時に値ぶんの弱体ダメージ。重複する（合計）。永続でよい
   sealSkill:{name:'スキル封印',buff:false}, sealUlt:{name:'宝具封印',buff:false},
+  critDown:{name:'クリティカル発生率ダウン',buff:false,val:true}, // 攻撃時のクリティカルレベル-x（シンプルは出目+x）
   // 即時
   heal:{name:'HP回復',val:true,inst:true}, np:{name:'NP増減',val:true,inst:true}, star:{name:'スター獲得',val:true,inst:true},
   starLoss:{name:'スター消失',val:true,inst:true},             // 対象のマスターがスターを失う
   cleanse:{name:'弱体解除',inst:true}, cleanseMental:{name:'精神異常解除',inst:true}, strip:{name:'強化解除',inst:true},
   instantDeath:{name:'即死',inst:true},                      // 対象のHPを0にする（ガッツ無効）
+  buffExtend:{name:'強化延長',val:true,inst:true},           // 対象のターン制の強化すべての残りターン+x
+  skillCharge:{name:'スキル再使用',val:true,inst:true},      // 対象の使用済みスキルをx個（番号の若い順）もう一度使えるようにする。使ったスキル自身・スキル再使用を持つスキルは戻らない
   dmg:{name:'ダメージ',val:true,inst:true,only:'ult'},
   // 特殊行動専用：自分以外の戦闘不能でないサーヴァント1体（敵味方どちらでも）を選び、その鉛筆を代わりにロールして
   // 出た再臨後コマンドをこの行動として使う

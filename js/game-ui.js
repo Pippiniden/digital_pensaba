@@ -79,7 +79,7 @@ function svtHTML(u){
     </div>
     <div class="sinfo">
       <div class="sname"><b title="${esc(d.name)}">${esc(d.name)}</b><button class="info" data-ui="detail" data-uid="${u.uid}" title="詳細を見る">i</button></div>
-      <div class="gauge hp"><span>HP</span><div class="bar"><i style="width:${pctOf(sh.hp,d.hp)}%"></i></div><b>${fmt(sh.hp)}<small>/${d.hp}</small></b></div>
+      <div class="gauge hp"><span>HP</span><div class="bar"><i style="width:${pctOf(sh.hp,maxHp(u))}%"></i></div><b>${fmt(sh.hp)}<small>/${maxHp(u)}</small></b></div>
       <div class="gauge np ${u.np>=RULES.ultCost?'full':''}"><span>${TERMS.gauge}</span><div class="bar"><i style="width:${Math.min(100,u.np)}%"></i></div><b>${u.np}<small>%</small></b></div>
       ${ctlHTML(u)}
       <div class="fxs" title="${esc(u.fx.map(fxText).join(' / '))}">${fx}</div>
@@ -214,7 +214,7 @@ function unitDetailHTML(d,u){
     <div class="udtop">
       <div class="udimg">${unitImg(d,'face','pimg',d.name)}</div>
       <div class="udinfo">${clsBadge(d.cls)}<h3>${esc(d.name)}</h3>
-        <div class="sub small">コスト ${d.cost} ・ HP ${u?`${fmt(u.hp)} / `:''}${d.hp}${u?` ・ ${TERMS.gauge} ${u.np}%`:''}${u&&u.asc?` ・ <span class="hl">${TERMS.ascFull}済み</span>`:''}</div>
+        <div class="sub small">コスト ${d.cost} ・ HP ${u?`${fmt(u.hp)} / ${maxHp(u)}`:d.hp}${u?` ・ ${TERMS.gauge} ${u.np}%`:''}${u&&u.asc?` ・ <span class="hl">${TERMS.ascFull}済み</span>`:''}</div>
         <div class="ccrow">${['R','B','G'].map(k=>cmdCardHTML(d,{c:k},{small:true})).join('')}</div>
       </div>
     </div>
@@ -237,7 +237,7 @@ function resultHTML(){
   const sub=cpuMode?(w===0?'勝利！':'敗北…'):`${esc(G.players[w].name)} の勝利！`;
   const side=pid=>{ const P=G.players[pid];
     const rows=P.party.map(u=>{ const d=D(u.def);
-      return `<div class="rrow ${u.out?'out':''}">${unitImg(d,'face','pimg',d.name)}<b>${esc(d.name)}</b><span>${u.out?TERMS.out:`HP ${fmt(u.hp)}<small>/${d.hp}</small>`}</span></div>`; }).join('');
+      return `<div class="rrow ${u.out?'out':''}">${unitImg(d,'face','pimg',d.name)}<b>${esc(d.name)}</b><span>${u.out?TERMS.out:`HP ${fmt(u.hp)}<small>/${maxHp(u)}</small>`}</span></div>`; }).join('');
     return `<div class="rside ${pid===w?'rwin':''}"><h4><span class="p${pid}">${esc(P.name)}</span>${pid===w?'<em>WIN</em>':''}</h4>${rows}
       <p class="sub small">与えたダメージ合計 <b>${fmt(G.dealt[pid])}</b></p></div>`; };
   return `<div class="modal result"><div class="mback"></div>
