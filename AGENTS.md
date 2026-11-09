@@ -18,6 +18,7 @@ It was written from the code (`js/*.js`). If you find a mismatch, the code is th
 | `editor.html` | Editor page shell. Three columns: `#list` `#form` `#side` |
 | `js/rules.js` | **Rule definitions**: terms `TERMS`, numbers `RULES`, effect kinds `FX`, targets `TARGETS`, line kinds `LINE_KEYS`, classes, image settings |
 | `js/units.js` | **Default character data** `DEFAULT_UNITS` (same format the editor's "export units.js" produces) |
+| `presets/original/` | **Not loaded by the game.** A frozen copy of the canon data (9 servants, 7 masters, their images) in the same export format, for people who copy this engine and want to drop the canon data in (see its README.md). `js/` data stays as the live data |
 | `js/masters.js` | **Master data** `DEFAULT_MASTERS` for the master rules (§5.4, §5.5). Currently 7 **test-only** canon masters (遠坂凛 C5 … 間桐雁夜 C0), expected to be replaced/removed. Same format the editor's "masters.js を書き出し" produces (`mastersToJS`) |
 | `js/common.js` | **Shared by game and editor**: data normalization, validation, load/save/export, HTML/string builders (cards, effect descriptions) |
 | `js/engine.js` | **Game logic**: state `G`, `ACTIONS`, damage/effect resolution, turn flow |
