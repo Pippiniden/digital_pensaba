@@ -61,6 +61,13 @@ function canAllocMore(u){
 // 画面に出すHP・戦闘不能の状態（ダメージ演出の再生中は演出に合わせて遅れて変わる）
 // HP・NP・効果は、演出の再生に合わせて遅れて変わる（FXHOLD にあればそれを出す）
 const shown = u=>{ const h=FXHOLD[u.uid]; return h?{hp:h.hp,out:h.out,np:h.np??u.np,fx:h.fx||u.fx}:{hp:u.hp,out:u.out,np:u.np,fx:u.fx}; };
+// かかっている効果で枠を光らせる：回避・無敵＝緑 / 良い効果＝青 / 悪い効果＝赤（複数あるときは 緑→青→赤 の順に切り替わる）
+function glowHTML(fxs){
+  let g=false,b=false,r=false;
+  fxs.forEach(e=>{ const f=FX[e.k]; if(!f) return; if(e.k==='evade'||e.k==='invul') g=true; else if(f.buff===true) b=true; else if(f.buff===false) r=true; });
+  const key=(g?'g':'')+(b?'b':'')+(r?'r':'');
+  return key?`<i class="glow gl-${key}"></i>`:'';
+}
 function svtHTML(u){
   const d=D(u.def), ph=G.phase, sh=shown(u), mhp=maxHp({def:u.def,fx:sh.fx});
   const allocable=canAllocMore(u);
@@ -75,6 +82,7 @@ function svtHTML(u){
   const nb=sh.fx.filter(e=>FX[e.k].buff===true).length, nd=sh.fx.filter(e=>FX[e.k].buff===false).length;
   const pfx=nb||nd?`<span class="pfx">${nb?`<b class="buff">▲${nb}</b>`:''}${nd?`<b class="debuff">▼${nd}</b>`:''}</span>`:'';
   return `<div class="${cls}${allocable?' allocable':''}" data-uid="${u.uid}" ${allocable?`data-a="alloc" data-d="1" title="クリックで行動を1回追加"`:pickable?`data-a="cardClick"`:''}>
+    ${glowHTML(sh.fx)}
     <div class="svin"><div class="portrait">${unitImg(d,'face','pimg',d.name)}
       ${clsIconTag(d.cls,'pcls')}<span class="pord">${ORD[u.idx]}</span>
       ${u.asc?`<span class="pasc">${TERMS.asc}</span>`:''}
@@ -84,18 +92,39 @@ function svtHTML(u){
     <div class="sinfo">
       <div class="sname"><b title="${esc(d.name)}">${esc(d.name)}</b><button class="info" data-ui="detail" data-uid="${u.uid}" title="詳細を見る">i</button></div>
       <div class="gauge hp"><span>HP</span><div class="bar"><i style="width:${pctOf(sh.hp,mhp)}%"></i></div><b>${fmt(sh.hp)}<small>/${mhp}</small></b></div>
-      <div class="gauge np ${sh.np>=RULES.ultCost?'full':''}"><span>${TERMS.gauge}</span><div class="bar"><i style="width:${Math.min(100,sh.np)}%"></i></div><b>${sh.np}<small>%</small></b></div>
+      <div class="gauge np ${sh.np>=RULES.ultCost?'full':''}"><span class="npl">${TERMS.gauge}</span><div class="bar"><i style="width:${Math.min(100,sh.np)}%"></i></div><b>${sh.np}<small>%</small></b></div>
       ${ctlHTML(u)}
       <div class="fxs" title="${esc(sh.fx.map(fxText).join(' / '))}">${fx}</div>
       ${skillBtns(u,d)}
     </div></div>
   </div>`;
 }
+// マスター戦（1騎＋マスター）：マスターはサーヴァントの隣にカードで出す。マスターチーム戦は従来どおり帯の小パネル
+const masterBeside = P=>!!P.master&&masterRule()&&!mTeam();
+function masterCardHTML(m){
+  const d=D(m.def), sh=shown(m), P=G.players[m.pid], mhp=maxHp({def:m.def,fx:sh.fx});
+  const pick=G.phase==='target'&&!G.pending&&!G.copy&&!cpuActing()&&masterTargetable()===m;
+  const tgt=G.phase==='target'&&G.target===m.uid&&!sh.out;
+  const sp=P.spell==='decl'?'令呪 宣言中':P.spellLeft>0?`令呪 ${P.spellLeft}画`:'令呪 使用済み';
+  const fx=sh.fx.map(e=>`<span class="chip fx ${FX[e.k].buff?'buff':'debuff'}">${fxText(e)}</span>`).join('');
+  const nb=sh.fx.filter(e=>FX[e.k].buff===true).length, nd=sh.fx.filter(e=>FX[e.k].buff===false).length;
+  const pfx=nb||nd?`<span class="pfx">${nb?`<b class="buff">▲${nb}</b>`:''}${nd?`<b class="debuff">▼${nd}</b>`:''}</span>`:'';
+  return `<div class="svt mcard ${sh.out||m.out?'out':''} ${pick?'pickable':''} ${tgt?'targeted':''}" data-uid="${m.uid}" ${pick?'data-a="cardClick"':''}>
+    ${glowHTML(sh.fx)}
+    <div class="svin"><div class="portrait">${unitImg(d,'face','pimg',d.name)}<span class="pord">${TERMS.player}</span>${m.out?'<span class="pout">瀕死</span>':''}${pfx}</div>
+    <div class="sinfo">
+      <div class="sname"><b title="${esc(d.name)}">${esc(d.name)}</b><button class="info" data-ui="detail" data-uid="${m.uid}" title="詳細を見る">i</button></div>
+      <div class="gauge hp"><span>HP</span><div class="bar"><i style="width:${pctOf(sh.hp,mhp)}%"></i></div><b>${fmt(sh.hp)}<small>/${mhp}</small></b></div>
+      <div class="mtags"><span class="mtag ${P.spellLeft>0&&P.spell!=='decl'?'':'off'}">${sp}</span>${P.evac?'<span class="mtag evac">退避中</span>':''}</div>
+      <div class="fxs" title="${esc(sh.fx.map(fxText).join(' / '))}">${fx}</div>
+    </div></div>
+  </div>`;
+}
 function sideHTML(pid,pos){
-  const P=G.players[pid], turn=pid===G.cur&&G.phase!=='over';
+  const P=G.players[pid], turn=pid===G.cur&&G.phase!=='over', beside=masterBeside(P);
   return `<section class="side ${pos} ${turn?'turn':''}">
-    <div class="sidebar"><b class="p${pid}">${esc(P.name)}</b>${turn?'<span class="turnbadge">手番</span>':''}${P.master?masterChipHTML(P.master):'<span class="grow"></span>'}<span class="stars" title="${TERMS.star}">★ <b>${P.stars}</b></span></div>
-    <div class="svts ${P.party.length===1?'solo':''}">${P.party.map(svtHTML).join('')}</div>
+    <div class="sidebar"><b class="p${pid}">${esc(P.name)}</b>${turn?'<span class="turnbadge">手番</span>':''}${P.master&&!beside?masterChipHTML(P.master):'<span class="grow"></span>'}<span class="stars" title="${TERMS.star}">★ <b>${P.stars}</b></span></div>
+    <div class="svts ${P.party.length===1?'solo':''} ${beside?'withm':''}">${P.party.map(svtHTML).join('')}${beside?masterCardHTML(P.master):''}</div>
   </section>`;
 }
 
@@ -254,7 +283,7 @@ function syncMagicCircle(){
   });
 }
 // 点滅（宝具ゲージ・宝具ボタン）も、作り直すたびに最初の明るさへ飛んでチカチカするので、時刻に合わせた位置から始める
-const PULSES = [['.gauge.np.full i',2000],['.sk.np.ready',2200]]; // [セレクタ, 往復1回のミリ秒（CSS と合わせる）]
+const PULSES = [['.gauge.np.full i',2000],['.sk.np.ready',2200],['.glow.gl-g,.glow.gl-b,.glow.gl-r',2400],['.glow.gl-gb,.glow.gl-gr,.glow.gl-br',3600],['.glow.gl-gbr',5400]]; // [セレクタ, 往復1回のミリ秒（CSS と合わせる）]
 function syncPulses(){
   const t=performance.now();
   PULSES.forEach(([sel,ms])=>document.querySelectorAll(sel).forEach(el=>{ el.style.animationDelay=`-${(t%ms).toFixed(0)}ms`; }));
@@ -304,7 +333,18 @@ function unitDetailHTML(d,u){
     ${u?`<h4>操作</h4><div class="udops">${skillBtns(u,d)}</div>`:''}
     <h4>スキル・${TERMS.ult}</h4>${skillListHTML(d)}
     <h4>鉛筆の面</h4>${facesTableHTML(d)}
+    ${d.link?`<div class="udlink"><button class="linkbtn" data-ui="openLink" data-url="${esc(d.link)}" title="${esc(d.link)}">キャラクター設定を見る ↗</button><small class="sub">別タブで開きます</small></div>`:''}
   </div>`;
+}
+// キャラクター設定リンクを開く前の確認（「今後は確認しない」で省略できる。メニューで戻せる）
+const LINK_PREF='pencilduel.linkConfirm';
+const linkConfirmOn=()=>readPref(LINK_PREF)!=='0';
+function linkModalHTML(){
+  if(!UI.linkAsk) return '';
+  return `<div class="modal linkask"><div class="mback" data-ui="linkCancel"></div>
+    <div class="mbody"><p>外部サイトを別タブで開きます。</p><p class="sub small linkurl">${esc(UI.linkAsk)}</p>
+      <label class="rok"><input type="checkbox" id="linkNoAsk">今後は確認しない</label>
+      <div class="row"><button class="primary" data-ui="linkGo">開く</button><button data-ui="linkCancel">やめる</button></div></div></div>`;
 }
 function masterDetailHTML(d,m){
   const fx=m&&m.fx.length?`<h4>効果</h4><div class="fxs open">${m.fx.map(e=>`<span class="chip fx ${FX[e.k].buff?'buff':'debuff'}">${fxText(e)}${e.tmp?'（このターン）':''}</span>`).join('')}</div>`:'';
@@ -581,15 +621,16 @@ function render(){
   ab.hidden=screen!=='battle';
   botbtn.hidden=screen!=='battle'||!matchMedia('(max-width:860px)').matches; // スマホ幅のときだけ
   botbtn.textContent=`下の余白：${BOTTOM_LABELS[UI.bottom]}`;
+  document.querySelector('#linkbtn').textContent=`リンク確認：${linkConfirmOn()?'ON':'OFF'}`;
   ab.textContent=`オート：${UI.auto?'ON':'OFF'}`; ab.classList.toggle('on',UI.auto);
   document.body.classList.toggle('menuopen',UI.menu);
   document.querySelector('#menubtn').setAttribute('aria-expanded',UI.menu?'true':'false');
   // 画面は毎回作り直すが、読み込み済みの画像は残す（setHTML：フェイズ切り替えで画像がチカチカ消えないように）
   if(screen==='mode'){ setHTML(app,modeHTML()); hinfo.textContent=''; }
-  else if(screen==='setup'){ setHTML(app,setupHTML()+(UI.sinfo?sinfoModalHTML():'')); hinfo.textContent=ruleset().partyMax===1?`${ruleset().name}ルール ・ ${TERMS.unit}選択`:'パーティ編成'; }
+  else if(screen==='setup'){ setHTML(app,setupHTML()+(UI.sinfo?sinfoModalHTML():'')+linkModalHTML()); hinfo.textContent=ruleset().partyMax===1?`${ruleset().name}ルール ・ ${TERMS.unit}選択`:'パーティ編成'; }
   else {
     if(UI.detail&&!U(UI.detail)) UI.detail=null;
-    setHTML(app,`<div class="battle ${UI.log?'':'nolog'}"><main class="field">${sideHTML(1,'top')}${stageHTML()}${sideHTML(0,'bottom')}</main>${UI.log?logHTML():''}</div>${UI.detail?detailModalHTML():''}${UI.result&&G.phase==='over'?resultHTML():''}`);
+    setHTML(app,`<div class="battle ${UI.log?'':'nolog'}"><main class="field">${sideHTML(1,'top')}${stageHTML()}${sideHTML(0,'bottom')}</main>${UI.log?logHTML():''}</div>${UI.detail?detailModalHTML():''}${UI.result&&G.phase==='over'?resultHTML():''}${linkModalHTML()}`);
     hinfo.textContent=`${G.rule!=='team'?`${ruleset().name}ルール ・ `:''}ターン${G.turn}`;
     const l=document.querySelector('#log'); if(l) l.scrollTop=l.scrollHeight;
     animateLane();
@@ -671,6 +712,10 @@ function uiAct(a,ds){
     case 'rtab': UI.rtab=ds.v; break;
     case 'sinfo': UI.sinfo=ds.id; break;
     case 'closeSinfo': UI.sinfo=null; break;
+    case 'openLink': if(linkConfirmOn()) UI.linkAsk=ds.url; else window.open(ds.url,'_blank','noopener'); break;
+    case 'linkGo': { const cb=document.querySelector('#linkNoAsk'); if(cb&&cb.checked) savePref(LINK_PREF,'0'); window.open(UI.linkAsk,'_blank','noopener'); UI.linkAsk=null; break; }
+    case 'linkCancel': UI.linkAsk=null; break;
+    case 'toggleLinkConfirm': savePref(LINK_PREF,linkConfirmOn()?'0':'1'); break;
     case 'toggleLog': UI.log=!UI.log; savePref('pencilduel.logOpen',UI.log?'1':'0'); break;
     case 'toggleAuto': UI.auto=!UI.auto; savePref('pencilduel.auto',UI.auto?'1':'0'); break;
     case 'toggleMenu': UI.menu=!UI.menu; break;
@@ -705,6 +750,7 @@ document.addEventListener('mouseover',e=>{
   document.querySelectorAll('.tile.viewing').forEach(x=>x.classList.remove('viewing')); t.classList.add('viewing');
 });
 document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&UI.linkAsk){ UI.linkAsk=null; render(); return; }
   if(e.key==='Escape'&&(UI.detail||UI.sinfo)){ UI.detail=null; UI.sinfo=null; render(); }
   if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('.tinfo')){ e.preventDefault(); e.stopPropagation(); e.target.click(); } // キーボードでも ⓘ を開ける
 });

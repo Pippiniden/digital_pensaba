@@ -47,6 +47,8 @@ body[data-screen="battle"] #app{overflow:hidden}
 .stars b{font-size:14px}
 .svts{flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:minmax(0,1fr);gap:10px}
 .svts.solo{grid-template-columns:minmax(0,440px);justify-content:center} /* 1騎だけのルール：中央に置く */
+.svts.withm{grid-template-columns:minmax(0,440px) minmax(0,260px)} /* マスタールール：サーヴァントの隣にマスター */
+.mcard .mtags{display:flex;flex-wrap:wrap;gap:4px}
 
 /* サーヴァントのカード：自分の大きさ（コンテナ）に合わせて中身を切り替える
    横長 → 肖像の右に情報 / 縦長（スマホ縦など）→ 肖像の下にHP・NP / 低い → 効果やスキル欄を隠して ⓘ で見る */
@@ -59,6 +61,24 @@ body[data-screen="battle"] #app{overflow:hidden}
 .svt.targeted{outline:2px solid var(--r);outline-offset:2px;box-shadow:var(--frame),0 0 22px rgba(226,72,60,.7)}
 .svt.targeted .portrait::before{content:'TARGET';position:absolute;z-index:3;left:50%;top:50%;transform:translate(-50%,-50%);font:700 12px var(--serif);letter-spacing:.15em;color:#fff;padding:2px 8px;background:rgba(226,72,60,.85);border:1px solid #ffb4ab}
 .svt.hit{animation:hit .32s}
+/* 効果による枠の光：緑＝回避・無敵 / 青＝良い効果 / 赤＝悪い効果。複数あるときは 緑→青→赤 と切り替わる（色だけを動かす） */
+.svt .glow{position:absolute;inset:-1px;z-index:4;pointer-events:none;border-radius:inherit;border:2px solid currentColor;
+  box-shadow:0 0 10px currentColor,inset 0 0 10px currentColor;animation-timing-function:ease-in-out;animation-iteration-count:infinite}
+.svt.out .glow{display:none}
+.gl-g{color:#3ddc84;animation:glG 2.4s infinite}
+.gl-b{color:#4aa3ff;animation:glB 2.4s infinite}
+.gl-r{color:#ff4d4d;animation:glR 2.4s infinite}
+.gl-gb{animation:glGB 3.6s infinite}
+.gl-gr{animation:glGR 3.6s infinite}
+.gl-br{animation:glBR 3.6s infinite}
+.gl-gbr{animation:glGBR 5.4s infinite}
+@keyframes glG{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes glB{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes glR{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes glGB{0%,40%{color:#3ddc84}50%,90%{color:#4aa3ff}100%{color:#3ddc84}}
+@keyframes glGR{0%,40%{color:#3ddc84}50%,90%{color:#ff4d4d}100%{color:#3ddc84}}
+@keyframes glBR{0%,40%{color:#4aa3ff}50%,90%{color:#ff4d4d}100%{color:#4aa3ff}}
+@keyframes glGBR{0%,27%{color:#3ddc84}33%,60%{color:#4aa3ff}66%,94%{color:#ff4d4d}100%{color:#3ddc84}}
 @keyframes hit{0%,100%{transform:none}20%{transform:translateX(-5px)}40%{transform:translateX(4px)}60%{transform:translateX(-3px)}80%{transform:translateX(2px)}}
 
 .svin{height:100%;display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px}
@@ -167,6 +187,11 @@ body[data-screen="battle"] #app{overflow:hidden}
 
 /* 詳細ウィンドウ */
 .modal{position:fixed;inset:0;z-index:25;display:grid;place-items:center;padding:16px}
+.udlink{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;padding-top:10px;border-top:1px solid var(--gold-lo)}
+.linkbtn{padding:5px 12px;font:700 13px var(--serif);color:var(--gold-hi);border:1px solid var(--gold);border-radius:4px;background:rgba(6,13,34,.6);cursor:pointer}
+.linkbtn:hover{box-shadow:0 0 10px rgba(214,178,94,.5)}
+.linkask{z-index:40}
+.linkurl{word-break:break-all}
 .mback{position:absolute;inset:0;background:rgba(2,6,20,.72);backdrop-filter:blur(2px)}
 .mbody{position:relative;width:min(600px,100%);max-height:calc(100vh - 32px);overflow:auto;padding:18px;border-radius:6px;border:1px solid var(--gold);
   background:linear-gradient(160deg,#16295a,var(--panel) 40%,var(--panel2));box-shadow:var(--frame),0 10px 40px rgba(0,0,0,.6)}
@@ -455,6 +480,9 @@ body[data-screen="battle"] #app{overflow:hidden}
   header h1{font-size:16px;flex:none}
   #hinfo{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11.5px}
   .svts.solo{grid-template-columns:minmax(0,1fr)} /* 1対1は横に余裕があるので幅いっぱいに */
+  .svts.withm{grid-template-columns:minmax(0,1.5fr) minmax(0,1fr)}
+  .gauge.np>span.npl{display:none} /* スマホではゲージの上の「NP」の文字を出さない */
+  .mcard .mtags{display:none}
 
   .field{gap:6px;padding:8px 8px calc(14px + env(safe-area-inset-bottom))} /* 下端は余白を多めに（iPhone のバーに近すぎないよう） */
   .svts{gap:6px}

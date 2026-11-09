@@ -274,6 +274,8 @@ function renderForm(){
       <label>HP<input type="number" min="1" step="5" data-p="hp" data-t="num" value="${u.hp}"></label>
       <label class="wide">属性（複数可）<input data-p="traits" data-t="tags" value="${esc((u.traits||[]).join('、'))}" placeholder="例：竜、騎乗、王、人型">
         <small>読点・カンマ・空白で区切る。特攻・特防の判定に使います${allTraits().length?`（使用中：${esc(allTraits().join('・'))}）`:''}</small></label>
+      <label class="wide">キャラクター設定のリンク（任意）<input type="url" data-p="link" data-t="optstr" value="${esc(u.link||'')}" placeholder="https://…">
+        <small>http(s) のURL。ゲームのキャラクター詳細に「キャラクター設定」リンクが出ます（別タブで開く）</small></label>
     </div>
     <div class="row tplrow"><label>カード構成テンプレ
       <select id="tplsel">${CARD_TPL_KEYS.map(k=>opt(k,k,tplKey)).join('')}</select></label>

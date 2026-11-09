@@ -66,8 +66,10 @@ function normalizeUnit(u){
   const ln=u.lines||{};
   const lines=Object.fromEntries(Object.keys(LINE_KEYS).map(k=>[k,strList(ln[k])]));
   return { id:String(u.id||''), name:String(u.name||''), cls:normClass(u.cls), traits:normTraits(u.traits), cost:num(u.cost), hp:num(u.hp,100),
-    fit:normFit(u.fit), lines, faces, skills, ult:Object.assign({name:String(ult.name||''), c:String(ult.c||'R'), eff:(ult.eff||[]).map(normEff)}, String(ult.ruby||'').trim()?{ruby:String(ult.ruby).trim()}:{}) };
+    fit:normFit(u.fit), ...(normLink(u.link)?{link:normLink(u.link)}:{}), lines, faces, skills, ult:Object.assign({name:String(ult.name||''), c:String(ult.c||'R'), eff:(ult.eff||[]).map(normEff)}, String(ult.ruby||'').trim()?{ruby:String(ult.ruby).trim()}:{}) };
 }
+// キャラクター設定へのリンク：http(s) のURLだけ受け付ける（それ以外は空）
+function normLink(v){ const s=String(v||'').trim(); return /^https?:\/\/\S+$/i.test(s)?s:''; }
 // 宝具名（ルビがあれば <ruby> で表示）／スキルランク
 function ultNameHTML(ult){ return ult.ruby?`<ruby>${esc(ult.name)}<rt>${esc(ult.ruby)}</rt></ruby>`:esc(ult.name); }
 function skillNameHTML(s){ return esc(s.name)+(s.rank?` <small class="srank">${esc(s.rank)}</small>`:''); }
@@ -89,6 +91,7 @@ function validateUnits(units){
     else if(ids.has(u.id)) add('error',`ID「${u.id}」が他の${TERMS.unit}と重複しています`);
     else ids.set(u.id,i);
     if(!u.name.trim()) add('error','名前が空です');
+    if(u.link&&!normLink(u.link)) add('warn','キャラクター設定のリンクは http:// か https:// で始まるURLにしてください（読み込み時に無視されます）');
     if(!u.cls.trim()) add('warn','クラスが空です');
     const noLine=Object.keys(LINE_KEYS).filter(k=>!u.lines[k].length);
     if(noLine.length) add('warn',`セリフ未設定：${noLine.map(k=>LINE_KEYS[k]).join('・')}`);
@@ -275,6 +278,7 @@ function unitsToJS(units){
     `    "id":${j(u.id)}, "name":${j(u.name)}, "cls":${j(u.cls)}, "cost":${u.cost}, "hp":${u.hp},`,
     ...(u.traits&&u.traits.length?[`    "traits":${j(u.traits)},`]:[]),
     ...(['face','card'].every(k=>fitIsDef(u.fit,k))?[]:[`    "fit":${j(u.fit)},`]),
+    ...(u.link?[`    "link":${j(u.link)},`]:[]),
     '    "lines":{',
     Object.keys(LINE_KEYS).map(k=>`      ${j(k)}:${j(u.lines[k])}`).join(',\n'),
     '    },',

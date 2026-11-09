@@ -199,10 +199,15 @@ function showDmg(L,ev,r){
 // サーヴァントのカード1枚だけ描き直す（画面全体の render は呼ばない）
 function redrawSvt(uid){
   const u0=U(uid);
-  if(u0&&u0.master){ const m=document.querySelector(`.mchip[data-uid="${uid}"]`); if(m) replaceHTML(m,masterChipHTML(u0)); return; }
+  if(u0&&u0.master){
+    const m=document.querySelector(`.mchip[data-uid="${uid}"]`); if(m){ replaceHTML(m,masterChipHTML(u0)); return; }
+    const c=document.querySelector(`.mcard[data-uid="${uid}"]`); if(c){ replaceHTML(c,masterCardHTML(u0)); syncPulses(); }
+    return;
+  }
   const el=document.querySelector(`.svt[data-uid="${uid}"]`), u=U(uid);
   if(!el||!u) return;
   replaceHTML(el,svtHTML(u)); // 肖像の画像は残したまま差し替える（チカチカ防止）
+  syncPulses();
 }
 
 // スキル使用：中央の帯（.stage）の上に、スキル名と効果のパネルを出す（続くセリフの吹き出しと重ねて見せる）

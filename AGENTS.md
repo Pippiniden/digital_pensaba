@@ -56,6 +56,7 @@ Worker (sim-worker.js, importScripts): rules → units → masters → common �
   fit?: { face:{x,y,z}, card:{x,y,z} },   // image framing set in the editor (x/y = object-position %, z = zoom %, 100–300). Defaults in FIT_DEF (common.js); omitted from export when default. Applied by unitImg() via fitStyle()
                                          // images are NOT data: img/units/{id}.webp (face) and {id}_card.webp (card, optional)
                                          // card chain: {id}_card → {id} → card.webp / face chain: {id} → face.webp (see imgCandidates)
+  link?: string,   // character-setting page (http/https only, normLink). Shown as a button at the bottom of unitDetailHTML; opens in a new tab after a confirm modal (UI.linkAsk; "今後は確認しない" / header button toggles localStorage `pencilduel.linkConfirm`='0')
   lines: { start, attack, extra, damage, skill, np, npDamage, defeat, win },  // each string[] (LINE_KEYS)
   faces: [ {acts:1|2|3, pre:Cmd, post:Cmd} ×6 ],   // pencil faces 1–6. pre = before ascension / post = after
                                                    // acts is IGNORED while RULES.actsTable is set (the default)
@@ -158,6 +159,8 @@ Simple rule + one master (泥ペンマス) per side. Setup picks a servant (`set
 - Non-damage ult (no `dmg` effect): used in the skill phase immediately, costs one allocated action, `G.ultDone`, then normal action phase.
 - CPU: `cpuMaster` / `cpuGuard` (cpu.js); it never aims servant attacks at the master (the defender would pick the better side anyway). Log phase numbers go through `PN()`.
 - Spell state: `P.spellLeft` (画 left), `P.spellUsed[i]`, `P.spell==='decl'` (master rule declaration only). `canGuardSpell(pid)` / `canDeclareSpell()`. Support/spell effects go through `masterEffects()`, which turns `dmg` on `enemy_master` into a `guard` (kind `spell`) when the defender can still spend a 画.
+
+UI notes: in the master rule (not mteam) the master is drawn as a card beside the servant (`masterCardHTML`, `.svts.withm`); mteam keeps the `.mchip`. Every `.svt` carries a `<i class="glow gl-…">` frame (`glowHTML`): green = evade/invul, blue = buff, red = debuff, cycling green→blue→red when several apply (phase synced via `PULSES`). On ≤860px the NP gauge label (`.npl`) is hidden.
 
 ### 5.5 Master team battle — マスターチームバトル (`G.rule==='mteam'`, `mTeam()`)
 
