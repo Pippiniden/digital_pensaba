@@ -500,7 +500,7 @@ function modeHTML(){
 
 // ---------- 描画 ----------
 function render(){
-  const app=document.querySelector('#app'), hinfo=document.querySelector('#hinfo'), spd=document.querySelector('#spd'), lb=document.querySelector('#logbtn'), ab=document.querySelector('#autobtn');
+  const app=document.querySelector('#app'), hinfo=document.querySelector('#hinfo'), spd=document.querySelector('#spd'), lb=document.querySelector('#logbtn'), ab=document.querySelector('#autobtn'), botbtn=document.querySelector('#botbtn');
   const screen=G.phase==='mode'?'mode':G.phase==='setup'?'setup':'battle';
   document.body.dataset.screen=screen;
   document.body.dataset.phase=G.phase;
@@ -511,6 +511,8 @@ function render(){
   spd.textContent=`CPU速度：${G.speed<500?'速い':'普通'}`;
   lb.hidden=screen!=='battle'||UI.log;
   ab.hidden=screen!=='battle';
+  botbtn.hidden=screen!=='battle'||!matchMedia('(max-width:860px)').matches; // スマホ幅のときだけ
+  botbtn.textContent=`下の余白：${BOTTOM_LABELS[UI.bottom]}`;
   ab.textContent=`オート：${UI.auto?'ON':'OFF'}`; ab.classList.toggle('on',UI.auto);
   document.body.classList.toggle('menuopen',UI.menu);
   document.querySelector('#menubtn').setAttribute('aria-expanded',UI.menu?'true':'false');
@@ -600,6 +602,7 @@ function uiAct(a,ds){
     case 'toggleLog': UI.log=!UI.log; savePref('pencilduel.logOpen',UI.log?'1':'0'); break;
     case 'toggleAuto': UI.auto=!UI.auto; savePref('pencilduel.auto',UI.auto?'1':'0'); break;
     case 'toggleMenu': UI.menu=!UI.menu; break;
+    case 'toggleBottom': UI.bottom=(UI.bottom+1)%BOTTOM_STEPS.length; savePref('pencilduel.bottom',String(UI.bottom)); applyBottom(); break;
     case 'spellPick': UI.spellPick=!UI.spellPick; break;
     case 'mToggle': UI.mfold=!UI.mfold; break;
     case 'rosterCls': UI.roster.cls=ds.v; break;
@@ -630,7 +633,12 @@ document.addEventListener('mouseover',e=>{
 });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&UI.detail){ UI.detail=null; render(); } });
 
-// iPhone Safari: 下部のアドレスバーに隠れないよう、実際に見えている高さを --app-h に入れる（dvh が効かない環境の保険）
+// iPhone Safari: 下部のバーに隠れるときの手動の余白（メニュー「下の余白」で切り替え、端末に保存）
+const BOTTOM_STEPS=[0,28,56,84], BOTTOM_LABELS=['なし','小','中','大'];
+UI.bottom=Math.min(BOTTOM_STEPS.length-1,Math.max(0,parseInt(readPref('pencilduel.bottom'),10)||0));
+function applyBottom(){ document.documentElement.style.setProperty('--bot',BOTTOM_STEPS[UI.bottom]+'px'); }
+applyBottom();
+// 見えている高さを --app-h に入れる（dvh が効かない環境の保険。対戦画面以外で使う）
 function fitViewportH(){
   const h=(window.visualViewport&&window.visualViewport.height)||window.innerHeight;
   if(h) document.documentElement.style.setProperty('--app-h',Math.round(h)+'px');

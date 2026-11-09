@@ -6,8 +6,10 @@ body.game{height:100vh;height:100dvh;height:var(--app-h,100dvh);display:flex;fle
 /* スマホで画面を下に引っぱったときの「更新」（ページの読み込み直し）で試合が途切れないようにする */
 html:has(body.game),body.game{overscroll-behavior:none}
 /* 対戦画面は画面に固定する（iPhone で、バーの出し入れによってページごと上にずれて敵マスターが隠れるのを防ぐ） */
-html:has(body.game[data-screen="battle"]){overflow:hidden;height:var(--app-h,100%)}
-body.game[data-screen="battle"]{position:fixed;top:0;left:0;right:0}
+/* 高さは数値で決めず、固定領域の上下端（top/bottom）で決める：iOS の Safari が下のバーを避けた見える範囲に合わせてくれる。
+   --bot はメニューの「下の余白」（手動調整：バーが重なる環境の保険） */
+html:has(body.game[data-screen="battle"]){overflow:hidden}
+body.game[data-screen="battle"]{position:fixed;inset:0 0 var(--bot,0px) 0;height:auto;min-height:0}
 body.game>header{flex:none}
 body.game #app{flex:1;min-height:0;overflow:auto}
 body[data-screen="setup"] #app{overflow:hidden}
