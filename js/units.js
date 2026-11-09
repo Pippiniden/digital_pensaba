@@ -353,4 +353,3 @@ const DEFAULT_UNITS = [
     "ult":{"name":"宝具","c":"R","eff":[{"k":"dmg","t":"target","v":80},{"k":"dmg","t":"self","v":80}]}
   }
 ];
-];
