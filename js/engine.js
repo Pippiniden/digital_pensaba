@@ -114,6 +114,7 @@ function resolveTargets(src,t,picked){
   else if(t==='target') ts=G.target?[U(G.target)]:[];
   else if(t==='svt') ts=picked&&picked.pid===src.pid?[picked]:alive(src.pid); // マスターチームの令呪は選んだ1騎
   else if(t==='enemy_master') ts=em?[em]:[];
+  else if(t==='enemy_svt') ts=picked&&!picked.master&&picked.pid!==src.pid?[picked]:[]; // マスターが選んだ敵1体
   return ts.filter(u=>u&&!u.out);
 }
 // 確率の判定（chance）：対象ごとに別々にロールする（全体効果なら1体ずつ判定）
@@ -598,7 +599,7 @@ const PN = n=>'①②③④⑤⑥⑦⑧⑨'[n-1+(masterRule()&&n>=3?1:0)];
 function toSkillPhase(){ G.phase='skill'; log(`${PN(3)} スキル・${TERMS.ult}使用`,'h'); phaseFx('SKILL',`スキル・${TERMS.ult}`); }
 // ---------- マスタールール ----------
 // マスターフェイズで行動できるマスター（なければ null）
-function masterReady(){ const m=masterOf(G.cur); return G.phase==='master'&&!G.mastered&&m&&!m.out?m:null; }
+function masterReady(){ const m=masterOf(G.cur); return G.phase==='master'&&!G.mastered&&m&&!m.out&&!(G.spellPick&&G.spellPick.sup)?m:null; } // 補助の対象選択中は他の行動を受け付けない
 function masterDone(){ G.mastered=true; flushKo(); checkWin(); if(G.winner==null&&G.phase==='master') toSkillPhase(); }
 const masterAtkDmg = (m,t)=>Math.max(0,D(m.def).cost*ruleset().masterAtk[t.master?'master':'svt']+dmgMods(m,t,'W').sum);
 // 令呪の状態：P.spellLeft＝残りの画数 / P.spellUsed[i]＝その効果を使った / P.spell==='decl'＝宣言中（マスタールール）
@@ -621,7 +622,12 @@ function useSpell(m,i,picked){
   return masterEffects(m,s.eff,{},picked);
 }
 // マスターチームの令呪：「自軍サーヴァント」は全員ではなく選んだ1騎
-const spellPicks = s=>mTeam()&&s.eff.some(e=>e.t==='svt');
+// 対象を選ぶ側：'own'=自軍1騎（マスターチームの svt）/ 'enemy'=敵1体（enemy_svt）/ 'any'=両方ある / null=選ばない
+const pickSide = effs=>{ const own=mTeam()&&effs.some(e=>e.t==='svt'), en=effs.some(e=>e.t==='enemy_svt'); return own&&en?'any':en?'enemy':own?'own':null; };
+const supPickSide = effs=>effs.some(e=>e.t==='enemy_svt')&&alive(1-G.cur).length?'enemy':null; // 補助は自軍 svt が全員なので、敵1体だけ選ぶ
+const pickOk = (side,u,pid)=>!!(side&&u&&!u.master&&!u.out&&(side==='any'||(side==='own')===(u.pid===pid)));
+const pickCands = (side,pid)=>side==='own'?alive(pid):side==='enemy'?alive(1-pid):side==='any'?[...alive(pid),...alive(1-pid)]:[];
+const spellPicks = s=>!!pickSide(s.eff);
 const spellTgt = t=>t==='svt'&&mTeam()?`選んだ${TERMS.unit}`:tLabel(t);
 // マスターの補助・令呪の効果を適用。「敵マスター」へのダメージは、相手が令呪で防げるなら守る側の選択（guard）を挟む。待ちになったら true
 function masterEffects(m,effs,o={},picked=null){
@@ -786,7 +792,16 @@ const ACTIONS = {
     log(`${MASTER_ACTS.support}：${nm(m)} 出目${f+1} → ${face.eff.length?`「${esc(face.label)}」（このターンのみ）`:'無'}`, face.eff.length?'good':'sub');
     fxEmit({t:'skill',uid:m.uid,head:`${MASTER_ACTS.support}・出目${f+1}`,name:face.eff.length?face.label:'無',
       lines:face.eff.length?face.eff.map(e=>`${tLabel(e.t)}：${fxText(e)}`):['何も起きない']});
+    const side=supPickSide(face.eff);
+    if(side){ G.spellPick={sup:{label:face.label,eff:face.eff},side}; return; } // 「選んだ敵1体」：対象の選択待ち
     if(!masterEffects(m,face.eff,{tmp:true})) masterDone();
+  },
+  masterSupportPick({uid}){
+    const m=masterOf(G.cur), sp=G.spellPick;
+    if(G.phase!=='master'||G.mastered||!m||m.out||!sp||!sp.sup) return;
+    const picked=U(uid); if(!pickOk(sp.side,picked,G.cur)) return;
+    G.spellPick=null; log(`${MASTER_ACTS.support}の対象：${nm(picked)}`,'sub');
+    if(!masterEffects(m,sp.sup.eff,{tmp:true},picked)) masterDone();
   },
   // 攻撃：相手マスターへはコスト×20、相手サーヴァントへはコスト×10（退避中のマスターには当たらない）
   masterAttack({to}){
@@ -801,16 +816,17 @@ const ACTIONS = {
     fixedHit(m,t,dmg); masterDone();
   },
   // 令呪：now=即時（スターを消費・スキップなし）なら i の効果をすぐ使う。宣言なら以降のフェイズをスキップして、次のマスターフェイズで使う
-  masterSpell({now,i,uid}){
+  masterSpell({now,i,uid}){ // uid：対象を選ぶ令呪（選んだ敵1体など）の対象
     const m=masterReady(); if(!m) return;
     const P=G.players[G.cur], need=ruleset().spellNowStars;
     if(!canDeclareSpell()) return;
     if(mTeam()){ // マスターチーム：その場で使い、行動回数-1（同じ効果は1回まで）
       const k=Number(i), s=D(m.def).spells[k]; if(!s||P.spellUsed[k]) return;
       let picked=null;
-      if(spellPicks(s)){ // 対象の1騎を選ぶ（uid がなければ選択待ちにする）
+      const side=pickSide(s.eff);
+      if(side){ // 対象の1体を選ぶ（uid がなければ選択待ちにする）
         picked=uid&&U(uid);
-        if(!picked||picked.master||picked.pid!==G.cur||picked.out){ G.spellPick={i:k}; return; }
+        if(!pickOk(side,picked,G.cur)){ G.spellPick={i:k,side}; return; }
       }
       G.spellPick=null;
       const top=Object.entries(G.alloc).filter(([,n])=>n>0).sort((a,b)=>b[1]-a[1])[0];
@@ -818,9 +834,12 @@ const ACTIONS = {
       if(!useSpell(m,k,picked)) masterDone(); return;
     }
     if(now){
-      const s=D(m.def).spells[Number(i)]; if(!s||P.stars<need) return;
+      const k=Number(i), s=D(m.def).spells[k]; if(!s||P.stars<need) return;
+      const side=pickSide(s.eff); let picked=null;
+      if(side){ picked=uid&&U(uid); if(!pickOk(side,picked,G.cur)){ G.spellPick={i:k,now:true,side}; return; } }
+      G.spellPick=null;
       P.stars-=need; log(`${esc(P.name)}：${TERMS.star}${need}個（クリティカルLv4）を消費して令呪を即時発動`,'sub');
-      if(!useSpell(m,Number(i))) masterDone(); return;
+      if(!useSpell(m,k,picked)) masterDone(); return;
     }
     P.spell='decl'; G.mastered=true;
     log(`${esc(P.name)}：令呪を宣言（このターンの以降のフェイズをスキップ。次の${TERMS.player}フェイズで発動）`,'good');
@@ -828,9 +847,12 @@ const ACTIONS = {
     endPhase();
   },
   // 宣言済みの令呪を使う（次のターンのマスターフェイズ）
-  masterSpellUse({i}){
-    const m=masterReady(); if(!m||G.players[G.cur].spell!=='decl'||!D(m.def).spells[Number(i)]) return;
-    if(!useSpell(m,Number(i))) masterDone();
+  masterSpellUse({i,uid}){
+    const m=masterReady(), k=Number(i); if(!m||G.players[G.cur].spell!=='decl'||!D(m.def).spells[k]) return;
+    const side=pickSide(D(m.def).spells[k].eff); let picked=null;
+    if(side){ picked=uid&&U(uid); if(!pickOk(side,picked,G.cur)){ G.spellPick={i:k,use:true,side}; return; } }
+    G.spellPick=null;
+    if(!useSpell(m,k,picked)) masterDone();
   },
   // 退避：次の相手ターン、相手マスターの通常攻撃と、サーヴァントの全体攻撃を受けない
   masterEvac(){
@@ -862,7 +884,7 @@ const ACTIONS = {
     if(s.pick){ G.pending={uid,si}; return; }
     doSkill(u,si,null);
   },
-  cancelPick(){ G.pending=null; G.spellPick=null; },
+  cancelPick(){ G.pending=null; if(!(G.spellPick&&G.spellPick.sup)) G.spellPick=null; }, // 補助のロール後は取り消せない
   useUlt({uid}){
     const u=U(uid);
     if(G.phase!=='skill'||G.pending||G.ult||G.ultDone||u.pid!==G.cur||!canUlt(u)||u.np<RULES.ultCost) return;
@@ -903,7 +925,11 @@ const ACTIONS = {
   cardClick({uid}){
     const u=U(uid);
     if(G.copy){ const c=U(G.copy.uid); if(copyCands(c).includes(u)) doCopy(c.uid,u); return; }
-    if(G.spellPick){ if(u&&!u.master&&u.pid===G.cur&&!u.out) ACTIONS.masterSpell({i:G.spellPick.i,uid}); return; } // 令呪の対象
+    if(G.spellPick){ // 令呪・補助の対象
+      const sp=G.spellPick; if(!pickOk(sp.side,u,G.cur)) return;
+      if(sp.sup) ACTIONS.masterSupportPick({uid}); else if(sp.use) ACTIONS.masterSpellUse({i:sp.i,uid}); else ACTIONS.masterSpell({i:sp.i,uid,now:sp.now});
+      return;
+    }
     if(G.pending){ if(pickValid(u)){ const p=G.pending; G.pending=null; doSkill(U(p.uid),p.si,u); } return; }
     if(G.phase==='target' && G.targetAll){ if(u.pid!==G.cur&&!u.out&&!isCpu(G.cur)) resolveDamage(); return; } // 全体宝具：敵を押すと発動
     if(G.phase==='target' && targetCandidates().includes(u)){

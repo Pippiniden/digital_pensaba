@@ -60,7 +60,7 @@ const shown = u=>FXHOLD[u.uid]||{hp:u.hp,out:u.out};
 function svtHTML(u){
   const d=D(u.def), ph=G.phase, sh=shown(u);
   const allocable=canAllocMore(u);
-  const pickable=allocable || (G.spellPick&&u.pid===G.cur&&!u.out) || (G.copy&&copyCands(U(G.copy.uid)).includes(u)) || (G.pending&&pickValid(u)) || (!G.pending&&!G.copy&&ph==='target'&&targetCandidates().includes(u));
+  const pickable=allocable || (G.spellPick&&pickOk(G.spellPick.side,u,G.cur)) || (G.copy&&copyCands(U(G.copy.uid)).includes(u)) || (G.pending&&pickValid(u)) || (!G.pending&&!G.copy&&ph==='target'&&targetCandidates().includes(u));
   const acting=G.ult?G.ult===u.uid:(G.alloc[u.uid]||0)>0;
   const tgt=(G.targetAll?u.pid!==G.cur&&!u.out&&['target','end'].includes(ph):G.target===u.uid)&&!sh.out;
   // スキルを使える自分のサーヴァント（スキル欄が隠れる小さい表示のとき、ⓘ を光らせて知らせる）
@@ -114,10 +114,12 @@ function masterChipHTML(m){
 function masterPromptHTML(){
   const m=masterOf(G.cur), d=D(m.def), P=G.players[G.cur], em=masterOf(1-G.cur), es=alive(1-G.cur)[0], rs=ruleset();
   const spells=(a,extra='')=>d.spells.map((s,i)=>`<button class="primary" data-a="${a}" data-i="${i}" ${extra} title="${esc(effsText(s.eff))}">${esc(s.name)}</button>`).join('');
+  if(G.spellPick){ // 対象の選択待ち（令呪・補助）。補助はロール済みなのでキャンセル不可
+    const sp=G.spellPick, s=sp.sup||d.spells[sp.i], who=sp.side==='enemy'?`敵の${TERMS.unit}`:TERMS.unit;
+    return `<p class="hl">「${esc(s.name||s.label)}」の対象にする${who}を選んでください</p><p class="sub small">${esc(spellText(s))}</p>${sp.sup?'':'<button data-a="cancelPick">キャンセル</button>'}`;
+  }
   if(P.spell==='decl') return `<p>宣言した<b class="hl">令呪</b>を1つ選んで発動します。</p><div class="row mopts">${spells('masterSpellUse')}</div>`;
   if(rs.mTeam){ // マスターチーム：補助か令呪（3画・同じ効果は1回）
-    if(G.spellPick){ const s=d.spells[G.spellPick.i];
-      return `<p class="hl">「${esc(s.name)}」を使う${TERMS.unit}を選んでください</p><p class="sub small">${esc(spellText(s))}</p><button data-a="cancelPick">キャンセル</button>`; }
     const can=canDeclareSpell();
     return `<p>${TERMS.player}の行動を1つ選びます。</p><div class="row mopts">
       <button class="primary" data-a="masterSupport" title="${TERMS.player}の鉛筆を振り、出た面の効果をこのターンだけ適用">🎲 ${MASTER_ACTS.support}</button>
@@ -632,10 +634,12 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&UI.detail){ UI.det
 function fitViewportH(){
   const h=(window.visualViewport&&window.visualViewport.height)||window.innerHeight;
   if(h) document.documentElement.style.setProperty('--app-h',Math.round(h)+'px');
+  if(document.body.dataset.screen==='battle'&&(window.scrollY||window.scrollX)) window.scrollTo(0,0); // ページごとずれていたら戻す
 }
 fitViewportH();
 window.addEventListener('resize',fitViewportH);
 window.addEventListener('orientationchange',fitViewportH);
+window.addEventListener('scroll',fitViewportH,{passive:true});
 if(window.visualViewport) window.visualViewport.addEventListener('resize',fitViewportH);
 // エディタで反映したデータを、別タブから戻ってきたときに読み直す（モード選択画面にいるときだけ）
 window.addEventListener('storage',e=>{ if((e.key===STORE.units||e.key===STORE.masters) && G.phase==='mode'){ reloadUnits(); render(); } });

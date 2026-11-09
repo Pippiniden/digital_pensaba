@@ -75,9 +75,15 @@ function cpuMaster(easy){
   // 令呪の価値が一番高いもの（マスターチームで対象を選ぶ令呪は、味方ごとに試して一番よい1騎）
   const spellBest=()=>{ let best={i:0,sc:-Infinity,uid:null};
     d.spells.forEach((s,i)=>{ if(P.spellUsed[i]||!s.eff.length) return;
-      (spellPicks(s)?alive(G.cur):[null]).forEach(t=>{ const v=cpuEffScore(m,s.eff,t,-1); if(v>best.sc) best={i,sc:v,uid:t&&t.uid}; }); });
+      (spellPicks(s)?pickCands(pickSide(s.eff),G.cur):[null]).forEach(t=>{ const v=cpuEffScore(m,s.eff,t,-1); if(v>best.sc) best={i,sc:v,uid:t&&t.uid}; }); });
     return best; };
-  if(P.spell==='decl') return ['masterSpellUse',{i:String(spellBest().i)}];
+  if(G.spellPick){ // 対象の選択待ち（補助の「選んだ敵1体」など）：一番効く相手を選ぶ
+    const sp=G.spellPick, effs=sp.sup?sp.sup.eff:d.spells[sp.i].eff;
+    let best=null, bs=-Infinity;
+    pickCands(sp.side,G.cur).forEach(t=>{ const v=cpuEffScore(m,effs,t,-1)+(t.pid!==G.cur?(1-hpR(t))*.01:0); if(v>bs){ bs=v; best=t; } });
+    return best?['cardClick',{uid:best.uid}]:null;
+  }
+  if(P.spell==='decl'){ const b=spellBest(); return ['masterSpellUse',{i:String(b.i),...(b.uid?{uid:b.uid}:{})}]; }
   if(rs.mTeam){ // マスターチーム：補助か令呪（行動-1と引き換えなので、価値が高いときだけ）
     if(!easy&&canDeclareSpell()){ const b=spellBest(); if(b.sc>=4) return ['masterSpell',{i:String(b.i),...(b.uid?{uid:b.uid}:{})}]; }
     return ['masterSupport'];
@@ -86,7 +92,7 @@ function cpuMaster(easy){
   if(es) opts.push(['masterAttack',{to:'svt'}]);
   if(em&&!em.out&&!G.players[em.pid].evac) opts.push(['masterAttack',{to:'master'}]);
   if(easy) return opts[Math.floor(rnd01(`${G.turn}m`)*opts.length)];
-  if(canDeclareSpell()&&P.stars>=rs.spellNowStars){ const b=spellBest(); if(b.sc>=4) return ['masterSpell',{now:'1',i:String(b.i)}]; }
+  if(canDeclareSpell()&&P.stars>=rs.spellNowStars){ const b=spellBest(); if(b.sc>=4) return ['masterSpell',{now:'1',i:String(b.i),...(b.uid?{uid:b.uid}:{})}]; }
   if(es&&masterAtkDmg(m,es)>=es.hp&&!has(es,'guts')) return ['masterAttack',{to:'svt'}];
   // 相手マスターへの攻撃は、倒せば相手サーヴァントにマスターの最大HP分のダメージ（相手が令呪で守る場合もある）
   if(em&&!em.out&&!G.players[em.pid].evac&&d.cost>=2) return ['masterAttack',{to:'master'}];
