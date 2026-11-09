@@ -40,6 +40,8 @@ function conv(el){
     case 'optnum': return v===''||!(Number(v)>0)?undefined:Number(v);
     case 'optstr': return v===''?undefined:v;
     case 'lines': return v.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+    case 'optlines': { const a=v.split(/\r?\n/).map(x=>x.trim()).filter(Boolean); return a.length?a:undefined; } // 専用セリフ（空なら項目ごと消す）
+    case 'tags': return [...new Set(v.split(/[,、，\s]+/).map(x=>x.trim()).filter(Boolean))]; // 属性：読点・カンマ・空白区切り
     default: return v;
   }
 }
@@ -51,7 +53,7 @@ function uniqueId(base){
 }
 const C=(c,dmg,np=0,star=0)=>({c,dmg,np,star});
 function newUnit(){
-  return { id:uniqueId('unit'), name:'新しいサーヴァント', cls:CLASSES[0], cost:2, hp:100, fit:normFit(), lines:Object.fromEntries(Object.keys(LINE_KEYS).map(k=>[k,[]])),
+  return { id:uniqueId('unit'), name:'新しいサーヴァント', cls:CLASSES[0], traits:[], cost:2, hp:100, fit:normFit(), lines:Object.fromEntries(Object.keys(LINE_KEYS).map(k=>[k,[]])),
     faces:[ {acts:1,pre:C('R',20),post:C('R',30)}, {acts:2,pre:C('B',15,20),post:C('B',20,30)}, {acts:1,pre:C('G',10,0,3),post:C('G',15,0,5)},
             {acts:2,pre:C('R',20),post:C('R',30)}, {acts:3,pre:{c:'ASC'},post:C('R',45)}, {acts:1,pre:C('B',15,20),post:C('B',20,30)} ],
     skills:[ {name:'スキル1',eff:[{k:'atk',t:'self',v:10,turns:3}]},
@@ -79,6 +81,10 @@ function applyCardTpl(u){
 }
 function makeCmd(t,old){
   old=old||{};
+  const c=makeCmd0(t,old); if(old.line&&old.line.length) c.line=old.line; // 専用セリフは種類を変えても残す
+  return c;
+}
+function makeCmd0(t,old){
   if(t==='ASC') return {c:'ASC'};
   if(t==='W') return {c:'W',label:old.label||'特殊行動',eff:old.eff||[{k:'heal',t:'self',v:20}],dmg:0,np:0,star:0};
   return {c:t,dmg:old.dmg||20,np:0,star:0}; // 属性を変えたらNP・スターは0に戻す
@@ -93,17 +99,26 @@ function newEff(ctx){
 function fixEff(e){
   const f=FX[e.k]||{};
   if(!f.val) e.v=0;
+  else if(!e.v&&!['poison','burn','critMult'].includes(e.k)) e.v=20; // 値を使わない効果から変えたときの仮の値
   if(f.inst){ delete e.turns; delete e.times; }
   else if(f.timesOnly){ delete e.turns; if(e.times==null) e.times=1; }
   else if(!f.perm&&e.turns==null&&e.times==null) e.turns=3;
   if((e.k==='poison'||e.k==='burn')&&!e.v) e.v=RULES.dot;
   if(!f.color) delete e.color;
   if(e.k!=='atkVs') delete e.vs;
+  if(!f.trait) delete e.trait;
+  else if(!e.trait) e.trait=allTraits()[0]||'';
   if(e.k==='cardConv'&&!e.color) e.color='R';
   if(e.k==='critMult'&&!(e.v>100)) e.v=200;
   if(e.k==='dmg'||e.k==='copyRoll') delete e.at;
   if(e.k==='star'&&e.t==='self') e.t='master';
 }
+
+// 全サーヴァントの属性（入力候補・特攻/特防の選択肢）
+const allTraits = ()=>[...new Set(units.flatMap(u=>u.traits||[]))].sort((a,b)=>a.localeCompare(b,'ja'));
+const traitDatalist = ()=>`<datalist id="traitlist">${allTraits().map(t=>`<option value="${esc(t)}"></option>`).join('')}</datalist>`;
+// 専用セリフ欄（スキル・鉛筆の面）。空なら通常の「スキル使用」「攻撃」のセリフを使う
+const ownLineIn=(p,arr,fallback)=>`<label class="ownline"><span>専用セリフ（任意）</span><textarea data-p="${p}" data-t="optlines" rows="${Math.max(1,(arr||[]).length)}" placeholder="空なら「${esc(fallback)}」のセリフ。1行に1つ">${esc((arr||[]).join(String.fromCharCode(10)))}</textarea></label>`;
 
 // ---------- 保存と再描画 ----------
 function saveDraft(){ writeJSON(STORE.draft,units); writeJSON(STORE.mdraft,masters); }
@@ -198,7 +213,8 @@ function renderMasterForm(el){
       ${effList(`spells.${i}.eff`,s.eff,'master')}
       <div class="preview mprev" data-prev="spell" data-i="${i}">${esc(effsText(s.eff))}</div>
     </div>`).join('')}
-  </section>`;
+  </section>
+  ${traitDatalist()}`;
 }
 function renderMasterSide(el){
   const m=cur(); if(!m){ el.innerHTML=''; return; }
@@ -242,6 +258,8 @@ function renderForm(){
         <datalist id="classlist">${CLASSES.map(c=>`<option value="${esc(c)}">${CLASSES_BASIC.includes(c)?'基本':'エクストラ'}</option>`).join('')}</datalist></label>
       <label>コスト<input type="number" min="0" max="${RULES.costCap}" data-p="cost" data-t="num" value="${u.cost}"></label>
       <label>HP<input type="number" min="1" step="5" data-p="hp" data-t="num" value="${u.hp}"></label>
+      <label class="wide">属性（複数可）<input data-p="traits" data-t="tags" value="${esc((u.traits||[]).join('、'))}" placeholder="例：竜、騎乗、王、人型">
+        <small>読点・カンマ・空白で区切る。特攻・特防の判定に使います${allTraits().length?`（使用中：${esc(allTraits().join('・'))}）`:''}</small></label>
     </div>
     <div class="row tplrow"><label>カード構成テンプレ
       <select id="tplsel">${CARD_TPL_KEYS.map(k=>opt(k,k,tplKey)).join('')}</select></label>
@@ -287,6 +305,7 @@ function renderForm(){
     </div>
   </section>
   <section class="sec"><h2>スキル</h2>${u.skills.map(skillEd).join('')}</section>
+  ${traitDatalist()}
   <section class="sec"><h2>${TERMS.ult}</h2>
     <div class="subcard">
       <div class="fields">
@@ -309,6 +328,8 @@ function cmdEd(path,c,isPre){
     <div class="cmdnums">${numIn(path+'.dmg',c.dmg||0,'ダメージ')}${numIn(path+'.np',c.np,TERMS.gauge)}${numIn(path+'.star',c.star,'★')}</div>
     <p class="sub small nm">ダメージを入れると無属性の攻撃になります（チェインには数えません）。</p>${effList(path+'.eff',c.eff,'special','W')}`;
   else if(c.c==='ASC') body=`<span class="sub small">出たら${TERMS.ascFull}する（1行動として数える）</span>`;
+  // 面の専用セリフ（攻撃のときの吹き出し。効果だけの特殊行動・霊基再臨面は、書いたときだけ出す）
+  body+=ownLineIn(path+'.line',c.line,LINE_KEYS.attack);
   return `<div class="cmded c-${esc(c.c)}">${select}${body}</div>`;
 }
 function skillEd(s,i){
@@ -321,6 +342,7 @@ function skillEd(s,i){
       <label>対象の選び方<select data-p="${p}.pick" data-t="optstr" data-act="structural">${Object.entries(PICKS).map(([k,v])=>opt(k,v,s.pick||'')).join('')}</select></label>
     </div>
     ${effList(p+'.eff',s.eff,'skill')}
+    ${ownLineIn(p+'.line',s.line,LINE_KEYS.skill)}
     <div class="preview" data-prev="skill" data-i="${i}">${esc(effsText(s.eff,s.pick))}</div>
   </div>`;
 }
@@ -337,14 +359,18 @@ function effAtSel(p,e,atKind){
 }
 function effRow(path,j,e,ctx,n,atKind){
   const p=`${path}.${j}`, f=FX[e.k]||{};
-  const kinds=Object.keys(FX).filter(k=>fxOnlyIn(k,ctx));
+  // 効果は「分類 → 種類」の2段で選ぶ（1つのリストだと長すぎるため。分類は rules.js の FX_GROUPS）
+  const groups=fxGroups().map(([g,ks])=>[g,ks.filter(k=>fxOnlyIn(k,ctx))]).filter(([,ks])=>ks.length);
+  const grp=fxGroupOf(e.k), kinds=(groups.find(([g])=>g===grp)||groups[0])[1];
   const tg=TGT_BY_CTX[ctx].includes(e.t)?TGT_BY_CTX[ctx]:[...TGT_BY_CTX[ctx],e.t];
   return `<div class="eff" data-ep="${p}">
-    <select data-p="${p}.k" data-act="effKind" aria-label="効果の種類">${kinds.map(k=>opt(k,FX[k].name,e.k)).join('')}</select>
+    <select class="effgrp" data-act="effGrp" data-ep="${p}" data-ctx="${ctx}" aria-label="効果の分類">${groups.map(([g,ks])=>opt(g,`${g}（${ks.length}）`,grp)).join('')}</select>
+    <select data-p="${p}.k" data-act="effKind" aria-label="効果の種類">${kinds.map(k=>opt(k,FX[k].name,e.k)).join('')}${kinds.includes(e.k)?'':opt(e.k,(FX[e.k]||{}).name||e.k,e.k)}</select>
     <select data-p="${p}.t" aria-label="対象">${tg.map(t=>opt(t,TARGETS[t]||t,e.t)).join('')}</select>
     ${f.val?numIn(p+'.v',e.v,'値'):''}
     ${f.inst?'':(f.timesOnly||(ctx==='master'&&/^faces./.test(path))?'':optNum(p+'.turns',e.turns,'ターン'))+optNum(p+'.times',e.times,'回数')}
     ${FX[e.k]&&FX[e.k].color?`<label class="mini"><span>色</span><select data-p="${p}.color" data-t="optstr">${opt('','すべて',e.color||'')}${['R','B','G'].map(c=>opt(c,TERMS[c],e.color)).join('')}</select></label>`:''}
+    ${f.trait?`<label class="mini"><span>属性</span><input class="traitin" list="traitlist" data-p="${p}.trait" data-t="optstr" value="${esc(e.trait||'')}" placeholder="属性名"></label>`:''}
     ${e.k==='atkVs'?`<label class="mini"><span>弱体</span><select data-p="${p}.vs" data-t="optstr">${opt('','どれでも',e.vs||'')}${Object.keys(FX).filter(k=>FX[k].buff===false).map(k=>opt(k,FX[k].name,e.vs)).join('')}</select></label>`:''}
     <label class="mini"><span>確率</span><select data-p="${p}.chance" data-t="optnum">${opt('','必ず',e.chance??'')}${[1,2,3,4,5].map(k=>opt(k,`ロール${k}以下`,e.chance)).join('')}</select></label>
     ${effAtSel(p,e,atKind)}
@@ -425,7 +451,7 @@ function renderSide(){
       <p class="sub small nm">1回ロールしたときの平均値です。全体平均は${units.length}体の${TERMS.asc}前の値です。</p>
     </div>
     <div class="sidecard"><b>カードの見え方</b>
-      <div class="card prev"><div class="uhead">${faceImg(u)}<div class="uinfo"><div class="top">${clsBadge(u.cls)}<b>${esc(u.name)}</b><span class="cost">コスト${u.cost} ・ HP${u.hp}</span></div>
+      <div class="card prev"><div class="uhead">${faceImg(u)}<div class="uinfo"><div class="top">${clsBadge(u.cls)}<b>${esc(u.name)}</b>${traitsHTML(u)}<span class="cost">コスト${u.cost} ・ HP${u.hp}</span></div>
         <div class="ccrow">${['R','B','G'].map(k=>cmdCardHTML(u,{c:k},{small:true})).join('')}</div></div></div>${skillListHTML(u)}</div>
     </div>`;
 }
@@ -467,6 +493,12 @@ document.addEventListener('input',e=>{
   if(el.dataset.act==='cmdType'){
     const old=getPath(cur(),el.dataset.path);
     setPath(cur(),el.dataset.path,makeCmd(el.value,old));
+    return full();
+  }
+  if(el.dataset.act==='effGrp'){ // 分類を変えたら、その分類の最初の効果にする
+    const e=getPath(cur(),el.dataset.ep), g=fxGroups().find(([n])=>n===el.value), k=g&&g[1].find(k=>fxOnlyIn(k,el.dataset.ctx));
+    if(!e||!k) return;
+    e.k=k; fixEff(e); if(isM()&&/^faces\./.test(el.dataset.ep)) delete e.turns;
     return full();
   }
   if(!el.dataset.p) return;

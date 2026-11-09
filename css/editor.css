@@ -172,3 +172,10 @@ table.simmx td.self{color:var(--sub)}
 .mfbody{display:flex;flex-direction:column;gap:6px;min-width:0}
 .mflabel{flex:1;min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:12px}
 .preview.mprev::before{content:'効果：'}
+
+/* 属性・専用セリフ・効果の分類 */
+.fields label.wide{grid-column:1/-1}
+.ownline{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--sub)}
+.ownline textarea{font-size:12px;resize:vertical;min-height:0}
+.eff .effgrp{max-width:9.5em;color:var(--sub)}
+.eff .traitin{width:7em}

@@ -89,6 +89,7 @@ const faceActs = (d,i)=>RULES.actsTable ? RULES.actsTable[i] : d.faces[i].acts;
 
 // ---------- セリフ ----------
 // 各サーヴァントの lines に、場面ごとのセリフを配列で書きます（複数あればランダムに1つ）
+// スキル・鉛筆の面ごとの専用セリフ（line）は、あればその場面の通常セリフの代わりに使う
 const LINE_KEYS = { start:'戦闘開始', attack:'攻撃', extra:'エクストラアタック', damage:'被ダメージ', skill:'スキル使用', np:'宝具使用', npDamage:'宝具で被ダメージ', defeat:'敗退', win:'勝利' };
 const LINE_MIN = { attack:3 };   // 最低限そろえたい種類数（足りないと注意を出す）
 
@@ -141,7 +142,10 @@ const FX = {
   // ターン開始時○○：持ち主の陣営のターン開始時に発動（スターはそのターンの手持ちに加わる）
   regenHp:{name:'ターン開始時HP回復',buff:true,val:true}, regenNp:{name:'ターン開始時NP獲得',buff:true,val:true},
   regenStar:{name:'ターン開始時スター獲得',buff:true,val:true},
-  atkVs:{name:'弱体状態特攻',buff:true,val:true},           // 攻撃対象が弱体（vs で種類を限定、未指定なら何でも）を受けていれば攻撃ダメージ+x
+  atkVs:{name:'弱体状態特攻',buff:true,val:true},
+  // 属性特攻・特防：trait（サーヴァントの属性 traits の1つ）で相手を限定する
+  atkTrait:{name:'特攻',buff:true,val:true,trait:true},      // 攻撃対象が属性 trait を持っていれば攻撃ダメージ+x
+  defTrait:{name:'特防',buff:true,val:true,trait:true},      // 攻撃してきた相手が属性 trait を持っていれば被ダメージ-x（被ダメージ減少無視で無視される）           // 攻撃対象が弱体（vs で種類を限定、未指定なら何でも）を受けていれば攻撃ダメージ+x
   counter:{name:'反撃',buff:true,val:true},                  // 攻撃（コマンド・宝具）を受けるたびに攻撃側へxダメージ（補正・無敵・回避の影響なし）
   // 被ダメージ時○○：攻撃対象になったターンの終了フェイズに1回発動（回避・無敵で防いでも発動）
   onHitNp:{name:'被ダメージ時NP獲得',buff:true,val:true},      // NP+x%（呪いで止まる）
@@ -171,6 +175,22 @@ const FX = {
   // 出た再臨後コマンドをこの行動として使う
   copyRoll:{name:'他のサーヴァントをロール',inst:true,only:'special'},
 };
+
+// ---------- 効果の分類（エディタで「分類 → 種類」の2段で選ぶ） ----------
+// ここにない効果は最後の「その他」に入る
+const FX_GROUPS = [
+  ['攻撃強化', ['atk','atkVs','atkTrait','ignoreDef','sureHit','pierce','critPow','critMult','critRoll','cardConv','onAtkStar','onAtkNp']],
+  ['防御・耐性', ['def','defTrait','evade','invul','guts','taunt','nullUnder','counter','maxHp','debuffImmune','mentalImmune']],
+  ['継続・ターン', ['actsUp','regenHp','regenNp','regenStar','onHitNp','onHitStar']],
+  ['弱体', ['atkDown','defDown','critDown','poison','burn','spread','drain','curse','stun','charm','fear','sealSkill','sealUlt','healBlock','buffImmune']],
+  ['回復・即時', ['heal','np','star','starLoss','cleanse','cleanseMental','strip','buffExtend','skillCharge']],
+  ['攻撃・特殊', ['dmg','instantDeath','copyRoll']],
+];
+function fxGroupOf(k){ const g=FX_GROUPS.find(([,ks])=>ks.includes(k)); return g?g[0]:'その他'; }
+function fxGroups(){ // 定義漏れの効果も「その他」として必ず選べるようにする
+  const listed=new Set(FX_GROUPS.flatMap(([,ks])=>ks)), rest=Object.keys(FX).filter(k=>!listed.has(k));
+  return [...FX_GROUPS.map(([g,ks])=>[g,ks.filter(k=>FX[k])]), ...(rest.length?[['その他',rest]]:[])];
+}
 
 // ---------- 効果の対象 ----------
 // マスタールールでは「味方全体」に自分のマスターも含む（敵全体のダメージは敵マスターにも当たる。退避で防げる）

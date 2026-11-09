@@ -35,7 +35,10 @@ function fxEmit(ev){
 // 出目の表示待ち：ロール演出が着地するまで画面に結果を出さないもの（'f:<uid>'=肖像の出目 / 'r:<idx>'=コマンド列の1枚）
 const FXHIDE=new Set();
 // o.w を付けると、次の演出までの待ち時間をその値にする（重ねて見せたいとき）
-function say(u,key,o={}){ const t=pickLine(D(u.def),key); if(t) fxEmit({t:'say',uid:u.uid,key,text:t,...o}); }
+// o.own：スキル・鉛筆の面の専用セリフ（あれば key の通常セリフの代わりに使う）
+function say(u,key,o={}){ const {own,...r}=o; const t=pickLine(D(u.def),key,own); if(t) fxEmit({t:'say',uid:u.uid,key,text:t,...r}); }
+// 出たコマンドの専用セリフ（他のサーヴァントの鉛筆をロールしたコマンドは、そのサーヴァントのセリフなので使わない）
+const cmdLine = cmd=>cmd&&!cmd.from?cmd.line:null;
 // フェイズ切り替えの帯。big はターン開始など大きく見せるもの
 function phaseFx(title,sub,o={}){ fxEmit({t:'phase',title,sub,...o}); }
 // 鉛筆ロールの演出。keys の結果は演出の着地まで隠す
@@ -43,6 +46,7 @@ function rollFx(uid,f,o={}){ (o.keys||[]).forEach(k=>FXHIDE.add(k)); fxEmit({t:'
 
 // ---------- ヘルパー ----------
 const D = id=>UNITS.find(u=>u.id===id)||MASTERS.find(m=>m.id===id);
+const traitsOf = u=>(D(u.def)||{}).traits||[]; // 属性（特攻・特防の判定用）
 const ruleset = ()=>RULESETS[G.rule]||RULESETS.team;
 const keepRule = ()=>({rule:G.rule, handicap:G.handicap});
 const ALL = ()=>[...G.players[0].party,...G.players[1].party];
@@ -196,6 +200,7 @@ function applyOne(src,t,e,o={}){
   }
   const inst={k:e.k,v:e.v,color:e.color||null,turns:e.turns??null,times:e.times??null,owner:src.pid};
   if(e.vs) inst.vs=e.vs;
+  if(e.trait) inst.trait=e.trait;
   if(o.tmp){ inst.tmp=true; inst.turns=null; } // 補助：このターンの終了フェイズまで
   t.fx.push(inst);
   if(e.k==='maxHp') t.hp+=e.v; // 最大HPが増えたぶん HP も増える
@@ -267,10 +272,16 @@ function dmgMods(att,tgt,color){
     // 弱体状態特攻：対象が指定の弱体（vs 未指定なら何か1つ）を受けていれば加算
     const vs=att.fx.filter(e=>e.k==='atkVs'&&tgt.fx.some(x=>e.vs?x.k===e.vs:FX[x.k].buff===false));
     if(vs.length){ sum+=vs.reduce((s,e)=>s+e.v,0); usedA.push(...vs); }
+    // 属性特攻：対象が属性 trait を持っていれば加算
+    const tt=traitsOf(tgt), at=att.fx.filter(e=>e.k==='atkTrait'&&tt.includes(e.trait));
+    if(at.length){ sum+=at.reduce((s,e)=>s+e.v,0); usedA.push(...at); }
     const dd=mods(tgt,'defDown'); sum+=dd.sum; usedT.push(...dd.list);
     const ig=att.fx.find(e=>e.k==='ignoreDef');
     if(ig){ if(mods(tgt,'def').list.length) usedA.push(ig); }
-    else { const df=mods(tgt,'def'); sum-=df.sum; usedT.push(...df.list); }
+    else { const df=mods(tgt,'def'); sum-=df.sum; usedT.push(...df.list);
+      // 属性特防：攻撃してきた相手が属性 trait を持っていれば減算（被ダメージ減少無視なら見ない）
+      const ta=traitsOf(att), dt=tgt.fx.filter(e=>e.k==='defTrait'&&ta.includes(e.trait));
+      if(dt.length){ sum-=dt.reduce((s,e)=>s+e.v,0); usedT.push(...dt); } }
   }
   // 色指定のある攻撃ダメージ+（色バフ）の合計：クリティカルで2倍
   const colorBuff=a.list.filter(e=>e.color).reduce((s,e)=>s+e.v,0);
@@ -312,7 +323,7 @@ function ultEffOrder(effs){
 function resolveCommand(att,cmd,tgt,o={}){
   const n=nm(att);
   const atkFx=to=>fxEmit({t:'atk',uid:att.uid,tgt:to,cmd,ri:o.ri,extra:!!o.extra});
-  if(cmd.c==='ASC'){ atkFx(null); log(`${n}：${TERMS.ascFull}（1行動）`,'sub'); return; }
+  if(cmd.c==='ASC'){ if(cmdLine(cmd)) say(att,'attack',{own:cmd.line}); atkFx(null); log(`${n}：${TERMS.ascFull}（1行動）`,'sub'); return; }
   if(isCopyCmd(cmd)){ // エクストラアタックで出たときは対象をランダムに選んで、その場でロール
     const cs=copyCands(att); if(!cs.length) return;
     const src=cs[Math.floor(Math.random()*cs.length)], r=copyRollFrom(src);
@@ -324,11 +335,11 @@ function resolveCommand(att,cmd,tgt,o={}){
   const [preE,postE]=splitEffs(cmd.eff,EFF_AT_DEFAULT[cmd.c==='W'?'W':'cmd']);
   if(cmd.c==='W'){
     log(`${n}：特殊行動「${esc(cmd.label)}」${cmd.from?`（${esc(cmd.from)}）`:''}`);
-    if(!(cmd.dmg>0)){ atkFx(null); applyEffects(att,[...preE,...postE],null); gainNpStar(att,cmd,1); return; }
+    if(!(cmd.dmg>0)){ if(cmdLine(cmd)) say(att,'attack',{own:cmd.line}); atkFx(null); applyEffects(att,[...preE,...postE],null); gainNpStar(att,cmd,1); return; }
     // ダメージを持つ特殊行動は無属性の攻撃として続けて処理する（チェインには数えない）
   }
   applyEffects(att,preE,null); // 攻撃前の効果（防御無視・無敵貫通などを付けてから攻撃）
-  say(att,(o.extra&&(D(att.def).lines.extra||[]).length)?'extra':'attack',{w:250}); // 吹き出しと攻撃カードを重ねて見せる（エクストラ用が空なら通常の攻撃セリフ）
+  say(att,(o.extra&&(D(att.def).lines.extra||[]).length)?'extra':'attack',{w:250,own:cmdLine(cmd)}); // 吹き出しと攻撃カードを重ねて見せる（エクストラ用が空なら通常の攻撃セリフ。面の専用セリフがあればそちら）
   atkFx(tgt.uid); // 戦闘不能の相手にも（オーバーキル）カードを飛ばす
   let dmg=cmd.dmg; const note=[`基本${dmg}`]; let usedA=[], usedT=[], colorBuff=0;
   // 2. スキル効果補正 / 3. Busterチェイン
@@ -569,7 +580,7 @@ function doSkill(u,si,picked){
   // 使ったスキルの名前と効果を中央に出す（選んだ対象があれば名前も）
   fxEmit({t:'skill',uid:u.uid,si,name:s.name,picked:picked?D(picked.def).name:'',
     lines:s.eff.length?s.eff.map(e=>`${tLabel(e.t,s.pick)}：${fxText(e)}${e.chance?`（出目${e.chance}以下で成功）`:''}`):['効果なし']});
-  say(u,'skill');
+  say(u,'skill',{own:s.line}); // スキルの専用セリフがあればそちら
   applyEffects(u,s.eff,picked);
   u.used[si]=true; // 効果の後に使用済みにする（スキル再使用で自分自身が戻らないように）
   flushKo();

@@ -14,22 +14,28 @@ function removeKey(key){ try{ localStorage.removeItem(key); }catch(e){} }
 
 // ---------- 正規化（読み込んだデータの形をそろえる） ----------
 const num = (v,d=0)=>Number.isFinite(+v)&&v!==''&&v!=null ? +v : d;
+// セリフ・属性の配列（文字列1つでも可）。空白だけのものは捨てる
+const strList = v=>(Array.isArray(v)?v:v==null?[]:[v]).map(x=>String(x??'').trim()).filter(Boolean);
+// 属性：重複を除いた配列
+const normTraits = v=>[...new Set(strList(v))];
 function normEff(e){
   e=e||{};
   const o={k:String(e.k||'atk'), t:String(e.t||'self'), v:num(e.v)};
   for(const k of ['turns','times','chance']) if(num(e[k])>0) o[k]=num(e[k]);
   if(['R','B','G'].includes(e.color)) o.color=e.color;
   if(e.vs&&FX[e.vs]&&FX[e.vs].buff===false) o.vs=String(e.vs); // 弱体状態特攻の対象の弱体
+  const tr=String(e.trait??'').trim(); if(tr) o.trait=tr; // 属性特攻・特防の対象の属性
   if(EFF_AT[e.at]) o.at=e.at; // 攻撃の前/後（未指定なら既定のタイミング。rules.js の EFF_AT）
   return o;
 }
 function normCmd(c){
   c=c||{};
-  if(c.c==='ASC') return {c:'ASC'};
-  if(c.c==='W') return {c:'W', label:String(c.label||''), eff:(c.eff||[]).map(normEff), dmg:num(c.dmg), np:num(c.np), star:num(c.star)};
+  const ln=strList(c.line), withLine=o=>(ln.length?Object.assign(o,{line:ln}):o); // この面の専用セリフ（任意）
+  if(c.c==='ASC') return withLine({c:'ASC'});
+  if(c.c==='W') return withLine({c:'W', label:String(c.label||''), eff:(c.eff||[]).map(normEff), dmg:num(c.dmg), np:num(c.np), star:num(c.star)});
   const o={c:String(c.c||'R'), dmg:num(c.dmg), np:num(c.np), star:num(c.star)};
   if(c.eff&&c.eff.length) o.eff=c.eff.map(normEff); // 通常コマンドの付加効果（任意）
-  return o;
+  return withLine(o);
 }
 function normClass(c){ c=String(c||'').trim(); return CLASS_LEGACY[c]||c; }
 // 画像の見せ方（はみ出し調整）。x,y = 表示位置(%) / z = 拡大率(%)。既定値のままなら書き出さない
@@ -51,11 +57,13 @@ function normalizeUnit(u){
   u=u||{};
   const faces=Array.from({length:6},(_,i)=>{ const f=(u.faces||[])[i]||{}; return {acts:num(f.acts,1), pre:normCmd(f.pre), post:normCmd(f.post||f.pre)}; });
   const skills=Array.from({length:3},(_,i)=>{ const s=(u.skills||[])[i]||{};
-    const o={name:String(s.name||''), eff:(s.eff||[]).map(normEff)}; const rk=String(s.rank||'').trim(); if(rk) o.rank=rk; if(['ally','enemy','any'].includes(s.pick)) o.pick=s.pick; return o; });
+    const o={name:String(s.name||''), eff:(s.eff||[]).map(normEff)}; const rk=String(s.rank||'').trim(); if(rk) o.rank=rk; if(['ally','enemy','any'].includes(s.pick)) o.pick=s.pick;
+    const ln=strList(s.line); if(ln.length) o.line=ln; // このスキルの専用セリフ（任意）
+    return o; });
   const ult=u.ult||{};
   const ln=u.lines||{};
-  const lines=Object.fromEntries(Object.keys(LINE_KEYS).map(k=>[k,(Array.isArray(ln[k])?ln[k]:[ln[k]]).map(x=>String(x??'').trim()).filter(Boolean)]));
-  return { id:String(u.id||''), name:String(u.name||''), cls:normClass(u.cls), cost:num(u.cost), hp:num(u.hp,100),
+  const lines=Object.fromEntries(Object.keys(LINE_KEYS).map(k=>[k,strList(ln[k])]));
+  return { id:String(u.id||''), name:String(u.name||''), cls:normClass(u.cls), traits:normTraits(u.traits), cost:num(u.cost), hp:num(u.hp,100),
     fit:normFit(u.fit), lines, faces, skills, ult:Object.assign({name:String(ult.name||''), c:String(ult.c||'R'), eff:(ult.eff||[]).map(normEff)}, String(ult.ruby||'').trim()?{ruby:String(ult.ruby).trim()}:{}) };
 }
 // 宝具名（ルビがあれば <ruby> で表示）／スキルランク
@@ -71,8 +79,10 @@ function normalizeUnits(raw){
 function validateUnits(units){
   const issues=[], ids=new Map();
   if(!units.length) issues.push({i:-1,level:'error',msg:`${TERMS.unit}が1体もありません`});
+  const allTraits=new Set(units.flatMap(u=>u.traits||[]));
   units.forEach((u,i)=>{
     const add=(level,msg)=>issues.push({i,level,msg});
+    traitUseCheck(u.faces.flatMap(f=>[...(f.pre.eff||[]),...(f.post.eff||[])]).concat(...u.skills.map(s=>s.eff),u.ult.eff),allTraits,add);
     if(!/^[A-Za-z0-9_-]+$/.test(u.id)) add('error','IDは半角英数字・_・- で入力してください');
     else if(ids.has(u.id)) add('error',`ID「${u.id}」が他の${TERMS.unit}と重複しています`);
     else ids.set(u.id,i);
@@ -121,6 +131,11 @@ function validateUnits(units){
   });
   return issues;
 }
+// 特攻・特防の属性を、どのサーヴァントも持っていなければ注意
+function traitUseCheck(effs,allTraits,add){
+  const miss=[...new Set(effs.filter(e=>FX[e.k]&&FX[e.k].trait&&e.trait&&!allTraits.has(e.trait)).map(e=>e.trait))];
+  if(miss.length) add('warn',`属性「${miss.join('」「')}」を持つ${TERMS.unit}がいません（特攻・特防が発動しません）`);
+}
 function checkEffs(effs,ctx,where,add){
   effs.forEach((e,ei)=>{
     const w=`${where}・効果${ei+1}`;
@@ -136,6 +151,8 @@ function checkEffs(effs,ctx,where,add){
     if(e.chance&&e.chance>=6) add('warn',`${w}：ロール6以下は必ず成功します`);
     if(e.k==='cardConv'&&!e.color) add('error',`${w}：カード変換は変換先の色を指定してください`);
     if(e.vs&&e.k!=='atkVs') add('warn',`${w}：この効果では弱体の種類の指定は使われません`);
+    if(FX[e.k].trait&&!e.trait) add('error',`${w}：${FX[e.k].name}は対象の属性を指定してください`);
+    if(e.trait&&!FX[e.k].trait) add('warn',`${w}：この効果では属性の指定は使われません`);
     if(e.k==='critMult'&&e.v>0&&e.v<=100) add('warn',`${w}：クリティカル倍率が100%以下だと、クリティカルでダメージが増えません`);
     if(e.k==='maxHp'&&e.times!=null) add('warn',`${w}：最大HP+は回数では減りません（ターンで指定してください）`);
     if(['buffExtend','skillCharge'].includes(e.k)&&!(e.v>0)) add('error',`${w}：値は1以上にしてください`);
@@ -154,12 +171,12 @@ function normalizeMaster(m){
   m=m||{};
   const faces=Array.from({length:6},(_,i)=>{ const f=(m.faces||[])[i]||{}; return {label:String(f.label||''), eff:(f.eff||[]).map(normEff)}; });
   const spells=Array.from({length:3},(_,i)=>{ const s=(m.spells||[])[i]||{}; return {name:String(s.name||''), eff:(s.eff||[]).map(normEff)}; });
-  return { id:String(m.id||''), name:String(m.name||''), cls:TERMS.player, cost:num(m.cost), hp:num(m.hp,100), master:true,
+  return { id:String(m.id||''), name:String(m.name||''), cls:TERMS.player, traits:[], cost:num(m.cost), hp:num(m.hp,100), master:true,
     fit:normFit(m.fit), lines:Object.fromEntries(Object.keys(LINE_KEYS).map(k=>[k,[]])), faces, spells };
 }
 // units を渡すと、サーヴァントとIDが重なっていないかも確かめる（ゲームはIDでサーヴァント→マスターの順に探すため）
 function validateMasters(ms,units=[]){
-  const issues=[], ids=new Map(), uids=new Set(units.map(u=>u.id));
+  const issues=[], ids=new Map(), uids=new Set(units.map(u=>u.id)), allTraits=new Set(units.flatMap(u=>u.traits||[]));
   if(!ms.length) issues.push({i:-1,level:'warn',msg:`${TERMS.player}が1人もいません（マスタールールが遊べません）`});
   ms.forEach((m,i)=>{
     const add=(level,msg)=>issues.push({i,level,msg});
@@ -170,6 +187,7 @@ function validateMasters(ms,units=[]){
     if(!m.name.trim()) add('error','名前が空です');
     if(!(m.cost>=0)) add('error','コストは0以上にしてください');
     if(!(m.hp>0)) add('error','HPは1以上にしてください');
+    traitUseCheck([...m.faces,...m.spells].flatMap(x=>x.eff),allTraits,add);
     m.faces.forEach((f,fi)=>{ if(f.eff.length&&!f.label.trim()) add('warn',`補助${fi+1}：面の名前が空です`); });
     m.spells.forEach((s,si)=>{ if(!s.name.trim()) add('warn',`令呪${si+1}：名前が空です`); });
     // 補助の効果はそのターンだけなので、効果時間なしの注意は出さない
@@ -244,6 +262,7 @@ function unitsToJS(units){
   const body=units.map(u=>[
     '  {',
     `    "id":${j(u.id)}, "name":${j(u.name)}, "cls":${j(u.cls)}, "cost":${u.cost}, "hp":${u.hp},`,
+    ...(u.traits&&u.traits.length?[`    "traits":${j(u.traits)},`]:[]),
     ...(['face','card'].every(k=>fitIsDef(u.fit,k))?[]:[`    "fit":${j(u.fit)},`]),
     '    "lines":{',
     Object.keys(LINE_KEYS).map(k=>`      ${j(k)}:${j(u.lines[k])}`).join(',\n'),
@@ -258,7 +277,8 @@ function unitsToJS(units){
     '  }'].join('\n')).join(',\n');
   return `'use strict';
 // ${TERMS.unit}データ（ペンシルエディタで書き出し）
-// lines: 場面ごとのセリフ
+// traits: 属性（特攻・特防の判定に使う）
+// lines: 場面ごとのセリフ（スキル・面の line はその場面専用のセリフ）
 // faces: 出目1〜6の面 / acts: 行動回数 / pre・post: ${TERMS.asc}前・後のコマンド
 // c: R=${TERMS.R} B=${TERMS.B} G=${TERMS.G} W=${TERMS.W} ASC=${TERMS.asc}
 const DEFAULT_UNITS = [
@@ -280,12 +300,14 @@ function downloadText(name,text,type='text/plain'){
   setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 
-// ランダムにセリフを1つ（なければ空文字）
-function pickLine(d,key){ const a=(d&&d.lines&&d.lines[key])||[]; return a.length?a[Math.floor(Math.random()*a.length)]:''; }
+// ランダムにセリフを1つ（なければ空文字）。own（スキル・面の専用セリフ）があればそちらを優先
+function pickLine(d,key,own){ const a=own&&own.length?own:(d&&d.lines&&d.lines[key])||[]; return a.length?a[Math.floor(Math.random()*a.length)]:''; }
 
 // ---------- 画像 ----------
 // クラス表示（アイコン＋名前）。iconOnly ならアイコンだけ
 function clsIconTag(cls,cls2='clsicon'){ return imgTag(classIcon(cls),CLASS_ICON_EXTRA,cls2,cls); }
+// 属性のチップ（なければ空文字）
+function traitsHTML(d){ const t=(d&&d.traits)||[]; return t.length?`<span class="traits">${t.map(x=>`<span class="trait">${esc(x)}</span>`).join('')}</span>`:''; }
 function clsBadge(cls,iconOnly){ return `<span class="cls${iconOnly?' only':''}" title="${esc(cls)}">${clsIconTag(cls)}${iconOnly?'':`<span>${esc(cls)}</span>`}</span>`; }
 // サーヴァント画像は IMG_DIR の中から id に合う名前のファイルを探す（rules.js）
 //   face: {id}.webp / card: {id}_card.webp → なければ face → なければ仮画像
@@ -395,6 +417,8 @@ function fxText(e){
     case 'regenHp': s=`ターン開始時HP${e.v}回復`; break;
     case 'regenNp': s=`ターン開始時${TERMS.gauge}+${e.v}%`; break;
     case 'regenStar': s=`ターン開始時${TERMS.star}${e.v}個獲得`; break;
+    case 'atkTrait': s=`〔${e.trait||'属性未指定'}〕特攻+${e.v}`; break;
+    case 'defTrait': s=`〔${e.trait||'属性未指定'}〕特防(被ダメージ-${e.v})`; break;
     case 'atkVs': s=`${e.vs&&FX[e.vs]?`〔${FX[e.vs].name}〕状態`:'弱体状態'}特攻+${e.v}`; break;
     case 'counter': s=`反撃(${e.v}ダメージ)`; break;
     case 'onHitNp': s=`被ダメージ時${TERMS.gauge}+${e.v}%`; break;

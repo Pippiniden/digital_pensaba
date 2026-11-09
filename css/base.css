@@ -148,3 +148,7 @@ table.faces th{color:var(--sub)}
 /* スキルランク・宝具ルビ */
 .srank{font-size:.75em;opacity:.8;font-weight:normal}
 ruby rt{font-size:.5em;letter-spacing:.05em}
+
+/* 属性（特攻・特防の判定用） */
+.traits{display:inline-flex;flex-wrap:wrap;gap:3px;vertical-align:middle;margin-left:4px}
+.trait{font-size:10px;line-height:16px;padding:0 6px;border:1px solid var(--line);border-radius:8px;color:var(--sub);white-space:nowrap}

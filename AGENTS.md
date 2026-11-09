@@ -51,18 +51,19 @@ Worker (sim-worker.js, importScripts): rules → units → masters → common �
 
 ### 4.1 Character ("servant") definition — `DEFAULT_UNITS[i]` / `UNITS[i]`
 ```
-{ id, name, cls, cost, hp,
+{ id, name, cls, traits?:string[], cost, hp,   // traits = 属性 (multiple, deduped by normTraits; used by atkTrait/defTrait). Omitted from export when empty. Read at runtime via traitsOf(u)
   fit?: { face:{x,y,z}, card:{x,y,z} },   // image framing set in the editor (x/y = object-position %, z = zoom %, 100–300). Defaults in FIT_DEF (common.js); omitted from export when default. Applied by unitImg() via fitStyle()
                                          // images are NOT data: img/units/{id}.webp (face) and {id}_card.webp (card, optional)
                                          // card chain: {id}_card → {id} → card.webp / face chain: {id} → face.webp (see imgCandidates)
   lines: { start, attack, extra, damage, skill, np, npDamage, defeat, win },  // each string[] (LINE_KEYS)
   faces: [ {acts:1|2|3, pre:Cmd, post:Cmd} ×6 ],   // pencil faces 1–6. pre = before ascension / post = after
                                                    // acts is IGNORED while RULES.actsTable is set (the default)
-  skills:[ {name, eff:Eff[], pick?:'ally'|'enemy'|'any'} ×3 ],   // skill 3 is usable only after ascension
+  skills:[ {name, eff:Eff[], pick?:'ally'|'enemy'|'any', line?:string[]} ×3 ],   // skill 3 is usable only after ascension. line = skill-specific speech, replaces lines.skill
   ult:   { name, c:'R'|'B'|'G', eff:Eff[] } }                    // Noble Phantasm (ultimate)
 ```
+- Any `Cmd` may carry `line?:string[]` (face-specific speech): on an attack it replaces `lines.attack`/`extra`; on a no-damage special action or the ascension face it is said only when set. Not used when the command was copied from another servant (`cmd.from`). Picked via `say(u,key,{own})` → `pickLine(d,key,own)`.
 - `Cmd`: `{c:'R'|'B'|'G', dmg, np, star, eff?:Eff[]}` (optional `eff`, e.g. self-cleanse; applied **after** the attack by default; `normCmd` only keeps it when non-empty) / `{c:'W', label, eff:Eff[], dmg, np, star}` (special action; with `dmg>0` it is also a colorless attack that does not count toward chains — `eff` is applied **before** the attack by default) / `{c:'ASC'}` (ascension face; allowed only in `pre`). R = Buster, B = Arts, G = Quick.
-- `Eff`: `{k:effectKind, t:target, v:value, turns?, times?, chance?, color?, at?:'pre'|'post'}`
+- `Eff`: `{k:effectKind, t:target, v:value, turns?, times?, chance?, color?, trait?, at?:'pre'|'post'}` (`trait` only for effects with `FX[k].trait`: `atkTrait` / `defTrait`; required there)
   - `at` (commands and ultimates only; ignored with a warning on skills and on `dmg`): apply before / after the attack. Unset = default from `EFF_AT_DEFAULT` (rules.js): special action → before, R/B/G command → after, ultimate → array order. Engine: `splitEffs` (commands) and `ultEffOrder` (ultimates: `pre` effects → array order of `dmg` and unset effects → `post` effects). Editor: the "タイミング" select in `effRow` (`effAtSel`).
   - `k` is a key of `FX` in `rules.js`. `t` is a key of `TARGETS`; the allowed targets depend on where the effect lives (`TGT_BY_CTX`: skill / ult / special).
   - `chance` = succeeds on a roll ≤ N (1–5). `color` only applies to effects with `FX[k].color` (`atk`, `onAtkStar`, `onAtkNp`). Effects with `FX[k].only` are restricted to that place (`dmg` → ultimate, `copyRoll` → special action).
@@ -193,6 +194,7 @@ Simple rule + one master (泥ペンマス) per side. Setup picks a servant (`set
 | `cardConv` | Requires `color`. Converts an R/B/G command rolled in `rollAction` to that color (one time per conversion; not on extra attacks or copied commands) | `ACTIONS.rollAction` |
 | `buffExtend` | Instant: the target's buffs that have `turns` get +x turns | `applyOne` |
 | `skillCharge` | Instant: resets up to x used skills of the target (lowest index first). `doSkill` marks the skill used **after** applying effects so it never resets itself; skills that contain `skillCharge` are never reset (prevents two units resetting each other forever) | `applyOne`, `doSkill` |
+| `atkTrait` / `defTrait` | 特攻 / 特防: attack +x when the target's `traits` include `e.trait` / damage taken −x when the attacker's `traits` include it. `defTrait` is skipped by `ignoreDef` like `def`. `trait` is copied onto the runtime fx. Validation warns when no servant has that trait (`traitUseCheck`) | `dmgMods()` |
 | `copyRoll` | Special-action only. Roll another servant's pencil and use its post-ascension command (rerolls if it lands on another `copyRoll`). On an extra attack the servant is picked at random. Brave Chain still counts it as the roller's action | `isCopyCmd` / `copyCands` / `doCopy` (engine), `cardClick`, CPU `cpuDecide` |
 
 ## 6. Design rules (do not break these)
@@ -223,7 +225,7 @@ Simple rule + one master (泥ペンマス) per side. Setup picks a servant (`set
 | Change terminology / display names | `TERMS` in `js/rules.js` |
 | Add a class | `CLASS_ICONS` in `js/rules.js` (icons in `img/classes/`). Names not in the list also work and get `extra.webp` |
 | Add a new line scene | `LINE_KEYS` in `rules.js` → call `say(u,'newKey')` in `engine.js`. The editor and export read `LINE_KEYS` automatically |
-| **Add a new effect kind** (e.g. a new status) | ① define it in `FX` in `rules.js` ② apply it in `engine.js` (instant effects in `applyOne`; lasting effects wherever they are read via `mods()`: `resolveCommand` / `resolveUlt` / `blocked`, etc.) ③ display text in `fxText` in `common.js` (the `default` branch uses `FX[k].name`) ④ add a score in `cpuSkillScore` in `cpu.js` ⑤ add validation to `checkEffs` in `common.js` if needed. The editor's choices are generated from `FX` automatically |
+| **Add a new effect kind** (e.g. a new status) | ① define it in `FX` in `rules.js` and add it to a category in `FX_GROUPS` ② apply it in `engine.js` (instant effects in `applyOne`; lasting effects wherever they are read via `mods()`: `resolveCommand` / `resolveUlt` / `blocked`, etc.) ③ display text in `fxText` in `common.js` (the `default` branch uses `FX[k].name`) ④ add a score in `cpuSkillScore` in `cpu.js` ⑤ add validation to `checkEffs` in `common.js` if needed. The editor's choices are generated from `FX` automatically |
 | Add a new effect target | `TARGETS` and `TGT_BY_CTX` in `rules.js` → `resolveTargets` in `engine.js` |
 | Change turn flow / phases | `ACTIONS` plus `beginTurn` / `endPhase` / `toTargetPhase` in `engine.js`. On the display side: `promptHTML` / `stageHTML` (`stepNo`) / `ctlHTML` in `game-ui.js`. Update `cpuDecide` in `cpu.js` to match |
 | Damage calculation / crits / chains | `resolveCommand` (normal), `resolveUlt` (ultimate), `resolveDamage` (chains), shared modifiers in `dmgMods` in `engine.js`. The CPU's estimate `estDamage` (cpu.js) reuses `dmgMods` |
@@ -236,7 +238,7 @@ Simple rule + one master (泥ペンマス) per side. Setup picks a servant (`set
 | Auto-advance rules | `autoMove` / `hasSkillChoice` in `js/game-ui.js` |
 | Command card look / shared assets | `cmdCardHTML` / `cardLayers` in `common.js`; asset paths in `CARD_LAYERS` in `rules.js`. The ascension (ASC) card shows `UI_IMG.grail` (`.cc-grail`, `.hasgrail` in base.css) |
 | Balance testing (simple-rule and 3v3 auto matches) | Rules of a match: `simGame` in `js/sim.js` (runs on the real engine/CPU, so rule changes apply automatically). Dialog / options / tables: `js/editor-sim.js` + "バランス検証" in `css/editor.css`. Needs the page served over http (Workers don't load from `file://`) |
-| Editor form / preview | `js/editor.js` (`renderForm` / `effRow` / `renderSide`) + `css/editor.css` |
+| Editor form / preview | `js/editor.js` (`renderForm` / `effRow` / `renderSide`) + `css/editor.css`. Effects are picked in two steps, category → kind (`.effgrp` select, `data-act="effGrp"`); categories come from `FX_GROUPS` in rules.js (`fxGroups()` puts any unlisted FX key under その他) — **add new FX keys to a group there**. Traits: `data-t="tags"` input + `#traitlist` datalist (`allTraits()`); skill / face speech: `ownLineIn` (`data-t="optlines"`, removes the field when empty) |
 | Data validation rules (errors / warnings) | `validateUnits` / `checkEffs` in `common.js` |
 | **Add a new field to characters** | `normalizeUnit` in `common.js` (otherwise it is dropped) → `unitsToJS` (export) → `newUnit` and `renderForm` in `editor.js` → `validateUnits` → existing data in `units.js` |
 | Colors / fonts / shared components | CSS variables in `css/base.css` |

@@ -251,6 +251,8 @@ function cpuEffScore(u,effs,picked,si){
       case 'onHitNp': sc+=ts.some(t=>t.np<RULES.ultCost)?1.5:.5; break;
       case 'counter': sc+=ts.some(t=>t.pid===u.pid)?2:-1; break;
       case 'atkVs': sc+=acting&&enemies.some(x=>x.fx.some(f=>e.vs?f.k===e.vs:FX[f.k].buff===false))?3:.5; break;
+      case 'atkTrait': sc+=acting&&enemies.some(x=>traitsOf(x).includes(e.trait))?3:.5; break;
+      case 'defTrait': sc+=ts.some(t=>t.pid===u.pid&&hpR(t)<.8)&&enemies.some(x=>traitsOf(x).includes(e.trait))?2.5:.5; break;
       case 'critDown': sc+=foes.length?1.5:-1; break;
       case 'critMult': sc+=acting&&!G.ult&&critLevel(stars)>=3?3:0; break;
       case 'healBlock': sc+=foes.some(t=>hpR(t)<.7||t.fx.some(x=>x.k==='regenHp'))?2:1; break;
