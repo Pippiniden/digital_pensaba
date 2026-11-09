@@ -213,6 +213,7 @@ body[data-screen="battle"] #app{overflow:hidden}
 .costm .bar{grid-column:1/-1;height:6px}
 .costm .bar i{background:linear-gradient(90deg,var(--gold),var(--gold-hi))}
 .setbtns{display:flex;gap:8px}
+.setbtns.wide{grid-column:1/-1;flex-wrap:wrap;justify-content:flex-end} /* マスター系はボタンが多いので次の行に回して折り返す */
 .setbody{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:12px}
 .rosterwrap{min-height:0;min-width:0;display:flex;flex-direction:column;gap:8px}
 .rfilter{flex:none;display:flex;flex-direction:column;gap:6px;padding:8px 10px;border-radius:6px;border:1px solid var(--gold-lo);background:rgba(6,13,34,.6)}
