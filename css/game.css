@@ -409,6 +409,7 @@ body[data-screen="battle"] #app{overflow:hidden}
   .setup{height:auto}
   .setbody{grid-template-columns:minmax(0,1fr)}
   .roster{overflow:visible;flex:none}
+  .mroster .mtiles{max-height:none;overflow:visible} /* 後ろで定義した .mtiles より優先させる */
 }
 @media (max-width:860px){
   .steps{margin-left:0}
@@ -533,9 +534,9 @@ body[data-screen="battle"] #app{overflow:hidden}
 .mopts button{white-space:nowrap}
 .mroster{flex:none;min-width:0;display:flex;flex-direction:column;gap:6px;margin-bottom:6px}
 .mroster h4{margin:0;font:700 13px var(--serif);color:var(--gold-hi)}
-.mtiles{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 6px}
-.mtile{flex:none;width:96px}
-.mtile .tname{font-size:11px;padding:16px 6px 5px}
+/* マスター一覧もサーヴァント一覧（.roster）と同じタイルの並び */
+.mtiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;padding:4px 6px 6px 2px;
+  max-height:34vh;overflow-y:auto} /* 画面に収める表示（PC）では、サーヴァント一覧の場所を残すため高さを抑えて中でスクロール */
 .slot.mslot{margin-left:10px}
 .mhead{display:flex;align-items:center;gap:8px;width:100%;padding:6px 10px;text-align:left;font:700 13px var(--serif);color:var(--gold-hi);
   border:1px solid var(--gold-lo);border-radius:5px;background:rgba(6,13,34,.6)}
@@ -555,7 +556,7 @@ body[data-screen="battle"] #app{overflow:hidden}
   .slot.mslot{margin-left:4px}
   .setbtns{flex-wrap:wrap}
   .setbtns button{flex:1 1 auto}
-  .mtile{width:84px}
+  .mtiles{grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
   .mhead .mhint{display:none}
   .roster{grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
 }

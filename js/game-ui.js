@@ -352,9 +352,9 @@ function setupHTML(){
 }
 
 // マスタールール：マスターの一覧（選んだら右に詳細）
-// 見出しを押すと折り畳める（選び終えたらサーヴァント一覧を広く使える）。UI.mfold：true=畳む
+// 見出しを押すと折り畳める（未選択でも畳める。選ぶと自動で畳み、外すと開く）。UI.mfold：true=畳む
 function masterRosterHTML(pid,view){
-  const mp=D(G.mpicks[pid]), fold=UI.mfold&&!!mp;
+  const mp=D(G.mpicks[pid]), fold=UI.mfold;
   return `<div class="mroster ${fold?'folded':''}"><button class="mhead" data-ui="mToggle" aria-expanded="${!fold}">
       <span class="mcaret">${fold?'▶':'▼'}</span><span>${TERMS.player}を選ぶ</span>
       ${mp?`<span class="mpicked">${unitImg(mp,'face','mpimg',mp.name)}<b>${esc(mp.name)}</b><small>C${mp.cost}</small></span>`:'<small class="hl">未選択</small>'}
@@ -599,7 +599,7 @@ function uiAct(a,ds){
     case 'toggleAuto': UI.auto=!UI.auto; savePref('pencilduel.auto',UI.auto?'1':'0'); break;
     case 'toggleMenu': UI.menu=!UI.menu; break;
     case 'spellPick': UI.spellPick=!UI.spellPick; break;
-    case 'mToggle': UI.mfold=!(UI.mfold&&!!D(G.mpicks[G.setupPid])); break;
+    case 'mToggle': UI.mfold=!UI.mfold; break;
     case 'rosterCls': UI.roster.cls=ds.v; break;
     case 'rosterReset': UI.roster={...UI.roster, cls:'', cost:'', q:'', ok:false}; break;
   }
