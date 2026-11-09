@@ -172,21 +172,31 @@ const FX = {
   instantDeath:{name:'即死',inst:true},                      // 対象のHPを0にする（ガッツがあれば踏みとどまる）
   buffExtend:{name:'強化延長',val:true,inst:true},           // 対象のターン制の強化すべての残りターン+x
   skillCharge:{name:'スキル再使用',val:true,inst:true},      // 対象の使用済みスキルをx個（番号の若い順）もう一度使えるようにする。使ったスキル自身・スキル再使用を持つスキルは戻らない
-  dmg:{name:'ダメージ',val:true,inst:true,only:['ult','master']}, // マスターの補助・令呪では固定ダメージ（補正・無敵・回避なし）
+  dmg:{name:'ダメージ',val:true,inst:true,maxOk:true,only:['ult','master']}, // マスターの補助・令呪では固定ダメージ（補正・無敵・回避なし）。max で対象の最大HPぶん（軽減不可）
   // 特殊行動専用：自分以外の戦闘不能でないサーヴァント1体（敵味方どちらでも）を選び、その鉛筆を代わりにロールして
   // 出た再臨後コマンドをこの行動として使う
   copyRoll:{name:'他のサーヴァントをロール',inst:true,only:'special'},
+  // 連続攻撃：このコマンド（宝具ならダメージ効果それぞれ）の攻撃を v 回行う。1回ごとに補正・クリティカル・NP・スターを処理し、
+  // 回避・無敵・回数制のバフも1回ごとに消費する。対象の指定は使わない
+  multiHit:{name:'連続攻撃',val:true,inst:true,noTgt:true,only:['special','ult']},
+  // 自傷：対象（ふつうは自身）に固定ダメージ（補正・無敵・回避なし、NPは増えない）。max にすると対象の最大HPぶん
+  selfDmg:{name:'自傷ダメージ',val:true,inst:true,maxOk:true},
+  npPow:{name:'宝具威力アップ',buff:true,val:true},        // 宝具のダメージ+x（ダメージ効果1つ・1ヒットごと）
+  npPowDown:{name:'宝具威力ダウン',buff:false,val:true},   // 宝具のダメージ-x
+  // 説明文：効果は持たない。これがあるスキル・宝具・特殊行動・補助・令呪の説明は、この文章に置き換わる（text）
+  desc:{name:'説明文（表示のみ）',inst:true,noTgt:true},
 };
 
 // ---------- 効果の分類（エディタで「分類 → 種類」の2段で選ぶ） ----------
 // ここにない効果は最後の「その他」に入る
 const FX_GROUPS = [
-  ['攻撃強化', ['atk','atkVs','atkTrait','ignoreDef','sureHit','pierce','critPow','critMult','critRoll','cardConv','onAtkStar','onAtkNp']],
+  ['攻撃強化', ['atk','npPow','atkVs','atkTrait','ignoreDef','sureHit','pierce','critPow','critMult','critRoll','cardConv','onAtkStar','onAtkNp']],
   ['防御・耐性', ['def','defTrait','evade','invul','guts','taunt','nullUnder','counter','maxHp','debuffImmune','mentalImmune']],
   ['継続・ターン', ['actsUp','regenHp','regenNp','regenStar','onHitNp','onHitStar']],
-  ['弱体', ['atkDown','defDown','critDown','poison','burn','spread','drain','curse','stun','charm','fear','sealSkill','sealUlt','healBlock','buffImmune']],
+  ['弱体', ['atkDown','npPowDown','defDown','critDown','poison','burn','spread','drain','curse','stun','charm','fear','sealSkill','sealUlt','healBlock','buffImmune']],
   ['回復・即時', ['heal','np','star','starLoss','cleanse','cleanseMental','strip','buffExtend','skillCharge']],
-  ['攻撃・特殊', ['dmg','instantDeath','copyRoll']],
+  ['攻撃・特殊', ['dmg','multiHit','selfDmg','instantDeath','copyRoll']],
+  ['表示', ['desc']],
 ];
 function fxGroupOf(k){ const g=FX_GROUPS.find(([,ks])=>ks.includes(k)); return g?g[0]:'その他'; }
 function fxGroups(){ // 定義漏れの効果も「その他」として必ず選べるようにする
@@ -207,7 +217,7 @@ const TGT_BY_CTX = {
   master:['svt','self','ally_all','enemy_all','enemy_svt','enemy_master','master'],
 };
 const fxOnlyIn = (k,ctx)=>!FX[k].only||[].concat(FX[k].only).includes(ctx); // その場所で使える効果か
-const PICKS = { '':'選ばない', ally:'味方単体', enemy:'敵単体', any:'単体（敵味方）' };
+const PICKS = { '':'選ばない', ally:'味方単体', other:'自分以外の味方単体', enemy:'敵単体', any:'単体（敵味方）' };
 
 // ---------- エディタ用：カード構成テンプレ（コスト × カード構成） ----------
 // 行は出目1〜6。'再臨前>再臨後'。B=Buster A=Arts Q=Quick（コード上は R/B/G）。

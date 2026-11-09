@@ -26,6 +26,8 @@ function normEff(e){
   if(e.vs&&FX[e.vs]&&FX[e.vs].buff===false) o.vs=String(e.vs); // 弱体状態特攻の対象の弱体
   const tr=String(e.trait??'').trim(); if(tr) o.trait=tr; // 属性特攻・特防の対象の属性
   if(EFF_AT[e.at]) o.at=e.at; // 攻撃の前/後（未指定なら既定のタイミング。rules.js の EFF_AT）
+  if(e.max&&FX[o.k]&&FX[o.k].maxOk) o.max=true; // 値＝対象の最大HP（軽減不可）
+  const tx=String(e.text??'').trim(); if(tx&&o.k==='desc') o.text=tx; // 説明文
   return o;
 }
 function normCmd(c){
@@ -57,7 +59,7 @@ function normalizeUnit(u){
   u=u||{};
   const faces=Array.from({length:6},(_,i)=>{ const f=(u.faces||[])[i]||{}; return {acts:num(f.acts,1), pre:normCmd(f.pre), post:normCmd(f.post||f.pre)}; });
   const skills=Array.from({length:3},(_,i)=>{ const s=(u.skills||[])[i]||{};
-    const o={name:String(s.name||''), eff:(s.eff||[]).map(normEff)}; const rk=String(s.rank||'').trim(); if(rk) o.rank=rk; if(['ally','enemy','any'].includes(s.pick)) o.pick=s.pick;
+    const o={name:String(s.name||''), eff:(s.eff||[]).map(normEff)}; const rk=String(s.rank||'').trim(); if(rk) o.rank=rk; if(PICKS[s.pick]&&s.pick) o.pick=s.pick;
     const ln=strList(s.line); if(ln.length) o.line=ln; // このスキルの専用セリフ（任意）
     return o; });
   const ult=u.ult||{};
@@ -142,9 +144,9 @@ function checkEffs(effs,ctx,where,add){
     if(!FX[e.k]) return add('error',`${w}：効果の種類が不正です`);
     if(!fxOnlyIn(e.k,ctx)) add('error',`${w}：「${FX[e.k].name}」は${[].concat(FX[e.k].only).map(c=>({ult:TERMS.ult,special:'特殊行動',master:TERMS.player}[c])).join('・')}でのみ使えます`);
     if(e.color&&!FX[e.k].color) add('warn',`${w}：この効果では色の指定は使われません`);
-    if(!TGT_BY_CTX[ctx].includes(e.t)) add('error',`${w}：ここでは「${TARGETS[e.t]||e.t}」を対象にできません`);
+    if(!FX[e.k].noTgt&&!TGT_BY_CTX[ctx].includes(e.t)) add('error',`${w}：ここでは「${TARGETS[e.t]||e.t}」を対象にできません`);
     if(e.t==='master'&&e.k!=='star'&&e.k!=='starLoss') add('warn',`${w}：${TERMS.player}が対象だと、${TERMS.star}獲得以外は効果がありません`);
-    if(FX[e.k].val&&e.v===0) add('warn',`${w}：値が0です`);
+    if(FX[e.k].val&&e.v===0&&!e.max) add('warn',`${w}：値が0です`);
     if(!FX[e.k].inst&&!FX[e.k].perm&&e.turns==null&&e.times==null) add('warn',`${w}：効果時間がないため、ずっと続きます`);
     if(FX[e.k].timesOnly&&e.turns!=null) add('warn',`${w}：${FX[e.k].name}は回数で指定します（ターンは使われません）`);
     if(e.k==='instantDeath'&&['self','ally_all'].includes(e.t)) add('warn',`${w}：味方に即死効果がかかります`);
@@ -158,6 +160,10 @@ function checkEffs(effs,ctx,where,add){
     if(['buffExtend','skillCharge'].includes(e.k)&&!(e.v>0)) add('error',`${w}：値は1以上にしてください`);
     if(e.at&&ctx==='skill') add('warn',`${w}：スキルでは「${EFF_AT[e.at]}」の指定は使われません`);
     if(e.at&&e.k==='dmg') add('warn',`${w}：ダメージ効果には「${EFF_AT[e.at]}」の指定は使われません`);
+    if(e.k==='desc'&&!e.text) add('warn',`${w}：説明文が空です`);
+    if(e.k==='multiHit'&&!(e.v>=2)) add('warn',`${w}：連続攻撃の回数は2以上にしてください`);
+    if(e.k==='multiHit'&&e.v>10) add('warn',`${w}：連続攻撃は10回までです（それ以上は10回）`);
+    if(e.k==='multiHit'&&effs.filter(x=>x.k==='multiHit').length>1&&effs.indexOf(e)!==effs.findIndex(x=>x.k==='multiHit')) add('warn',`${w}：連続攻撃が複数あります（一番大きい回数を使います）`);
   });
 }
 const hasErrors = units=>validateUnits(units).some(x=>x.level==='error');
@@ -434,7 +440,12 @@ function fxText(e){
     case 'skillCharge': s=`使用済みスキル${e.v}個を再使用可能に`; break;
     case 'np': s=`${TERMS.gauge}${e.v>=0?'+':''}${e.v}%`; break;
     case 'star': s=`${TERMS.star}${e.v}個獲得`; break;
-    case 'dmg': s=`${e.v}ダメージ`; break;
+    case 'dmg': s=e.max?'最大HPぶんのダメージ(軽減不可)':`${e.v}ダメージ`; break;
+    case 'selfDmg': s=e.max?'最大HPぶんの自傷ダメージ(軽減不可)':`自傷ダメージ${e.v}`; break;
+    case 'multiHit': s=`${e.v}回連続攻撃`; break;
+    case 'npPow': s=`${TERMS.ult}威力+${e.v}`; break;
+    case 'npPowDown': s=`${TERMS.ult}威力-${e.v}`; break;
+    case 'desc': return e.text||'（説明文なし）';
     default: s=FX[e.k]?FX[e.k].name:e.k;
   }
   const dur=[e.times!=null?`${e.times}回`:'', e.turns!=null?`${e.turns}T`:''].filter(Boolean).join('・');
@@ -444,7 +455,14 @@ function tLabel(t,pick){
   if(t==='picked') return PICKS[pick]&&pick ? PICKS[pick] : TARGETS.picked;
   return TARGETS[t]||t;
 }
-const effsText=(effs,pick)=>effs.length?effs.map(e=>`${tLabel(e.t,pick)}：${fxText(e)}`).join(' ／ '):'効果なし';
+// 効果の説明を1行ずつ。説明文（desc）があれば、それだけを返す（ほかの効果の説明は出さない）
+// tl：対象の呼び名（マスターチームの令呪など、場所で変わるとき）
+function effLines(effs,pick,tl){
+  const ds=effs.filter(e=>e.k==='desc');
+  if(ds.length) return ds.map(e=>e.text||'（説明文なし）');
+  return effs.map(e=>FX[e.k]&&FX[e.k].noTgt?fxText(e):`${tl?tl(e.t):tLabel(e.t,pick)}：${fxText(e)}`);
+}
+const effsText=(effs,pick,tl)=>effs.length?effLines(effs,pick,tl).join(' ／ '):'効果なし';
 function cmdChip(c){
   if(!c) return '';
   if(c.c==='ASC') return `<span class="cmd ASC">${TERMS.asc}</span>`;

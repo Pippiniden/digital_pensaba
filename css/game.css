@@ -581,3 +581,41 @@ body[data-screen="battle"] #app{overflow:hidden}
   .mchip .gauge{min-width:56px}
   .mchip{gap:4px;padding:2px 4px}
 }
+
+/* ---------- キャラクター選択の ⓘ ---------- */
+.tile .tinfo{position:absolute;right:6px;bottom:8px;z-index:3;display:grid;place-items:center;color:var(--ink);cursor:pointer;
+  border:1px solid var(--gold-lo);background:linear-gradient(180deg,#2550a8,#163474 55%,#11295c)}
+.tile .tinfo:hover,.tile .tinfo:focus-visible{border-color:var(--gold-hi);box-shadow:0 0 8px rgba(214,178,94,.5)}
+.tile .tname{padding-right:32px}
+
+/* ---------- リザルトの詳細（タブ） ---------- */
+.result .mbody{width:min(680px,100%)}
+.rtabs{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;margin:0 0 10px}
+.rtabs button{padding:3px 12px;font-size:12.5px}
+.rtabs button.on{color:#1a1206;font-weight:700;border-color:var(--gold-hi);background:linear-gradient(180deg,var(--gold-hi),var(--gold))}
+.rbody{margin-bottom:14px;text-align:left}
+.rbody .rsides{margin-bottom:0}
+.mvp{font:700 10px var(--serif);font-style:normal;color:#1a1206;background:var(--gold-hi);border-radius:2px;padding:0 4px;letter-spacing:.08em}
+.rkv{display:grid;grid-template-columns:1fr 1fr;gap:2px 10px;margin-top:8px;padding-top:6px;border-top:1px solid var(--line);font-size:12px}
+.rkv div{display:flex;justify-content:space-between;gap:6px}
+.rkv span{color:var(--sub)}
+.rtablewrap{overflow-x:auto}
+.rtable{width:100%;border-collapse:collapse;font-size:12.5px;white-space:nowrap}
+.rtable th,.rtable td{padding:4px 6px;border-bottom:1px solid var(--line);text-align:right}
+.rtable thead th{font:700 11px var(--serif);color:var(--gold-hi)}
+.rtable tbody th{text-align:left;font-weight:700;max-width:12em;overflow:hidden;text-overflow:ellipsis}
+.rtable tr.out{opacity:.6}
+.rtable td.top{color:var(--gold-hi);font-weight:700}
+.rnote{margin:6px 0 0}
+.p0bg{background:var(--p0)}.p1bg{background:var(--p1)}
+.tllegend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;margin-bottom:6px}
+.tllegend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.tl{max-height:46vh;overflow:auto;display:flex;flex-direction:column;gap:3px}
+.tlrow{display:grid;grid-template-columns:36px minmax(0,1fr);gap:6px;align-items:center}
+.tln{font:700 11px var(--serif);color:var(--sub);text-align:right}
+.tlline{display:flex;align-items:center;height:14px}
+.tlline i{display:block;height:100%;min-width:2px}
+.tlline small{margin-left:6px;font-size:10.5px;line-height:1;white-space:nowrap}
+.rlog{max-height:46vh;border:1px solid var(--line);border-radius:4px;background:rgba(6,13,34,.6)}
+@media (max-width:640px){ .rsides{grid-template-columns:1fr} }
+.rkv .wide{grid-column:1/-1}

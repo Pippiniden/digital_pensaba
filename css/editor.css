@@ -179,3 +179,5 @@ table.simmx td.self{color:var(--sub)}
 .ownline textarea{font-size:12px;resize:vertical;min-height:0}
 .eff .effgrp{max-width:9.5em;color:var(--sub)}
 .eff .traitin{width:7em}
+.eff .desctext{flex:1 1 16em;min-width:0}
+label.mini.chk{cursor:pointer}

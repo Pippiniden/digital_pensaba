@@ -18,7 +18,9 @@ function newGame(o={}){
     // evac：退避中（次の相手ターンの間） / zeroNext：前のターンの行動回数が0だった（次の行動回数+1）
     players:[{name:TERMS.player+'1',party:[],stars:0,master:null,spell:null,evac:false,zeroNext:false},{name:TERMS.player+'2',party:[],stars:0,master:null,spell:null,evac:false,zeroNext:false}],
     cur:0, turn:0, actRolled:false, maxActs:{}, alloc:{}, rolled:[], ult:null, target:null,
-    gen:0, pending:null, copy:null, guard:null, hcap:null, mastered:false, ultDone:false, log:[], winner:null, dealt:[0,0] };
+    gen:0, pending:null, copy:null, guard:null, hcap:null, mastered:false, ultDone:false, ultNp:null, log:[], winner:null, dealt:[0,0],
+    // リザルト用の記録：stats＝ユニットごと（uid） / tl＝ターンごとの与ダメージ [P1,P2] / chains＝陣営ごとのチェイン回数 / starsGen＝発生スター合計
+    stats:{}, tl:[], chains:[{R:0,B:0,G:0,brave:0},{R:0,B:0,G:0,brave:0}], starsGen:[0,0] };
   FXQ.length=0; for(const k in FXHOLD) delete FXHOLD[k]; FXHIDE.clear(); KO_PEND.length=0;
 }
 
@@ -104,11 +106,29 @@ function makeMaster(pid,id){ return {uid:`p${pid}m`,pid,idx:-1,def:id,hp:D(id).h
 const ultNoTarget = u=>!D(u.def).ult.eff.some(e=>e.t==='target');
 function targetCandidates(){ const es=alive(1-G.cur); const t=es.filter(u=>has(u,'taunt')); return t.length?t:es; }
 function pendingSkill(){ return G.pending ? D(U(G.pending.uid).def).skills[G.pending.si] : null; }
-function pickValid(u){
-  const s=pendingSkill(); if(!s||u.out) return false;
-  if(s.pick==='ally') return u.pid===G.cur;
-  if(s.pick==='enemy') return u.pid!==G.cur;
+// スキルの対象に選べるか（pick：ally=味方 / other=自分以外の味方 / enemy=敵 / any=敵味方）
+function skillPickOk(user,s,u){
+  if(!u||u.out||u.master) return false;
+  if(s.pick==='ally') return u.pid===user.pid;
+  if(s.pick==='other') return u.pid===user.pid&&u.uid!==user.uid;
+  if(s.pick==='enemy') return u.pid!==user.pid;
   return true;
+}
+const skillCands = (user,s)=>ALL().filter(u=>skillPickOk(user,s,u));
+function pickValid(u){ const s=pendingSkill(); return !!s&&skillPickOk(U(G.pending.uid),s,u); }
+// スキルを今使えるか（対象を選ぶスキルは、選べる相手がいること。例：1騎だけのときの「自分以外の味方」）
+function skillUsable(u,si){
+  const s=D(u.def).skills[si];
+  return !!s&&canSkill(u)&&!u.used[si]&&(si<2||u.asc)&&(!s.pick||skillCands(u,s).length>0);
+}
+// 連続攻撃の回数（コマンド・宝具の効果の multiHit。なければ1、最大10）
+const hitsOf = effs=>Math.min(10,Math.max(1,...(effs||[]).filter(e=>e.k==='multiHit').map(e=>Math.floor(e.v)||1)));
+// 効果の値（max なら対象の最大HP）
+const effVal = (e,t)=>e.max&&t?maxHp(t):e.v;
+// 全体にかかる効果の呼び名（スキル演出の「→ 全体」）
+function allLabel(effs){
+  const ts=new Set(effs.filter(e=>FX[e.k]&&!FX[e.k].noTgt).map(e=>e.t)), a=ts.has('ally_all'), en=ts.has('enemy_all');
+  return a&&en?'全体':a?'味方全体':en?'敵全体':'';
 }
 function mods(u,k,color){
   const list=u.fx.filter(e=>e.k===k && (!color || !e.color || e.color===color));
@@ -125,6 +145,19 @@ const maxHp = u=>D(u.def).hp+mods(u,'maxHp').sum;
 function clampHp(u){ if(!u.out&&u.hp>maxHp(u)) u.hp=Math.max(1,maxHp(u)); }
 // スターの獲得：手番側はこのターンの発生スター（G.gen）、相手側は手持ちに直接加える
 function gainStars(pid,v){ if(pid===G.cur) G.gen+=v; else G.players[pid].stars+=v; }
+// ---------- リザルト用の記録 ----------
+function st(u){
+  const S=G.stats||(G.stats={});
+  return S[u.uid]||(S[u.uid]={dealt:0,taken:0,maxHit:0,kills:0,attacks:0,crits:0,ults:0,skills:0,blocked:0});
+}
+// ダメージの記録。src＝与えた側（なければ毒など）。real＝実際に減ったHP / raw＝ダメージの値 / ko＝これで倒れた
+function recDmg(src,u,real,raw,ko){
+  st(u).taken+=real;
+  if(src&&src.pid===u.pid) return; // 自傷・味方からのダメージは与ダメージに数えない
+  G.dealt[1-u.pid]+=real;
+  const tl=G.tl||(G.tl=[]), row=tl[G.turn]||(tl[G.turn]=[0,0]); row[1-u.pid]+=real;
+  if(src){ const s=st(src); s.dealt+=real; s.maxHit=Math.max(s.maxHit,raw); if(ko) s.kills++; }
+}
 
 // =====================================================================
 // 効果の適用
@@ -152,6 +185,7 @@ function chanceRoll(e,who){
 // o.tmp：マスターの補助（このターンだけ）。付いた効果は終了フェイズで消える
 function applyEffects(src,effs,picked,o={}){
   for(const e of effs){
+    if(FX[e.k]&&FX[e.k].noTgt) continue; // 連続攻撃・説明文は効果を持たない（連続攻撃は攻撃側で使う）
     if(e.t==='master'){
       if(e.chance&&!chanceRoll(e,src)) continue;
       if(e.k==='star'||e.k==='starLoss') changeStars(src.pid,e.k==='star'?e.v:-e.v);
@@ -159,7 +193,7 @@ function applyEffects(src,effs,picked,o={}){
     }
     resolveTargets(src,e.t,picked).forEach(t=>{
       if(e.chance&&!chanceRoll(e,t)) return;
-      if(e.k==='dmg'){ if(src.master) fixedHit(src,t,e.v); return; } // 宝具のダメージは resolveUlt で処理
+      if(e.k==='dmg'){ if(src.master) fixedHit(src,t,effVal(e,t)); return; } // 宝具のダメージは resolveUlt で処理
       applyOne(src,t,e,o);
     });
   }
@@ -182,10 +216,29 @@ const KO_PEND=[];
 function retreat(u){ u.hp=0; u.out=true; u.fx=[]; log(`${nm(u)} ${TERMS.out}`,'bad'); KO_PEND.push(u.uid); }
 // 攻撃・スキル・終了フェイズの処理が終わったところで呼ぶ：戦闘不能の演出とセリフをまとめて出す
 function flushKo(){
+  settleGuts();
   if(!KO_PEND.length) return;
   const uids=KO_PEND.splice(0);
   fxEmit({t:'ko',uids});
   uids.forEach(uid=>say(U(uid),'defeat'));
+}
+// ガッツ：HPが0になっても、その一連の攻撃（ダメージフェイズ・スキル・終了フェイズなど）が終わるまではHP0のまま踏みとどまる。
+// その間に攻撃されてもオーバーキルにはならない。終わったところ（flushKo）で、ガッツの値までHPが戻る
+function gutsHold(u){
+  const g=u.fx.find(e=>e.k==='guts'); if(!g) return false;
+  if(!g.fired){ g.fired=true; log(`${nm(u)} ガッツ！ 一連の攻撃が終わるまで踏みとどまる`,'good'); fxEmit({t:'pop',uid:u.uid,text:FX.guts.name,cls:'asc'}); }
+  return true;
+}
+function settleGuts(){
+  ALL().forEach(u=>{
+    if(u.out) return;
+    const g=u.fx.find(e=>e.k==='guts'&&e.fired);
+    if(g){
+      u.fx=u.fx.filter(e=>e!==g);
+      if(u.hp<=0){ u.hp=Math.min(g.v,maxHp(u))||1; log(`${nm(u)} ガッツ発動！ HP${u.hp}で復帰`,'good'); fxEmit({t:'pop',uid:u.uid,text:`HP${u.hp}`,cls:'heal'}); }
+      syncU(u);
+    } else if(u.hp<=0) retreat(u); // 踏みとどまっている間にガッツを解除された
+  });
 }
 function applyOne(src,t,e,o={}){ applyOne0(src,t,e,o); syncU(t); }
 function applyOne0(src,t,e,o={}){
@@ -212,11 +265,12 @@ function applyOne0(src,t,e,o={}){
     }
     case 'instantDeath': { // HPを0にする。ガッツがあれば踏みとどまる
       log(`${nm(t)}に即死効果`,'bad');
-      const g=t.fx.find(x=>x.k==='guts');
-      if(g){ fxEmit({t:'dmg',uid:t.uid,text:FX.instantDeath.name,hp0:t.hp,hp:g.v,out:false}); t.hp=g.v; t.fx=t.fx.filter(x=>x!==g); log(`${nm(t)} ガッツ発動！ HP${g.v}で踏みとどまった`,'good'); return; }
-      fxEmit({t:'dmg',uid:t.uid,text:FX.instantDeath.name,hp0:t.hp,hp:0,out:true}); retreat(t); return;
+      const g=has(t,'guts');
+      fxEmit({t:'dmg',uid:t.uid,text:FX.instantDeath.name,hp0:t.hp,hp:0,out:!g});
+      t.hp=0; if(!gutsHold(t)) retreat(t); return;
     }
-    case 'dmg': return; // 宝具側で処理
+    case 'selfDmg': { const v=effVal(e,t); log(`${nm(t)} ${FX.selfDmg.name} <b>${fmt(v)}</b>${e.max?'（最大HP・軽減不可）':''}`,'bad'); dealDamage(t,v,false,{src:t}); return; }
+    case 'dmg': case 'multiHit': case 'desc': return; // 宝具側で処理 / 効果なし
   }
   if(e.k==='guts') t.fx=t.fx.filter(x=>x.k!=='guts'); // ガッツは重複不可
   if(e.k==='curse'){ // 呪いは回数のみ。重ねると回数が増える
@@ -250,15 +304,12 @@ function blocked(att,tgt){
 function dealDamage(u,dmg,isHit,o={}){
   if(u.out) return;
   if(u.master){ masterHit(u,dmg,o); return; }
-  const hp0=u.hp, g=hp0-dmg<=0?u.fx.find(e=>e.k==='guts'):null;
-  const hp1=hp0-dmg<=0?(g?g.v:0):hp0-dmg;
-  fxEmit({t:'dmg',uid:u.uid,v:fmt(dmg),crit:!!o.crit,np:!!o.np,hp0,hp:hp1,out:hp0-dmg<=0&&!g});
-  G.dealt[1-u.pid]+=Math.min(dmg,hp0);
-  u.hp-=dmg;
-  if(u.hp<=0){
-    if(g){ u.hp=g.v; u.fx=u.fx.filter(e=>e!==g); log(`${nm(u)} ガッツ発動！ HP${g.v}で踏みとどまった`,'good'); }
-    else { retreat(u); return; }
-  }
+  const hp0=u.hp, ko=hp0-dmg<=0, g=ko&&has(u,'guts');
+  const hp1=ko?0:hp0-dmg;
+  fxEmit({t:'dmg',uid:u.uid,v:fmt(dmg),crit:!!o.crit,np:!!o.np,hp0,hp:hp1,out:ko&&!g});
+  recDmg(o.att||o.src,u,Math.min(dmg,Math.max(0,hp0)),dmg,ko&&!g&&hp0>0);
+  u.hp=hp1;
+  if(ko){ if(!gutsHold(u)){ retreat(u); return; } } // ガッツ：一連の攻撃が終わるまでHP0で踏みとどまる
   if(isHit){
     // 被ダメージ時○○ はここではなく、攻撃対象になったターンの終了フェイズ（hitEffects）で発動する
     const c=u.fx.find(e=>e.k==='curse');
@@ -268,7 +319,7 @@ function dealDamage(u,dmg,isHit,o={}){
     const ct=mods(u,'counter'), a=o.att;
     if(ct.sum&&a&&!a.out){
       log(`${nm(u)}の反撃！ ${nm(a)}に<b>${ct.sum}</b>ダメージ`,'good');
-      consume(u,ct.list); dealDamage(a,ct.sum,false);
+      consume(u,ct.list); dealDamage(a,ct.sum,false,{src:u});
     }
   }
   syncU(u);
@@ -277,7 +328,7 @@ function dealDamage(u,dmg,isHit,o={}){
 function masterHit(m,dmg,o={}){
   const hp0=m.hp, hp1=Math.max(0,hp0-dmg);
   fxEmit({t:'dmg',uid:m.uid,v:fmt(dmg),crit:!!o.crit,np:!!o.np,hp0,hp:hp1,out:hp1<=0});
-  G.dealt[1-m.pid]+=Math.min(dmg,hp0);
+  recDmg(o.att||o.src,m,Math.min(dmg,hp0),dmg,hp1<=0&&hp0>0);
   m.hp=hp1;
   if(hp1>0) return;
   m.out=true; m.fx=[];
@@ -289,7 +340,7 @@ function masterHit(m,dmg,o={}){
 // マスターの補助・令呪・攻撃による固定ダメージ（補正・無敵・回避・NP獲得なし）
 function fixedHit(src,t,v){
   log(`${nm(src)}の攻撃 → ${nm(t)}に<b>${fmt(v)}</b>ダメージ`);
-  dealDamage(t,v,false);
+  dealDamage(t,v,false,{src});
 }
 // 攻撃側の補正（被ダメージ減少無視なら相手の def を見ない）。使った効果も返す
 function dmgMods(att,tgt,color){
@@ -348,9 +399,73 @@ function ultEffOrder(effs){
   const at=e=>e.k==='dmg'?'':e.at||'';
   return [...effs.filter(e=>at(e)==='pre'), ...effs.filter(e=>!at(e)), ...effs.filter(e=>at(e)==='post')];
 }
+// 攻撃1回ぶん（補正 → Busterチェイン → クリティカル → 最終ダメージ → NP・スター → 攻撃時○○）。lab はログの「（2/3）」など
+function attackHit(att,cmd,tgt,o,lab){
+  const n=nm(att)+lab, sa=st(att);
+  let dmg=cmd.dmg; const note=[`基本${dmg}`]; let usedA=[], usedT=[], colorBuff=0;
+  sa.attacks++;
+  // 2. スキル効果補正 / 3. Busterチェイン
+  if(!o.extra){
+    const m=dmgMods(att,tgt,cmd.c); usedA=m.usedA; usedT=m.usedT; colorBuff=m.colorBuff;
+    if(m.sum){ dmg=Math.max(0,dmg+m.sum); note.push(`補正${m.sum>0?'+':''}${m.sum}`); }
+    if(o.chain==='R'){ dmg+=RULES.chainR; note.push(`チェイン+${RULES.chainR}`); }
+  } else note.push('エクストラ：補正なし');
+  // 4. クリティカル（クラス相性はなし）：スターがあれば1d100で判定。成功でダメージ+30（Buster+60）、色バフ2倍
+  let crit=false;
+  if(!o.extra){
+    const stars=G.players[att.pid].stars;
+    if(stars>0){
+      const cr=mods(att,'critRoll'), cd=mods(att,'critDown'); // critDown＝クリティカル発生率ダウン（弱体）
+      if(ruleset().crit==='d6'){ // シンプルルール：1d6 の出目（クリティカルロール-x で出目を下げる）が必要値以下で成功
+        const need=critNeedD6(stars), r=roll()+1, rv=r-cr.sum+cd.sum;
+        crit=(need>=6&&!cd.sum)||rv<=need;
+        note.push(`クリ判定 出目${r}${cr.sum?`-${cr.sum}`:''}${cd.sum?`+${cd.sum}`:''} ≤ ${need} ${crit?'成功':'失敗'}`);
+      } else {
+        const lv=Math.max(0,Math.min(CRIT_TABLE.length,critLevel(stars)+cr.sum-cd.sum)), p=critChance(lv);
+        const r=Math.floor(Math.random()*100)+1;
+        crit=r<=p;
+        note.push(`クリ判定 Lv${lv}(${p}%) 出目${r} ${crit?'成功':'失敗'}`);
+      }
+      consume(att,[...cr.list,...cd.list]);
+    }
+    if(crit){
+      sa.crits++;
+      const cp=mods(att,'critPow'), cm=att.fx.filter(e=>e.k==='critMult');
+      if(cm.length){ // クリティカル倍率：+30/+60・色バフ2倍の代わりに、ここまでのダメージ×x%（威力+は最後に加算）
+        const pct=Math.max(...cm.map(e=>e.v)), add=Math.round(dmg*pct/100)-dmg+cp.sum;
+        dmg+=add; note.push(`クリ×${pct}%${cp.sum?`+${cp.sum}`:''}`); consume(att,cm);
+      } else {
+        const add=(cmd.c==='R'?RULES.critDmgR:RULES.critDmg)+cp.sum+colorBuff;
+        dmg+=add; note.push(`クリ+${add}${colorBuff?`(色バフ+${colorBuff}含む)`:''}`);
+      }
+      consume(att,cp.list);
+    }
+  }
+  // 6. 最終ダメージ（クリティカルとオーバーキルは重複：獲得NP・発生スターがそれぞれ2倍）
+  // ガッツで踏みとどまっている相手（HP0・戦闘不能ではない）はオーバーキルにならない
+  const mult=(crit?2:1)*(tgt.out?2:1);
+  if(tgt.out){
+    log(`${n} ${cmdChip(cmd)} → オーバーキル（${TERMS.gauge}・${TERMS.star}${mult}倍）`);
+    fxEmit({t:'dmg',uid:tgt.uid,v:fmt(dmg),crit,over:true});
+  } else {
+    const b=blocked(att,tgt);
+    if(b){ st(tgt).blocked++; log(`${n} ${cmdChip(cmd)} → ${nm(tgt)}：${b}で無効 <span class="sub">(${note.join(' / ')})</span>`); fxEmit({t:'dmg',uid:tgt.uid,text:b}); }
+    else if(nullified(tgt,dmg)){ st(tgt).blocked++; log(`${n} ${cmdChip(cmd)} → ${nm(tgt)}：${fmt(dmg)}ダメージは${nullified(tgt,dmg)}以下なので無効 <span class="sub">(${note.join(' / ')})</span>`); fxEmit({t:'dmg',uid:tgt.uid,text:'無効'}); consume(tgt,usedT); }
+    else { log(`${n} ${cmdChip(cmd)} → ${nm(tgt)}：<b>${fmt(dmg)}</b>ダメージ <span class="sub">(${note.join(' / ')})</span>`); consume(tgt,usedT); dealDamage(tgt,dmg,true,{crit,att}); }
+  }
+  gainNpStar(att,cmd,mult);
+  consume(att,usedA);
+  // 攻撃時○○（エクストラアタックでは発動しない）
+  if(!o.extra){
+    const s=mods(att,'onAtkStar',cmd.c), p=mods(att,'onAtkNp',cmd.c);
+    if(s.sum){ G.gen+=s.sum; log(`${n} 攻撃時効果：${TERMS.star}${s.sum}個発生`,'sub'); }
+    if(p.sum){ addNp(att,npRate(att,p.sum)); log(`${n} 攻撃時効果：${TERMS.gauge}+${p.sum}%`,'sub'); }
+    consume(att,[...s.list,...p.list]);
+  }
+}
 function resolveCommand(att,cmd,tgt,o={}){
   const n=nm(att);
-  const atkFx=to=>fxEmit({t:'atk',uid:att.uid,tgt:to,cmd,ri:o.ri,extra:!!o.extra});
+  const atkFx=(to,x={})=>fxEmit({t:'atk',uid:att.uid,tgt:to,cmd,ri:o.ri,extra:!!o.extra,...x});
   if(cmd.c==='ASC'){ if(cmdLine(cmd)) say(att,'attack',{own:cmd.line}); atkFx(null); log(`${n}：${TERMS.ascFull}（1行動）`,'sub'); return; }
   if(isCopyCmd(cmd)){ // エクストラアタックで出たときは対象をランダムに選んで、その場でロール
     const cs=copyCands(att); if(!cs.length) return;
@@ -367,64 +482,15 @@ function resolveCommand(att,cmd,tgt,o={}){
     // ダメージを持つ特殊行動は無属性の攻撃として続けて処理する（チェインには数えない）
   }
   applyEffects(att,preE,null); // 攻撃前の効果（防御無視・無敵貫通などを付けてから攻撃）
+  if(att.out) return; // 攻撃前の自傷などで倒れた
   say(att,(o.extra&&(D(att.def).lines.extra||[]).length)?'extra':'attack',{w:250,own:cmdLine(cmd)}); // 吹き出しと攻撃カードを重ねて見せる（エクストラ用が空なら通常の攻撃セリフ。面の専用セリフがあればそちら）
-  atkFx(tgt.uid); // 戦闘不能の相手にも（オーバーキル）カードを飛ばす
-  let dmg=cmd.dmg; const note=[`基本${dmg}`]; let usedA=[], usedT=[], colorBuff=0;
-  // 2. スキル効果補正 / 3. Busterチェイン
-  if(!o.extra){
-    const m=dmgMods(att,tgt,cmd.c); usedA=m.usedA; usedT=m.usedT; colorBuff=m.colorBuff;
-    if(m.sum){ dmg=Math.max(0,dmg+m.sum); note.push(`補正${m.sum>0?'+':''}${m.sum}`); }
-    if(o.chain==='R'){ dmg+=RULES.chainR; note.push(`チェイン+${RULES.chainR}`); }
-  } else note.push('エクストラ：補正なし');
-  // 4. クリティカル（クラス相性はなし）：スターがあれば1d100で判定。成功でダメージ+30（Buster+60）、色バフ2倍
-  let crit=false;
-  if(!o.extra){
-    const st=G.players[att.pid].stars;
-    if(st>0){
-      const cr=mods(att,'critRoll'), cd=mods(att,'critDown'); // critDown＝クリティカル発生率ダウン（弱体）
-      if(ruleset().crit==='d6'){ // シンプルルール：1d6 の出目（クリティカルロール-x で出目を下げる）が必要値以下で成功
-        const need=critNeedD6(st), r=roll()+1, rv=r-cr.sum+cd.sum;
-        crit=(need>=6&&!cd.sum)||rv<=need;
-        note.push(`クリ判定 出目${r}${cr.sum?`-${cr.sum}`:''}${cd.sum?`+${cd.sum}`:''} ≤ ${need} ${crit?'成功':'失敗'}`);
-      } else {
-        const lv=Math.max(0,Math.min(CRIT_TABLE.length,critLevel(st)+cr.sum-cd.sum)), p=critChance(lv);
-        const r=Math.floor(Math.random()*100)+1;
-        crit=r<=p;
-        note.push(`クリ判定 Lv${lv}(${p}%) 出目${r} ${crit?'成功':'失敗'}`);
-      }
-      consume(att,[...cr.list,...cd.list]);
-    }
-    if(crit){
-      const cp=mods(att,'critPow'), cm=att.fx.filter(e=>e.k==='critMult');
-      if(cm.length){ // クリティカル倍率：+30/+60・色バフ2倍の代わりに、ここまでのダメージ×x%（威力+は最後に加算）
-        const pct=Math.max(...cm.map(e=>e.v)), add=Math.round(dmg*pct/100)-dmg+cp.sum;
-        dmg+=add; note.push(`クリ×${pct}%${cp.sum?`+${cp.sum}`:''}`); consume(att,cm);
-      } else {
-        const add=(cmd.c==='R'?RULES.critDmgR:RULES.critDmg)+cp.sum+colorBuff;
-        dmg+=add; note.push(`クリ+${add}${colorBuff?`(色バフ+${colorBuff}含む)`:''}`);
-      }
-      consume(att,cp.list);
-    }
-  }
-  // 6. 最終ダメージ（クリティカルとオーバーキルは重複：獲得NP・発生スターがそれぞれ2倍）
-  const mult=(crit?2:1)*(tgt.out?2:1);
-  if(tgt.out){
-    log(`${n} ${cmdChip(cmd)} → オーバーキル（${TERMS.gauge}・${TERMS.star}${mult}倍）`);
-    fxEmit({t:'dmg',uid:tgt.uid,v:fmt(dmg),crit,over:true});
-  } else {
-    const b=blocked(att,tgt);
-    if(b){ log(`${n} ${cmdChip(cmd)} → ${nm(tgt)}：${b}で無効 <span class="sub">(${note.join(' / ')})</span>`); fxEmit({t:'dmg',uid:tgt.uid,text:b}); }
-    else if(nullified(tgt,dmg)){ log(`${n} ${cmdChip(cmd)} → ${nm(tgt)}：${fmt(dmg)}ダメージは${nullified(tgt,dmg)}以下なので無効 <span class="sub">(${note.join(' / ')})</span>`); fxEmit({t:'dmg',uid:tgt.uid,text:'無効'}); consume(tgt,usedT); }
-    else { log(`${n} ${cmdChip(cmd)} → ${nm(tgt)}：<b>${fmt(dmg)}</b>ダメージ <span class="sub">(${note.join(' / ')})</span>`); consume(tgt,usedT); dealDamage(tgt,dmg,true,{crit,att}); }
-  }
-  gainNpStar(att,cmd,mult);
-  consume(att,usedA);
-  // 攻撃時○○（エクストラアタックでは発動しない）
-  if(!o.extra){
-    const s=mods(att,'onAtkStar',cmd.c), p=mods(att,'onAtkNp',cmd.c);
-    if(s.sum){ G.gen+=s.sum; log(`${n} 攻撃時効果：${TERMS.star}${s.sum}個発生`,'sub'); }
-    if(p.sum){ addNp(att,npRate(att,p.sum)); log(`${n} 攻撃時効果：${TERMS.gauge}+${p.sum}%`,'sub'); }
-    consume(att,[...s.list,...p.list]);
+  // 連続攻撃：同じ攻撃を hits 回。1回ごとに補正・クリティカル・NP・スター・回避/無敵・回数制の効果を処理する
+  const hits=hitsOf(cmd.eff);
+  if(hits>1) log(`${n} ${cmdChip(cmd)}：${hits}回連続攻撃`,'sub');
+  for(let h=0;h<hits;h++){
+    if(att.out) break; // 反撃で倒れたら残りの攻撃はしない
+    atkFx(tgt.uid,h?{w:260}:{}); // 戦闘不能の相手にも（オーバーキル）カードを飛ばす
+    attackHit(att,cmd,tgt,o,hits>1?`（${h+1}/${hits}）`:'');
   }
   syncU(tgt); syncU(att); // 獲得したNP・使い切った効果は、ダメージ演出のあとで画面に反映
 
@@ -436,26 +502,39 @@ function resolveUlt(u,tgt){
   log(`${nm(u)}の${TERMS.ult}「${esc(ud.name)}」！`,'good');
   fxEmit({t:'cutin',uid:u.uid,title:ud.name,ruby:ud.ruby,col:ud.c});
   say(u,'np');
+  st(u).ults++;
+  const hits=hitsOf(ud.eff); // 連続攻撃：ダメージ効果それぞれを hits 回
+  if(hits>1) log(`${hits}回連続攻撃`,'sub');
   for(const e of ultEffOrder(ud.eff)){
     if(u.out) break; // 反撃で倒れたら残りの効果は出ない
     if(e.k!=='dmg'){ applyEffects(u,[e],null); continue; }
-    // マスタールール：全体宝具は敵マスターにも当たる（退避中なら当たらない。無敵・回避などでは防げない）
-    const em=masterOf(1-u.pid), hitM=e.t==='enemy_all'&&em&&!em.out&&!G.players[em.pid].evac&&!mTeam();
-    const ts = e.t==='enemy_all' ? [...alive(1-u.pid),...(hitM?[em]:[])] : [tgt].filter(x=>x&&!x.out);
-    const usedA=new Set();
-    for(const t of ts){
-      t.tgtd=true;
-      const m=dmgMods(u,t,ud.c); m.usedA.forEach(x=>usedA.add(x));
-      let dmg=Math.max(0,e.v+m.sum);
-      if(t.master&&e.t==='enemy_all'){ log(`→ ${nm(t)}：<b>${fmt(dmg)}</b>ダメージ`); dealDamage(t,dmg,false,{np:true}); continue; }
-      const b=blocked(u,t);
-      if(b){ log(`→ ${nm(t)}：${b}で無効`); fxEmit({t:'dmg',uid:t.uid,text:b}); }
-      else if(nullified(t,dmg)){ log(`→ ${nm(t)}：${fmt(dmg)}ダメージは${nullified(t,dmg)}以下なので無効`); fxEmit({t:'dmg',uid:t.uid,text:'無効'}); consume(t,m.usedT); }
-      else { log(`→ ${nm(t)}：<b>${fmt(dmg)}</b>ダメージ`); consume(t,m.usedT); dealDamage(t,dmg,true,{np:true,att:u}); if(!t.out) say(t,'npDamage'); }
-      if(u.out) break; // 反撃で倒れたら残りの対象には当たらない
+    for(let h=0;h<hits;h++){
+      if(u.out) break;
+      // マスタールール：全体宝具は敵マスターにも当たる（退避中なら当たらない。無敵・回避などでは防げない）
+      const em=masterOf(1-u.pid), hitM=e.t==='enemy_all'&&em&&!em.out&&!G.players[em.pid].evac&&!mTeam();
+      const ts = e.t==='enemy_all' ? [...alive(1-u.pid),...(hitM?[em]:[])] : [tgt].filter(x=>x&&!x.out);
+      if(!ts.length) break;
+      const usedA=new Set(), lab=hits>1?`（${h+1}/${hits}）`:'';
+      for(const t of ts){
+        t.tgtd=true;
+        // 宝具威力アップ・ダウンは攻撃ダメージ+と同じく足し引き。max（最大HPぶん）は補正を受けない（軽減不可）
+        let dmg, usedT=[];
+        if(e.max) dmg=maxHp(t);
+        else {
+          const m=dmgMods(u,t,ud.c), up=mods(u,'npPow'), dn=mods(u,'npPowDown');
+          [...m.usedA,...up.list,...dn.list].forEach(x=>usedA.add(x)); usedT=m.usedT;
+          dmg=Math.max(0,e.v+m.sum+up.sum-dn.sum);
+        }
+        if(t.master&&e.t==='enemy_all'){ log(`→ ${nm(t)}${lab}：<b>${fmt(dmg)}</b>ダメージ`); dealDamage(t,dmg,false,{np:true,src:u}); continue; }
+        const b=blocked(u,t);
+        if(b){ st(t).blocked++; log(`→ ${nm(t)}${lab}：${b}で無効`); fxEmit({t:'dmg',uid:t.uid,text:b}); }
+        else if(!e.max&&nullified(t,dmg)){ st(t).blocked++; log(`→ ${nm(t)}${lab}：${fmt(dmg)}ダメージは${nullified(t,dmg)}以下なので無効`); fxEmit({t:'dmg',uid:t.uid,text:'無効'}); consume(t,usedT); }
+        else { log(`→ ${nm(t)}${lab}：<b>${fmt(dmg)}</b>ダメージ${e.max?'（最大HP・軽減不可）':''}`); consume(t,usedT); dealDamage(t,dmg,true,{np:true,att:u}); if(!t.out&&!h) say(t,'npDamage'); }
+        if(u.out) break; // 反撃で倒れたら残りの対象には当たらない
+      }
+      consume(u,[...usedA]);
+      ts.forEach(syncU); syncU(u);
     }
-    consume(u,[...usedA]);
-    ts.forEach(syncU); syncU(u);
   }
 }
 function resolveDamage(){
@@ -468,14 +547,14 @@ function resolveDamage(){
     const hp0=tgt.hp;
     const acts=G.rolled, cols=acts.map(a=>a.cmd.c);
     const chain = acts.length===3 && ['R','B','G'].includes(cols[0]) && cols.every(c=>c===cols[0]) ? cols[0] : null;
-    if(chain){ log(`${TERMS[chain]}チェイン発生！`,'good'); fxEmit({t:'banner',title:`${TERMS[chain]} Chain`,col:chain}); }
+    if(chain){ log(`${TERMS[chain]}チェイン発生！`,'good'); fxEmit({t:'banner',title:`${TERMS[chain]} Chain`,col:chain}); chainsOf(G.cur)[chain]++; }
     acts.forEach((a,ri)=>{ if(!U(a.uid).out) resolveCommand(U(a.uid),a.cmd,tgt,{chain,ri}); }); // 反撃で倒れたら残りの行動はしない
     if(chain==='B'){ [...new Set(acts.map(a=>a.uid))].map(U).forEach(u=>{ addNp(u,npRate(u,RULES.chainB)); syncU(u); }); log(`チェインボーナス：行動${TERMS.unit}の${TERMS.gauge}+${RULES.chainB}%`); }
     if(chain==='G'){ G.gen+=RULES.chainG; log(`チェインボーナス：${TERMS.star}${RULES.chainG}個発生`); }
     // 7. ブレイブチェイン
     if(acts.length===3 && acts.every(a=>a.uid===acts[0].uid) && !U(acts[0].uid).out){
       const u=U(acts[0].uid), f=roll(), face=D(u.def).faces[f];
-      log(`ブレイブチェイン！ ${nm(u)}のエクストラアタック（出目${f+1}）`,'good');
+      log(`ブレイブチェイン！ ${nm(u)}のエクストラアタック（出目${f+1}）`,'good'); chainsOf(G.cur).brave++;
       fxEmit({t:'banner',title:'Brave Chain',sub:'エクストラアタック'});
       const cmd=!u.asc&&face.pre.c==='ASC'?face.pre:u.asc?face.post:face.pre;
       rollFx(u.uid,f,{cmd,keys:[`f:${u.uid}`]}); u.face={i:f,kind:'cmd',cmd};
@@ -488,6 +567,7 @@ function resolveDamage(){
   checkWin();
   if(G.winner==null) G.phase='end';
 }
+const chainsOf = pid=>(G.chains||(G.chains=[{R:0,B:0,G:0,brave:0},{R:0,B:0,G:0,brave:0}]))[pid];
 function ascend(u){ u.asc=true; fxEmit({t:'pop',uid:u.uid,text:TERMS.ascFull,cls:'asc'}); log(`${nm(u)} ${TERMS.ascFull}！ 以降は${TERMS.asc}後コマンド、スキル3解放`,'good'); }
 
 // =====================================================================
@@ -533,7 +613,7 @@ const hcapText = ()=>G.hcap?`攻撃ダメージ+${G.hcap.atk}・獲得${TERMS.ga
 // 攻撃・被弾・チェインで得るNPに、ハンデのNP獲得量アップを掛ける（スキルなどで直接増えるNPには掛けない）
 const npRate = (u,v)=>hasHcap(u)&&G.hcap.np?Math.round(v*(100+G.hcap.np)/100):v;
 function beginTurn(){
-  Object.assign(G,{phase:'actRoll',actRolled:false,maxActs:{},alloc:{},rolled:[],ult:null,target:null,targetAll:false,gen:0,pending:null,copy:null,guard:null,mastered:false,ultDone:false,spellPick:null});
+  Object.assign(G,{phase:'actRoll',actRolled:false,maxActs:{},alloc:{},rolled:[],ult:null,ultNp:null,target:null,targetAll:false,gen:0,pending:null,copy:null,guard:null,mastered:false,ultDone:false,spellPick:null});
   const P=G.players[G.cur];
   if(P.evac){ P.evac=false; log(`${esc(P.name)}の${TERMS.player}が退避から戻った`,'sub'); }
   log(`━ ターン${G.turn}：${esc(G.players[G.cur].name)} ━`,'h');
@@ -589,7 +669,7 @@ function endPhase(){
   hitEffects();
   // マスターの補助（このターンだけ）の効果を消す
   ALLM().forEach(u=>{ const t=u.fx.filter(e=>e.tmp); if(t.length){ u.fx=u.fx.filter(e=>!e.tmp); clampHp(u); syncU(u); } });
-  G.players[G.cur].stars=G.gen;
+  G.players[G.cur].stars=G.gen; (G.starsGen||(G.starsGen=[0,0]))[G.cur]+=G.gen;
   log(`${esc(G.players[G.cur].name)}：${TERMS.star}を${G.gen}個獲得（次のターンに使用）`);
   ALL().forEach(u=>u.face=null); // このターンの出目・コマンドの表示は次のターンに持ち越さない
   flushKo();
@@ -611,8 +691,10 @@ function doSkill(u,si,picked){
   const s=D(u.def).skills[si];
   log(`${nm(u)} スキル「${esc(s.name)}」`);
   // 使ったスキルの名前と効果を中央に出す（選んだ対象があれば名前も）
-  fxEmit({t:'skill',uid:u.uid,si,name:s.name,picked:picked?D(picked.def).name:'',
-    lines:s.eff.length?s.eff.map(e=>`${tLabel(e.t,s.pick)}：${fxText(e)}${e.chance?`（出目${e.chance}以下で成功）`:''}`):['効果なし']});
+  // 全体にかかるスキルは「→ 全体」（味方全体・敵全体）と出す。説明文があればその文章
+  fxEmit({t:'skill',uid:u.uid,si,name:s.name,picked:picked?D(picked.def).name:allLabel(s.eff),
+    lines:s.eff.length?effLines(s.eff,s.pick):['効果なし']});
+  st(u).skills++;
   say(u,'skill',{own:s.line}); // スキルの専用セリフがあればそちら
   applyEffects(u,s.eff,picked);
   u.used[si]=true; // 効果の後に使用済みにする（スキル再使用で自分自身が戻らないように）
@@ -649,7 +731,7 @@ const canGuardSpell = pid=>G.players[pid].spellLeft>0&&G.players[pid].spell!=='d
 function useSpell(m,i,picked){
   const s=D(m.def).spells[i], P=G.players[m.pid];
   log(`${nm(m)}：「${esc(s.name)}」${picked?` → ${nm(picked)}`:''}`,'good');
-  fxEmit({t:'skill',uid:m.uid,head:'令呪',name:s.name,picked:picked?D(picked.def).name:'',lines:s.eff.map(e=>`${spellTgt(e.t)}：${fxText(e)}`)});
+  fxEmit({t:'skill',uid:m.uid,head:'令呪',name:s.name,picked:picked?D(picked.def).name:allLabel(s.eff),lines:effLines(s.eff,null,spellTgt)});
   say(m,'spell',{own:s.line});
   P.spellUsed[i]=true; P.spellLeft--; P.spell=null;
   return masterEffects(m,s.eff,{},picked);
@@ -666,7 +748,7 @@ const spellTgt = t=>t==='svt'&&mTeam()?`選んだ${TERMS.unit}`:tLabel(t);
 function masterEffects(m,effs,o={},picked=null){
   const md=effs.filter(e=>e.k==='dmg'&&e.t==='enemy_master');
   applyEffects(m,effs.filter(e=>!md.includes(e)),picked,o);
-  const em=masterOf(1-m.pid), dmg=md.reduce((s,e)=>s+e.v,0);
+  const em=masterOf(1-m.pid), dmg=md.reduce((s,e)=>s+effVal(e,em),0);
   if(!dmg||!em||em.out) return false;
   if(canGuardSpell(em.pid)){ G.guard={kind:'spell',dmg}; G.phase='guard'; return true; }
   fixedHit(m,em,dmg); return false;
@@ -708,10 +790,20 @@ const ACTIONS = {
     if(sumCost(picks)+d.cost+mcost(pid)>costCap()){ G.setupMsg=`コスト合計が${costCap()}を超えます${masterRule()?`（${TERMS.player}込み）`:''}`; return; }
     picks.push(id);
   },
-  setupRandom(){
-    const pid=G.setupPid;
-    if(masterRule()&&MASTERS.length) G.mpicks[pid]=MASTERS[Math.floor(Math.random()*MASTERS.length)].id;
-    const room=costCap()-(ruleset().partyMax>1?mcost(pid):0); // チームはマスターのコストを引いた残りで編成
+  // 2人目（CPU）の編成から1人目の編成に戻る
+  setupBack(){ if(G.phase==='setup'&&G.setupPid===1){ G.setupPid=0; G.setupMsg=''; } },
+  // おまかせ。only='svt'：サーヴァントだけ（選んだマスターはそのまま） / only='master'：マスターだけ（選んだサーヴァントはそのまま）
+  setupRandom({only}={}){
+    if(G.phase!=='setup') return;
+    const pid=G.setupPid, team=ruleset().partyMax>1, rnd=a=>a[Math.floor(Math.random()*a.length)];
+    if(only==='master'){
+      if(!masterRule()||!MASTERS.length) return;
+      const room=costCap()-(team?sumCost(G.picks[pid]):0), c=MASTERS.filter(m=>!team||m.cost<=room);
+      if(!c.length){ G.setupMsg=`コスト上限に収まる${TERMS.player}がいません`; return; }
+      G.mpicks[pid]=rnd(c).id; G.setupMsg=''; return;
+    }
+    if(masterRule()&&MASTERS.length&&only!=='svt') G.mpicks[pid]=rnd(MASTERS).id;
+    const room=costCap()-(team?mcost(pid):0); // チームはマスターのコストを引いた残りで編成
     let best=[];
     for(let t=0;t<50;t++){
       const pool=[...UNITS].sort(()=>Math.random()-.5), p=[];
@@ -823,8 +915,8 @@ const ACTIONS = {
     const m=masterReady(); if(!m) return;
     const d=D(m.def), f=roll(), face=d.faces[f];
     log(`${MASTER_ACTS.support}：${nm(m)} 出目${f+1} → ${face.eff.length?`「${esc(face.label)}」（このターンのみ）`:'無'}`, face.eff.length?'good':'sub');
-    fxEmit({t:'skill',uid:m.uid,head:`${MASTER_ACTS.support}・出目${f+1}`,name:face.eff.length?face.label:'無',
-      lines:face.eff.length?face.eff.map(e=>`${tLabel(e.t)}：${fxText(e)}`):['何も起きない']});
+    fxEmit({t:'skill',uid:m.uid,head:`${MASTER_ACTS.support}・出目${f+1}`,name:face.eff.length?face.label:'無',picked:allLabel(face.eff),
+      lines:face.eff.length?effLines(face.eff):['何も起きない']});
     if(face.eff.length) say(m,'support',{own:face.line});
     const side=supPickSide(face.eff);
     if(side){ G.spellPick={sup:{label:face.label,eff:face.eff},side}; return; } // 「選んだ敵1体」：対象の選択待ち
@@ -914,7 +1006,7 @@ const ACTIONS = {
   },
   useSkill({uid,si}){
     si=Number(si); const u=U(uid), s=D(u.def).skills[si];
-    if(G.phase!=='skill'||G.pending||u.pid!==G.cur||!canSkill(u)||u.used[si]||(si===2&&!u.asc)) return;
+    if(G.phase!=='skill'||G.pending||!u||u.pid!==G.cur||!skillUsable(u,si)) return;
     if(s.pick){ G.pending={uid,si}; return; }
     doSkill(u,si,null);
   },
@@ -929,8 +1021,15 @@ const ACTIONS = {
       if(top){ G.alloc[top[0]]--; log(`補助${TERMS.ult}のため行動回数-1（${dn(U(top[0]))}）`,'sub'); }
       flushKo(); checkWin(); return;
     }
-    G.ult=uid; u.np=0; syncU(u);
+    G.ult=uid; G.ultNp=u.np; u.np=0; syncU(u);
     log(`${nm(u)}が${TERMS.ult}「${esc(D(u.def).ult.name)}」を使用（このターンの行動になります）`,'good');
+  },
+  // 宝具の取り消し（スキルフェイズの間だけ。使ったNPを戻す）
+  cancelUlt(){
+    if(G.phase!=='skill'||G.pending||!G.ult) return;
+    const u=U(G.ult); u.np=Math.min(RULES.gaugeMax,u.np+(G.ultNp??RULES.ultCost));
+    G.ult=null; G.ultNp=null; syncU(u);
+    log(`${nm(u)}の${TERMS.ult}の使用を取り消した`,'sub');
   },
   skillDone(){
     if(G.phase!=='skill'||G.pending) return;

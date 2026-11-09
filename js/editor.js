@@ -41,6 +41,7 @@ function conv(el){
     case 'optstr': return v===''?undefined:v;
     case 'lines': return v.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
     case 'optlines': { const a=v.split(/\r?\n/).map(x=>x.trim()).filter(Boolean); return a.length?a:undefined; } // 専用セリフ（空なら項目ごと消す）
+    case 'bool': return el.checked||undefined; // チェックボックス（外したら項目ごと消す）
     case 'tags': return [...new Set(v.split(/[,、，\s]+/).map(x=>x.trim()).filter(Boolean))]; // 属性：読点・カンマ・空白区切り
     default: return v;
   }
@@ -112,6 +113,11 @@ function fixEff(e){
   if(e.k==='critMult'&&!(e.v>100)) e.v=200;
   if(e.k==='dmg'||e.k==='copyRoll') delete e.at;
   if(e.k==='star'&&e.t==='self') e.t='master';
+  if(!f.maxOk) delete e.max;
+  if(e.k!=='desc') delete e.text;
+  else if(e.text==null) e.text='';
+  if(f.noTgt){ e.t=e.t==='svt'?'svt':'self'; delete e.chance; delete e.at; } // 対象・確率・タイミングを使わない効果
+  if(e.k==='multiHit'&&!(e.v>=2)) e.v=2;
 }
 
 // 全サーヴァントの属性（入力候補・特攻/特防の選択肢）
@@ -371,17 +377,31 @@ function effRow(path,j,e,ctx,n,atKind){
   const groups=fxGroups().map(([g,ks])=>[g,ks.filter(k=>fxOnlyIn(k,ctx))]).filter(([,ks])=>ks.length);
   const grp=fxGroupOf(e.k), kinds=(groups.find(([g])=>g===grp)||groups[0])[1];
   const tg=TGT_BY_CTX[ctx].includes(e.t)?TGT_BY_CTX[ctx]:[...TGT_BY_CTX[ctx],e.t];
+  // 値：最大HPにできる効果（ダメージ・自傷）は「最大HP」にチェックすると値の代わりに対象の最大HP（軽減不可）
+  const val=f.val?(f.maxOk?`${e.max?'':numIn(p+'.v',e.v,e.k==='multiHit'?'回数':'値')}<label class="mini chk" title="値の代わりに対象の最大HPと同じダメージにする（軽減できない）"><input type="checkbox" data-p="${p}.max" data-t="bool" data-act="structural" ${e.max?'checked':''}><span>最大HP</span></label>`
+    :numIn(p+'.v',e.v,e.k==='multiHit'?'回数':'値')):'';
+  if(e.k==='desc') return `<div class="eff" data-ep="${p}">
+    <select class="effgrp" data-act="effGrp" data-ep="${p}" data-ctx="${ctx}" aria-label="効果の分類">${groups.map(([g,ks])=>opt(g,`${g}（${ks.length}）`,grp)).join('')}</select>
+    <select data-p="${p}.k" data-act="effKind" aria-label="効果の種類">${kinds.map(k=>opt(k,FX[k].name,e.k)).join('')}</select>
+    <input class="desctext" data-p="${p}.text" value="${esc(e.text||'')}" placeholder="説明文（スキル・${TERMS.ult}の説明がこの文章になります）">
+    <span class="effops">
+      <button data-act="effMove" data-path="${path}" data-i="${j}" data-d="-1" ${j?'':'disabled'} title="上へ">↑</button>
+      <button data-act="effMove" data-path="${path}" data-i="${j}" data-d="1" ${j<n-1?'':'disabled'} title="下へ">↓</button>
+      <button data-act="effDel" data-path="${path}" data-i="${j}" title="削除">×</button>
+    </span>
+    <div class="sub small">表示のみ・効果はありません。ほかの効果の説明の代わりに、この文章を出します。</div>
+  </div>`;
   return `<div class="eff" data-ep="${p}">
     <select class="effgrp" data-act="effGrp" data-ep="${p}" data-ctx="${ctx}" aria-label="効果の分類">${groups.map(([g,ks])=>opt(g,`${g}（${ks.length}）`,grp)).join('')}</select>
     <select data-p="${p}.k" data-act="effKind" aria-label="効果の種類">${kinds.map(k=>opt(k,FX[k].name,e.k)).join('')}${kinds.includes(e.k)?'':opt(e.k,(FX[e.k]||{}).name||e.k,e.k)}</select>
-    <select data-p="${p}.t" aria-label="対象">${tg.map(t=>opt(t,TARGETS[t]||t,e.t)).join('')}</select>
-    ${f.val?numIn(p+'.v',e.v,'値'):''}
+    ${f.noTgt?'':`<select data-p="${p}.t" aria-label="対象">${tg.map(t=>opt(t,TARGETS[t]||t,e.t)).join('')}</select>`}
+    ${val}
     ${f.inst?'':(f.timesOnly||(ctx==='master'&&/^faces./.test(path))?'':optNum(p+'.turns',e.turns,'ターン'))+optNum(p+'.times',e.times,'回数')}
     ${FX[e.k]&&FX[e.k].color?`<label class="mini"><span>色</span><select data-p="${p}.color" data-t="optstr">${opt('','すべて',e.color||'')}${['R','B','G'].map(c=>opt(c,TERMS[c],e.color)).join('')}</select></label>`:''}
     ${f.trait?`<label class="mini"><span>属性</span><input class="traitin" list="traitlist" data-p="${p}.trait" data-t="optstr" value="${esc(e.trait||'')}" placeholder="属性名"></label>`:''}
     ${e.k==='atkVs'?`<label class="mini"><span>弱体</span><select data-p="${p}.vs" data-t="optstr">${opt('','どれでも',e.vs||'')}${Object.keys(FX).filter(k=>FX[k].buff===false).map(k=>opt(k,FX[k].name,e.vs)).join('')}</select></label>`:''}
-    <label class="mini"><span>確率</span><select data-p="${p}.chance" data-t="optnum">${opt('','必ず',e.chance??'')}${[1,2,3,4,5].map(k=>opt(k,`ロール${k}以下`,e.chance)).join('')}</select></label>
-    ${effAtSel(p,e,atKind)}
+    ${f.noTgt?'':`<label class="mini"><span>確率</span><select data-p="${p}.chance" data-t="optnum">${opt('','必ず',e.chance??'')}${[1,2,3,4,5].map(k=>opt(k,`ロール${k}以下`,e.chance)).join('')}</select></label>`}
+    ${f.noTgt?'':effAtSel(p,e,atKind)}
     <span class="effops">
       <button data-act="effMove" data-path="${path}" data-i="${j}" data-d="-1" ${j?'':'disabled'} title="上へ">↑</button>
       <button data-act="effMove" data-path="${path}" data-i="${j}" data-d="1" ${j<n-1?'':'disabled'} title="下へ">↓</button>
