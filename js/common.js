@@ -238,7 +238,8 @@ function mastersToJS(ms){
 // spells: 令呪3種
 // lines : セリフ（support=補助 / attack=攻撃 / spell=令呪使用）。faces・spells の line は、その面・令呪だけの専用セリフ（任意）
 // 効果の対象（t）: svt=自軍${TERMS.unit} / self=${TERMS.player}自身 / ally_all=味方全体（${TERMS.player}含む）
-//                  enemy_all=敵${TERMS.unit} / enemy_master=敵${TERMS.player} / master=自陣の${TERMS.star}
+//                  enemy_all=敵${TERMS.unit}全員（敵${TERMS.player}には当たらない） / enemy_both=敵全体（敵${TERMS.unit}全員＋敵${TERMS.player}）
+//                  enemy_svt=選んだ敵${TERMS.unit} / enemy_master=敵${TERMS.player} / master=自陣の${TERMS.star}
 const DEFAULT_MASTERS = [
 ${body}
 ];
