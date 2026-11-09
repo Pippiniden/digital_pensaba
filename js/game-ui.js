@@ -234,13 +234,30 @@ function laneHTML(){
   return s;
 }
 // 中央の魔法陣（飾り）：外側と内側を逆向きに回す
-// 画面を描き直しても回転が最初に戻らないよう、経過時間ぶん animation-delay をずらす
-const MC_SPIN = { out:120, in:80 }; // 1周の秒数（CSS と合わせる）
+// CSS の animation は、要素を作り直したり付け替えたりすると最初からやり直しになる（描き直しのたびに回転がカクッと戻る）。
+// そこで回転は Web Animations API で付ける：開始時刻をページの時計の 0 に固定するので、角度は「今の時刻」だけで決まり、
+// 要素が作り直されても付け替えられても、同じ角度から途切れずに回り続ける
+const MC_SPIN = { out:120, in:80 }; // 1周の秒数
 function magicCircleHTML(){
-  const t=performance.now()/1000;
   return `<div class="circle" aria-hidden="true">
-    <img class="mc-o" src="${UI_IMG.circleOut}" alt="" style="animation-delay:-${(t%MC_SPIN.out).toFixed(2)}s">
-    <img class="mc-i" src="${UI_IMG.circleIn}" alt="" style="animation-delay:-${(t%MC_SPIN.in).toFixed(2)}s"></div>`;
+    <img class="mc-o" src="${UI_IMG.circleOut}" alt="">
+    <img class="mc-i" src="${UI_IMG.circleIn}" alt=""></div>`;
+}
+function syncMagicCircle(){
+  document.querySelectorAll('.circle img').forEach(im=>{
+    if(im._spin&&im._spin.playState==='running') return; // 付け替えた画像は回転が続いている
+    const out=im.classList.contains('mc-o');
+    try{
+      im._spin=im.animate([{rotate:'0deg'},{rotate:'360deg'}],{duration:(out?MC_SPIN.out:MC_SPIN.in)*1000,iterations:Infinity,direction:out?'normal':'reverse'});
+      im._spin.startTime=0;
+    }catch(e){}
+  });
+}
+// 点滅（宝具ゲージ・宝具ボタン）も、作り直すたびに最初の明るさへ飛んでチカチカするので、時刻に合わせた位置から始める
+const PULSES = [['.gauge.np.full i',2000],['.sk.np.ready',2200]]; // [セレクタ, 往復1回のミリ秒（CSS と合わせる）]
+function syncPulses(){
+  const t=performance.now();
+  PULSES.forEach(([sel,ms])=>document.querySelectorAll(sel).forEach(el=>{ el.style.animationDelay=`-${(t%ms).toFixed(0)}ms`; }));
 }
 function stageHTML(){
   const ph=G.phase, me=G.players[G.cur];
@@ -576,6 +593,7 @@ function render(){
     hinfo.textContent=`${G.rule!=='team'?`${ruleset().name}ルール ・ `:''}ターン${G.turn}`;
     const l=document.querySelector('#log'); if(l) l.scrollTop=l.scrollHeight;
     animateLane();
+    syncMagicCircle(); syncPulses();
   }
   saveMatch();
   scheduleCpu();
