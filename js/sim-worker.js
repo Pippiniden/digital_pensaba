@@ -11,7 +11,7 @@ var SHOW_IDS=null;
 
 // 自分の URL の ?v= を読み込むスクリプトにも付けて、キャッシュされた古い版を使わないようにする
 const SIM_Q=self.location.search||'';
-importScripts(...['rules.js','units.js','common.js','engine.js','cpu.js','sim.js'].map(f=>f+SIM_Q));
+importScripts(...['rules.js','units.js','masters.js','common.js','engine.js','cpu.js','sim.js'].map(f=>f+SIM_Q));
 
 onmessage=e=>{
   const m=e.data;

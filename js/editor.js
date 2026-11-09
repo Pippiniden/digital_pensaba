@@ -243,7 +243,7 @@ function effAtSel(p,e,atKind){
 }
 function effRow(path,j,e,ctx,n,atKind){
   const p=`${path}.${j}`, f=FX[e.k]||{};
-  const kinds=Object.keys(FX).filter(k=>!FX[k].only||FX[k].only===ctx);
+  const kinds=Object.keys(FX).filter(k=>fxOnlyIn(k,ctx));
   const tg=TGT_BY_CTX[ctx].includes(e.t)?TGT_BY_CTX[ctx]:[...TGT_BY_CTX[ctx],e.t];
   return `<div class="eff" data-ep="${p}">
     <select data-p="${p}.k" data-act="effKind" aria-label="効果の種類">${kinds.map(k=>opt(k,FX[k].name,e.k)).join('')}</select>

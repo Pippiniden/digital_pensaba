@@ -18,6 +18,7 @@ It was written from the code (`js/*.js`). If you find a mismatch, the code is th
 | `editor.html` | Editor page shell. Three columns: `#list` `#form` `#side` |
 | `js/rules.js` | **Rule definitions**: terms `TERMS`, numbers `RULES`, effect kinds `FX`, targets `TARGETS`, line kinds `LINE_KEYS`, classes, image settings |
 | `js/units.js` | **Default character data** `DEFAULT_UNITS` (same format the editor's "export units.js" produces) |
+| `js/masters.js` | **Master data** `DEFAULT_MASTERS` for the master rule (§5.4). Currently 7 **test-only** canon masters (遠坂凛 C5 … 間桐雁夜 C0), expected to be replaced/removed. Not editable in the editor yet |
 | `js/common.js` | **Shared by game and editor**: data normalization, validation, load/save/export, HTML/string builders (cards, effect descriptions) |
 | `js/engine.js` | **Game logic**: state `G`, `ACTIONS`, damage/effect resolution, turn flow |
 | `js/cpu.js` | CPU brain. `cpuDecide()` only returns the next single move. Difficulties in `CPU_LEVELS` (`easy` / `normal` / `hard` つよい / `expert` 超つよい) |
@@ -37,9 +38,9 @@ It was written from the code (`js/*.js`). If you find a mismatch, the code is th
 Order matters: later files use globals from earlier ones.
 
 ```
-Game   (index.html) : rules → units → common → engine → cpu → fx → game-ui
+Game   (index.html) : rules → units → masters → common → engine → cpu → fx → game-ui
 Editor (editor.html): rules → units → common → editor → sim → editor-sim
-Worker (sim-worker.js, importScripts): rules → units → common → engine → cpu → sim
+Worker (sim-worker.js, importScripts): rules → units → masters → common → engine → cpu → sim
 ```
 
 - `engine.js` calls `reloadUnits()` at load time, so `loadUnits` from `common.js` and `DEFAULT_UNITS` from `units.js` must already exist.
@@ -78,7 +79,7 @@ Worker (sim-worker.js, importScripts): rules → units → common → engine →
 `costCap:10, partyMax:3, actionsMax:3, actsTable:[0,1,1,3,2,2], gaugeOnHit:10, gaugeMax:100, ultCost:100, chainR:30, chainB:20, chainG:10, critDmg:30, critDmgR:60, dot:20, dotTiming:'current'|'all'`.
 - `actsTable`: action count per pencil face (index 0–5 = face 1–6), shared by all units. Set to `null` to use each face's own `acts` instead. Always read it through `faceActs(d, i)`.
 - Critical: `critLevel(stars)` → level 0–7 from `CRIT_TABLE`, `critChance(level)` → % (Lv1 10 / Lv2 20 / Lv3 35 / Lv4 50 / Lv5 75 / Lv6 90 / Lv7 100; thresholds at 1/6/11/16/21/26/31 stars).
-- `RULESETS` (rules.js) holds per-rule settings: `team` (3 units, d100 crit) and `simple` (1 unit, d6 crit via `CRIT_D6_TABLE` / `critNeedD6`, `handicapAsc:2`). The active one is `G.rule`; read it through `ruleset()` (engine.js). Party size comes from `ruleset().partyMax`, not `RULES`.
+- `RULESETS` (rules.js) holds per-rule settings: `team` (3 units, d100 crit), `simple` (1 unit, d6 crit via `CRIT_D6_TABLE` / `critNeedD6`, `handicapAsc:2`) and `master` (simple + a master per side, `master:true`, see §5.4). The active one is `G.rule`; read it through `ruleset()` (engine.js). Party size comes from `ruleset().partyMax`, not `RULES`.
 - `dot` is only the fallback damage for poison/burn effects whose value is 0 (old data).
 
 ### 4.4 Storage (localStorage)
@@ -135,7 +136,20 @@ Chosen on the mode screen (`setRule`, plus `toggleHandicap`; both kept by `resta
 - 1 servant per side (picking another replaces it). The CPU's "おまかせ（同コスト）" picks the same (or nearest) cost as the opponent.
 - Critical: if the player holds stars, roll 1d6; success when roll − `critRoll` ≤ `critNeedD6(stars)` (1–6★: 2, 7–13: 3, 14–29: 5, 30+: certain). Effects of a success are the same as the team rule.
 - Win only by knocking out the enemy servant. (The old "NP 100% at turn start = ultimate win" rule was removed.)
-- Handicap (`G.handicap`, default ON): `applyHandicap()` in `startGame` ascends the lower-cost side when the cost gap ≥ `handicapAsc`. The rule's optional "3+ cost gap → NP / attack bonus" is not implemented.
+- Handicap (`G.handicap`, default ON): `applyHandicap()` in `startGame` ascends the lower-cost side when the cost gap ≥ `handicapAsc`; when the gap ≥ `hcapBonus.gap` (3) it also sets `G.hcap` = that side's servant gets attack damage +`atk` (30, added in `dmgMods`) and NP gained from attacks / hits / Arts chain ×(100+`np`)% (10, `npRate`). Not an fx (cannot be stripped); shown as a chip via `hcapText`. Measured (hard vs hard, all pairs): low side wins gap3 8%→20.4%, gap4 0.2%→3.2%, gap5 0% (with +20 it was 16.5% / 1.6%).
+
+### 5.4 Master rule — マスタールール (`G.rule==='master'`, `masterRule()`)
+
+Simple rule + one master (泥ペンマス) per side. Setup picks a servant (`setupToggle`) and a master (`setupMaster`, `G.mpicks`); CPU "おまかせ（同コスト）" matches servant+master total cost. Handicap uses the total (`sideCost`).
+- Master data (`normalizeMaster` in common.js): `{id,name,cls:'マスター',cost,hp,master:true,faces:[{label,eff}×6],spells:[{name,eff}×3]}`. Effects use `TGT_BY_CTX.master` (`svt` 自軍サーヴァント, `self` the master, `ally_all` incl. master, `enemy_all`, `enemy_master`, `master` stars). `dmg` is allowed there as fixed damage (`fixedHit`). `D()` looks up `UNITS` then `MASTERS`.
+- Runtime master: `makeMaster()` → `G.players[pid].master` (uid `p{pid}m`, same shape as a unit so fx/damage code is shared). It is **not** in `party`/`alive()`/`ALL()`; use `ALLM()` / `U()` / `masterOf(pid)`. `m.out` = 瀕死. Damage to a master goes through `dealDamage` → `masterHit` (at HP 0: 瀕死, own servant takes the master's max HP as damage).
+- Flow: `actRoll → master → skill → …`. `G.phase==='master'` (once per turn, `G.mastered`): `masterSupport` (roll a face, effects get `tmp` and are removed in `endPhase` = this turn only), `masterAttack {to:'master'|'svt'}` (cost × `masterAtk.master`(20) / `.svt`(10), blocked by the target master's `evac`), `masterSpell` (declare: `P.spell='decl'`, skip to `endPhase`; next master phase `masterSpellUse {i}`) or `masterSpell {now,i}` (pay `spellNowStars`=16★, no skip), `masterEvac` (`P.evac` until that player's next `beginTurn`). 令呪 needs ≥1 action this turn (`canDeclareSpell`), once per game (`P.spell`).
+- `G.phase==='guard'` (actor = the defender, `actor()` in cpu.js): `G.guard.kind==='spell'` → master-on-master attack can be voided with the defender's unused 令呪; `'svt'` → a servant attack (or single-target ult) aimed at the enemy master (`masterTargetable()`, not while taunt) lets the defender take it on the servant or the master (`guard {to}`).
+- Enemy-all ult damage also hits the enemy master unless evacuated (no invul/evade). Ally-all effects also reach the own master.
+- Action count: +1 from `G.turn>=lateBonus` (6 = 3rd round, second player) and +1 after a turn with 0 actions (`P.zeroNext`).
+- Non-damage ult (no `dmg` effect): used in the skill phase immediately, costs one allocated action, `G.ultDone`, then normal action phase.
+- CPU: `cpuMaster` / `cpuGuard` (cpu.js); it never aims servant attacks at the master (the defender would pick the better side anyway). Log phase numbers go through `PN()`.
+- Not implemented: マスターチームバトル (3 servants + master, cost 13).
 
 ### 5.3 Effect kinds that need special handling (`FX` in rules.js)
 
@@ -157,13 +171,13 @@ Chosen on the mode screen (`setRule`, plus `toggleHandicap`; both kept by `resta
 | `stun` / `charm` | Can't act, use skills or ultimate | `disabled()` |
 | `debuffImmune` / `buffImmune` | Blocks debuffs (incl. DoT) / buffs; consumes one time per block | `immuneTo()` in `applyOne`, `endPhase` |
 | `ignoreDef` | Ignore the target's `def` | `dmgMods()` |
-| `instantDeath` | HP → 0 and knocked out, **ignores guts** | `applyOne` (`doSkill` then calls `checkWin`) |
+| `instantDeath` | HP → 0 and knocked out; **guts still triggers** (HP becomes the guts value) | `applyOne` (`doSkill` then calls `checkWin`) |
 | `starLoss` | Target's master loses x stars (min 0) | `applyOne` / `changeStars` |
 | `onAtkStar` / `onAtkNp` | "On attack": each damaging command (optionally only of `color`) generates x stars / gains x% NP. Not on extra attacks or ultimates | end of `resolveCommand` |
-| `regenHp` / `regenNp` / `regenStar` | "Every turn": at the end phase of the owner's turn (after DoT), alive units of `G.cur` heal (up to `maxHp`), gain NP, and add stars to `G.gen` | `endPhase` |
+| `regenHp` / `regenNp` / `regenStar` | "ターン開始時": at the start of the owner's turn (`turnStartEffects` in `beginTurn`, before turn counts drop), alive units of `G.cur` heal (up to `maxHp`), gain NP, and add stars straight to the hand (usable that turn) | `beginTurn` |
 | `atkVs` | Attack +x when the target has the debuff named by the effect's extra field `vs` (an `FX` key with `buff:false`; unset = any debuff). `vs` is kept by `normEff`, copied onto the runtime fx, and edited via the "弱体" select in `effRow` | `dmgMods()` |
 | `counter` | Each time the unit takes an attack hit (command or ultimate; `dealDamage(...,true,{att})`), the attacker takes x fixed damage (no modifiers / invul / evade / NP). An attacker knocked out by it stops: its remaining commands, Brave Chain and the rest of its ultimate are skipped | `dealDamage`, `resolveDamage`, `resolveUlt` |
-| `onHitNp` / `onHitStar` | On each attack hit: NP +x (blocked by `curse` like normal hit NP) / stars for the unit's master via `gainStars` (`G.gen` on the turn side, `stars` directly otherwise) | `dealDamage` |
+| `onHitNp` / `onHitStar` | "被ダメージ時": once, in the end phase of a turn in which the unit was an attack target (`u.tgtd`, set in `resolveDamage` / `resolveUlt` even if evaded): NP +x (a `curse` blocks it and uses one time) / stars via `gainStars` | `hitEffects` in `endPhase` |
 | `maxHp` | Max HP +x; HP also rises by x when applied. Read max HP via `maxHp(u)` (engine.js; UI bars, `heal`, CPU `hpR`), never `D(u.def).hp` for a runtime unit. `clampHp` lowers HP when it expires (`beginTurn`) or is stripped | `applyOne`, `maxHp` / `clampHp` |
 | `critDown` | Debuff on the attacker: crit level −x (simple rule: die roll +x, and the 30★ "certain" no longer applies) | `resolveCommand` |
 | `cardConv` | Requires `color`. Converts an R/B/G command rolled in `rollAction` to that color (one time per conversion; not on extra attacks or copied commands) | `ACTIONS.rollAction` |

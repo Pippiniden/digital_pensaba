@@ -30,7 +30,7 @@ function fxNext(){
   setTimeout(fxNext,wait);
 }
 const fxLayer = ()=>document.querySelector('#fx');
-const portraitOf = uid=>document.querySelector(`.svt[data-uid="${uid}"] .portrait`);
+const portraitOf = uid=>document.querySelector(`.svt[data-uid="${uid}"] .portrait, .mchip[data-uid="${uid}"]`); // マスターは帯のパネル
 
 function fxPlay(ev){
   const L=fxLayer(); if(!L){ if(ev.t==='dmg') stepHold(ev); if(ev.t==='roll') reveal(ev); if(ev.t==='ko') ev.uids.forEach(uid=>{ delete FXHOLD[uid]; redrawSvt(uid); }); return 0; }
@@ -193,6 +193,8 @@ function showDmg(L,ev,r){
 
 // サーヴァントのカード1枚だけ描き直す（画面全体の render は呼ばない）
 function redrawSvt(uid){
+  const u0=U(uid);
+  if(u0&&u0.master){ const m=document.querySelector(`.mchip[data-uid="${uid}"]`); if(m) replaceHTML(m,masterChipHTML(u0)); return; }
   const el=document.querySelector(`.svt[data-uid="${uid}"]`), u=U(uid);
   if(!el||!u) return;
   replaceHTML(el,svtHTML(u)); // 肖像の画像は残したまま差し替える（チカチカ防止）
@@ -206,7 +208,7 @@ function showSkill(L,ev){
   L.querySelectorAll('.skillfx').forEach(x=>x.remove());
   const el=document.createElement('div');
   el.className=`skillfx p${u.pid}`;
-  el.innerHTML=`<div class="sf-head"><i>S${ev.si+1}</i><b>${esc(ev.name)}</b></div>
+  el.innerHTML=`<div class="sf-head"><i>${esc(ev.head||`S${ev.si+1}`)}</i><b>${esc(ev.name)}</b></div>
     <div class="sf-who">${clsIconTag(d.cls,'sf-cls')}${esc(d.name)}${ev.picked?` → ${esc(ev.picked)}`:''}</div>
     <ul>${ev.lines.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`;
   L.appendChild(el);

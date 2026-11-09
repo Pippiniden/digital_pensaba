@@ -60,12 +60,23 @@ function critNeedD6(stars){ let n=0; CRIT_D6_TABLE.forEach(([s,v])=>{ if(stars>=
 // team  : チームバトルルール（3on3・合計コスト10・クリティカルは1d100）
 // simple: シンプルルール（1on1・クリティカルは1d6）。宝具はチームバトルと同じくスキルフェイズで使う
 //         handicapAsc：ハンデ戦ON のとき、この値以上のコスト差があれば低コスト側が最初から霊基再臨済み
+//         hcapBonus  ：さらにコスト差が gap 以上なら、低コスト側のサーヴァントは攻撃ダメージ+atk・獲得NP+np%（攻撃・被弾・チェインのNP）
 const RULESETS = {
   team:  { name:'チームバトル', partyMax:3, crit:'d100',
     desc:'3騎まで・コスト合計10以下で編成する基本ルール。' },
-  simple:{ name:'シンプル', partyMax:1, crit:'d6', handicapAsc:2,
+  simple:{ name:'シンプル', partyMax:1, crit:'d6', handicapAsc:2, hcapBonus:{gap:3, atk:30, np:10},
     desc:`1騎どうしで戦う簡易ルール。相手の${TERMS.unit}を${TERMS.out}にすれば勝利。` },
+  // master: マスタールール（シンプルルール＋泥ペンマス）。行動回数決定の後にマスターフェイズが入る
+  //   masterAtk   ：マスターの攻撃＝コスト×値（master＝相手マスターへ / svt＝相手サーヴァントへ）
+  //   lateBonus   ：G.turn がこの値以上（=3ターン目の後攻から）は行動回数+1
+  //   spellNowStars：令呪を宣言したターンにすぐ使うために消費するスター（クリティカルLv4 = CRIT_TABLE の16個）
+  master:{ name:'マスター', partyMax:1, crit:'d6', handicapAsc:2, hcapBonus:{gap:3, atk:30, np:10}, master:true,
+    masterAtk:{ master:20, svt:10 }, lateBonus:6, spellNowStars:16,
+    desc:`${TERMS.unit}1騎＋${TERMS.player}1人で戦うルール。行動回数の後に${TERMS.player}フェイズ（補助・攻撃・令呪・退避）。相手の${TERMS.unit}を${TERMS.out}にすれば勝利。` },
 };
+
+// ---------- マスターフェイズ（マスタールール） ----------
+const MASTER_ACTS = { support:'補助', attack:'攻撃', spell:'令呪', evac:'退避' };
 
 // 出目index(0-5)の行動回数
 const faceActs = (d,i)=>RULES.actsTable ? RULES.actsTable[i] : d.faces[i].acts;
@@ -121,12 +132,14 @@ const FX = {
   onAtkNp:{name:'攻撃時NP獲得',buff:true,val:true,color:true},
   actsUp:{name:'最大行動回数+',buff:true,val:true},          // 次の行動回数決定フェイズで出た数に+x（使うと回数を1消費）
   // 毎ターン○○：持ち主の手番の終了フェイズに発動（弱体ダメージの後）
-  regenHp:{name:'毎ターンHP回復',buff:true,val:true}, regenNp:{name:'毎ターンNP獲得',buff:true,val:true},
-  regenStar:{name:'毎ターンスター獲得',buff:true,val:true},
+  // ターン開始時○○：持ち主の陣営のターン開始時に発動（スターはそのターンの手持ちに加わる）
+  regenHp:{name:'ターン開始時HP回復',buff:true,val:true}, regenNp:{name:'ターン開始時NP獲得',buff:true,val:true},
+  regenStar:{name:'ターン開始時スター獲得',buff:true,val:true},
   atkVs:{name:'弱体状態特攻',buff:true,val:true},           // 攻撃対象が弱体（vs で種類を限定、未指定なら何でも）を受けていれば攻撃ダメージ+x
   counter:{name:'反撃',buff:true,val:true},                  // 攻撃（コマンド・宝具）を受けるたびに攻撃側へxダメージ（補正・無敵・回避の影響なし）
-  onHitNp:{name:'被弾時NP獲得',buff:true,val:true},          // 攻撃を受けるたびにNP+x%（呪いで止まる）
-  onHitStar:{name:'被弾時スター獲得',buff:true,val:true},    // 攻撃を受けるたびに自分のマスターがスターx個獲得
+  // 被ダメージ時○○：攻撃対象になったターンの終了フェイズに1回発動（回避・無敵で防いでも発動）
+  onHitNp:{name:'被ダメージ時NP獲得',buff:true,val:true},      // NP+x%（呪いで止まる）
+  onHitStar:{name:'被ダメージ時スター獲得',buff:true,val:true}, // 自分のマスターがスターx個獲得
   maxHp:{name:'最大HP+',buff:true,val:true},                 // 最大HP+x（付与時にHPもx増える。切れたら最大HPまで下がる）
   cardConv:{name:'カード変換',buff:true,color:true},          // 行動決定で出たコマンド(R/B/G)を color の色に変える（1回変えるごとに回数を1消費）
   // 弱体
@@ -144,23 +157,28 @@ const FX = {
   heal:{name:'HP回復',val:true,inst:true}, np:{name:'NP増減',val:true,inst:true}, star:{name:'スター獲得',val:true,inst:true},
   starLoss:{name:'スター消失',val:true,inst:true},             // 対象のマスターがスターを失う
   cleanse:{name:'弱体解除',inst:true}, cleanseMental:{name:'精神異常解除',inst:true}, strip:{name:'強化解除',inst:true},
-  instantDeath:{name:'即死',inst:true},                      // 対象のHPを0にする（ガッツ無効）
+  instantDeath:{name:'即死',inst:true},                      // 対象のHPを0にする（ガッツがあれば踏みとどまる）
   buffExtend:{name:'強化延長',val:true,inst:true},           // 対象のターン制の強化すべての残りターン+x
   skillCharge:{name:'スキル再使用',val:true,inst:true},      // 対象の使用済みスキルをx個（番号の若い順）もう一度使えるようにする。使ったスキル自身・スキル再使用を持つスキルは戻らない
-  dmg:{name:'ダメージ',val:true,inst:true,only:'ult'},
+  dmg:{name:'ダメージ',val:true,inst:true,only:['ult','master']}, // マスターの補助・令呪では固定ダメージ（補正・無敵・回避なし）
   // 特殊行動専用：自分以外の戦闘不能でないサーヴァント1体（敵味方どちらでも）を選び、その鉛筆を代わりにロールして
   // 出た再臨後コマンドをこの行動として使う
   copyRoll:{name:'他のサーヴァントをロール',inst:true,only:'special'},
 };
 
 // ---------- 効果の対象 ----------
-const TARGETS = { self:'自身', picked:'選んだ1体', ally_all:'味方全体', enemy_all:'敵全体', target:'攻撃対象', master:TERMS.player };
-// 場所ごとに使える対象（skill=スキル / ult=宝具 / special=白コマンドの特殊行動）
+// マスタールールでは「味方全体」に自分のマスターも含む（敵全体のダメージは敵マスターにも当たる。退避で防げる）
+const TARGETS = { self:'自身', picked:'選んだ1体', ally_all:'味方全体', enemy_all:'敵全体', target:'攻撃対象', master:TERMS.player,
+  svt:`自軍${TERMS.unit}`, enemy_master:`敵${TERMS.player}` };
+// 場所ごとに使える対象（skill=スキル / ult=宝具 / special=白コマンドの特殊行動 / master=マスターの補助・令呪）
+// master の self はマスター自身。master（スター）は自分の陣営
 const TGT_BY_CTX = {
   skill:['self','picked','ally_all','enemy_all','master'],
   ult:['self','target','ally_all','enemy_all','master'],
   special:['self','target','ally_all','enemy_all','master'],
+  master:['svt','self','ally_all','enemy_all','enemy_master','master'],
 };
+const fxOnlyIn = (k,ctx)=>!FX[k].only||[].concat(FX[k].only).includes(ctx); // その場所で使える効果か
 const PICKS = { '':'選ばない', ally:'味方単体', enemy:'敵単体', any:'単体（敵味方）' };
 
 // ---------- エディタ用：カード構成テンプレ（コスト × カード構成） ----------

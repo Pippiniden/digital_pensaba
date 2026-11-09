@@ -32,7 +32,7 @@ body[data-screen="battle"] #app{overflow:hidden}
 /* ---------- 対戦画面 ---------- */
 .battle{height:100%;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 300px}
 .battle.nolog{grid-template-columns:minmax(0,1fr)}
-.field{position:relative;min-height:0;display:grid;grid-template-rows:minmax(0,1fr) auto minmax(0,1fr);gap:8px;padding:10px 12px}
+.field{position:relative;min-height:0;display:grid;grid-template-rows:minmax(0,1fr) auto minmax(0,1fr);grid-template-columns:minmax(0,1fr);gap:8px;padding:10px 12px}
 .side{min-height:0;display:flex;flex-direction:column;gap:5px}
 .sidebar{flex:none}
 .side.bottom{flex-direction:column-reverse}
@@ -510,3 +510,35 @@ body[data-screen="battle"] #app{overflow:hidden}
   .proll .die{width:16px;height:16px;font-size:9px}
 }
 
+
+/* ---------- マスタールール ---------- */
+.lock .mroster{pointer-events:none}
+.mchip{flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:6px;padding:2px 6px 2px 8px;border:1px solid var(--gold-lo);border-radius:4px;
+  background:rgba(6,13,34,.6);font-family:inherit;font-size:12px;position:relative;transition:box-shadow .15s}
+.mchip .mlab{flex:none;font:700 10px var(--serif);color:var(--gold-hi)}
+.mchip .mname{flex:0 1 auto;min-width:3em;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.mchip .gauge{flex:1 1 90px;min-width:70px;max-width:180px;grid-template-columns:minmax(0,1fr) auto}
+.mchip .gauge>b{min-width:0}
+.mtag{flex:none;font-size:10px;padding:0 6px;border-radius:2px;color:#1a1206;background:linear-gradient(180deg,#f2a6a6,#c84a4a)}
+.mtag.off{color:var(--sub);background:none;border:1px solid var(--line)}
+.mtag.evac{background:linear-gradient(180deg,#a6d4f2,#3a78f0);color:#06122e}
+.mtag.dead{background:#555;color:#ddd}
+.mchip .pfx{display:flex;position:static}
+.mchip.out{filter:grayscale(.8) brightness(.7)}
+.mchip.pickable{cursor:pointer;outline:2px dashed var(--gold-hi);outline-offset:2px}
+.mchip.pickable:hover{box-shadow:0 0 16px rgba(246,227,161,.5)}
+.mchip.targeted{outline:2px solid var(--r);outline-offset:2px;box-shadow:0 0 18px rgba(226,72,60,.7)}
+.mchip.hit{animation:none}
+.mopts{justify-content:center}
+.mopts button{white-space:nowrap}
+.mroster{flex:none;display:flex;flex-direction:column;gap:6px;margin-bottom:6px}
+.mroster h4{margin:0;font:700 13px var(--serif);color:var(--gold-hi)}
+.mtiles{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 6px}
+.mtile{flex:none;width:96px}
+.mtile .tname{font-size:11px;padding:16px 6px 5px}
+.slot.mslot{margin-left:10px}
+@media (max-width:640px){
+  .mchip .mlab,.mchip .pfx,.mchip .mtag:not(.evac):not(.dead){display:none}
+  .mchip .gauge{min-width:56px}
+  .mchip{gap:4px;padding:2px 4px}
+}

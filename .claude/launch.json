@@ -32,6 +32,17 @@
       ],
       "port": 8771,
       "autoPort": false
+    },
+    {
+      "name": "static-master",
+      "runtimeExecutable": "python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8779"
+      ],
+      "port": 8779,
+      "autoPort": false
     }
   ]
 }

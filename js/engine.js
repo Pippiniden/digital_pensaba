@@ -6,17 +6,19 @@
         ホストが act() を実行して G をブロードキャスト」で載せ替え可能
    ===================================================================== */
 
-let UNITS=[], UNIT_SOURCE='default', UNIT_BROKEN=false;
-function reloadUnits(){ const r=loadUnits(); UNITS=r.units; UNIT_SOURCE=r.source; UNIT_BROKEN=!!r.broken; }
+let UNITS=[], MASTERS=[], UNIT_SOURCE='default', UNIT_BROKEN=false;
+function reloadUnits(){ const r=loadUnits(); UNITS=r.units; UNIT_SOURCE=r.source; UNIT_BROKEN=!!r.broken; MASTERS=loadMasters(); }
 reloadUnits();
 
 let G;
 function newGame(o={}){
   G = { phase:'mode', mode:null, rule:o.rule||'team', handicap:o.handicap??true, cpu:[false,false], level:'normal', speed:700, seed:String(Math.random()),
-    setupPid:0, picks:[[],[]], setupMsg:'',
-    players:[{name:TERMS.player+'1',party:[],stars:0},{name:TERMS.player+'2',party:[],stars:0}],
+    setupPid:0, picks:[[],[]], mpicks:[null,null], setupMsg:'',
+    // master：マスタールールのマスター（makeMaster）。spell：令呪 null/'decl'(宣言済み・次のマスターフェイズで使う)/'used'
+    // evac：退避中（次の相手ターンの間） / zeroNext：前のターンの行動回数が0だった（次の行動回数+1）
+    players:[{name:TERMS.player+'1',party:[],stars:0,master:null,spell:null,evac:false,zeroNext:false},{name:TERMS.player+'2',party:[],stars:0,master:null,spell:null,evac:false,zeroNext:false}],
     cur:0, turn:0, actRolled:false, maxActs:{}, alloc:{}, rolled:[], ult:null, target:null,
-    gen:0, pending:null, copy:null, log:[], winner:null, dealt:[0,0] };
+    gen:0, pending:null, copy:null, guard:null, hcap:null, mastered:false, ultDone:false, log:[], winner:null, dealt:[0,0] };
   FXQ.length=0; for(const k in FXHOLD) delete FXHOLD[k]; FXHIDE.clear(); KO_PEND.length=0;
 }
 
@@ -40,11 +42,14 @@ function phaseFx(title,sub,o={}){ fxEmit({t:'phase',title,sub,...o}); }
 function rollFx(uid,f,o={}){ (o.keys||[]).forEach(k=>FXHIDE.add(k)); fxEmit({t:'roll',uid,f,...o}); }
 
 // ---------- ヘルパー ----------
-const D = id=>UNITS.find(u=>u.id===id);
+const D = id=>UNITS.find(u=>u.id===id)||MASTERS.find(m=>m.id===id);
 const ruleset = ()=>RULESETS[G.rule]||RULESETS.team;
 const keepRule = ()=>({rule:G.rule, handicap:G.handicap});
 const ALL = ()=>[...G.players[0].party,...G.players[1].party];
-const U = uid=>ALL().find(u=>u.uid===uid);
+const masterOf = pid=>G.players[pid].master;
+const masterRule = ()=>!!ruleset().master;
+const ALLM = ()=>[...ALL(),...G.players.map(P=>P.master).filter(Boolean)]; // サーヴァント＋マスター
+const U = uid=>ALLM().find(u=>u.uid===uid);
 const alive = pid=>G.players[pid].party.filter(u=>!u.out);
 const roll = ()=>Math.floor(Math.random()*6);       // 面index(0-5)、出目は+1
 const has = (u,k)=>u.fx.some(e=>e.k===k);
@@ -61,6 +66,8 @@ const totalAlloc = ()=>Object.values(G.alloc).reduce((a,b)=>a+b,0);
 const requiredAlloc = ()=>Math.min(RULES.actionsMax, Object.values(G.maxActs).reduce((a,b)=>a+b,0));
 const remainingRolls = ()=>Object.entries(G.alloc).reduce((s,[uid,n])=>U(uid).out?s:s+n-G.rolled.filter(r=>r.uid===uid).length,0);
 function makeUnit(pid,idx,id){ return {uid:`p${pid}u${idx}`,pid,idx,def:id,hp:D(id).hp,np:0,asc:false,out:false,used:[false,false,false],fx:[],face:null}; }
+// マスター：サーヴァントと同じ形（fx・hp・out）にして、効果やダメージの処理を共用する。out＝瀕死
+function makeMaster(pid,id){ return {uid:`p${pid}m`,pid,idx:-1,def:id,hp:D(id).hp,np:0,asc:false,out:false,used:[],fx:[],face:null,master:true}; }
 // 宝具に「攻撃対象」を使う効果がない（全体宝具・補助宝具）なら、対象を選ばず敵全体が対象
 const ultNoTarget = u=>!D(u.def).ult.eff.some(e=>e.t==='target');
 function targetCandidates(){ const es=alive(1-G.cur); const t=es.filter(u=>has(u,'taunt')); return t.length?t:es; }
@@ -92,11 +99,14 @@ function gainStars(pid,v){ if(pid===G.cur) G.gen+=v; else G.players[pid].stars+=
 // =====================================================================
 function resolveTargets(src,t,picked){
   let ts=[];
+  const m=masterOf(src.pid), em=masterOf(1-src.pid);
   if(t==='self') ts=[src];
   else if(t==='picked') ts=picked?[picked]:[];
-  else if(t==='ally_all') ts=alive(src.pid);
+  else if(t==='ally_all') ts=[...alive(src.pid),...(m?[m]:[])]; // マスタールール：味方全体の効果はマスターにも
   else if(t==='enemy_all') ts=alive(1-src.pid);
   else if(t==='target') ts=G.target?[U(G.target)]:[];
+  else if(t==='svt') ts=alive(src.pid);
+  else if(t==='enemy_master') ts=em?[em]:[];
   return ts.filter(u=>u&&!u.out);
 }
 // 確率の判定（chance）：対象ごとに別々にロールする（全体効果なら1体ずつ判定）
@@ -106,7 +116,8 @@ function chanceRoll(e,who){
   log(`判定ロール（${nm(who)}）出目${r} ≤ ${e.chance} → ${ok?'成功':'失敗'}`, ok?'':'sub');
   return ok;
 }
-function applyEffects(src,effs,picked){
+// o.tmp：マスターの補助（このターンだけ）。付いた効果は終了フェイズで消える
+function applyEffects(src,effs,picked,o={}){
   for(const e of effs){
     if(e.t==='master'){
       if(e.chance&&!chanceRoll(e,src)) continue;
@@ -115,7 +126,8 @@ function applyEffects(src,effs,picked){
     }
     resolveTargets(src,e.t,picked).forEach(t=>{
       if(e.chance&&!chanceRoll(e,t)) return;
-      applyOne(src,t,e);
+      if(e.k==='dmg'){ if(src.master) fixedHit(src,t,e.v); return; } // 宝具のダメージは resolveUlt で処理
+      applyOne(src,t,e,o);
     });
   }
 }
@@ -142,8 +154,7 @@ function flushKo(){
   fxEmit({t:'ko',uids});
   uids.forEach(uid=>say(U(uid),'defeat'));
 }
-function applyOne(src,t,e){
-  const d=D(t.def);
+function applyOne(src,t,e,o={}){
   if(immuneTo(t,e.k)) return;
   switch(e.k){
     case 'heal': if(has(t,'healBlock')){ log(`${nm(t)}は回復無効でHPが回復しない`,'sub'); return; }
@@ -164,7 +175,12 @@ function applyOne(src,t,e){
       idx.forEach(i=>t.used[i]=false);
       log(idx.length?`${nm(t)}のスキル${idx.map(i=>i+1).join('・')}が再使用可能に`:`${nm(t)}に使用済みのスキルがない`, idx.length?'good':'sub'); return;
     }
-    case 'instantDeath': log(`${nm(t)}に即死効果`,'bad'); fxEmit({t:'dmg',uid:t.uid,text:FX.instantDeath.name,hp0:t.hp,hp:0,out:true}); retreat(t); return;
+    case 'instantDeath': { // HPを0にする。ガッツがあれば踏みとどまる
+      log(`${nm(t)}に即死効果`,'bad');
+      const g=t.fx.find(x=>x.k==='guts');
+      if(g){ fxEmit({t:'dmg',uid:t.uid,text:FX.instantDeath.name,hp0:t.hp,hp:g.v,out:false}); t.hp=g.v; t.fx=t.fx.filter(x=>x!==g); log(`${nm(t)} ガッツ発動！ HP${g.v}で踏みとどまった`,'good'); return; }
+      fxEmit({t:'dmg',uid:t.uid,text:FX.instantDeath.name,hp0:t.hp,hp:0,out:true}); retreat(t); return;
+    }
     case 'dmg': return; // 宝具側で処理
   }
   if(e.k==='guts') t.fx=t.fx.filter(x=>x.k!=='guts'); // ガッツは重複不可
@@ -176,6 +192,7 @@ function applyOne(src,t,e){
   }
   const inst={k:e.k,v:e.v,color:e.color||null,turns:e.turns??null,times:e.times??null,owner:src.pid};
   if(e.vs) inst.vs=e.vs;
+  if(o.tmp){ inst.tmp=true; inst.turns=null; } // 補助：このターンの終了フェイズまで
   t.fx.push(inst);
   if(e.k==='maxHp') t.hp+=e.v; // 最大HPが増えたぶん HP も増える
   log(`${nm(t)}に ${fxText(inst)}`, FX[e.k].buff?'good':'bad');
@@ -196,6 +213,7 @@ function blocked(att,tgt){
 }
 function dealDamage(u,dmg,isHit,o={}){
   if(u.out) return;
+  if(u.master){ masterHit(u,dmg,o); return; }
   const hp0=u.hp, g=hp0-dmg<=0?u.fx.find(e=>e.k==='guts'):null;
   const hp1=hp0-dmg<=0?(g?g.v:0):hp0-dmg;
   fxEmit({t:'dmg',uid:u.uid,v:fmt(dmg),crit:!!o.crit,np:!!o.np,hp0,hp:hp1,out:hp0-dmg<=0&&!g});
@@ -206,13 +224,10 @@ function dealDamage(u,dmg,isHit,o={}){
     else { retreat(u); return; }
   }
   if(isHit){
-    const c=u.fx.find(e=>e.k==='curse'), hn=mods(u,'onHitNp'), hs=mods(u,'onHitStar');
+    // 被ダメージ時○○ はここではなく、攻撃対象になったターンの終了フェイズ（hitEffects）で発動する
+    const c=u.fx.find(e=>e.k==='curse');
     if(c){ consume(u,[c]); log(`${nm(u)}は呪いで${TERMS.gauge}が増えない`,'sub'); }
-    else {
-      addNp(u,RULES.gaugeOnHit+hn.sum);
-      if(hn.sum){ log(`${nm(u)} 被弾時効果：${TERMS.gauge}+${hn.sum}%`,'sub'); consume(u,hn.list); }
-    }
-    if(hs.sum){ gainStars(u.pid,hs.sum); log(`${nm(u)} 被弾時効果：${TERMS.star}${hs.sum}個獲得`,'sub'); consume(u,hs.list); }
+    else addNp(u,npRate(u,RULES.gaugeOnHit));
     // 反撃：攻撃側へ固定ダメージ（補正・無敵・回避・クリティカルの影響なし、NPは増えない）
     const ct=mods(u,'counter'), a=o.att;
     if(ct.sum&&a&&!a.out){
@@ -221,10 +236,29 @@ function dealDamage(u,dmg,isHit,o={}){
     }
   }
 }
+// マスターへのダメージ：HPが0になったら瀕死（以降はマスターフェイズなし）。自軍サーヴァントがマスターの最大HP分のダメージを受ける
+function masterHit(m,dmg,o={}){
+  const hp0=m.hp, hp1=Math.max(0,hp0-dmg);
+  fxEmit({t:'dmg',uid:m.uid,v:fmt(dmg),crit:!!o.crit,np:!!o.np,hp0,hp:hp1,out:hp1<=0});
+  G.dealt[1-m.pid]+=Math.min(dmg,hp0);
+  m.hp=hp1;
+  if(hp1>0) return;
+  m.out=true; m.fx=[];
+  const full=D(m.def).hp;
+  log(`${nm(m)} 瀕死！ ${TERMS.unit}が${TERMS.player}の最大HP分（${full}）のダメージを受ける`,'bad');
+  fxEmit({t:'pop',uid:m.uid,text:'瀕死',cls:'ko'});
+  alive(m.pid).forEach(u=>dealDamage(u,full,false));
+}
+// マスターの補助・令呪・攻撃による固定ダメージ（補正・無敵・回避・NP獲得なし）
+function fixedHit(src,t,v){
+  log(`${nm(src)}の攻撃 → ${nm(t)}に<b>${fmt(v)}</b>ダメージ`);
+  dealDamage(t,v,false);
+}
 // 攻撃側の補正（被ダメージ減少無視なら相手の def を見ない）。使った効果も返す
 function dmgMods(att,tgt,color){
   const a=mods(att,'atk',color), ad=mods(att,'atkDown');
-  let sum=a.sum-ad.sum; const usedA=[...a.list,...ad.list], usedT=[];
+  // ハンデの攻撃ダメージ+ も足す
+  let sum=a.sum-ad.sum+(hasHcap(att)?G.hcap.atk:0); const usedA=[...a.list,...ad.list], usedT=[];
   if(tgt&&!tgt.out){
     // 弱体状態特攻：対象が指定の弱体（vs 未指定なら何か1つ）を受けていれば加算
     const vs=att.fx.filter(e=>e.k==='atkVs'&&tgt.fx.some(x=>e.vs?x.k===e.vs:FX[x.k].buff===false));
@@ -239,7 +273,7 @@ function dmgMods(att,tgt,color){
   return {sum, usedA, usedT, colorBuff};
 }
 function gainNpStar(att,cmd,mult){
-  if(cmd.np) addNp(att,cmd.np*mult);
+  if(cmd.np) addNp(att,npRate(att,cmd.np*mult));
   if(cmd.star) G.gen+=cmd.star*mult;
 }
 // ---------- 他のサーヴァントをロール（copyRoll） ----------
@@ -346,7 +380,7 @@ function resolveCommand(att,cmd,tgt,o={}){
   if(!o.extra){
     const s=mods(att,'onAtkStar',cmd.c), p=mods(att,'onAtkNp',cmd.c);
     if(s.sum){ G.gen+=s.sum; log(`${n} 攻撃時効果：${TERMS.star}${s.sum}個発生`,'sub'); }
-    if(p.sum){ addNp(att,p.sum); log(`${n} 攻撃時効果：${TERMS.gauge}+${p.sum}%`,'sub'); }
+    if(p.sum){ addNp(att,npRate(att,p.sum)); log(`${n} 攻撃時効果：${TERMS.gauge}+${p.sum}%`,'sub'); }
     consume(att,[...s.list,...p.list]);
   }
   // 攻撃後の効果（例：自身の弱体解除）
@@ -360,11 +394,15 @@ function resolveUlt(u,tgt){
   for(const e of ultEffOrder(ud.eff)){
     if(u.out) break; // 反撃で倒れたら残りの効果は出ない
     if(e.k!=='dmg'){ applyEffects(u,[e],null); continue; }
-    const ts = e.t==='enemy_all' ? alive(1-u.pid) : [tgt].filter(x=>x&&!x.out);
+    // マスタールール：全体宝具は敵マスターにも当たる（退避中なら当たらない。無敵・回避などでは防げない）
+    const em=masterOf(1-u.pid), hitM=e.t==='enemy_all'&&em&&!em.out&&!G.players[em.pid].evac;
+    const ts = e.t==='enemy_all' ? [...alive(1-u.pid),...(hitM?[em]:[])] : [tgt].filter(x=>x&&!x.out);
     const usedA=new Set();
     for(const t of ts){
+      t.tgtd=true;
       const m=dmgMods(u,t,ud.c); m.usedA.forEach(x=>usedA.add(x));
       let dmg=Math.max(0,e.v+m.sum);
+      if(t.master&&e.t==='enemy_all'){ log(`→ ${nm(t)}：<b>${fmt(dmg)}</b>ダメージ`); dealDamage(t,dmg,false,{np:true}); continue; }
       const b=blocked(u,t);
       if(b){ log(`→ ${nm(t)}：${b}で無効`); fxEmit({t:'dmg',uid:t.uid,text:b}); }
       else if(nullified(t,dmg)){ log(`→ ${nm(t)}：${fmt(dmg)}ダメージは${nullified(t,dmg)}以下なので無効`); fxEmit({t:'dmg',uid:t.uid,text:'無効'}); consume(t,m.usedT); }
@@ -376,16 +414,17 @@ function resolveUlt(u,tgt){
 }
 function resolveDamage(){
   const tgt=U(G.target);
-  log(`⑥ ダメージフェイズ（攻撃対象：${G.targetAll?'敵全体':nm(tgt)}）`,'h');
+  log(`${PN(6)} ダメージフェイズ（攻撃対象：${G.targetAll?'敵全体':nm(tgt)}）`,'h');
   phaseFx('BATTLE','ダメージフェイズ',{w:800}); // 帯が消えてから攻撃カードを出す
   if(G.ult){ resolveUlt(U(G.ult),tgt); }
   else {
+    tgt.tgtd=true; // 攻撃対象になった（被ダメージ時○○ の発動条件。回避・無敵で防いでも対象にはなっている）
     const hp0=tgt.hp;
     const acts=G.rolled, cols=acts.map(a=>a.cmd.c);
     const chain = acts.length===3 && ['R','B','G'].includes(cols[0]) && cols.every(c=>c===cols[0]) ? cols[0] : null;
     if(chain){ log(`${TERMS[chain]}チェイン発生！`,'good'); fxEmit({t:'banner',title:`${TERMS[chain]} Chain`,col:chain}); }
     acts.forEach((a,ri)=>{ if(!U(a.uid).out) resolveCommand(U(a.uid),a.cmd,tgt,{chain,ri}); }); // 反撃で倒れたら残りの行動はしない
-    if(chain==='B'){ [...new Set(acts.map(a=>a.uid))].map(U).forEach(u=>addNp(u,RULES.chainB)); log(`チェインボーナス：行動${TERMS.unit}の${TERMS.gauge}+${RULES.chainB}%`); }
+    if(chain==='B'){ [...new Set(acts.map(a=>a.uid))].map(U).forEach(u=>addNp(u,npRate(u,RULES.chainB))); log(`チェインボーナス：行動${TERMS.unit}の${TERMS.gauge}+${RULES.chainB}%`); }
     if(chain==='G'){ G.gen+=RULES.chainG; log(`チェインボーナス：${TERMS.star}${RULES.chainG}個発生`); }
     // 7. ブレイブチェイン
     if(acts.length===3 && acts.every(a=>a.uid===acts[0].uid) && !U(acts[0].uid).out){
@@ -409,7 +448,8 @@ function ascend(u){ u.asc=true; fxEmit({t:'pop',uid:u.uid,text:TERMS.ascFull,cls
 // ターン進行
 // =====================================================================
 function startGame(){
-  G.players.forEach((P,pid)=>{ P.party=G.picks[pid].map((id,i)=>makeUnit(pid,i,id)); P.stars=0; });
+  G.players.forEach((P,pid)=>{ P.party=G.picks[pid].map((id,i)=>makeUnit(pid,i,id)); P.stars=0;
+    P.master=masterRule()&&G.mpicks[pid]?makeMaster(pid,G.mpicks[pid]):null; P.spell=null; P.evac=false; P.zeroNext=false; });
   applyHandicap();
   log('先攻・後攻の決定','h');
   let r0,r1;
@@ -426,27 +466,67 @@ function startGame(){
   beginTurn();
 }
 // シンプルルールのハンデ戦：コスト差が handicapAsc 以上なら、低コスト側を最初から霊基再臨済みにする
+// 陣営のコスト（マスタールールはマスターのコストも足す）
+const sideCost = P=>P.party.reduce((s,u)=>s+D(u.def).cost,0)+(P.master?D(P.master.def).cost:0);
 function applyHandicap(){
   const rs=ruleset(); if(!rs.handicapAsc||!G.handicap) return;
-  const c=G.players.map(P=>P.party.reduce((s,u)=>s+D(u.def).cost,0)), diff=Math.abs(c[0]-c[1]);
+  const c=G.players.map(P=>sideCost(P)), diff=Math.abs(c[0]-c[1]);
   if(diff<rs.handicapAsc) return;
   const low=c[0]<c[1]?0:1;
   log(`ハンデ戦：コスト差${diff}のため ${esc(G.players[low].name)} は${TERMS.ascFull}済みで開始`,'h');
   G.players[low].party.forEach(ascend);
+  const hb=rs.hcapBonus;
+  if(hb&&diff>=hb.gap){
+    G.hcap={pid:low, np:hb.np, atk:hb.atk};
+    log(`ハンデ戦：コスト差${diff}のため ${esc(G.players[low].name)} の${TERMS.unit}は ${hcapText()}`,'h');
+  }
 }
+// ハンデ（コスト差 hcapBonus.gap 以上）：低コスト側のサーヴァントの攻撃ダメージ+atk・獲得NP+np%（解除できない）
+const hasHcap = u=>!!G.hcap&&G.hcap.pid===u.pid&&!u.master;
+const hcapText = ()=>G.hcap?`攻撃ダメージ+${G.hcap.atk}・獲得${TERMS.gauge}+${G.hcap.np}%`:'';
+// 攻撃・被弾・チェインで得るNPに、ハンデのNP獲得量アップを掛ける（スキルなどで直接増えるNPには掛けない）
+const npRate = (u,v)=>hasHcap(u)&&G.hcap.np?Math.round(v*(100+G.hcap.np)/100):v;
 function beginTurn(){
-  Object.assign(G,{phase:'actRoll',actRolled:false,maxActs:{},alloc:{},rolled:[],ult:null,target:null,targetAll:false,gen:0,pending:null,copy:null});
+  Object.assign(G,{phase:'actRoll',actRolled:false,maxActs:{},alloc:{},rolled:[],ult:null,target:null,targetAll:false,gen:0,pending:null,copy:null,guard:null,mastered:false,ultDone:false});
+  const P=G.players[G.cur];
+  if(P.evac){ P.evac=false; log(`${esc(P.name)}の${TERMS.player}が退避から戻った`,'sub'); }
   log(`━ ターン${G.turn}：${esc(G.players[G.cur].name)} ━`,'h');
   phaseFx(`TURN ${G.turn}`,`${G.players[G.cur].name}の手番`,{big:true,pid:G.cur});
-  // ① ターン開始：このプレイヤーが付与した効果の残りターン-1
-  ALL().forEach(u=>{
+  // ① ターン開始：ターン開始時○○ を発動してから、このプレイヤーが付与した効果の残りターン-1
+  turnStartEffects();
+  ALLM().forEach(u=>{
     u.fx.forEach(e=>{ if(e.owner===G.cur && e.turns!=null) e.turns--; });
     const ex=u.fx.filter(e=>e.turns!=null&&e.turns<=0);
     if(ex.length){ u.fx=u.fx.filter(e=>!ex.includes(e)); clampHp(u); log(`${nm(u)}の ${ex.map(e=>FX[e.k].name).join('・')} が終了`,'sub'); }
   });
 }
+// ターン開始時○○：手番側の生存サーヴァントに付いているものが発動（スターはこのターンの手持ちに加わる）
+function turnStartEffects(){
+  alive(G.cur).forEach(u=>{
+    const h=mods(u,'regenHp').sum, n=mods(u,'regenNp').sum, s=mods(u,'regenStar').sum;
+    if(h&&has(u,'healBlock')) log(`${nm(u)}は回復無効でターン開始時に回復しない`,'sub');
+    else if(h&&u.hp<maxHp(u)){ const v=Math.min(h,maxHp(u)-u.hp); u.hp+=v; log(`${nm(u)} ターン開始時：HP${v}回復`,'good'); fxEmit({t:'pop',uid:u.uid,text:`HP+${v}`,cls:'heal'}); }
+    if(n){ addNp(u,n); log(`${nm(u)} ターン開始時：${TERMS.gauge}+${n}%`,'good'); }
+    if(s){ G.players[G.cur].stars+=s; log(`${nm(u)} ターン開始時：${TERMS.star}${s}個獲得`,'good'); }
+  });
+}
+// 被ダメージ時○○：このターンに攻撃対象になったサーヴァント（敵味方とも）に付いているものが、終了フェイズに1回発動
+function hitEffects(){
+  ALL().forEach(u=>{
+    if(!u.tgtd) return; delete u.tgtd;
+    if(u.out) return;
+    const hn=mods(u,'onHitNp'), hs=mods(u,'onHitStar');
+    if(hn.sum){
+      const c=u.fx.find(e=>e.k==='curse');
+      if(c){ consume(u,[c]); log(`${nm(u)}は呪いで被ダメージ時の${TERMS.gauge}が増えない`,'sub'); }
+      else { addNp(u,hn.sum); log(`${nm(u)} 被ダメージ時：${TERMS.gauge}+${hn.sum}%`,'good'); }
+      consume(u,hn.list);
+    }
+    if(hs.sum){ gainStars(u.pid,hs.sum); log(`${nm(u)} 被ダメージ時：${TERMS.star}${hs.sum}個獲得`,'good'); consume(u,hs.list); }
+  });
+}
 function endPhase(){
-  log('⑦ 終了フェイズ','h');
+  log(`${PN(7)} 終了フェイズ`,'h');
   const pids = RULES.dotTiming==='all' ? [0,1] : [G.cur];
   // 弱体ダメージ：攻防補正・無敵・回避・クリティカルの影響なし。弱体無効で防がれる。毒・やけどはそれぞれ重複せず最大値
   pids.forEach(pid=>alive(pid).forEach(u=>{
@@ -458,14 +538,9 @@ function endPhase(){
     log(`${nm(u)} 弱体ダメージ${d}（${[ps?`毒${ps}`:'',bs?`やけど${bs}`:'',ds?`HP減少${ds}`:''].filter(Boolean).join('・')}）`,'bad');
     dealDamage(u,d,false);
   }));
-  // 毎ターン○○：手番側の生存サーヴァントに付いているものが発動
-  alive(G.cur).forEach(u=>{
-    const h=mods(u,'regenHp').sum, n=mods(u,'regenNp').sum, s=mods(u,'regenStar').sum;
-    if(h&&has(u,'healBlock')) log(`${nm(u)}は回復無効で毎ターン回復しない`,'sub');
-    else if(h&&u.hp<maxHp(u)){ const v=Math.min(h,maxHp(u)-u.hp); u.hp+=v; log(`${nm(u)} 毎ターン回復：HP${v}回復`,'good'); fxEmit({t:'pop',uid:u.uid,text:`HP+${v}`,cls:'heal'}); }
-    if(n){ addNp(u,n); log(`${nm(u)} 毎ターン：${TERMS.gauge}+${n}%`,'good'); }
-    if(s){ G.gen+=s; log(`${nm(u)} 毎ターン：${TERMS.star}${s}個獲得`,'good'); }
-  });
+  hitEffects();
+  // マスターの補助（このターンだけ）の効果を消す
+  ALLM().forEach(u=>{ const t=u.fx.filter(e=>e.tmp); if(t.length){ u.fx=u.fx.filter(e=>!e.tmp); clampHp(u); } });
   G.players[G.cur].stars=G.gen;
   log(`${esc(G.players[G.cur].name)}：${TERMS.star}を${G.gen}個獲得（次のターンに使用）`);
   ALL().forEach(u=>u.face=null); // このターンの出目・コマンドの表示は次のターンに持ち越さない
@@ -497,10 +572,34 @@ function doSkill(u,si,picked){
   checkWin(); // 即死などでスキルだけで決着することがある
 }
 function toTargetPhase(){
-  G.phase='target'; log('⑤ 攻撃対象決定','h'); phaseFx('TARGET','攻撃対象の選択');
+  G.phase='target'; log(`${PN(5)} 攻撃対象決定`,'h'); phaseFx('TARGET','攻撃対象の選択');
   const c=targetCandidates();
   if(G.ult&&ultNoTarget(U(G.ult))){ G.targetAll=true; G.target=c[0].uid; return; } // 全体宝具：最初から敵全体を選んだ状態
   if(c.length===1) G.target=c[0].uid;
+}
+
+// ログのフェイズ番号（マスタールールは③にマスターフェイズが入るので、スキル以降が1つずれる）
+const PN = n=>'①②③④⑤⑥⑦⑧⑨'[n-1+(masterRule()&&n>=3?1:0)];
+function toSkillPhase(){ G.phase='skill'; log(`${PN(3)} スキル・${TERMS.ult}使用`,'h'); phaseFx('SKILL',`スキル・${TERMS.ult}`); }
+// ---------- マスタールール ----------
+// マスターフェイズで行動できるマスター（なければ null）
+function masterReady(){ const m=masterOf(G.cur); return G.phase==='master'&&!G.mastered&&m&&!m.out?m:null; }
+function masterDone(){ G.mastered=true; flushKo(); checkWin(); if(G.winner==null&&G.phase==='master') toSkillPhase(); }
+const masterAtkDmg = (m,t)=>Math.max(0,D(m.def).cost*ruleset().masterAtk[t.master?'master':'svt']+dmgMods(m,t,'W').sum);
+// 令呪を使える（未使用・このターンにサーヴァントが1回以上行動できる）
+function canDeclareSpell(){ return G.players[G.cur].spell==null && Object.values(G.maxActs).some(n=>n>0); }
+function useSpell(m,i){
+  const s=D(m.def).spells[i];
+  log(`${nm(m)}：「${esc(s.name)}」`,'good');
+  fxEmit({t:'skill',uid:m.uid,head:'令呪',name:s.name,lines:s.eff.map(e=>`${tLabel(e.t)}：${fxText(e)}`)});
+  applyEffects(m,s.eff,null);
+  G.players[m.pid].spell='used';
+}
+// 攻撃対象にできる敵マスター（ターゲット集中の敵がいれば不可）
+function masterTargetable(){
+  const em=masterOf(1-G.cur);
+  if(!em||em.out||G.targetAll||alive(1-G.cur).some(u=>has(u,'taunt'))) return null;
+  return em;
 }
 
 // =====================================================================
@@ -542,6 +641,13 @@ const ACTIONS = {
       if(best.length===ruleset().partyMax) break;
     }
     G.picks[G.setupPid]=best; G.setupMsg='';
+    if(masterRule()&&MASTERS.length) G.mpicks[G.setupPid]=MASTERS[Math.floor(Math.random()*MASTERS.length)].id;
+  },
+  // マスタールール：マスターを選ぶ（もう一度押すと外す）
+  setupMaster({id}){
+    if(G.phase!=='setup'||!masterRule()||!MASTERS.some(m=>m.id===id)) return;
+    const pid=G.setupPid; G.setupMsg='';
+    G.mpicks[pid]=G.mpicks[pid]===id?null:id;
   },
   // CPUのおまかせ編成。how='random'：完全ランダム（setupRandom と同じ） / how='same'：相手と同じコストになるように選ぶ
   setupCpu({how}={}){
@@ -549,6 +655,14 @@ const ACTIONS = {
     const pid=G.setupPid; G.setupMsg='';
     if(how==='random'){ ACTIONS.setupRandom(); return; }
     const opp=G.picks[1-pid], pick=a=>a[Math.floor(Math.random()*a.length)];
+    if(masterRule()){ // マスタールール：サーヴァント＋マスターの合計コストが相手と同じ（なければ一番近い）組み合わせからランダム
+      const om=G.mpicks[1-pid], combos=UNITS.flatMap(u=>MASTERS.map(m=>({u:u.id,m:m.id,c:u.cost+m.cost})));
+      const want=opp.length&&om?D(opp[0]).cost+D(om).cost:Math.max(...combos.map(x=>x.c));
+      const gap=Math.min(...combos.map(x=>Math.abs(x.c-want))), top=combos.filter(x=>Math.abs(x.c-want)===gap), c=pick(top);
+      G.picks[pid]=[c.u]; G.mpicks[pid]=c.m;
+      if(gap) G.setupMsg=`合計コスト${want}の組み合わせがないため、いちばん近いコスト${c.c}で選びました`;
+      return;
+    }
     if(ruleset().partyMax===1){ // 1騎のルール：相手と同じ（なければ一番近い）コストからランダム
       const want=opp.length?D(opp[0]).cost:Math.max(...UNITS.map(d=>d.cost));
       const gap=Math.min(...UNITS.map(d=>Math.abs(d.cost-want))), c=UNITS.filter(d=>Math.abs(d.cost-want)===gap);
@@ -569,25 +683,30 @@ const ACTIONS = {
   },
   setupConfirm(){
     if(!G.picks[G.setupPid].length) return;
+    if(masterRule()&&!G.mpicks[G.setupPid]){ G.setupMsg=`${TERMS.player}を選んでください`; return; }
     if(G.setupPid===0){ G.setupPid=1; G.setupMsg=''; } else { G.phase='init'; startGame(); }
   },
   rollActs(){
     if(G.phase!=='actRoll'||G.actRolled) return;
     log('② 行動回数決定','h');
     ALL().forEach(u=>u.face=null); // 先攻決定の出目なども消してから振る
-    const bonus=G.players[G.cur].party.filter(u=>u.out).length; let left=RULES.actionsMax; const rolls=[];
+    const P=G.players[G.cur], bonus=P.party.filter(u=>u.out).length; let left=RULES.actionsMax; const rolls=[];
+    // マスタールール：3ターン目の後攻から+1 / 前のターンに行動回数0だったら+1
+    let late=0, zero=0;
+    if(masterRule()){ late=G.turn>=ruleset().lateBonus?1:0; zero=P.zeroNext?1:0; P.zeroNext=false; }
     alive(G.cur).forEach(u=>{
       let m=0;
       if(disabled(u)){ u.face=null; log(`${nm(u)}は行動不能`,'bad'); }
       else {
         const f=roll(); u.face={i:f,kind:'acts'}; rolls.push({uid:u.uid,f});
         const fear=has(u,'fear')?1:0, up=mods(u,'actsUp'); consume(u,up.list);
-        m=Math.max(0,Math.min(RULES.actionsMax, faceActs(D(u.def),f)+bonus+up.sum-fear));
-        log(`${nm(u)} 出目${f+1} → 最大行動${m}${bonus?`（${TERMS.out}ボーナス+${bonus}）`:''}${up.sum?`（最大行動回数+${up.sum}）`:''}${fear?'（恐怖-1）':''}`, m?'':'bad');
+        m=Math.max(0,Math.min(RULES.actionsMax, faceActs(D(u.def),f)+bonus+late+zero+up.sum-fear));
+        log(`${nm(u)} 出目${f+1} → 最大行動${m}${bonus?`（${TERMS.out}ボーナス+${bonus}）`:''}${late?'（3ターン目後攻から+1）':''}${zero?'（前ターン0回行動+1）':''}${up.sum?`（最大行動回数+${up.sum}）`:''}${fear?'（恐怖-1）':''}`, m?'':'bad');
       }
       G.maxActs[u.uid]=m; const a=Math.min(m,left); G.alloc[u.uid]=a; left-=a;
     });
     rolls.forEach((r,i)=>rollFx(r.uid,r.f,{n:G.maxActs[r.uid],grp:i<rolls.length-1,keys:[`f:${r.uid}`]}));
+    if(masterRule()) P.zeroNext=Object.values(G.maxActs).every(n=>!n);
     G.actRolled=true;
   },
   alloc({uid,d}){
@@ -609,7 +728,76 @@ const ACTIONS = {
     if(G.phase!=='actRoll'||!G.actRolled||totalAlloc()!==requiredAlloc()) return;
     const txt=Object.entries(G.alloc).filter(([,n])=>n).map(([uid,n])=>`${dn(U(uid))}×${n}`).join('、');
     log(`配分：${txt||'なし'}`,'sub');
-    G.phase='skill'; log(`③ スキル・${TERMS.ult}使用`,'h'); phaseFx('SKILL',`スキル・${TERMS.ult}`);
+    const m=masterOf(G.cur);
+    if(m&&!m.out){ G.phase='master'; log(`③ ${TERMS.player}フェイズ`,'h'); phaseFx('MASTER',`${TERMS.player}フェイズ`); }
+    else toSkillPhase();
+  },
+  // ---------- マスターフェイズ（マスタールール） ----------
+  // 補助：マスターの鉛筆を振り、出た面の効果をこのターンだけ適用（無なら何も起きない）
+  masterSupport(){
+    const m=masterReady(); if(!m) return;
+    const d=D(m.def), f=roll(), face=d.faces[f];
+    log(`${MASTER_ACTS.support}：${nm(m)} 出目${f+1} → ${face.eff.length?`「${esc(face.label)}」（このターンのみ）`:'無'}`, face.eff.length?'good':'sub');
+    fxEmit({t:'skill',uid:m.uid,head:`${MASTER_ACTS.support}・出目${f+1}`,name:face.eff.length?face.label:'無',
+      lines:face.eff.length?face.eff.map(e=>`${tLabel(e.t)}：${fxText(e)}`):['何も起きない']});
+    applyEffects(m,face.eff,null,{tmp:true});
+    masterDone();
+  },
+  // 攻撃：相手マスターへはコスト×20、相手サーヴァントへはコスト×10（退避中のマスターには当たらない）
+  masterAttack({to}){
+    const m=masterReady(); if(!m) return;
+    const em=masterOf(1-G.cur), t=to==='master'?em:alive(1-G.cur)[0];
+    if(!t||t.out) return;
+    const dmg=masterAtkDmg(m,t);
+    log(`${MASTER_ACTS.attack}：${nm(m)} → ${nm(t)}`,'');
+    if(t.master&&G.players[t.pid].evac){ log(`${nm(t)}は退避中のため当たらない`,'sub'); fxEmit({t:'dmg',uid:t.uid,text:'退避'}); masterDone(); return; }
+    // マスターからマスターへの攻撃は、相手が令呪1画でサーヴァントに守らせて無効にできる（宣言中は不可）
+    if(t.master&&dmg>0&&G.players[t.pid].spell==null){ G.guard={kind:'spell',dmg}; G.phase='guard'; return; }
+    fixedHit(m,t,dmg); masterDone();
+  },
+  // 令呪：now=即時（スターを消費・スキップなし）なら i の効果をすぐ使う。宣言なら以降のフェイズをスキップして、次のマスターフェイズで使う
+  masterSpell({now,i}){
+    const m=masterReady(); if(!m) return;
+    const P=G.players[G.cur], need=ruleset().spellNowStars;
+    if(!canDeclareSpell()) return;
+    if(now){
+      const s=D(m.def).spells[Number(i)]; if(!s||P.stars<need) return;
+      P.stars-=need; log(`${esc(P.name)}：${TERMS.star}${need}個（クリティカルLv4）を消費して令呪を即時発動`,'sub');
+      useSpell(m,Number(i)); masterDone(); return;
+    }
+    P.spell='decl'; G.mastered=true;
+    log(`${esc(P.name)}：令呪を宣言（このターンの以降のフェイズをスキップ。次の${TERMS.player}フェイズで発動）`,'good');
+    fxEmit({t:'pop',uid:m.uid,text:'令呪宣言',cls:'asc'});
+    endPhase();
+  },
+  // 宣言済みの令呪を使う（次のターンのマスターフェイズ）
+  masterSpellUse({i}){
+    const m=masterReady(); if(!m||G.players[G.cur].spell!=='decl'||!D(m.def).spells[Number(i)]) return;
+    useSpell(m,Number(i)); masterDone();
+  },
+  // 退避：次の相手ターン、相手マスターの通常攻撃と、サーヴァントの全体攻撃を受けない
+  masterEvac(){
+    const m=masterReady(); if(!m) return;
+    G.players[G.cur].evac=true; log(`${MASTER_ACTS.evac}：${nm(m)}は次の相手ターンの間、退避する`,'good');
+    fxEmit({t:'pop',uid:m.uid,text:MASTER_ACTS.evac,cls:'heal'});
+    masterDone();
+  },
+  // 守る側の選択（G.guard）。spell：令呪でマスターへの攻撃を防ぐか / svt：サーヴァントの攻撃をどちらで受けるか
+  guard({to}){
+    if(G.phase!=='guard'||!G.guard) return;
+    const g=G.guard, dp=1-G.cur, em=masterOf(dp);
+    if(g.kind==='spell'){
+      G.guard=null; G.phase='master';
+      if(to==='block'){ G.players[dp].spell='used'; log(`${esc(G.players[dp].name)}：令呪1画で${TERMS.unit}が${nm(em)}を守った（ダメージ無効）`,'good'); fxEmit({t:'dmg',uid:em.uid,text:'令呪'}); }
+      else fixedHit(masterOf(G.cur),em,g.dmg);
+      masterDone(); return;
+    }
+    if(g.kind==='svt'){
+      const s=alive(dp)[0];
+      G.target = to==='master'&&em&&!em.out ? em.uid : s.uid;
+      log(`${esc(G.players[dp].name)}：${nm(U(G.target))}で受ける`,'sub');
+      G.guard=null; G.phase='target'; resolveDamage();
+    }
   },
   useSkill({uid,si}){
     si=Number(si); const u=U(uid), s=D(u.def).skills[si];
@@ -620,14 +808,21 @@ const ACTIONS = {
   cancelPick(){ G.pending=null; },
   useUlt({uid}){
     const u=U(uid);
-    if(G.phase!=='skill'||G.pending||G.ult||u.pid!==G.cur||!canUlt(u)||u.np<RULES.ultCost) return;
+    if(G.phase!=='skill'||G.pending||G.ult||G.ultDone||u.pid!==G.cur||!canUlt(u)||u.np<RULES.ultCost) return;
+    if(masterRule()&&!D(u.def).ult.eff.some(e=>e.k==='dmg')){
+      // マスタールール：ダメージのない宝具は、行動回数-1でその場で使い、スキルフェイズを続けて行動決定へ進める
+      u.np=0; G.ultDone=true; resolveUlt(u,null);
+      const top=Object.entries(G.alloc).filter(([,n])=>n>0).sort((a,b)=>b[1]-a[1])[0];
+      if(top){ G.alloc[top[0]]--; log(`補助${TERMS.ult}のため行動回数-1（${dn(U(top[0]))}）`,'sub'); }
+      flushKo(); checkWin(); return;
+    }
     G.ult=uid; u.np=0;
     log(`${nm(u)}が${TERMS.ult}「${esc(D(u.def).ult.name)}」を使用（このターンの行動になります）`,'good');
   },
   skillDone(){
     if(G.phase!=='skill'||G.pending) return;
     if(G.ult) toTargetPhase();
-    else { G.phase='action'; log('④ 行動決定','h'); phaseFx('COMMAND','行動決定'); }
+    else { G.phase='action'; log(`${PN(4)} 行動決定`,'h'); phaseFx('COMMAND','行動決定'); }
   },
   rollAction({uid}){
     const u=U(uid);
@@ -654,11 +849,17 @@ const ACTIONS = {
     if(G.pending){ if(pickValid(u)){ const p=G.pending; G.pending=null; doSkill(U(p.uid),p.si,u); } return; }
     if(G.phase==='target' && G.targetAll){ if(u.pid!==G.cur&&!u.out&&!isCpu(G.cur)) resolveDamage(); return; } // 全体宝具：敵を押すと発動
     if(G.phase==='target' && targetCandidates().includes(u)){
-      if(G.target===uid && !isCpu(G.cur)) resolveDamage(); // 選択中の相手をもう一度押すと確定
+      if(G.target===uid && !isCpu(G.cur)) ACTIONS.resolve(); // 選択中の相手をもう一度押すと確定
       else G.target=uid;
     }
+    else if(G.phase==='target' && u && masterTargetable()===u){ if(G.target===uid && !isCpu(G.cur)) ACTIONS.resolve(); else G.target=uid; }
   },
-  resolve(){ if(G.phase==='target'&&G.target) resolveDamage(); },
+  resolve(){
+    if(G.phase!=='target'||!G.target) return;
+    // マスタールール：マスターを攻撃対象にしたら、守る側がサーヴァントとマスターのどちらで受けるか選ぶ
+    if(U(G.target).master){ if(masterTargetable()!==U(G.target)) return; G.guard={kind:'svt'}; G.phase='guard'; return; }
+    resolveDamage();
+  },
   endTurn(){ if(G.phase==='end') endPhase(); },
 };
 function act(type,p={}){

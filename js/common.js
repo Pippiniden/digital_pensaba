@@ -125,10 +125,10 @@ function checkEffs(effs,ctx,where,add){
   effs.forEach((e,ei)=>{
     const w=`${where}・効果${ei+1}`;
     if(!FX[e.k]) return add('error',`${w}：効果の種類が不正です`);
-    if(FX[e.k].only&&ctx!==FX[e.k].only) add('error',`${w}：「${FX[e.k].name}」は${FX[e.k].only==='ult'?TERMS.ult:'特殊行動'}でのみ使えます`);
+    if(!fxOnlyIn(e.k,ctx)) add('error',`${w}：「${FX[e.k].name}」は${[].concat(FX[e.k].only).map(c=>({ult:TERMS.ult,special:'特殊行動',master:TERMS.player}[c])).join('・')}でのみ使えます`);
     if(e.color&&!FX[e.k].color) add('warn',`${w}：この効果では色の指定は使われません`);
     if(!TGT_BY_CTX[ctx].includes(e.t)) add('error',`${w}：ここでは「${TARGETS[e.t]||e.t}」を対象にできません`);
-    if(e.t==='master'&&e.k!=='star') add('warn',`${w}：${TERMS.player}が対象だと、${TERMS.star}獲得以外は効果がありません`);
+    if(e.t==='master'&&e.k!=='star'&&e.k!=='starLoss') add('warn',`${w}：${TERMS.player}が対象だと、${TERMS.star}獲得以外は効果がありません`);
     if(FX[e.k].val&&e.v===0) add('warn',`${w}：値が0です`);
     if(!FX[e.k].inst&&!FX[e.k].perm&&e.turns==null&&e.times==null) add('warn',`${w}：効果時間がないため、ずっと続きます`);
     if(FX[e.k].timesOnly&&e.turns!=null) add('warn',`${w}：${FX[e.k].name}は回数で指定します（ターンは使われません）`);
@@ -144,6 +144,37 @@ function checkEffs(effs,ctx,where,add){
   });
 }
 const hasErrors = units=>validateUnits(units).some(x=>x.level==='error');
+
+// ---------- マスター（泥ペンマス：マスタールール用） ----------
+// { id, name, cls:'マスター', cost, hp,
+//   faces:[ {label, eff:Eff[]} ×6 ]   補助：出た面の効果をこのターンだけ適用（eff が空なら「無」）
+//   spells:[ {name, eff:Eff[]} ×3 ] } 令呪：1試合1回、3つから1つ選ぶ
+// 効果の対象は TGT_BY_CTX.master（self＝マスター自身）
+function normalizeMaster(m){
+  m=m||{};
+  const faces=Array.from({length:6},(_,i)=>{ const f=(m.faces||[])[i]||{}; return {label:String(f.label||''), eff:(f.eff||[]).map(normEff)}; });
+  const spells=Array.from({length:3},(_,i)=>{ const s=(m.spells||[])[i]||{}; return {name:String(s.name||''), eff:(s.eff||[]).map(normEff)}; });
+  return { id:String(m.id||''), name:String(m.name||''), cls:TERMS.player, cost:num(m.cost), hp:num(m.hp,100), master:true,
+    fit:normFit(m.fit), lines:Object.fromEntries(Object.keys(LINE_KEYS).map(k=>[k,[]])), faces, spells };
+}
+function validateMasters(ms){
+  const issues=[];
+  ms.forEach((m,i)=>{
+    const add=(level,msg)=>issues.push({i,level,msg:`${m.name||m.id}：${msg}`});
+    if(!/^[A-Za-z0-9_-]+$/.test(m.id)) add('error','IDは半角英数字・_・- で入力してください');
+    if(!(m.hp>0)) add('error','HPは1以上にしてください');
+    // 補助の効果はそのターンだけなので、効果時間なしの注意は出さない
+    m.faces.forEach((f,fi)=>checkEffs(f.eff,'master',`補助${fi+1}`,(lv,msg)=>{ if(!msg.includes('効果時間がない')) add(lv,msg); }));
+    m.spells.forEach((s,si)=>{ if(!s.eff.length) add('warn',`令呪${si+1}：効果がありません`); checkEffs(s.eff,'master',`令呪${si+1}`,add); });
+  });
+  return issues;
+}
+function loadMasters(){
+  const raw=typeof DEFAULT_MASTERS!=='undefined'?DEFAULT_MASTERS:[];
+  const ms=raw.map(normalizeMaster);
+  validateMasters(ms).filter(x=>x.level==='error').forEach(x=>console.warn('[マスター]',x.msg));
+  return ms;
+}
 
 // ---------- 読み込み・保存 ----------
 // エディタで「ゲームに反映」したデータがあればそれを、なければ標準データ（units.js）を使う
@@ -313,13 +344,13 @@ function fxText(e){
     case 'onAtkStar': s=`${e.color?TERMS[e.color]:''}攻撃時：${TERMS.star}${e.v}個発生`; break;
     case 'onAtkNp': s=`${e.color?TERMS[e.color]:''}攻撃時：${TERMS.gauge}+${e.v}%`; break;
     case 'heal': s=`HP${e.v}回復`; break;
-    case 'regenHp': s=`毎ターンHP${e.v}回復`; break;
-    case 'regenNp': s=`毎ターン${TERMS.gauge}+${e.v}%`; break;
-    case 'regenStar': s=`毎ターン${TERMS.star}${e.v}個獲得`; break;
+    case 'regenHp': s=`ターン開始時HP${e.v}回復`; break;
+    case 'regenNp': s=`ターン開始時${TERMS.gauge}+${e.v}%`; break;
+    case 'regenStar': s=`ターン開始時${TERMS.star}${e.v}個獲得`; break;
     case 'atkVs': s=`${e.vs&&FX[e.vs]?`〔${FX[e.vs].name}〕状態`:'弱体状態'}特攻+${e.v}`; break;
     case 'counter': s=`反撃(${e.v}ダメージ)`; break;
-    case 'onHitNp': s=`被弾時${TERMS.gauge}+${e.v}%`; break;
-    case 'onHitStar': s=`被弾時${TERMS.star}${e.v}個獲得`; break;
+    case 'onHitNp': s=`被ダメージ時${TERMS.gauge}+${e.v}%`; break;
+    case 'onHitStar': s=`被ダメージ時${TERMS.star}${e.v}個獲得`; break;
     case 'maxHp': s=`最大HP+${e.v}`; break;
     case 'critDown': s=`クリティカル発生率ダウン(Lv-${e.v})`; break;
     case 'cardConv': s=`カード変換→${e.color?TERMS[e.color]:'(色未指定)'}`; break;

@@ -17,7 +17,7 @@ const cpuHard = ()=>G.level==='hard'||G.level==='expert';
 const MC_ROLLOUTS = 16;  // 超つよい：攻撃対象の候補ごとに決着まで試す回数
 const MC_TURNS = 40;     // 1回の試しで進める最大ターン数（超えたら残りHPで評価）
 const isCpu = pid=>!!(G.cpu&&G.cpu[pid]);
-const actor = ()=>G.phase==='setup'?G.setupPid:G.cur;
+const actor = ()=>G.phase==='setup'?G.setupPid:G.phase==='guard'?1-G.cur:G.cur; // guard＝守る側が選ぶ
 const cpuActing = ()=>!['mode','setup','over'].includes(G.phase) && isCpu(actor()); // 編成はCPU分も人が選ぶ（おまかせ＝setupCpu）
 const hpR = u=>u.hp/maxHp(u);
 const isActing = u=>G.ult ? G.ult===u.uid : (G.alloc[u.uid]||0)>0;
@@ -41,7 +41,7 @@ function cpuDecide(){
     case 'skill': {
       if(G.pending) return ['cardClick',{uid:cpuPickTarget(G.pending.uid,G.pending.si,easy).uid}];
       let m=null;
-      if(!G.ult){ const u=cpuUltUser(); if(u) m=['useUlt',{uid:u.uid}]; }
+      if(!G.ult&&!G.ultDone){ const u=cpuUltUser(); if(u) m=['useUlt',{uid:u.uid}]; }
       if(!m){ const s=cpuNextSkill(easy); m=s ? ['useSkill',{uid:s.u.uid,si:String(s.si)}] : ['skillDone']; }
       // 超つよい・シンプルルール：スキル・宝具も先読みで選ぶ（チームバトルでは逆に弱くなったので使わない）
       return G.level==='expert'&&ruleset().partyMax===1 ? cpuMcSkill(m) : m;
@@ -62,8 +62,37 @@ function cpuDecide(){
       return G.target!==best.uid ? ['cardClick',{uid:best.uid}] : ['resolve'];
     }
     case 'end': return ['endTurn'];
+    case 'master': return cpuMaster(easy);
+    case 'guard': return cpuGuard();
   }
   return null;
+}
+// ---------- マスタールール ----------
+// マスターフェイズ：宣言済みの令呪があれば使う → 令呪を即時で使う価値があれば使う → 攻撃で倒せるなら攻撃 → 攻撃か補助
+// 攻撃対象のマスターは守る側がサーヴァントで受けるか選べるので、CPU はサーヴァントの攻撃でマスターを狙わない
+function cpuMaster(easy){
+  const m=masterOf(G.cur), d=D(m.def), P=G.players[G.cur], em=masterOf(1-G.cur), es=alive(1-G.cur)[0], rs=ruleset();
+  const spellBest=()=>{ let bi=0, bs=-Infinity; d.spells.forEach((s,i)=>{ const v=cpuEffScore(m,s.eff,null,-1); if(v>bs){ bs=v; bi=i; } }); return {i:bi,sc:bs}; };
+  if(P.spell==='decl') return ['masterSpellUse',{i:String(spellBest().i)}];
+  const opts=[['masterSupport']];
+  if(es) opts.push(['masterAttack',{to:'svt'}]);
+  if(em&&!em.out&&!G.players[em.pid].evac) opts.push(['masterAttack',{to:'master'}]);
+  if(easy) return opts[Math.floor(rnd01(`${G.turn}m`)*opts.length)];
+  if(canDeclareSpell()&&P.stars>=rs.spellNowStars){ const b=spellBest(); if(b.sc>=4) return ['masterSpell',{now:'1',i:String(b.i)}]; }
+  if(es&&masterAtkDmg(m,es)>=es.hp&&!has(es,'guts')) return ['masterAttack',{to:'svt'}];
+  // 相手マスターへの攻撃は、倒せば相手サーヴァントにマスターの最大HP分のダメージ（相手が令呪で守る場合もある）
+  if(em&&!em.out&&!G.players[em.pid].evac&&d.cost>=2) return ['masterAttack',{to:'master'}];
+  return ['masterSupport'];
+}
+// 守る側の選択：令呪で守るのは、受けるとマスターが瀕死になるときだけ。
+// サーヴァントの攻撃は、サーヴァントが倒れそうならマスターで受け、マスターが倒れる（＝サーヴァントにマスターの最大HP分）ならサーヴァントで受ける
+function cpuGuard(){
+  const g=G.guard, dp=1-G.cur, em=masterOf(dp), s=alive(dp)[0];
+  if(g.kind==='spell') return ['guard',{to:g.dmg>=em.hp?'block':'take'}];
+  const est=estDamage(s);
+  if(est>=s.hp&&est<em.hp) return ['guard',{to:'master'}];
+  if(est<em.hp&&est*2<=em.hp&&hpR(s)<.5) return ['guard',{to:'master'}];
+  return ['guard',{to:'svt'}];
 }
 // 行動配分（ふつう）：3回行動できる強いユニットがいればブレイブチェイン狙い、なければ強い順。つよい以上は cpuAllocEV
 function avgDmg(u){
@@ -176,10 +205,13 @@ function cpuGuardScore(u,si){
 // スキルの使いどき：効果ごとに「今使う価値」を点数化し、2点以上なら使う
 function cpuSkillScore(u,si){
   const s=D(u.def).skills[si];
-  const picked=s.pick?cpuPickTarget(u.uid,si,false):null;
+  return cpuEffScore(u,s.eff,s.pick?cpuPickTarget(u.uid,si,false):null,si);
+}
+// 効果の並び（スキル・令呪）の「今使う価値」。si はスキル番号（スキル以外は -1）
+function cpuEffScore(u,effs,picked,si){
   const allies=alive(u.pid), enemies=alive(1-u.pid), stars=G.players[u.pid].stars;
   let sc=0;
-  for(const e of s.eff){
+  for(const e of effs){
     const ts=e.t==='master'?[]:resolveTargets(u,e.t,picked), acting=ts.some(isActing);
     const foes=ts.filter(t=>t.pid!==u.pid);
     switch(e.k){
@@ -225,6 +257,7 @@ function cpuSkillScore(u,si){
       case 'curse': case 'atkDown': sc+=2; break;
       case 'strip': sc+=ts.some(t=>t.fx.some(x=>FX[x.k].buff))?2:0; break;
       case 'defDown': sc+=ts.some(t=>t.pid===u.pid)?-1:1; break;
+      case 'dmg': sc+=foes.length?2:0; break;
     }
   }
   return sc;
@@ -308,7 +341,7 @@ function cpuMcTarget(){
 const MC_MARGIN = .1;
 function cpuMcSkill(h){
   const cands=[['skillDone']];
-  if(!G.ult) alive(G.cur).forEach(u=>{ if(canUlt(u)&&u.np>=RULES.ultCost) cands.push(['useUlt',{uid:u.uid}]); });
+  if(!G.ult&&!G.ultDone) alive(G.cur).forEach(u=>{ if(canUlt(u)&&u.np>=RULES.ultCost) cands.push(['useUlt',{uid:u.uid}]); });
   usableSkills().forEach(x=>{ if(D(x.u.def).skills[x.si].eff.length) cands.push(['useSkill',{uid:x.u.uid,si:String(x.si)}]); });
   if(cands.length<2) return h;
   const score=cpuMcScores(cands.map(m=>()=>ACTIONS[m[0]](m[1]||{})));

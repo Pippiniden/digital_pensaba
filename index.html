@@ -21,7 +21,7 @@
     <button id="autobtn" data-ui="toggleAuto" hidden title="選ぶ余地のない操作（ロール・決定だけのボタン）を自動で進めます">オート：OFF</button>
     <button id="spd" data-a="toggleSpeed" hidden></button>
     <a class="btn" href="editor.html">ペンシルエディタ</a>
-    <button data-a="restart">最初から</button>
+    <button data-a="restart">タイトルに戻る</button>
   </nav>
 </header>
 <div id="app"></div>
@@ -30,6 +30,7 @@
 <!-- 読み込み順が大事：ルール → 標準データ → 共通処理 → エンジン → CPU → 演出 → 画面 -->
 <script src="js/rules.js"></script>
 <script src="js/units.js"></script>
+<script src="js/masters.js"></script>
 <script src="js/common.js"></script>
 <script src="js/engine.js"></script>
 <script src="js/cpu.js"></script>

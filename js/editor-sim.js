@@ -104,7 +104,7 @@ function renderSim(){
       <label>相手の範囲<select data-sim="range" ${run?'disabled':''}>
         <option value="same" ${sel(SIM.range,'same')}>同コストのみ</option>
         <option value="all" ${sel(SIM.range,'all')}>全コスト</option></select></label>
-      <label class="chk ${SIM.range==='same'?'dim':''}"><input type="checkbox" data-sim="handicap" ${SIM.handicap?'checked':''} ${run?'disabled':''}>ハンデ戦（コスト差${RULESETS.simple.handicapAsc}以上で低コスト側が${TERMS.ascFull}済み）</label>`}
+      <label class="chk ${SIM.range==='same'?'dim':''}"><input type="checkbox" data-sim="handicap" ${SIM.handicap?'checked':''} ${run?'disabled':''}>ハンデ戦（コスト差${RULESETS.simple.handicapAsc}以上で低コスト側が${TERMS.ascFull}済み、${RULESETS.simple.hcapBonus.gap}以上でさらに攻撃+${RULESETS.simple.hcapBonus.atk}・獲得NP+${RULESETS.simple.hcapBonus.np}%）</label>`}
       <label>${team?'1キャラあたり':'1組あたり'}<select data-sim="n" ${run?'disabled':''}>${SIM_NS.map(n=>`<option value="${n}" ${sel(SIM.n,n)}>${n}試合</option>`).join('')}</select></label>
       ${run?`<button class="small danger" data-act="simStop">中止</button>`
            :`<button class="primary" data-act="simStart" ${nJobs?'':'disabled'}>実行（${nJobs}${team?'キャラ':'組'} × ${SIM.n}試合）</button>`}
