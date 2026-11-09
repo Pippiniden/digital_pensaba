@@ -589,33 +589,33 @@ function modeHTML(){
   const back=(label='← 戻る')=>`<div class="navbar"><button data-ui="navBack">${label}</button></div>`;
   // ルール選択（クイックバトル・ローカル対戦の最初の段階）
   const rulePick=(nextBtn)=>`<div class="navstep"><h3>ルールを選ぶ</h3><div class="rules">
-      ${Object.entries(RULESETS).map(([k,r])=>`<button class="${G.rule===k?'on':''}" data-a="setRule" data-rule="${k}">${esc(r.name)}</button>`).join('')}
-      ${ruleset().handicapAsc?`<button class="hcap ${G.handicap?'on':''}" data-a="toggleHandicap" title="${esc(hcapRuleText(ruleset()))}">ハンデ戦：${G.handicap?'ON':'OFF'}</button>`:''}
-      <p class="sub small">${esc(ruleset().desc)}</p></div><div class="row mt">${nextBtn}</div></div>`;
-  let body;
+      ${Object.entries(RULESETS).map(([k,r])=>`<button class="gbtn ${G.rule===k?'p':''}" data-a="setRule" data-rule="${k}">${esc(r.name)}</button>`).join('')}
+      ${ruleset().handicapAsc?`<button class="gbtn hcap ${G.handicap?'p':''}" data-a="toggleHandicap" title="${esc(hcapRuleText(ruleset()))}">ハンデ戦：${G.handicap?'ON':'OFF'}</button>`:''}
+      </div><div class="row mt">${nextBtn}</div></div>`;
+  // タイトル画面は常に表示し、選択（ルール・強さ・設定・チュートリアル）は上に浮かぶパネルで行う
+  let panel='';
   if(s==='quick'&&nav.step==='level'){
-    body=`${back()}<div class="navstep"><h3>CPUの強さを選ぶ</h3><p class="sub small">${esc(ruleset().name)}ルール${ruleset().handicapAsc?`・ハンデ戦${G.handicap?'ON':'OFF'}`:''}</p>
-      <div class="levels">${Object.entries(CPU_LEVELS).map(([k,l])=>`<button class="lvbtn ${k==='normal'?'primary':''}" data-a="chooseMode" data-mode="cpu" data-level="${k}"><b>${esc(l.name)}</b><small>${esc(l.desc)}</small></button>`).join('')}</div></div>`;
-  }else if(s==='quick') body=`${back()}<p class="navtitle">クイックバトル <small>CPUと対戦</small></p>${rulePick('<button class="primary" data-ui="navNext">次へ：CPUの強さ</button>')}`;
-  else if(s==='local') body=`${back()}<p class="navtitle">ローカル対戦 <small>同じ画面で交代しながら対戦</small></p>${rulePick('<button class="primary" data-a="chooseMode" data-mode="pvp">はじめる</button>')}`;
-  else if(s==='tutorial') body=`${back()}<p class="navtitle">チュートリアル</p>${rulesGuideHTML(true)}`;
+    panel=`${back()}<div class="navstep"><h3>CPUの強さ</h3><div class="levels">${Object.entries(CPU_LEVELS).map(([k,l])=>`<button class="gbtn ${k==='normal'?'p':''}" data-a="chooseMode" data-mode="cpu" data-level="${k}">${esc(l.name)}</button>`).join('')}</div></div>`;
+  }else if(s==='quick') panel=`${back()}<p class="navtitle">クイックバトル</p>${rulePick('<button class="gbtn p" data-ui="navNext">次へ</button>')}`;
+  else if(s==='local') panel=`${back()}<p class="navtitle">ローカル対戦</p>${rulePick('<button class="gbtn p" data-a="chooseMode" data-mode="pvp">はじめる</button>')}`;
+  else if(s==='tutorial') panel=`${back()}<p class="navtitle">チュートリアル</p>${rulesGuideHTML(false)}${statusGuideHTML(false)}`;
   else if(s==='settings'){
     const sp=G.speed<500?250:700;
-    body=`${back()}<p class="navtitle">設定</p><div class="navstep setting">
-      <div class="setrow"><div><b>ゲーム進行速度</b><small class="sub">CPUの手番や演出の速さ</small></div>
+    panel=`${back()}<p class="navtitle">設定</p><div class="navstep setting">
+      <div class="setrow"><div><b>ゲーム進行速度</b></div>
         <div class="seg"><button class="${sp===250?'on':''}" data-ui="setSpeed" data-v="250">速い</button><button class="${sp===700?'on':''}" data-ui="setSpeed" data-v="700">普通</button></div></div>
-      <div class="setrow"><div><b>設定リンクの確認</b><small class="sub">キャラクター設定リンクを開く前に確認する</small></div>
+      <div class="setrow"><div><b>設定リンクの確認</b></div>
         <div class="seg"><button class="${linkConfirmOn()?'on':''}" data-ui="setLinkConfirm" data-v="1">確認する</button><button class="${linkConfirmOn()?'':'on'}" data-ui="setLinkConfirm" data-v="0">確認しない</button></div></div>
     </div>`;
-  }else body=`<div class="showcase">${show}</div>${src}
+  }
+  const top=`<div class="showcase">${show}</div>${src}
     <div class="topmenu">
-      <button class="primary big" data-ui="nav" data-s="quick"><b>クイックバトル</b><small>CPUと対戦</small></button>
-      <button class="big" data-ui="nav" data-s="local"><b>ローカル対戦</b><small>2人で交代しながら</small></button>
-      <button class="big" data-ui="nav" data-s="tutorial"><b>チュートリアル</b><small>遊び方・ルール</small></button>
-      <button class="big" data-ui="nav" data-s="settings"><b>設定</b><small>進行速度・リンク確認</small></button>
-    </div>
-    <div class="guides">${rulesGuideHTML(false)}${statusGuideHTML(false)}</div>`;
-  return `<div class="mode">${head}${body}</div>`;
+      <button class="gbtn p" data-ui="nav" data-s="quick">クイックバトル</button>
+      <button class="gbtn" data-ui="nav" data-s="local">ローカル対戦</button>
+      <button class="gbtn" data-ui="nav" data-s="tutorial">チュートリアル</button>
+      <button class="gbtn" data-ui="nav" data-s="settings">設定</button>
+    </div>`;
+  return `<div class="mode">${head}${top}</div>${panel?`<div class="modal navmodal"><div class="mback" data-ui="navClose"></div><div class="mbody navpanel">${panel}</div></div>`:''}`;
 }
 
 // ---------- 描画 ----------
@@ -729,6 +729,7 @@ function uiAct(a,ds){
     case 'linkGo': { const cb=document.querySelector('#linkNoAsk'); if(cb&&cb.checked) savePref(LINK_PREF,'0'); window.open(UI.linkAsk,'_blank','noopener'); UI.linkAsk=null; break; }
     case 'linkCancel': UI.linkAsk=null; break;
     case 'nav': UI.nav={s:ds.s,step:'rule'}; break;
+    case 'navClose': UI.nav={s:'top',step:'rule'}; break;
     case 'navNext': UI.nav.step='level'; break;
     case 'navBack': if(UI.nav.s==='quick'&&UI.nav.step==='level') UI.nav.step='rule'; else UI.nav={s:'top',step:'rule'}; break;
     case 'setSpeed': { const v=Number(ds.v)||700; savePref('pencilduel.speed',String(v)); window.SPEED_PREF=v; G.speed=v; break; }
@@ -769,6 +770,7 @@ document.addEventListener('mouseover',e=>{
   document.querySelectorAll('.tile.viewing').forEach(x=>x.classList.remove('viewing')); t.classList.add('viewing');
 });
 document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&G.phase==='mode'&&UI.nav.s!=='top'){ UI.nav={s:'top',step:'rule'}; render(); return; }
   if(e.key==='Escape'&&UI.linkAsk){ UI.linkAsk=null; render(); return; }
   if(e.key==='Escape'&&(UI.detail||UI.sinfo)){ UI.detail=null; UI.sinfo=null; render(); }
   if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('.tinfo')){ e.preventDefault(); e.stopPropagation(); e.target.click(); } // キーボードでも ⓘ を開ける

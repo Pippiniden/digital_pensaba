@@ -279,9 +279,23 @@ body[data-screen="battle"] #app{overflow:hidden}
 .rules .hcap{margin-left:auto}
 .rules p{flex-basis:100%;margin:0}
 /* メインメニュー（階層）：トップの4つ・戻る・各段階 */
-.topmenu{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:18px}
-.topmenu button.big{display:flex;flex-direction:column;align-items:center;gap:4px;padding:16px 10px;font-size:17px}
-.topmenu button small,.lvbtn small{font:400 11.5px var(--sans,inherit);opacity:.8}
+/* 金縁パネルのボタン：幅は固定（画面に合わせて引き伸ばさない）。PC とスマホで大きさだけ切り替える */
+.gbtn{position:relative;display:block;width:280px;max-width:100%;margin:0 auto;padding:15px 12px;text-align:center;
+  font:500 17px var(--serif);letter-spacing:.18em;color:#f1e6c0;cursor:pointer;
+  background:linear-gradient(180deg,#13265a,#0c1a42);border:1px solid #b99a4c;border-radius:0;outline:1px solid #6e5a2a;outline-offset:3px;box-shadow:none}
+.gbtn::before,.gbtn::after{content:'';position:absolute;top:50%;width:7px;height:7px;margin-top:-4px;background:#e4c46e;transform:rotate(45deg)}
+.gbtn::before{left:-4px}.gbtn::after{right:-4px}
+.gbtn:hover{background:linear-gradient(180deg,#1c3680,#112452);color:#fff;transform:none}
+.gbtn.p{background:linear-gradient(180deg,#e9cf84,#b8943e);color:#1b1306;font-weight:700}
+.gbtn.p:hover{background:linear-gradient(180deg,#f2dc98,#c4a04a)}
+.topmenu,.levels,.navpanel .rules{display:flex;flex-direction:column;align-items:center;gap:20px}
+.topmenu{margin-top:22px}
+@media (max-width:860px){.gbtn{width:240px;padding:12px 10px;font-size:15px}.topmenu,.levels,.navpanel .rules{gap:16px}}
+.navpanel{width:min(420px,100%);max-height:88vh;overflow-y:auto;padding:20px 22px 24px}
+.navpanel .navstep h3{text-align:center}
+.navpanel .navtitle{text-align:center}
+.navpanel .row.mt{justify-content:center;margin-top:22px}
+.navpanel .navbar{margin-bottom:6px}
 .navbar{margin:0 0 10px}
 .navtitle{margin:4px 0 12px;font:700 20px var(--serif);color:var(--gold-hi)}
 .navtitle small{font:400 12px var(--sans,inherit);color:var(--sub);margin-left:8px}
