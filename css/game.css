@@ -442,11 +442,12 @@ body[data-screen="battle"] #app{overflow:hidden}
   header{padding:8px 12px;flex-wrap:nowrap;gap:8px}
   header h1{font-size:16px;flex:none}
   #hinfo{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11.5px}
-  .svts.solo{grid-template-columns:minmax(0,180px)}
+  .svts.solo{grid-template-columns:minmax(0,1fr)} /* 1対1は横に余裕があるので幅いっぱいに */
 
   .field{gap:6px;padding:8px}
   .svts{gap:6px}
   .svt{padding:4px}
+  .svt .pcls{display:none} /* クラスアイコンは顔を隠すのでスマホでは出さない */
   .ctl{flex-wrap:wrap;gap:4px;font-size:11px}
   .ctl .primary{padding:2px 8px;font-size:12px}
   .sidebar{font-size:13px}
@@ -476,7 +477,7 @@ body[data-screen="battle"] #app{overflow:hidden}
   .gauge>b{right:4px;min-width:0;font-size:10.5px}
   .gauge>b small{color:#dfe6f5}
   .sks{display:none}
-  .pcls{width:20px;height:20px}
+  .pcls{display:none} /* 小さいカードではクラスアイコンが顔を隠すので出さない */
   .pasc{top:26px}
   .pord{font-size:9px}
   .pout{font-size:14px;letter-spacing:.1em}
