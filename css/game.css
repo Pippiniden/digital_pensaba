@@ -278,6 +278,36 @@ body[data-screen="battle"] #app{overflow:hidden}
 .rules button.on{color:#1a1206;font-weight:700;border-color:var(--gold-hi);background:linear-gradient(180deg,var(--gold-hi),var(--gold))}
 .rules .hcap{margin-left:auto}
 .rules p{flex-basis:100%;margin:0}
+/* メインメニュー（階層）：トップの4つ・戻る・各段階 */
+.topmenu{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-top:18px}
+.topmenu button.big{display:flex;flex-direction:column;align-items:center;gap:4px;padding:16px 10px;font-size:17px}
+.topmenu button small,.lvbtn small{font:400 11.5px var(--sans,inherit);opacity:.8}
+.navbar{margin:0 0 10px}
+.navtitle{margin:4px 0 12px;font:700 20px var(--serif);color:var(--gold-hi)}
+.navtitle small{font:400 12px var(--sans,inherit);color:var(--sub);margin-left:8px}
+.navstep h3{margin:0 0 8px;font-size:16px;color:var(--gold-hi)}
+.levels{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-top:10px}
+.lvbtn{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:12px;text-align:left;font-size:15px}
+.setting{display:flex;flex-direction:column;gap:12px}
+.setrow{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 14px;border:1px solid var(--gold-lo);border-radius:6px;background:rgba(6,13,34,.6)}
+.setrow small{display:block}
+.seg{display:flex;gap:6px}
+.seg button.on{color:#1a1206;font-weight:700;border-color:var(--gold-hi);background:linear-gradient(180deg,var(--gold-hi),var(--gold))}
+/* ルール説明・状態異常の説明（階層化した折り畳み） */
+.guides{margin-top:28px;display:flex;flex-direction:column;gap:10px}
+.gtop{border:1px solid var(--gold-lo);border-radius:6px;background:rgba(6,13,34,.6)}
+.gtop>summary{padding:10px 14px;font:700 15px var(--serif);color:var(--gold-hi);cursor:pointer}
+.gin{padding:0 12px 12px;display:flex;flex-direction:column;gap:6px}
+.gsub{border:1px solid var(--line);border-radius:4px;background:rgba(10,21,51,.55)}
+.gsub>summary{padding:7px 12px;font-size:14px;cursor:pointer}
+.gbody{padding:2px 14px 10px;font-size:13px;line-height:1.7}
+.gbody p{margin:4px 0}
+.gbody ol{margin:4px 0;padding-left:20px}
+.gbody dl{margin:4px 0}
+.gbody dt{margin-top:6px;font-weight:700;color:var(--gold-hi)}
+.gbody dd{margin:0 0 0 12px}
+.fxhelp dt{margin-top:8px}
+.gcol.g{color:#3ddc84}.gcol.b{color:#4aa3ff}.gcol.r{color:#ff4d4d}
 .modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:16px}
 .modes .card{padding:18px}
 .modes h3{margin:0 0 4px;font-size:17px;color:var(--gold-hi)}

@@ -12,7 +12,7 @@ reloadUnits();
 
 let G;
 function newGame(o={}){
-  G = { phase:'mode', mode:null, rule:o.rule||'team', handicap:o.handicap??true, cpu:[false,false], level:'normal', speed:700, seed:String(Math.random()),
+  G = { phase:'mode', mode:null, rule:o.rule||'team', handicap:o.handicap??true, cpu:[false,false], level:'normal', speed:(typeof window!=='undefined'&&window.SPEED_PREF)||700, seed:String(Math.random()),
     setupPid:0, picks:[[],[]], mpicks:[null,null], setupMsg:'',
     // master：マスタールールのマスター（makeMaster）。spell：令呪 null/'decl'(宣言済み・次のマスターフェイズで使う)/'used'
     // evac：退避中（次の相手ターンの間） / zeroNext：前のターンの行動回数が0だった（次の行動回数+1）

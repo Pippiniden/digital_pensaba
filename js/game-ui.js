@@ -6,10 +6,11 @@
    - 画面だけの状態（詳細ウィンドウ・ログの開閉など）は UI に持ち、G には入れない
    ===================================================================== */
 
-const UI = { menu:false, mfold:false, /* マスター選択の折り畳み */ spellPick:false, /* 令呪の即時発動：3つの中から選ぶ表示 */ result:false, resultShown:false, endReady:false,
+const UI = { nav:{s:'top',step:'rule'}, /* モード選択の階層：top / quick(rule→level) / local / tutorial / settings */ menu:false, mfold:false, /* マスター選択の折り畳み */ spellPick:false, /* 令呪の即時発動：3つの中から選ぶ表示 */ result:false, resultShown:false, endReady:false,
   roster:{ sort:'default', cls:'', cost:'', q:'', ok:false }, /* キャラクター選択の並べ替え・絞り込み */ detail:null, setupView:null, log:readLogPref(), auto:readPref('pencilduel.auto')==='1' };
 function readPref(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
 function savePref(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+window.SPEED_PREF=Number(readPref('pencilduel.speed'))||0; // 設定で選んだ進行速度（newGame が読む）
 function readLogPref(){
   const v=readPref('pencilduel.logOpen'); if(v!=null) return v==='1';
   return window.innerWidth>1100;
@@ -441,7 +442,7 @@ function setupHTML(){
         <p class="sub small nm">${solo?`${rs.name}ルール：${TERMS.unit}を1騎${rs.master?`と${TERMS.player}を1人`:''}選びます。${handicapNote(pid)}`:`${rs.master?`${TERMS.player}1人と`:''}コスト合計${cap}以下${rs.master?`（${TERMS.player}込み）`:''}・最大${rs.partyMax}騎。選んだ順に 1st / 2nd / 3rd。`}</p></div>
       <div class="slots">${slots}</div>
       <div class="costm" ${solo?'hidden':''}><span>COST</span><b>${cost}</b><small>/ ${cap}</small><div class="bar"><i style="width:${pctOf(cost,cap)}%"></i></div></div>
-      <div class="setbtns ${mr?'wide':''}">${pid===1?`<button data-a="setupBack" title="${esc(G.players[0].name)}の編成に戻ります（ここまでの選択は残ります）">← 戻る</button>`:''}${isCpu(pid)
+      <div class="setbtns ${mr?'wide':''}">${pid===0?`<button data-a="restart" data-keepnav="1" title="メニューに戻ります">← 戻る</button>`:''}${pid===1?`<button data-a="setupBack" title="${esc(G.players[0].name)}の編成に戻ります（ここまでの選択は残ります）">← 戻る</button>`:''}${isCpu(pid)
         ?`<button data-a="setupCpu" data-how="same" title="相手と同じ${solo?'コスト':'合計コスト・人数'}になるように選びます">おまかせ（同コスト）</button><button data-a="setupCpu" data-how="random" title="コスト上限の中から完全にランダムに選びます">おまかせ（ランダム）</button>`
         :`<button data-a="setupRandom">おまかせ</button>`}${mr?`<button data-a="setupRandom" data-only="svt" title="選んだ${TERMS.player}はそのままで、${TERMS.unit}だけランダムに選びます">${TERMS.unit}だけおまかせ</button><button data-a="setupRandom" data-only="master" title="選んだ${TERMS.unit}はそのままで、${TERMS.player}だけランダムに選びます">${TERMS.player}だけおまかせ</button>`:''}<button class="primary big" data-a="setupConfirm" ${picks.length&&(!masterRule()||G.mpicks[pid])?'':'disabled'}>決定</button></div>
     </div>
@@ -583,26 +584,38 @@ function modeHTML(){
   const src = (cu||cm
     ? `<p class="datainfo">ペンシルエディタで作ったデータ（${[cu?`${TERMS.unit}${UNITS.length}騎`:'',cm?`${TERMS.player}${MASTERS.length}人`:''].filter(Boolean).join('・')}）を使っています。<button data-a="useDefaultData">標準データに戻す</button></p>` : '')
     + (UNIT_BROKEN||MASTER_BROKEN ? `<p class="datainfo warn">エディタの${UNIT_BROKEN?TERMS.unit:TERMS.player}データにエラーがあったため、標準データを使っています。</p>` : '');
-  const show=showcaseHTML();
-  return `<div class="mode">
-    <div class="title"><small>Fate fan-made pencil battle</small><h2>PENCIL DUEL</h2></div>
-    <div class="showcase">${show}</div>
-    ${src}
-    <div class="rules">
-      <span class="rlabel">ルール</span>
+  const show=showcaseHTML(), nav=UI.nav, s=nav.s;
+  const head=`<div class="title"><small>Fate fan-made pencil battle</small><h2>PENCIL DUEL</h2></div>`;
+  const back=(label='← 戻る')=>`<div class="navbar"><button data-ui="navBack">${label}</button></div>`;
+  // ルール選択（クイックバトル・ローカル対戦の最初の段階）
+  const rulePick=(nextBtn)=>`<div class="navstep"><h3>ルールを選ぶ</h3><div class="rules">
       ${Object.entries(RULESETS).map(([k,r])=>`<button class="${G.rule===k?'on':''}" data-a="setRule" data-rule="${k}">${esc(r.name)}</button>`).join('')}
       ${ruleset().handicapAsc?`<button class="hcap ${G.handicap?'on':''}" data-a="toggleHandicap" title="${esc(hcapRuleText(ruleset()))}">ハンデ戦：${G.handicap?'ON':'OFF'}</button>`:''}
-      <p class="sub small">${esc(ruleset().desc)}</p>
+      <p class="sub small">${esc(ruleset().desc)}</p></div><div class="row mt">${nextBtn}</div></div>`;
+  let body;
+  if(s==='quick'&&nav.step==='level'){
+    body=`${back()}<div class="navstep"><h3>CPUの強さを選ぶ</h3><p class="sub small">${esc(ruleset().name)}ルール${ruleset().handicapAsc?`・ハンデ戦${G.handicap?'ON':'OFF'}`:''}</p>
+      <div class="levels">${Object.entries(CPU_LEVELS).map(([k,l])=>`<button class="lvbtn ${k==='normal'?'primary':''}" data-a="chooseMode" data-mode="cpu" data-level="${k}"><b>${esc(l.name)}</b><small>${esc(l.desc)}</small></button>`).join('')}</div></div>`;
+  }else if(s==='quick') body=`${back()}<p class="navtitle">クイックバトル <small>CPUと対戦</small></p>${rulePick('<button class="primary" data-ui="navNext">次へ：CPUの強さ</button>')}`;
+  else if(s==='local') body=`${back()}<p class="navtitle">ローカル対戦 <small>同じ画面で交代しながら対戦</small></p>${rulePick('<button class="primary" data-a="chooseMode" data-mode="pvp">はじめる</button>')}`;
+  else if(s==='tutorial') body=`${back()}<p class="navtitle">チュートリアル</p>${rulesGuideHTML(true)}`;
+  else if(s==='settings'){
+    const sp=G.speed<500?250:700;
+    body=`${back()}<p class="navtitle">設定</p><div class="navstep setting">
+      <div class="setrow"><div><b>ゲーム進行速度</b><small class="sub">CPUの手番や演出の速さ</small></div>
+        <div class="seg"><button class="${sp===250?'on':''}" data-ui="setSpeed" data-v="250">速い</button><button class="${sp===700?'on':''}" data-ui="setSpeed" data-v="700">普通</button></div></div>
+      <div class="setrow"><div><b>設定リンクの確認</b><small class="sub">キャラクター設定リンクを開く前に確認する</small></div>
+        <div class="seg"><button class="${linkConfirmOn()?'on':''}" data-ui="setLinkConfirm" data-v="1">確認する</button><button class="${linkConfirmOn()?'':'on'}" data-ui="setLinkConfirm" data-v="0">確認しない</button></div></div>
+    </div>`;
+  }else body=`<div class="showcase">${show}</div>${src}
+    <div class="topmenu">
+      <button class="primary big" data-ui="nav" data-s="quick"><b>クイックバトル</b><small>CPUと対戦</small></button>
+      <button class="big" data-ui="nav" data-s="local"><b>ローカル対戦</b><small>2人で交代しながら</small></button>
+      <button class="big" data-ui="nav" data-s="tutorial"><b>チュートリアル</b><small>遊び方・ルール</small></button>
+      <button class="big" data-ui="nav" data-s="settings"><b>設定</b><small>進行速度・リンク確認</small></button>
     </div>
-    <div class="modes">
-      <div class="card"><h3>CPU戦</h3>
-        <p class="sub">あなたとCPUの${ruleset().master?`${ruleset().partyMax===1?TERMS.unit:'パーティ'}と${TERMS.player}`:ruleset().partyMax===1?TERMS.unit:'パーティ'}を選んで、1対1で戦います。</p>
-        <p class="sub small">${Object.values(CPU_LEVELS).map(l=>`${esc(l.name)}：${esc(l.desc)}`).join('<br>')}</p>
-        <div class="row mt">${Object.entries(CPU_LEVELS).map(([k,l])=>`<button class="${k==='normal'?'primary':''}" data-a="chooseMode" data-mode="cpu" data-level="${k}">${esc(l.name)}</button>`).join('')}</div></div>
-      <div class="card"><h3>2人対戦</h3>
-        <p class="sub">同じ画面で交代しながら遊びます。</p>
-        <div class="row mt"><button class="primary" data-a="chooseMode" data-mode="pvp">はじめる</button></div></div>
-    </div></div>`;
+    <div class="guides">${rulesGuideHTML(false)}${statusGuideHTML(false)}</div>`;
+  return `<div class="mode">${head}${body}</div>`;
 }
 
 // ---------- 描画 ----------
@@ -715,6 +728,11 @@ function uiAct(a,ds){
     case 'openLink': if(linkConfirmOn()) UI.linkAsk=ds.url; else window.open(ds.url,'_blank','noopener'); break;
     case 'linkGo': { const cb=document.querySelector('#linkNoAsk'); if(cb&&cb.checked) savePref(LINK_PREF,'0'); window.open(UI.linkAsk,'_blank','noopener'); UI.linkAsk=null; break; }
     case 'linkCancel': UI.linkAsk=null; break;
+    case 'nav': UI.nav={s:ds.s,step:'rule'}; break;
+    case 'navNext': UI.nav.step='level'; break;
+    case 'navBack': if(UI.nav.s==='quick'&&UI.nav.step==='level') UI.nav.step='rule'; else UI.nav={s:'top',step:'rule'}; break;
+    case 'setSpeed': { const v=Number(ds.v)||700; savePref('pencilduel.speed',String(v)); window.SPEED_PREF=v; G.speed=v; break; }
+    case 'setLinkConfirm': savePref(LINK_PREF,ds.v==='0'?'0':'1'); break;
     case 'toggleLinkConfirm': savePref(LINK_PREF,linkConfirmOn()?'0':'1'); break;
     case 'toggleLog': UI.log=!UI.log; savePref('pencilduel.logOpen',UI.log?'1':'0'); break;
     case 'toggleAuto': UI.auto=!UI.auto; savePref('pencilduel.auto',UI.auto?'1':'0'); break;
@@ -735,6 +753,7 @@ document.addEventListener('click',e=>{
   const u=e.target.closest('[data-ui]');
   if(u){ uiAct(u.dataset.ui,u.dataset); return; }
   const b=e.target.closest('[data-a]'); if(!b||b.disabled) return;
+  if(b.dataset.a==='restart'&&!b.dataset.keepnav) UI.nav={s:'top',step:'rule'}; // 試合から戻るときはトップメニューへ（編成の「戻る」は直前の選択画面へ）
   if(b.dataset.view) UI.setupView=b.dataset.view;
   if(b.dataset.a==='setupMaster'&&b.classList.contains('mtile')) UI.mfold=!b.classList.contains('sel'); // 選んだら畳む／外したら開く
   if(b.dataset.a==='setupConfirm') UI.mfold=false; // 次の人の編成では、マスター一覧を開いた状態から始める
