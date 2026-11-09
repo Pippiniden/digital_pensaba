@@ -171,6 +171,7 @@ function resolveTargets(src,t,picked){
   else if(t==='enemy_all') ts=alive(1-src.pid);
   else if(t==='target') ts=G.target?[U(G.target)]:[];
   else if(t==='svt') ts=picked&&picked.pid===src.pid?[picked]:alive(src.pid); // マスターチームの令呪は選んだ1騎
+  else if(t==='ally_svt') ts=picked&&!picked.master&&picked.pid===src.pid?[picked]:[]; // マスターが選んだ自軍1騎
   else if(t==='enemy_master') ts=em?[em]:[];
   else if(t==='enemy_svt') ts=picked&&!picked.master&&picked.pid!==src.pid?[picked]:[]; // マスターが選んだ敵1体
   return ts.filter(u=>u&&!u.out);
@@ -738,8 +739,10 @@ function useSpell(m,i,picked){
 }
 // マスターチームの令呪：「自軍サーヴァント」は全員ではなく選んだ1騎
 // 対象を選ぶ側：'own'=自軍1騎（マスターチームの svt）/ 'enemy'=敵1体（enemy_svt）/ 'any'=両方ある / null=選ばない
-const pickSide = effs=>{ const own=mTeam()&&effs.some(e=>e.t==='svt'), en=effs.some(e=>e.t==='enemy_svt'); return own&&en?'any':en?'enemy':own?'own':null; };
-const supPickSide = effs=>effs.some(e=>e.t==='enemy_svt')&&alive(1-G.cur).length?'enemy':null; // 補助は自軍 svt が全員なので、敵1体だけ選ぶ
+// ally_svt（選んだ自軍サーヴァント）はどのマスタールールでも1騎を選ぶ。svt はマスターチームの令呪だけ1騎を選ぶ
+const pickSide = effs=>{ const own=effs.some(e=>e.t==='ally_svt'||(mTeam()&&e.t==='svt')), en=effs.some(e=>e.t==='enemy_svt'); return own&&en?'any':en?'enemy':own?'own':null; };
+// 補助は svt が全員なので、選ぶのは ally_svt / enemy_svt だけ
+const supPickSide = effs=>{ const own=effs.some(e=>e.t==='ally_svt')&&alive(G.cur).length, en=effs.some(e=>e.t==='enemy_svt')&&alive(1-G.cur).length; return own&&en?'any':en?'enemy':own?'own':null; };
 const pickOk = (side,u,pid)=>!!(side&&u&&!u.master&&!u.out&&(side==='any'||(side==='own')===(u.pid===pid)));
 const pickCands = (side,pid)=>side==='own'?alive(pid):side==='enemy'?alive(1-pid):side==='any'?[...alive(pid),...alive(1-pid)]:[];
 const spellPicks = s=>!!pickSide(s.eff);

@@ -119,7 +119,7 @@ function masterPromptHTML(){
   const m=masterOf(G.cur), d=D(m.def), P=G.players[G.cur], em=masterOf(1-G.cur), es=alive(1-G.cur)[0], rs=ruleset();
   const spells=(a,extra='')=>d.spells.map((s,i)=>`<button class="primary" data-a="${a}" data-i="${i}" ${extra} title="${esc(effsText(s.eff))}">${esc(s.name)}</button>`).join('');
   if(G.spellPick){ // 対象の選択待ち（令呪・補助）。補助はロール済みなのでキャンセル不可
-    const sp=G.spellPick, s=sp.sup||d.spells[sp.i], who=sp.side==='enemy'?`敵の${TERMS.unit}`:TERMS.unit;
+    const sp=G.spellPick, s=sp.sup||d.spells[sp.i], who=sp.side==='enemy'?`敵の${TERMS.unit}`:sp.side==='own'?`自軍の${TERMS.unit}`:TERMS.unit;
     return `<p class="hl">「${esc(s.name||s.label)}」の対象にする${who}を選んでください</p><p class="sub small">${esc(spellText(s))}</p>${sp.sup?'':'<button data-a="cancelPick">キャンセル</button>'}`;
   }
   if(P.spell==='decl') return `<p>宣言した<b class="hl">令呪</b>を1つ選んで発動します。</p><div class="row mopts">${spells('masterSpellUse')}</div>`;

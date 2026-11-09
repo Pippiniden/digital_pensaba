@@ -525,5 +525,33 @@ const DEFAULT_UNITS = [
       {"name":"","eff":[]}
     ],
     "ult":{"name":"約束された勝利の手榴弾","c":"R","eff":[{"k":"dmg","t":"target","v":300,"chance":5},{"k":"selfDmg","t":"ally_all","v":300,"chance":2}],"ruby":"ホーリー・ハンドグレネード"}
+  },
+  {
+    "id":"bartholomew", "name":"バーソロミュー・ロバーツ", "cls":"ライダー", "cost":2, "hp":450,
+    "lines":{
+      "start":[],
+      "attack":[],
+      "extra":[],
+      "damage":[],
+      "skill":[],
+      "np":[],
+      "npDamage":[],
+      "defeat":[],
+      "win":[]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":40,"np":0,"star":0},"post":{"c":"R","dmg":70,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"R","dmg":30,"np":0,"star":0},"post":{"c":"R","dmg":40,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":30,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":15,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"特殊行動","eff":[{"k":"atk","t":"ally_all","v":20,"turns":3}],"dmg":0,"np":0,"star":0}},
+      {"acts":3,"pre":{"c":"B","dmg":20,"np":15,"star":0},"post":{"c":"B","dmg":30,"np":25,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":2},"post":{"c":"G","dmg":50,"np":0,"star":2}}
+    ],
+    "skills":[
+      {"name":"嵐の航海者","eff":[{"k":"npPow","t":"self","v":80,"turns":1},{"k":"atk","t":"self","v":30,"turns":1}],"rank":"A"},
+      {"name":"海賊の誉れ","eff":[{"k":"atk","t":"self","v":20,"turns":3},{"k":"guts","t":"self","v":10,"times":1},{"k":"debuffImmune","t":"self","v":0,"turns":3}],"rank":"B"},
+      {"name":"ブラック・バート","eff":[{"k":"atk","t":"self","v":40,"turns":3}],"rank":"B"}
+    ],
+    "ult":{"name":"最後にして最大なる略奪","c":"R","eff":[{"k":"dmg","t":"target","v":150},{"k":"defDown","t":"target","v":20,"turns":3}],"ruby":"ハウス・オブ・ローズ"}
   }
 ];
