@@ -1,6 +1,7 @@
 'use strict';
 // サーヴァントデータ（ペンシルエディタで書き出し）
-// lines: 場面ごとのセリフ
+// traits: 属性（特攻・特防の判定に使う）
+// lines: 場面ごとのセリフ（スキル・面の line はその場面専用のセリフ）
 // faces: 出目1〜6の面 / acts: 行動回数 / pre・post: 再臨前・後のコマンド
 // c: R=Buster B=Arts G=Quick W=特殊 ASC=再臨
 const DEFAULT_UNITS = [
@@ -296,7 +297,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"mnesarete", "name":"ネサレテ", "cls":"アーチャー", "cost":5, "hp":750,
-    "fit":{"face":{"x":100,"y":0,"z":113},"card":{"x":93,"y":12,"z":100}},
+    "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":0,"z":100}},
     "lines":{
       "start":["邪魔するなら、殺しちゃおうかしら……","こういうの、美しくないわねえ"],
       "attack":["どきなさい","そこよ","せっかちねえ","あら、見惚れたの？"],
