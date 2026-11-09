@@ -467,5 +467,33 @@ const DEFAULT_UNITS = [
       {"name":"アルジュバロータのパン工房","eff":[{"k":"regenStar","t":"self","v":2,"turns":5},{"k":"regenNp","t":"ally_all","v":5,"turns":5},{"k":"regenHp","t":"ally_all","v":20,"turns":5}],"rank":"C+"}
     ],
     "ult":{"name":"護国の石窯","c":"R","eff":[{"k":"dmg","t":"target","v":350},{"k":"def","t":"target","v":20,"turns":3},{"k":"burn","t":"target","v":20,"turns":3}],"ruby":"クリメイション・ブレッド"}
+  },
+  {
+    "id":"tezcatlipoca", "name":"テスカトリポカ", "cls":"バーサーカー", "cost":5, "hp":750,
+    "lines":{
+      "start":["我にあらがうか！我と闘うか！その無礼を赦す！対価としてその命を持って我を楽しませよ！！これは所詮、余興である！！"],
+      "attack":["肉体とは良い物だ！","簡単に壊れてくれるなよ！","挨拶代わりだ！くらうがいい！"],
+      "extra":["これはどうだ！！！中々に効くだろう！！！"],
+      "damage":["はは！"],
+      "skill":["祈る時は過ぎた！貴様の怯声を響かせろ！！","生贄を出そうともはや止まらぬ！貴様の血肉で我を潤わせろ！","砕き、裂き、抉り出してやろう！"],
+      "np":["原初の光を最期の景色として、永久の闇夜に眠るが良い。これより送るは――――貴様らの健闘を讃えた星の輝きだ"],
+      "npDamage":["むう！？多少は楽しめるか！"],
+      "defeat":["慢心のしすぎか…我としたことが…","まさか奴以外に敵と呼べる存在がいたとはな…貴様ら…覚えた…ぞ…ふ…ははははは…は…"],
+      "win":[]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":90,"np":0,"star":0},"post":{"c":"R","dmg":120,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"R","dmg":90,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"煙を吐く鏡","eff":[{"k":"defTrait","t":"self","v":150,"turns":1,"trait":"悪","at":"post"}],"dmg":0,"np":0,"star":0}},
+      {"acts":3,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":70,"np":30,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":50,"np":0,"star":2},"post":{"c":"G","dmg":70,"np":0,"star":2}}
+    ],
+    "skills":[
+      {"name":"カリスマ","eff":[{"k":"atk","t":"ally_all","v":30,"turns":3}],"rank":"A+"},
+      {"name":"悪神の智慧","eff":[{"k":"atk","t":"picked","v":20,"turns":3},{"k":"atk","t":"picked","v":30,"turns":3,"color":"R"},{"k":"defDown","t":"picked","v":30,"turns":3}],"pick":"ally"},
+      {"name":"山の心臓","eff":[{"k":"np","t":"self","v":30}],"rank":"EX"}
+    ],
+    "ult":{"name":"\t原初の太陽","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":550},{"k":"stun","t":"self","v":0,"turns":2},{"k":"defDown","t":"self","v":30,"turns":3}]}
   }
 ];
