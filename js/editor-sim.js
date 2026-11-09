@@ -1,7 +1,7 @@
 'use strict';
 /* =====================================================================
    エディタ：バランス検証（自動対戦）
-   - 編集中のデータ（units）で、両者 CPU（ふつう）の対戦を js/sim-worker.js に回させる
+   - 編集中のデータ（units）で、両者 CPU（つよい）の対戦を js/sim-worker.js に回させる
    - シンプル（1対1）：対象＝選択中のキャラ vs 他キャラ ／ 全キャラ総当たり。範囲＝同コストのみ ／ 全コスト（ハンデ戦 ON/OFF）
    - チーム（3対3）：対象キャラ＋ランダムな味方 vs 同じ合計コスト・同じ人数のランダムな編成（対象は相手側に入らない）。
      全キャラ＝キャラごとに同じ検証をして勝率で並べる
@@ -90,7 +90,7 @@ function renderSim(){
   d.innerHTML=`
     <div class="simhead"><h2>バランス検証 <small class="sub">${team?'チームバトル（3対3）':'シンプルルール（1対1）'}</small></h2><span class="grow"></span>
       <button class="small" data-act="simClose" title="閉じる">✕</button></div>
-    <p class="sub small nm">編集中のデータで、両陣営とも CPU（ふつう）の対戦を自動で回します。${team
+    <p class="sub small nm">編集中のデータで、両陣営とも CPU（つよい）の対戦を自動で回します。${team
       ?`対象キャラの味方はランダム（合計コスト${RULES.costCap}以内・できるだけ3騎）、相手は対象キャラを含まない「合計コストと人数が同じ」ランダムな編成です。`
       :'1騎どうしで戦います。'}先攻はランダム、${SIM_TURN_LIMIT}ターンで決着しなければ引き分け（勝率は0.5勝扱い）。</p>
     <div class="simopts">

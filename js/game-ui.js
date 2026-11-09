@@ -389,8 +389,8 @@ function modeHTML(){
     <div class="modes">
       <div class="card"><h3>CPU戦</h3>
         <p class="sub">あなたとCPUの${ruleset().partyMax===1?TERMS.unit:'パーティ'}を選んで、1対1で戦います（CPUはおまかせも選べます）。</p>
-        <p class="sub small">よわい：スキルや攻撃対象をほぼ気まぐれに選ぶ<br>ふつう：状況を見てスキル・行動配分・攻撃対象を選ぶ</p>
-        <div class="row mt"><button data-a="chooseMode" data-mode="cpu" data-level="easy">よわい</button><button class="primary" data-a="chooseMode" data-mode="cpu" data-level="normal">ふつう</button></div></div>
+        <p class="sub small">${Object.values(CPU_LEVELS).map(l=>`${esc(l.name)}：${esc(l.desc)}`).join('<br>')}</p>
+        <div class="row mt">${Object.entries(CPU_LEVELS).map(([k,l])=>`<button class="${k==='normal'?'primary':''}" data-a="chooseMode" data-mode="cpu" data-level="${k}">${esc(l.name)}</button>`).join('')}</div></div>
       <div class="card"><h3>2人対戦</h3>
         <p class="sub">同じ画面で交代しながら遊びます。</p>
         <div class="row mt"><button class="primary" data-a="chooseMode" data-mode="pvp">はじめる</button></div></div>

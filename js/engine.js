@@ -514,7 +514,7 @@ const ACTIONS = {
   chooseMode({mode,level}){
     if(G.phase!=='mode') return;
     applyMode(mode==='cpu'
-      ? {mode, level:level||'normal', cpu:[false,true], names:['あなた','CPU']}
+      ? {mode, level:CPU_LEVELS[level]?level:'normal', cpu:[false,true], names:['あなた','CPU']}
       : {mode:'pvp', level:'normal', cpu:[false,false], names:[TERMS.player+'1',TERMS.player+'2']});
   },
   rematch(){
