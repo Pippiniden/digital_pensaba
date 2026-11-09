@@ -7,7 +7,7 @@
    ===================================================================== */
 
 // 次のイベントまでの待ち時間(ms)。イベントに w があればそちらを優先
-const FX_WAIT = { skill:700, say:950, dmg:420, cutin:2000, phase:420, phaseBig:900, banner:700, roll:780, rollGrp:110, atk:640, pop:520, ko:900 };
+const FX_WAIT = { sync:130, skill:700, say:950, dmg:420, cutin:2000, phase:420, phaseBig:900, banner:700, roll:780, rollGrp:110, atk:640, pop:520, ko:900 };
 const ROLL_SPIN = 520;                             // ロール演出で出目が回っている時間(ms)
 const BUBBLE_MS = 2600;                            // 吹き出しの表示時間(ms)
 let fxRunning=false;
@@ -18,6 +18,7 @@ function fxNext(){
   const ev=FXQ.shift();
   if(!ev){
     fxRunning=false; clearKoHolds();
+    if(UI.defer){ UI.defer=false; render(); } // 演出中は出さなかった表示（ダメージフェイズ終了など）を出す
     // 決着：VICTORY などの帯（showPhase の end は 3200ms 表示）が消えるころに「もう一度」などのボタン、続いてリザルトを出す
     if(G.phase==='over'&&!UI.resultShown){ UI.resultShown=true;
       setTimeout(()=>{ if(G.phase==='over'){ UI.endReady=true; render(); } },1400);
@@ -33,6 +34,7 @@ const fxLayer = ()=>document.querySelector('#fx');
 const portraitOf = uid=>document.querySelector(`.svt[data-uid="${uid}"] .portrait, .mchip[data-uid="${uid}"]`); // マスターは帯のパネル
 
 function fxPlay(ev){
+  if(ev.t==='sync'){ stepHold(ev); return FX_WAIT.sync; } // NP・効果の表示を、この順番で更新
   const L=fxLayer(); if(!L){ if(ev.t==='dmg') stepHold(ev); if(ev.t==='roll') reveal(ev); if(ev.t==='ko') ev.uids.forEach(uid=>{ delete FXHOLD[uid]; redrawSvt(uid); }); return 0; }
   if(ev.t==='ko'){ showKo(L,ev); return FX_WAIT.ko; }
   if(ev.t==='cutin'){ showCutin(L,ev); return FX_WAIT.cutin; }
@@ -160,11 +162,14 @@ function showBubble(L,ev,r){
 // ダメージ数値：肖像の中央から浮き上がって消える
 // 表示HPをこのダメージのぶんだけ減らす。
 // HP0になっても、ここではまだ暗くしない（ko イベント＝一連の攻撃が終わったところで戦闘不能の表示にする）
+// sync イベント（NP・効果・HP）も同じ：再生されたぶんだけ表示を進め、そのユニットの演出が尽きたら表示固定を外す
 function stepHold(ev){
-  if(ev.hp==null) return;
-  const ko=ev.out||(FXHOLD[ev.uid]&&FXHOLD[ev.uid].ko);
-  if(ko||FXQ.some(e=>e.t==='dmg'&&e.uid===ev.uid&&e.hp!=null)) FXHOLD[ev.uid]={hp:ev.hp,out:false,ko:!!ko};
-  else delete FXHOLD[ev.uid];
+  if(ev.t==='dmg'&&ev.hp==null) return;
+  holdOf(ev.uid);
+  const h=FXHOLD[ev.uid]; if(!h){ redrawSvt(ev.uid); return; }
+  if(ev.t==='dmg'){ h.hp=ev.hp; if(ev.out) h.ko=true; }
+  else { if(ev.hp!=null) h.hp=ev.hp; h.np=ev.np; h.fx=ev.fx; }
+  if(!h.ko&&!FXQ.some(e=>e.uid===ev.uid&&(e.t==='sync'||(e.t==='dmg'&&e.hp!=null)))) delete FXHOLD[ev.uid];
   redrawSvt(ev.uid);
 }
 // 戦闘不能の演出：カードを暗くして「戦闘不能」の文字を出す

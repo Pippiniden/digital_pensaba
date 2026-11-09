@@ -468,11 +468,14 @@ body[data-screen="battle"] #app{overflow:hidden}
   .sidebar{font-size:13px}
   .stage{padding:6px 10px 8px}
   .stagetop{gap:4px 10px;margin-bottom:4px}
-  .steps span{font-size:9.5px;padding:1px 6px}
+  /* 手順の帯：全幅に等分して1行に収める（マスタールールは8個あり、折り返して縦長の形になっていた） */
+  .stagetop>.steps{flex:1 1 100%;width:100%}
+  .steps span{flex:1 1 0;min-width:0;font-size:9px;padding:1px 0;text-align:center;white-space:nowrap;overflow:hidden}
   .prompt p{font-size:12px;margin-bottom:4px}
   .lane{gap:6px}
-  .critbox{justify-self:end;min-width:0;padding:3px 10px}
+  .critbox{justify-self:end;min-width:0;padding:3px 10px;flex-direction:row;align-items:baseline;gap:5px;white-space:nowrap} /* 縦に伸びないよう1行に */
   .critbox b{font-size:16px}
+  .critbox small{font-size:10px}
   .udops .sks{grid-template-columns:1fr 1fr}
   /* フェイズの帯：狭い画面では文字を詰めて小さく（VICTORY などがはみ出さないように） */
   .pf-band b{animation-name:pftextsm;font-size:22px;letter-spacing:.12em}

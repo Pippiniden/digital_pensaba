@@ -56,9 +56,10 @@ function canAllocMore(u){
     &&(G.alloc[u.uid]||0)<(G.maxActs[u.uid]||0)&&totalAlloc()<RULES.actionsMax;
 }
 // 画面に出すHP・戦闘不能の状態（ダメージ演出の再生中は演出に合わせて遅れて変わる）
-const shown = u=>FXHOLD[u.uid]||{hp:u.hp,out:u.out};
+// HP・NP・効果は、演出の再生に合わせて遅れて変わる（FXHOLD にあればそれを出す）
+const shown = u=>{ const h=FXHOLD[u.uid]; return h?{hp:h.hp,out:h.out,np:h.np??u.np,fx:h.fx||u.fx}:{hp:u.hp,out:u.out,np:u.np,fx:u.fx}; };
 function svtHTML(u){
-  const d=D(u.def), ph=G.phase, sh=shown(u);
+  const d=D(u.def), ph=G.phase, sh=shown(u), mhp=maxHp({def:u.def,fx:sh.fx});
   const allocable=canAllocMore(u);
   const pickable=allocable || (G.spellPick&&pickOk(G.spellPick.side,u,G.cur)) || (G.copy&&copyCands(U(G.copy.uid)).includes(u)) || (G.pending&&pickValid(u)) || (!G.pending&&!G.copy&&ph==='target'&&targetCandidates().includes(u));
   const acting=G.ult?G.ult===u.uid:(G.alloc[u.uid]||0)>0;
@@ -66,9 +67,9 @@ function svtHTML(u){
   // スキルを使える自分のサーヴァント（スキル欄が隠れる小さい表示のとき、ⓘ を光らせて知らせる）
   const canSk=u.pid===G.cur&&ph==='skill'&&!G.pending&&!cpuActing()&&(canSkill(u)&&d.skills.some((s,i)=>!u.used[i]&&(i<2||u.asc))||!G.ult&&!G.ultDone&&canUlt(u)&&u.np>=RULES.ultCost);
   const cls=['svt',sh.out?'out':'',pickable?'pickable':'',tgt?'targeted':'',acting&&u.pid===G.cur?'acting':'',canSk?'canskill':''].join(' ');
-  const fx=(hasHcap(u)?`<span class="chip fx buff hcapchip">ハンデ：${hcapText()}</span>`:'')+u.fx.map(e=>`<span class="chip fx ${FX[e.k].buff?'buff':'debuff'}">${fxText(e)}</span>`).join('');
+  const fx=(hasHcap(u)?`<span class="chip fx buff hcapchip">ハンデ：${hcapText()}</span>`:'')+sh.fx.map(e=>`<span class="chip fx ${FX[e.k].buff?'buff':'debuff'}">${fxText(e)}</span>`).join('');
   // スマホの簡易表示用：効果の数（強化▲・弱体▼）。中身は拡大ウィンドウで見る
-  const nb=u.fx.filter(e=>FX[e.k].buff===true).length, nd=u.fx.filter(e=>FX[e.k].buff===false).length;
+  const nb=sh.fx.filter(e=>FX[e.k].buff===true).length, nd=sh.fx.filter(e=>FX[e.k].buff===false).length;
   const pfx=nb||nd?`<span class="pfx">${nb?`<b class="buff">▲${nb}</b>`:''}${nd?`<b class="debuff">▼${nd}</b>`:''}</span>`:'';
   return `<div class="${cls}${allocable?' allocable':''}" data-uid="${u.uid}" ${allocable?`data-a="alloc" data-d="1" title="クリックで行動を1回追加"`:pickable?`data-a="cardClick"`:''}>
     <div class="svin"><div class="portrait">${unitImg(d,'face','pimg',d.name)}
@@ -79,10 +80,10 @@ function svtHTML(u){
     </div>
     <div class="sinfo">
       <div class="sname"><b title="${esc(d.name)}">${esc(d.name)}</b><button class="info" data-ui="detail" data-uid="${u.uid}" title="詳細を見る">i</button></div>
-      <div class="gauge hp"><span>HP</span><div class="bar"><i style="width:${pctOf(sh.hp,maxHp(u))}%"></i></div><b>${fmt(sh.hp)}<small>/${maxHp(u)}</small></b></div>
-      <div class="gauge np ${u.np>=RULES.ultCost?'full':''}"><span>${TERMS.gauge}</span><div class="bar"><i style="width:${Math.min(100,u.np)}%"></i></div><b>${u.np}<small>%</small></b></div>
+      <div class="gauge hp"><span>HP</span><div class="bar"><i style="width:${pctOf(sh.hp,mhp)}%"></i></div><b>${fmt(sh.hp)}<small>/${mhp}</small></b></div>
+      <div class="gauge np ${sh.np>=RULES.ultCost?'full':''}"><span>${TERMS.gauge}</span><div class="bar"><i style="width:${Math.min(100,sh.np)}%"></i></div><b>${sh.np}<small>%</small></b></div>
       ${ctlHTML(u)}
-      <div class="fxs" title="${esc(u.fx.map(fxText).join(' / '))}">${fx}</div>
+      <div class="fxs" title="${esc(sh.fx.map(fxText).join(' / '))}">${fx}</div>
       ${skillBtns(u,d)}
     </div></div>
   </div>`;
@@ -102,10 +103,10 @@ function masterChipHTML(m){
   const pick=G.phase==='target'&&!G.pending&&!G.copy&&!cpuActing()&&masterTargetable()===m;
   const tgt=G.phase==='target'&&G.target===m.uid&&!sh.out;
   const sp=P.spell==='decl'?'令呪 宣言中':P.spellLeft>0?`令呪 ${P.spellLeft}画`:'令呪 使用済み';
-  const nb=m.fx.filter(e=>FX[e.k].buff===true).length, nd=m.fx.filter(e=>FX[e.k].buff===false).length;
-  return `<div class="mchip ${sh.out||m.out?'out':''} ${pick?'pickable':''} ${tgt?'targeted':''}" data-uid="${m.uid}" ${pick?'data-a="cardClick"':''} title="${esc(m.fx.map(fxText).join(' / '))}">
+  const nb=sh.fx.filter(e=>FX[e.k].buff===true).length, nd=sh.fx.filter(e=>FX[e.k].buff===false).length, mhp=maxHp({def:m.def,fx:sh.fx});
+  return `<div class="mchip ${sh.out||m.out?'out':''} ${pick?'pickable':''} ${tgt?'targeted':''}" data-uid="${m.uid}" ${pick?'data-a="cardClick"':''} title="${esc(sh.fx.map(fxText).join(' / '))}">
     <span class="mlab">${TERMS.player}</span><b class="mname" title="${esc(d.name)}">${esc(d.name)}</b>
-    <span class="gauge hp"><div class="bar"><i style="width:${pctOf(sh.hp,maxHp(m))}%"></i></div><b>${fmt(sh.hp)}<small>/${maxHp(m)}</small></b></span>
+    <span class="gauge hp"><div class="bar"><i style="width:${pctOf(sh.hp,mhp)}%"></i></div><b>${fmt(sh.hp)}<small>/${mhp}</small></b></span>
     <span class="mtag ${P.spellLeft>0&&P.spell!=='decl'?'':'off'}">${sp}</span>${P.evac?'<span class="mtag evac">退避中</span>':''}${m.out?'<span class="mtag dead">瀕死</span>':''}
     ${nb||nd?`<span class="pfx">${nb?`<b class="buff">▲${nb}</b>`:''}${nd?`<b class="debuff">▼${nd}</b>`:''}</span>`:''}
     <button class="info" data-ui="detail" data-uid="${m.uid}" title="詳細を見る">i</button></div>`;
@@ -171,6 +172,8 @@ function promptHTML(){
       if(G.targetAll) return `<p>${TERMS.ult}「${esc(D(U(G.ult).def).ult.name)}」は<b class="hl">敵全体</b>が対象です。</p><button class="primary big" data-a="resolve">⚔ ${TERMS.ult}発動</button>`;
       return `<p>相手の${TERMS.unit}${masterTargetable()?`か${TERMS.player}`:''}をクリックして攻撃対象を選びます${targetCandidates().some(u=>has(u,'taunt'))?'（ターゲット集中あり）':''}。</p><p>対象：<b>${G.target?nm(U(G.target)):'未選択'}</b></p><button class="primary big" data-a="resolve" ${G.target?'':'disabled'}>⚔ 攻撃</button>`;
     case 'end':
+      // ダメージ演出の再生中は「終わりました」を出さない（演出が終わったら fx.js が描き直す）
+      if(fxBusy()){ UI.defer=true; return `<p class="thinking">ダメージ処理中</p>`; }
       return `<p>ダメージフェイズが終わりました。</p><button class="primary big" data-a="endTurn">ターン終了</button>`;
     case 'over':
       if(!UI.endReady) return ''; // 決着の演出（VICTORY の帯）が終わってから出す
@@ -241,7 +244,8 @@ function stageHTML(){
   const mr=masterRule();
   const stepNo=(mr?{actRoll:2,master:3,skill:4,action:5,target:6,guard:G.guard&&G.guard.kind==='spell'?3:6,end:8,over:9}:{actRoll:2,skill:3,action:4,target:5,end:7,over:8})[ph]||1;
   const names=mr?['開始','行動回数',TERMS.player,'スキル','行動','対象','ダメージ','終了']:['開始','行動回数','スキル','行動','対象','ダメージ','終了'];
-  const steps=names.map((s,i)=>`<span class="${i+1===stepNo?'on':i+1<stepNo?'done':''}">${s}</span>`).join('');
+  const stepShown=ph==='end'&&fxBusy()?(mr?7:6):stepNo; // ダメージ演出中は「ダメージ」のまま
+  const steps=names.map((s,i)=>`<span class="${i+1===stepShown?'on':i+1<stepShown?'done':''}">${s}</span>`).join('');
   const stars=me.stars;
   return `<section class="stage">
     ${magicCircleHTML()}
@@ -577,7 +581,7 @@ function autoMove(){
       const uid=Object.keys(G.alloc).find(id=>!U(id).out&&G.rolled.filter(r=>r.uid===id).length<G.alloc[id]);
       return uid?['rollAction',{uid}]:['toTarget'];
     }
-    case 'target': return (G.targetAll||targetCandidates().length===1)&&G.target ? ['resolve'] : null;
+    case 'target': return (G.targetAll||targetCandidates().length===1||(!G.ult&&!G.rolled.length))&&G.target ? ['resolve'] : null; // 攻撃が1つもない（全員0回）ときも選ぶ余地なし
     case 'end': return ['endTurn'];
   }
   return null;

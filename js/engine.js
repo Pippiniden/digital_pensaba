@@ -27,10 +27,35 @@ function newGame(o={}){
 const FXQ=[];
 // 表示用のHP：ダメージ演出が再生されるまで、画面には攻撃前のHPを出しておく（{uid:{hp,out}}）。
 // fx.js がダメージ演出を1つ再生するたびに更新し、そのユニットの演出が無くなったら消す
+// HP のほか NPゲージ・効果（バフ/デバフ）の表示も同じ仕組みで遅らせる：{hp,np,fx,out,ko}
 const FXHOLD={};
+// act() の開始時点の表示状態（演出で「変化前」を出すための基準）と、最後に積んだ sync の内容
+let PRE={}, SYNCED={};
+const cloneFx = fx=>fx.map(e=>({...e}));
+const viewSig = u=>JSON.stringify([u.hp,u.np,u.fx.map(e=>[e.k,e.v,e.turns,e.times,e.color])]);
+function snapPre(){
+  PRE={}; SYNCED={};
+  ALLM().forEach(u=>{ PRE[u.uid]={hp:u.hp,np:u.np,fx:cloneFx(u.fx)}; SYNCED[u.uid]=viewSig(u); });
+}
+// 変化前の表示状態で、そのユニットの表示を固定する（まだ無ければ）
+function holdOf(uid){
+  if(uid in FXHOLD) return;
+  const u=U(uid), b=PRE[uid]||(u&&{hp:u.hp,np:u.np,fx:cloneFx(u.fx)});
+  if(b) FXHOLD[uid]={hp:b.hp,np:b.np,fx:cloneFx(b.fx),out:false};
+}
 function fxEmit(ev){
-  if(ev.t==='dmg'&&ev.hp!=null&&!(ev.uid in FXHOLD)) FXHOLD[ev.uid]={hp:ev.hp0,out:false};
+  if((ev.t==='dmg'&&ev.hp!=null)||ev.t==='sync'){
+    holdOf(ev.uid);
+    if(ev.t==='dmg'&&FXHOLD[ev.uid]&&!FXQ.some(e=>e.uid===ev.uid&&(e.t==='sync'||(e.t==='dmg'&&e.hp!=null)))) FXHOLD[ev.uid].hp=ev.hp0;
+  }
   FXQ.push(ev);
+}
+// NP・効果・HPが変わったことを演出に積む。画面の表示は、この演出が再生されたときに変わる
+function syncU(u){
+  if(!u||u.out) return;
+  const sig=viewSig(u); if(SYNCED[u.uid]===sig) return;
+  SYNCED[u.uid]=sig;
+  fxEmit({t:'sync',uid:u.uid,hp:u.hp,np:u.np,fx:cloneFx(u.fx)});
 }
 // 出目の表示待ち：ロール演出が着地するまで画面に結果を出さないもの（'f:<uid>'=肖像の出目 / 'r:<idx>'=コマンド列の1枚）
 const FXHIDE=new Set();
@@ -162,7 +187,8 @@ function flushKo(){
   fxEmit({t:'ko',uids});
   uids.forEach(uid=>say(U(uid),'defeat'));
 }
-function applyOne(src,t,e,o={}){
+function applyOne(src,t,e,o={}){ applyOne0(src,t,e,o); syncU(t); }
+function applyOne0(src,t,e,o={}){
   if(t.master&&mTeam()&&FX[e.k].buff===false){ log(`${nm(t)}は${TERMS.unit}に守られていて弱体を受けない`,'sub'); return; } // マスターチーム：マスターは弱体を受けない
   if(immuneTo(t,e.k)) return;
   switch(e.k){
@@ -245,6 +271,7 @@ function dealDamage(u,dmg,isHit,o={}){
       consume(u,ct.list); dealDamage(a,ct.sum,false);
     }
   }
+  syncU(u);
 }
 // マスターへのダメージ：HPが0になったら瀕死（以降はマスターフェイズなし）。自軍サーヴァントがマスターの最大HP分のダメージを受ける
 function masterHit(m,dmg,o={}){
@@ -336,7 +363,7 @@ function resolveCommand(att,cmd,tgt,o={}){
   const [preE,postE]=splitEffs(cmd.eff,EFF_AT_DEFAULT[cmd.c==='W'?'W':'cmd']);
   if(cmd.c==='W'){
     log(`${n}：特殊行動「${esc(cmd.label)}」${cmd.from?`（${esc(cmd.from)}）`:''}`);
-    if(!(cmd.dmg>0)){ if(cmdLine(cmd)) say(att,'attack',{own:cmd.line}); atkFx(null); applyEffects(att,[...preE,...postE],null); gainNpStar(att,cmd,1); return; }
+    if(!(cmd.dmg>0)){ if(cmdLine(cmd)) say(att,'attack',{own:cmd.line}); atkFx(null); applyEffects(att,[...preE,...postE],null); gainNpStar(att,cmd,1); syncU(att); return; }
     // ダメージを持つ特殊行動は無属性の攻撃として続けて処理する（チェインには数えない）
   }
   applyEffects(att,preE,null); // 攻撃前の効果（防御無視・無敵貫通などを付けてから攻撃）
@@ -399,6 +426,8 @@ function resolveCommand(att,cmd,tgt,o={}){
     if(p.sum){ addNp(att,npRate(att,p.sum)); log(`${n} 攻撃時効果：${TERMS.gauge}+${p.sum}%`,'sub'); }
     consume(att,[...s.list,...p.list]);
   }
+  syncU(tgt); syncU(att); // 獲得したNP・使い切った効果は、ダメージ演出のあとで画面に反映
+
   // 攻撃後の効果（例：自身の弱体解除）
   applyEffects(att,postE,null);
 }
@@ -426,6 +455,7 @@ function resolveUlt(u,tgt){
       if(u.out) break; // 反撃で倒れたら残りの対象には当たらない
     }
     consume(u,[...usedA]);
+    ts.forEach(syncU); syncU(u);
   }
 }
 function resolveDamage(){
@@ -434,13 +464,13 @@ function resolveDamage(){
   phaseFx('BATTLE','ダメージフェイズ',{w:800}); // 帯が消えてから攻撃カードを出す
   if(G.ult){ resolveUlt(U(G.ult),tgt); }
   else {
-    tgt.tgtd=true; // 攻撃対象になった（被ダメージ時○○ の発動条件。回避・無敵で防いでも対象にはなっている）
+    if(G.rolled.length) tgt.tgtd=true; // 攻撃対象になった（被ダメージ時○○ の発動条件。回避・無敵で防いでも対象にはなっている）
     const hp0=tgt.hp;
     const acts=G.rolled, cols=acts.map(a=>a.cmd.c);
     const chain = acts.length===3 && ['R','B','G'].includes(cols[0]) && cols.every(c=>c===cols[0]) ? cols[0] : null;
     if(chain){ log(`${TERMS[chain]}チェイン発生！`,'good'); fxEmit({t:'banner',title:`${TERMS[chain]} Chain`,col:chain}); }
     acts.forEach((a,ri)=>{ if(!U(a.uid).out) resolveCommand(U(a.uid),a.cmd,tgt,{chain,ri}); }); // 反撃で倒れたら残りの行動はしない
-    if(chain==='B'){ [...new Set(acts.map(a=>a.uid))].map(U).forEach(u=>addNp(u,npRate(u,RULES.chainB))); log(`チェインボーナス：行動${TERMS.unit}の${TERMS.gauge}+${RULES.chainB}%`); }
+    if(chain==='B'){ [...new Set(acts.map(a=>a.uid))].map(U).forEach(u=>{ addNp(u,npRate(u,RULES.chainB)); syncU(u); }); log(`チェインボーナス：行動${TERMS.unit}の${TERMS.gauge}+${RULES.chainB}%`); }
     if(chain==='G'){ G.gen+=RULES.chainG; log(`チェインボーナス：${TERMS.star}${RULES.chainG}個発生`); }
     // 7. ブレイブチェイン
     if(acts.length===3 && acts.every(a=>a.uid===acts[0].uid) && !U(acts[0].uid).out){
@@ -513,7 +543,7 @@ function beginTurn(){
   ALLM().forEach(u=>{
     u.fx.forEach(e=>{ if(e.owner===G.cur && e.turns!=null) e.turns--; });
     const ex=u.fx.filter(e=>e.turns!=null&&e.turns<=0);
-    if(ex.length){ u.fx=u.fx.filter(e=>!ex.includes(e)); clampHp(u); log(`${nm(u)}の ${ex.map(e=>FX[e.k].name).join('・')} が終了`,'sub'); }
+    if(ex.length){ u.fx=u.fx.filter(e=>!ex.includes(e)); clampHp(u); syncU(u); log(`${nm(u)}の ${ex.map(e=>FX[e.k].name).join('・')} が終了`,'sub'); }
   });
 }
 // ターン開始時○○：手番側の生存サーヴァントに付いているものが発動（スターはこのターンの手持ちに加わる）
@@ -523,6 +553,7 @@ function turnStartEffects(){
     if(h&&has(u,'healBlock')) log(`${nm(u)}は回復無効でターン開始時に回復しない`,'sub');
     else if(h&&u.hp<maxHp(u)){ const v=Math.min(h,maxHp(u)-u.hp); u.hp+=v; log(`${nm(u)} ターン開始時：HP${v}回復`,'good'); fxEmit({t:'pop',uid:u.uid,text:`HP+${v}`,cls:'heal'}); }
     if(n){ addNp(u,n); log(`${nm(u)} ターン開始時：${TERMS.gauge}+${n}%`,'good'); }
+    syncU(u);
     if(s){ G.players[G.cur].stars+=s; log(`${nm(u)} ターン開始時：${TERMS.star}${s}個獲得`,'good'); }
   });
 }
@@ -539,6 +570,7 @@ function hitEffects(){
       consume(u,hn.list);
     }
     if(hs.sum){ gainStars(u.pid,hs.sum); log(`${nm(u)} 被ダメージ時：${TERMS.star}${hs.sum}個獲得`,'good'); consume(u,hs.list); }
+    syncU(u);
   });
 }
 function endPhase(){
@@ -556,7 +588,7 @@ function endPhase(){
   }));
   hitEffects();
   // マスターの補助（このターンだけ）の効果を消す
-  ALLM().forEach(u=>{ const t=u.fx.filter(e=>e.tmp); if(t.length){ u.fx=u.fx.filter(e=>!e.tmp); clampHp(u); } });
+  ALLM().forEach(u=>{ const t=u.fx.filter(e=>e.tmp); if(t.length){ u.fx=u.fx.filter(e=>!e.tmp); clampHp(u); syncU(u); } });
   G.players[G.cur].stars=G.gen;
   log(`${esc(G.players[G.cur].name)}：${TERMS.star}を${G.gen}個獲得（次のターンに使用）`);
   ALL().forEach(u=>u.face=null); // このターンの出目・コマンドの表示は次のターンに持ち越さない
@@ -591,7 +623,7 @@ function toTargetPhase(){
   G.phase='target'; log(`${PN(5)} 攻撃対象決定`,'h'); phaseFx('TARGET','攻撃対象の選択');
   const c=targetCandidates();
   if(G.ult&&ultNoTarget(U(G.ult))){ G.targetAll=true; G.target=c[0].uid; return; } // 全体宝具：最初から敵全体を選んだ状態
-  if(c.length===1) G.target=c[0].uid;
+  if(c.length===1||(!G.ult&&!G.rolled.length)) G.target=c[0].uid; // 攻撃がない（全員行動0回）ときは対象を選ぶ意味がないので自動で決める
 }
 
 // ログのフェイズ番号（マスタールールは③にマスターフェイズが入るので、スキル以降が1つずれる）
@@ -752,7 +784,7 @@ const ACTIONS = {
       if(disabled(u)){ u.face=null; log(`${nm(u)}は行動不能`,'bad'); }
       else {
         const f=roll(); u.face={i:f,kind:'acts'}; rolls.push({uid:u.uid,f});
-        const fear=has(u,'fear')?1:0, up=mods(u,'actsUp'); consume(u,up.list);
+        const fear=has(u,'fear')?1:0, up=mods(u,'actsUp'); consume(u,up.list); syncU(u);
         m=Math.max(0,Math.min(RULES.actionsMax, faceActs(D(u.def),f)+bonus+late+zero+up.sum-fear));
         log(`${nm(u)} 出目${f+1} → 最大行動${m}${bonus?`（${TERMS.out}ボーナス+${bonus}）`:''}${late?'（3ターン目後攻から+1）':''}${zero?'（前ターン0回行動+1）':''}${up.sum?`（最大行動回数+${up.sum}）`:''}${fear?'（恐怖-1）':''}`, m?'':'bad');
       }
@@ -892,12 +924,12 @@ const ACTIONS = {
     if(G.phase!=='skill'||G.pending||G.ult||G.ultDone||u.pid!==G.cur||!canUlt(u)||u.np<RULES.ultCost) return;
     if(masterRule()&&!D(u.def).ult.eff.some(e=>e.k==='dmg')){
       // マスタールール：ダメージのない宝具は、行動回数-1でその場で使い、スキルフェイズを続けて行動決定へ進める
-      u.np=0; G.ultDone=true; resolveUlt(u,null);
+      u.np=0; syncU(u); G.ultDone=true; resolveUlt(u,null);
       const top=Object.entries(G.alloc).filter(([,n])=>n>0).sort((a,b)=>b[1]-a[1])[0];
       if(top){ G.alloc[top[0]]--; log(`補助${TERMS.ult}のため行動回数-1（${dn(U(top[0]))}）`,'sub'); }
       flushKo(); checkWin(); return;
     }
-    G.ult=uid; u.np=0;
+    G.ult=uid; u.np=0; syncU(u);
     log(`${nm(u)}が${TERMS.ult}「${esc(D(u.def).ult.name)}」を使用（このターンの行動になります）`,'good');
   },
   skillDone(){
@@ -915,7 +947,7 @@ const ACTIONS = {
     cmd=asc?face.pre:u.asc?face.post:face.pre;
     // カード変換：R/B/G のコマンドを指定色に（同じ色なら回数を使わない）
     const cv=u.fx.find(e=>e.k==='cardConv'&&e.color&&['R','B','G'].includes(cmd.c)&&cmd.c!==e.color);
-    if(cv){ const from=cmd.c; cmd={...cmd,c:cv.color}; consume(u,[cv]); log(`${nm(u)} カード変換：${TERMS[from]} → ${TERMS[cv.color]}`,'sub'); }
+    if(cv){ const from=cmd.c; cmd={...cmd,c:cv.color}; consume(u,[cv]); syncU(u); log(`${nm(u)} カード変換：${TERMS[from]} → ${TERMS[cv.color]}`,'sub'); }
     G.rolled.push({uid,f,cmd}); u.face={i:f,kind:'cmd',cmd};
     rollFx(uid,f,{cmd,keys:[`f:${uid}`,`r:${G.rolled.length-1}`]});
     if(asc) ascend(u);
@@ -951,6 +983,7 @@ const ACTIONS = {
 function act(type,p={}){
   if(!ACTIONS[type]) return;
   if(G.phase==='over' && !['restart','rematch','toggleSpeed','useDefaultData'].includes(type)) return;
+  snapPre();
   ACTIONS[type](p);
   render();
 }
