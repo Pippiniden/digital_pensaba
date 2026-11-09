@@ -18,13 +18,13 @@ It was written from the code (`js/*.js`). If you find a mismatch, the code is th
 | `editor.html` | Editor page shell. Three columns: `#list` `#form` `#side` |
 | `js/rules.js` | **Rule definitions**: terms `TERMS`, numbers `RULES`, effect kinds `FX`, targets `TARGETS`, line kinds `LINE_KEYS`, classes, image settings |
 | `js/units.js` | **Default character data** `DEFAULT_UNITS` (same format the editor's "export units.js" produces) |
-| `js/masters.js` | **Master data** `DEFAULT_MASTERS` for the master rules (§5.4, §5.5). Currently 7 **test-only** canon masters (遠坂凛 C5 … 間桐雁夜 C0), expected to be replaced/removed. Not editable in the editor yet |
+| `js/masters.js` | **Master data** `DEFAULT_MASTERS` for the master rules (§5.4, §5.5). Currently 7 **test-only** canon masters (遠坂凛 C5 … 間桐雁夜 C0), expected to be replaced/removed. Same format the editor's "masters.js を書き出し" produces (`mastersToJS`) |
 | `js/common.js` | **Shared by game and editor**: data normalization, validation, load/save/export, HTML/string builders (cards, effect descriptions) |
 | `js/engine.js` | **Game logic**: state `G`, `ACTIONS`, damage/effect resolution, turn flow |
 | `js/cpu.js` | CPU brain. `cpuDecide()` only returns the next single move. Difficulties in `CPU_LEVELS` (`easy` / `normal` / `hard` つよい / `expert` 超つよい) |
 | `js/fx.js` | Visual effects (speech bubbles, damage numbers, ultimate cut-in, phase banners, pencil-roll animation, attack-card zoom). Plays `FXQ` in order |
 | `js/game-ui.js` | Game screen rendering (`render`) and input (click handling) |
-| `js/editor.js` | Editor rendering, input, auto-save |
+| `js/editor.js` | Editor rendering, input, auto-save. Two tabs in the left column (`tab` = `'units'` / `'masters'`, remembered in `pencilduel.editorTab`): `list()` / `selIdx()` / `cur()` follow the tab, and the header buttons (apply / unapply / export / JSON / import / reset) act on the current tab. Master tab: `renderMasterForm` / `renderMasterSide` / `newMaster` (effects use ctx `'master'`; 補助 faces hide the turns input) |
 | `js/sim.js` | **Balance simulation core**: `simGame(picks,rule,handicap)` plays one headless match (both sides CPU at `SIM_LEVEL` = `'hard'` (つよい), draw after `SIM_TURN_LIMIT` turns). Simple rule: `simPair(a,b,n,handicap)` aggregates n games from `a`'s side. Team rule: `simTeam(t,n,pool,full)` gives `t` random allies (cost ≤ `costCap`, as many units as possible; `full` = only teams at exactly `costCap`) against a random team **without `t`** with the **same total cost and size** (`simTeamPlan`), and breaks the win rate down by ally / enemy unit / team cost |
 | `js/sim-worker.js` | Web Worker that `importScripts` rules → units → common → engine → cpu → sim with a no-op `render()`, sets `UNITS` from the posted draft and posts one `{t:'pair',r}` per matchup (simple) or per target unit (`rule:'team'`), then `{t:'done'}` |
 | `js/editor-sim.js` | Editor's "バランス検証" dialog (`#simdlg`): options in `SIM` (`rule` simple/team, target, range/handicap for simple, `full` for team), starts/terminates the worker. Simple: per-opponent table or all-vs-all ranking + win-rate matrix. Team: `simTeamResultHTML` (one unit: summary + ally / enemy / team-cost tables; all: ranking). "検証から外す" chips (`SIM.excl`) drop special characters (e.g. メディア, whose NP gain is unusual) from opponents and all-vs-all; the selected character is still tested as the target |
@@ -39,7 +39,7 @@ Order matters: later files use globals from earlier ones.
 
 ```
 Game   (index.html) : rules → units → masters → common → engine → cpu → fx → game-ui
-Editor (editor.html): rules → units → common → editor → sim → editor-sim
+Editor (editor.html): rules → units → masters → common → editor → sim → editor-sim
 Worker (sim-worker.js, importScripts): rules → units → masters → common → engine → cpu → sim
 ```
 
@@ -87,6 +87,9 @@ Worker (sim-worker.js, importScripts): rules → units → masters → common �
 |---|---|
 | `pencilduel.units` | Character array applied from the editor via "apply to game". If present, the game prefers it over the default data |
 | `pencilduel.editorDraft` | The editor's draft (auto-saved) |
+| `pencilduel.masters` | Masters applied from the editor's master tab. If present and valid (`validateMasters(ms, units)`, incl. no id clash with servants), `loadMasters(units)` prefers it over `DEFAULT_MASTERS`; otherwise falls back with `broken:true` |
+| `pencilduel.masterDraft` | The editor's master draft (auto-saved) |
+| `pencilduel.editorTab` | The editor's open tab |
 | `pencilduel.logOpen` | Whether the battle log is open |
 | `pencilduel.auto` | Whether auto-advance is on (`'1'`) |
 | `pencilduel.simExclude` | Character ids excluded from the editor's balance test |

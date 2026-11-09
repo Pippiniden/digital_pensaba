@@ -4,7 +4,7 @@
    ゲームとペンシルエディタの両方が読み込みます
    ===================================================================== */
 
-const STORE = { units:'pencilduel.units', draft:'pencilduel.editorDraft' };
+const STORE = { units:'pencilduel.units', draft:'pencilduel.editorDraft', masters:'pencilduel.masters', mdraft:'pencilduel.masterDraft' };
 
 const esc = s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clone = v=>JSON.parse(JSON.stringify(v));
@@ -157,23 +157,71 @@ function normalizeMaster(m){
   return { id:String(m.id||''), name:String(m.name||''), cls:TERMS.player, cost:num(m.cost), hp:num(m.hp,100), master:true,
     fit:normFit(m.fit), lines:Object.fromEntries(Object.keys(LINE_KEYS).map(k=>[k,[]])), faces, spells };
 }
-function validateMasters(ms){
-  const issues=[];
+// units を渡すと、サーヴァントとIDが重なっていないかも確かめる（ゲームはIDでサーヴァント→マスターの順に探すため）
+function validateMasters(ms,units=[]){
+  const issues=[], ids=new Map(), uids=new Set(units.map(u=>u.id));
+  if(!ms.length) issues.push({i:-1,level:'warn',msg:`${TERMS.player}が1人もいません（マスタールールが遊べません）`});
   ms.forEach((m,i)=>{
-    const add=(level,msg)=>issues.push({i,level,msg:`${m.name||m.id}：${msg}`});
+    const add=(level,msg)=>issues.push({i,level,msg});
     if(!/^[A-Za-z0-9_-]+$/.test(m.id)) add('error','IDは半角英数字・_・- で入力してください');
+    else if(ids.has(m.id)) add('error',`ID「${m.id}」が他の${TERMS.player}と重複しています`);
+    else if(uids.has(m.id)) add('error',`ID「${m.id}」が${TERMS.unit}と重複しています`);
+    else ids.set(m.id,i);
+    if(!m.name.trim()) add('error','名前が空です');
+    if(!(m.cost>=0)) add('error','コストは0以上にしてください');
     if(!(m.hp>0)) add('error','HPは1以上にしてください');
+    m.faces.forEach((f,fi)=>{ if(f.eff.length&&!f.label.trim()) add('warn',`補助${fi+1}：面の名前が空です`); });
+    m.spells.forEach((s,si)=>{ if(!s.name.trim()) add('warn',`令呪${si+1}：名前が空です`); });
     // 補助の効果はそのターンだけなので、効果時間なしの注意は出さない
     m.faces.forEach((f,fi)=>checkEffs(f.eff,'master',`補助${fi+1}`,(lv,msg)=>{ if(!msg.includes('効果時間がない')) add(lv,msg); }));
     m.spells.forEach((s,si)=>{ if(!s.eff.length) add('warn',`令呪${si+1}：効果がありません`); checkEffs(s.eff,'master',`令呪${si+1}`,add); });
   });
   return issues;
 }
-function loadMasters(){
-  const raw=typeof DEFAULT_MASTERS!=='undefined'?DEFAULT_MASTERS:[];
-  const ms=raw.map(normalizeMaster);
-  validateMasters(ms).filter(x=>x.level==='error').forEach(x=>console.warn('[マスター]',x.msg));
-  return ms;
+const mastersHaveErrors = (ms,units)=>validateMasters(ms,units).some(x=>x.level==='error');
+// エディタで「ゲームに反映」したマスターがあればそれを、なければ標準データ（masters.js）を使う
+function loadMasters(units=[]){
+  const def=()=>(typeof DEFAULT_MASTERS!=='undefined'?DEFAULT_MASTERS:[]).map(normalizeMaster);
+  const raw=readJSON(STORE.masters);
+  if(raw){
+    try{ if(!Array.isArray(raw)) throw 0; const ms=raw.map(normalizeMaster); if(!mastersHaveErrors(ms,units)) return {masters:ms, source:'custom'}; }catch(e){}
+    return {masters:def(), source:'default', broken:true};
+  }
+  return {masters:def(), source:'default'};
+}
+const saveCustomMasters = ms=>writeJSON(STORE.masters,ms);
+const clearCustomMasters = ()=>removeKey(STORE.masters);
+// masters.js 形式で書き出す（中身はJSONなので、そのまま読み込み直せる）
+function mastersToJS(ms){
+  const j=v=>JSON.stringify(v);
+  const body=ms.map(m=>[
+    '  {',
+    `    "id":${j(m.id)}, "name":${j(m.name)}, "cost":${m.cost}, "hp":${m.hp},`,
+    ...(fitIsDef(m.fit,'face')?[]:[`    "fit":${j({face:m.fit.face})},`]),
+    '    "faces":[',
+    m.faces.map(f=>`      ${j({label:f.label,eff:f.eff})}`).join(',\n'),
+    '    ],',
+    '    "spells":[',
+    m.spells.map(s=>`      ${j({name:s.name,eff:s.eff})}`).join(',\n'),
+    '    ]',
+    '  }'].join('\n')).join(',\n');
+  return `'use strict';
+// ${TERMS.player}データ（ペンシルエディタで書き出し）。マスタールール・マスターチームで使う
+// faces : 補助で振る鉛筆の面1〜6。eff が空なら「無」（何も起きない）。効果はそのターンだけ
+// spells: 令呪3種
+// 効果の対象（t）: svt=自軍${TERMS.unit} / self=${TERMS.player}自身 / ally_all=味方全体（${TERMS.player}含む）
+//                  enemy_all=敵${TERMS.unit} / enemy_master=敵${TERMS.player} / master=自陣の${TERMS.star}
+const DEFAULT_MASTERS = [
+${body}
+];
+`;
+}
+function parseMastersFile(text){
+  const t=text.trim(), a=t.indexOf('['), b=t.lastIndexOf(']');
+  if(a<0||b<a) throw new Error(`${TERMS.player}の配列が見つかりません`);
+  const raw=JSON.parse(t.slice(a,b+1));
+  if(!Array.isArray(raw)||raw.some(m=>!m||!Array.isArray(m.spells))) throw new Error(`${TERMS.player}のデータではありません（spells がありません）`);
+  return raw.map(normalizeMaster);
 }
 
 // ---------- 読み込み・保存 ----------

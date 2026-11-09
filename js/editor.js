@@ -7,13 +7,23 @@
    ===================================================================== */
 
 let units=[], sel=0, rollPost=false, rollIdx=null, rollTimer=null, toastTimer=null;
-const cur = ()=>units[sel];
+// マスター（マスタールール用）は別タブで編集する。tab='units'|'masters'
+let masters=[], msel=0, tab='units';
+try{ if(localStorage.getItem('pencilduel.editorTab')==='masters') tab='masters'; }catch(e){}
+const isM = ()=>tab==='masters';
+const list = ()=>isM()?masters:units;          // 今のタブの一覧
+const selIdx = ()=>isM()?msel:sel;
+function setSel(i){ if(isM()) msel=i; else sel=i; }
+const cur = ()=>list()[selIdx()];
 
 // ---------- 起動 ----------
 function boot(){
   const draft=readJSON(STORE.draft);
   try{ units = draft ? normalizeUnits(draft) : clone(loadUnits().units); }
   catch(e){ units=clone(loadUnits().units); }
+  const md=readJSON(STORE.mdraft);
+  try{ masters = Array.isArray(md) ? md.map(normalizeMaster) : clone(loadMasters(units).masters); }
+  catch(e){ masters=clone(loadMasters(units).masters); }
   renderAll();
 }
 
@@ -35,7 +45,7 @@ function conv(el){
 }
 function uniqueId(base){
   base=(base||'unit').replace(/_\d+$/,'').replace(/[^A-Za-z0-9_-]/g,'')||'unit';
-  const ids=new Set(units.map(u=>u.id));
+  const ids=new Set([...units,...masters].map(u=>u.id)); // サーヴァントとマスターでIDが重ならないように
   if(!ids.has(base)) return base;
   for(let n=2;;n++) if(!ids.has(`${base}_${n}`)) return `${base}_${n}`;
 }
@@ -75,6 +85,7 @@ function makeCmd(t,old){
 }
 function newEff(ctx){
   if(ctx==='ult') return {k:'dmg',t:'target',v:80};
+  if(ctx==='master') return {k:'atk',t:'svt',v:20};
   if(ctx==='special') return {k:'heal',t:'self',v:20};
   return {k:'atk',t:'self',v:10,turns:3};
 }
@@ -95,38 +106,120 @@ function fixEff(e){
 }
 
 // ---------- 保存と再描画 ----------
-function saveDraft(){ writeJSON(STORE.draft,units); }
+function saveDraft(){ writeJSON(STORE.draft,units); writeJSON(STORE.mdraft,masters); }
 function light(){ saveDraft(); renderList(); renderSide(); renderStatus(); updatePreviews(); }
 function full(){ saveDraft(); renderAll(); }
 function renderAll(){ renderList(); renderForm(); renderSide(); renderStatus(); }
 
+// 今のタブの検証結果・反映済みデータ
+const issuesNow = ()=>isM()?validateMasters(masters,units):validateUnits(units);
 function renderStatus(){
-  const applied=loadUnits(), iss=validateUnits(units);
+  const applied=isM()?loadMasters(units):loadUnits(), iss=issuesNow();
   const e=iss.filter(x=>x.level==='error').length, w=iss.filter(x=>x.level==='warn').length;
-  const dirty=JSON.stringify(units)!==JSON.stringify(applied.units);
+  const dirty=JSON.stringify(list())!==JSON.stringify(isM()?applied.masters:applied.units);
   document.querySelector('#status').innerHTML=
-    `<span class="${dirty?'dirty':'clean'}">${dirty?'● ゲームに未反映の変更があります':`✓ ゲームと同じ内容（${applied.source==='custom'?'反映済みデータ':'標準データ'}）`}</span>`+
+    `<b class="sub">${isM()?TERMS.player:TERMS.unit}：</b><span class="${dirty?'dirty':'clean'}">${dirty?'● ゲームに未反映の変更があります':`✓ ゲームと同じ内容（${applied.source==='custom'?'反映済みデータ':'標準データ'}）`}</span>`+
     ` <span class="sub">エラー${e}・注意${w}</span>`;
   document.querySelector('#unapply').hidden = applied.source!=='custom';
+  document.querySelector('#exportJS').textContent=`${isM()?'masters.js':'units.js'} を書き出し`;
+  document.querySelector('#simbtn').hidden=isM(); // バランス検証はサーヴァントだけ
 }
 
 // ---------- 一覧 ----------
+function tabsHTML(){
+  return `<div class="edtabs" role="tablist">${[['units',TERMS.unit],['masters',TERMS.player]].map(([k,l])=>
+    `<button role="tab" aria-selected="${tab===k}" class="${tab===k?'on':''}" data-act="tab" data-tab="${k}">${l}</button>`).join('')}</div>`;
+}
 function renderList(){
-  const iss=validateUnits(units);
-  document.querySelector('#list').innerHTML=`
-    <div class="row"><b>${TERMS.unit}一覧</b><span class="sub small">${units.length}体</span></div>
-    <div class="ulist">${units.map((u,i)=>{
+  const iss=issuesNow(), L=list(), si=selIdx();
+  document.querySelector('#list').innerHTML=`${tabsHTML()}
+    <div class="row"><b>${isM()?TERMS.player:TERMS.unit}一覧</b><span class="sub small">${L.length}${isM()?'人':'体'}</span></div>
+    <div class="ulist">${L.map((u,i)=>{
       const e=iss.filter(x=>x.i===i&&x.level==='error').length, w=iss.filter(x=>x.i===i&&x.level==='warn').length;
-      return `<button class="uitem ${i===sel?'on':''}" data-act="sel" data-i="${i}">
-        ${clsBadge(u.cls,true)}${faceImg(u,'face xs')}<span class="uname">${esc(u.name)||'（名前なし）'}</span><span class="sub small">C${u.cost}</span>
+      return `<button class="uitem ${i===si?'on':''}" data-act="sel" data-i="${i}">
+        ${isM()?'':clsBadge(u.cls,true)}${faceImg(u,'face xs')}<span class="uname">${esc(u.name)||'（名前なし）'}</span><span class="sub small">C${u.cost}</span>
         ${e?`<span class="dot err" title="エラー${e}件">${e}</span>`:w?`<span class="dot wrn" title="注意${w}件">${w}</span>`:''}</button>`;
     }).join('')}</div>
     <div class="row">
       <button class="small" data-act="add">＋ 追加</button>
       <button class="small" data-act="dup" ${cur()?'':'disabled'}>複製</button>
-      <button class="small" data-act="move" data-d="-1" ${sel>0?'':'disabled'} title="上へ">↑</button>
-      <button class="small" data-act="move" data-d="1" ${sel<units.length-1?'':'disabled'} title="下へ">↓</button>
+      <button class="small" data-act="move" data-d="-1" ${si>0?'':'disabled'} title="上へ">↑</button>
+      <button class="small" data-act="move" data-d="1" ${si<L.length-1?'':'disabled'} title="下へ">↓</button>
       <button class="small danger" data-act="del" ${cur()?'':'disabled'}>削除</button>
+    </div>`;
+}
+
+// ---------- マスターの編集（マスタールール・マスターチーム用） ----------
+function newMaster(){
+  return { id:uniqueId('master'), name:'新しいマスター', cls:TERMS.player, cost:2, hp:120, master:true, fit:normFit(), lines:Object.fromEntries(Object.keys(LINE_KEYS).map(k=>[k,[]])),
+    faces:[ {label:'無',eff:[]}, {label:'強化魔術',eff:[{k:'atk',t:'svt',v:20}]}, {label:'治癒魔術',eff:[{k:'heal',t:'svt',v:80}]},
+            {label:'無',eff:[]}, {label:'魔力供給',eff:[{k:'np',t:'svt',v:20}]}, {label:'魔弾',eff:[{k:'dmg',t:'enemy_master',v:40}]} ],
+    spells:[ {name:'令呪：宝具解放',eff:[{k:'np',t:'svt',v:100}]}, {name:'令呪：回復',eff:[{k:'heal',t:'svt',v:200}]}, {name:'令呪：強化',eff:[{k:'atk',t:'svt',v:30,turns:3}]} ] };
+}
+const mFaceText = f=>f.eff.length?effsText(f.eff):'無（何も起きない）';
+function renderMasterForm(el){
+  const m=cur();
+  if(!m){ el.innerHTML=`<section class="sec"><p>${TERMS.player}がいません。「＋ 追加」から作成してください。</p></section>`; return; }
+  const ma=RULESETS.master.masterAtk;
+  el.innerHTML=`
+  <section class="sec"><h2>基本情報</h2>
+    <p class="sub small nm">マスタールール（${TERMS.unit}1騎＋${TERMS.player}）とマスターチーム（${TERMS.unit}3騎＋${TERMS.player}）で使う${TERMS.player}です。</p>
+    <div class="fields">
+      <label>名前<input data-p="name" value="${esc(m.name)}"></label>
+      <label>ID<input data-p="id" value="${esc(m.id)}"><small>半角英数字・_・-（${TERMS.unit}と重ならないこと）</small></label>
+      <label>コスト<input type="number" min="0" data-p="cost" data-t="num" value="${m.cost}"><small data-mprev="atk">攻撃：相手${TERMS.player}へ${m.cost*ma.master}・相手${TERMS.unit}へ${m.cost*ma.svt}（マスタールール）</small></label>
+      <label>HP<input type="number" min="1" step="5" data-p="hp" data-t="num" value="${m.hp}"><small>0になると自軍${TERMS.unit}がこの値のダメージを受ける</small></label>
+    </div>
+  </section>
+  <section class="sec"><h2>画像</h2>
+    <p class="sub small nm"><code>${IMG_DIR}</code> にIDと同じ名前の ${IMG_EXT} を置くと自動で使われます（なければ仮画像）。</p>
+    <div class="imged"><div class="imgfield isface"><span class="imgprev" data-imgprev="face">${faceImg(m,'face lg')}</span>
+      <span class="imglab">${IMG_KEYS.face}</span><code data-imgpath="face">${esc(IMG_DIR+m.id)}.${IMG_EXT}</code></div></div>
+    <div class="fited"><div class="fitgrp"><b>${IMG_KEYS.face}</b>
+      ${[['x','左右'],['y','上下'],['z','拡大']].map(([a,lab])=>`<label class="fitrow"><span>${lab}</span>
+        <input type="range" min="${FIT_RANGE[a][0]}" max="${FIT_RANGE[a][1]}" step="1" data-p="fit.face.${a}" data-t="num" value="${m.fit.face[a]}">
+        <output data-fitout="face.${a}">${m.fit.face[a]}%</output></label>`).join('')}
+      <button class="small" data-act="fitReset" data-k="face">リセット</button></div></div>
+  </section>
+  <section class="sec"><h2>補助（${TERMS.player}の鉛筆の6面）</h2>
+    <p class="sub small nm">${TERMS.player}フェイズの「補助」で振り、出た面の効果を<b>そのターンだけ</b>適用します。効果のない面は「無」（何も起きない）。「敵${TERMS.player}」へのダメージは、相手が令呪1画で防げます。</p>
+    <div class="mfaceed">${m.faces.map((f,i)=>`<div class="mfacerow">
+      <span class="die">${i+1}</span>
+      <div class="mfbody"><input data-p="faces.${i}.label" value="${esc(f.label)}" placeholder="面の名前（効果がなければ「無」）">
+        ${effList(`faces.${i}.eff`,f.eff,'master')}
+        <div class="preview mprev" data-prev="mface" data-i="${i}">${esc(mFaceText(f))}</div></div>
+    </div>`).join('')}</div>
+  </section>
+  <section class="sec"><h2>令呪</h2>
+    <p class="sub small nm">マスタールールは1試合1回・3つから1つ。マスターチームは3画で、同じ効果は1回まで（使うと行動回数-1）。マスターチームでは「自軍${TERMS.unit}」の効果は選んだ1騎にかかります。</p>
+    ${m.spells.map((s,i)=>`<div class="subcard">
+      <div class="row"><b>令呪${i+1}</b></div>
+      <div class="fields"><label>名前<input data-p="spells.${i}.name" value="${esc(s.name)}"></label></div>
+      ${effList(`spells.${i}.eff`,s.eff,'master')}
+      <div class="preview mprev" data-prev="spell" data-i="${i}">${esc(effsText(s.eff))}</div>
+    </div>`).join('')}
+  </section>`;
+}
+function renderMasterSide(el){
+  const m=cur(); if(!m){ el.innerHTML=''; return; }
+  const iss=validateMasters(masters,units).filter(x=>x.i===msel||x.i===-1);
+  el.innerHTML=`
+    <div class="sidecard">
+      <div class="row"><b>補助の鉛筆プレビュー</b><span class="grow"></span><button class="primary small" data-act="roll">転がす</button></div>
+      <div class="pencil" aria-label="${TERMS.player}の鉛筆の6面"><div class="peraser"></div><div class="pferrule"></div>
+        <div class="pbody">${m.faces.map((f,i)=>`<div class="pface ${rollIdx===i?'hit':''}"><span class="dieb">${i+1}</span><span class="mflabel ${f.eff.length?'':'sub'}">${esc(f.eff.length?f.label||'（名前なし）':'無')}</span></div>`).join('')}</div>
+        <div class="ptip"><i></i></div></div>
+      <div id="rollres" class="rollres">${rollResultHTML(m)}</div>
+    </div>
+    <div class="sidecard"><b>検証</b>
+      ${iss.length?`<ul class="issues">${iss.map(x=>`<li class="${x.level}">${x.level==='error'?'エラー':'注意'}：${esc(x.msg)}</li>`).join('')}</ul>`:'<p class="ok small nm">問題は見つかりませんでした。</p>'}
+    </div>
+    <div class="sidecard"><b>数値の目安</b>
+      <table class="stats">
+        <tr><td>HP ／ コスト</td><td>${m.hp} ／ ${m.cost}</td></tr>
+        <tr><td>補助で効果が出る確率</td><td>${Math.round(m.faces.filter(f=>f.eff.length).length/6*100)}%</td></tr>
+        <tr><td>全${TERMS.player}の平均 HP ／ コスト</td><td>${Math.round(masters.reduce((s,x)=>s+x.hp,0)/masters.length)} ／ ${(masters.reduce((s,x)=>s+x.cost,0)/masters.length).toFixed(1)}</td></tr>
+      </table>
     </div>`;
 }
 
@@ -137,6 +230,7 @@ const optNum=(p,v,label)=>`<label class="mini"><span>${label}</span><input type=
 
 function renderForm(){
   const u=cur(), el=document.querySelector('#form');
+  if(isM()) return renderMasterForm(el);
   if(!u){ el.innerHTML=`<section class="sec"><p>${TERMS.unit}がありません。「＋ 追加」から作成してください。</p></section>`; return; }
   el.innerHTML=`
   <section class="sec"><h2>基本情報</h2>
@@ -249,7 +343,7 @@ function effRow(path,j,e,ctx,n,atKind){
     <select data-p="${p}.k" data-act="effKind" aria-label="効果の種類">${kinds.map(k=>opt(k,FX[k].name,e.k)).join('')}</select>
     <select data-p="${p}.t" aria-label="対象">${tg.map(t=>opt(t,TARGETS[t]||t,e.t)).join('')}</select>
     ${f.val?numIn(p+'.v',e.v,'値'):''}
-    ${f.inst?'':(f.timesOnly?'':optNum(p+'.turns',e.turns,'ターン'))+optNum(p+'.times',e.times,'回数')}
+    ${f.inst?'':(f.timesOnly||(ctx==='master'&&/^faces./.test(path))?'':optNum(p+'.turns',e.turns,'ターン'))+optNum(p+'.times',e.times,'回数')}
     ${FX[e.k]&&FX[e.k].color?`<label class="mini"><span>色</span><select data-p="${p}.color" data-t="optstr">${opt('','すべて',e.color||'')}${['R','B','G'].map(c=>opt(c,TERMS[c],e.color)).join('')}</select></label>`:''}
     ${e.k==='atkVs'?`<label class="mini"><span>弱体</span><select data-p="${p}.vs" data-t="optstr">${opt('','どれでも',e.vs||'')}${Object.keys(FX).filter(k=>FX[k].buff===false).map(k=>opt(k,FX[k].name,e.vs)).join('')}</select></label>`:''}
     <label class="mini"><span>確率</span><select data-p="${p}.chance" data-t="optnum">${opt('','必ず',e.chance??'')}${[1,2,3,4,5].map(k=>opt(k,`ロール${k}以下`,e.chance)).join('')}</select></label>
@@ -268,6 +362,15 @@ const cardPreviewHTML=u=>`<span class="ccrow">${['R','B','G'].map(k=>cmdCardHTML
 function updatePreviews(){
   const u=cur(); if(!u) return;
   document.querySelectorAll('.eff[data-ep]').forEach(el=>{ const e=getPath(u,el.dataset.ep); if(e) el.querySelector('.effprev').textContent=fxText(e); });
+  if(isM()){
+    document.querySelectorAll('[data-prev="mface"]').forEach(el=>el.textContent=mFaceText(u.faces[+el.dataset.i]));
+    document.querySelectorAll('[data-prev="spell"]').forEach(el=>el.textContent=effsText(u.spells[+el.dataset.i].eff));
+    document.querySelectorAll('[data-fitout]').forEach(el=>{ const [k,a]=el.dataset.fitout.split('.'); el.textContent=`${u.fit[k][a]}%`; });
+    const ma=RULESETS.master.masterAtk, at=document.querySelector('[data-mprev="atk"]'); if(at) at.textContent=`攻撃：相手${TERMS.player}へ${u.cost*ma.master}・相手${TERMS.unit}へ${u.cost*ma.svt}（マスタールール）`;
+    document.querySelectorAll('[data-imgprev]').forEach(el=>{ const key=`${u.id}|${JSON.stringify(u.fit)}`; if(el.dataset.key===key) return; el.dataset.key=key; el.innerHTML=faceImg(u,'face lg');
+      const f=document.querySelector('[data-imgpath="face"]'); if(f) f.textContent=`${IMG_DIR+u.id}.${IMG_EXT}`; });
+    return;
+  }
   document.querySelectorAll('[data-prev="skill"]').forEach(el=>{ const s=u.skills[+el.dataset.i]; el.textContent=effsText(s.eff,s.pick); });
   document.querySelectorAll('[data-prev="ult"]').forEach(el=>el.textContent=effsText(u.ult.eff));
   document.querySelectorAll('[data-fitout]').forEach(el=>{ const [k,a]=el.dataset.fitout.split('.'); el.textContent=`${u.fit[k][a]}%`; });
@@ -291,6 +394,7 @@ function faceStats(u,post){
 }
 function renderSide(){
   const u=cur(), el=document.querySelector('#side');
+  if(isM()) return renderMasterSide(el);
   if(!u){ el.innerHTML=''; return; }
   const iss=validateUnits(units).filter(x=>x.i===sel||x.i===-1);
   const a=faceStats(u,false), b=faceStats(u,true), all=units.map(x=>faceStats(x,false));
@@ -335,6 +439,7 @@ function pencilHTML(u){
 function rollResultHTML(u){
   if(rollIdx==null) return '<span class="sub small">「転がす」で1回ロールを試せます。</span>';
   if(rollTimer) return '<span class="sub small">ころころ…</span>';
+  if(isM()){ const f=u.faces[rollIdx]; return `出目<b>${rollIdx+1}</b> ・ ${f.eff.length?`<b>${esc(f.label)}</b><div class="sub small">${esc(effsText(f.eff))}</div>`:'無（何も起きない）'}`; }
   const f=u.faces[rollIdx], c=rollPost?f.post:f.pre;
   return `出目<b>${rollIdx+1}</b> ・ 行動回数<b>${faceActs(u,rollIdx)}</b> ・ ${cmdChip(c)}${c.eff&&c.eff.length?`<div class="sub small">${esc(effsText(c.eff))}</div>`:''}`;
 }
@@ -366,7 +471,9 @@ document.addEventListener('input',e=>{
   }
   if(!el.dataset.p) return;
   setPath(cur(),el.dataset.p,conv(el));
-  if(el.dataset.act==='effKind'){ fixEff(getPath(cur(),el.dataset.p.replace(/\.k$/,''))); return full(); }
+  if(el.dataset.act==='effKind'){ const e=getPath(cur(),el.dataset.p.replace(/\.k$/,'')); fixEff(e);
+    if(isM()&&/^faces\./.test(el.dataset.p)) delete e.turns; // 補助の効果はそのターンだけ（ターン数は使わない）
+    return full(); }
   if(el.dataset.act==='structural') return full();
   light();
 });
@@ -377,7 +484,10 @@ document.addEventListener('change',e=>{
   if(el.id==='file'&&el.files[0]){
     const f=el.files[0], rd=new FileReader();
     rd.onload=()=>{
-      try{ units=parseUnitsFile(String(rd.result)); sel=0; rollIdx=null; full(); toast(`${f.name} から${units.length}体を読み込みました`); }
+      try{
+        if(isM()){ masters=parseMastersFile(String(rd.result)); msel=0; rollIdx=null; full(); toast(`${f.name} から${TERMS.player}${masters.length}人を読み込みました`); }
+        else { units=parseUnitsFile(String(rd.result)); sel=0; rollIdx=null; full(); toast(`${f.name} から${units.length}体を読み込みました`); }
+      }
       catch(err){ toast(`読み込めませんでした：${err.message}`,true); }
       el.value='';
     };
@@ -388,11 +498,12 @@ document.addEventListener('click',e=>{
   const b=e.target.closest('button[data-act]'); if(!b||b.disabled) return;
   const a=b.dataset.act, u=cur();
   switch(a){
-    case 'sel': sel=+b.dataset.i; rollIdx=null; renderAll(); window.scrollTo({top:0}); break;
-    case 'add': units.push(newUnit()); sel=units.length-1; rollIdx=null; full(); break;
-    case 'dup': { const c=clone(u); c.id=uniqueId(c.id); c.name+='（コピー）'; units.splice(sel+1,0,c); sel++; full(); break; }
-    case 'del': if(confirm(`「${u.name||'名前なし'}」を削除しますか？`)){ units.splice(sel,1); sel=Math.max(0,Math.min(sel,units.length-1)); rollIdx=null; full(); } break;
-    case 'move': { const j=sel+Number(b.dataset.d); if(j<0||j>=units.length) break; [units[sel],units[j]]=[units[j],units[sel]]; sel=j; full(); break; }
+    case 'tab': if(b.dataset.tab!==tab){ tab=b.dataset.tab==='masters'?'masters':'units'; rollIdx=null; try{ localStorage.setItem('pencilduel.editorTab',tab); }catch(e){} renderAll(); window.scrollTo({top:0}); } break;
+    case 'sel': setSel(+b.dataset.i); rollIdx=null; renderAll(); window.scrollTo({top:0}); break;
+    case 'add': { const L=list(); L.push(isM()?newMaster():newUnit()); setSel(L.length-1); rollIdx=null; full(); break; }
+    case 'dup': { const L=list(), i=selIdx(), c=clone(u); c.id=uniqueId(c.id); c.name+='（コピー）'; L.splice(i+1,0,c); setSel(i+1); full(); break; }
+    case 'del': if(confirm(`「${u.name||'名前なし'}」を削除しますか？`)){ const L=list(), i=selIdx(); L.splice(i,1); setSel(Math.max(0,Math.min(i,L.length-1))); rollIdx=null; full(); } break;
+    case 'move': { const L=list(), i=selIdx(), j=i+Number(b.dataset.d); if(j<0||j>=L.length) break; [L[i],L[j]]=[L[j],L[i]]; setSel(j); full(); break; }
     case 'fitReset': { u.fit[b.dataset.k]={...FIT_DEF[b.dataset.k]}; full(); break; }
     case 'effAdd': { if(!getPath(u,b.dataset.path)) setPath(u,b.dataset.path,[]); getPath(u,b.dataset.path).push(newEff(b.dataset.ctx)); full(); break; }
     case 'effDel': getPath(u,b.dataset.path).splice(+b.dataset.i,1); full(); break;
@@ -403,22 +514,32 @@ document.addEventListener('click',e=>{
       full(); toast(`${tplKey}（コスト${u.cost}）のテンプレを適用しました`); break; }
     case 'roll': doRoll(); break;
     case 'apply':
+      if(isM()){
+        if(mastersHaveErrors(masters,units)){ toast('エラーがあるため反映できません。一覧の赤い数字と右の「検証」を確認してください',true); break; }
+        if(saveCustomMasters(masters)){ renderStatus(); toast(`${TERMS.player}をゲームに反映しました。マスタールール・マスターチームで使えます`); }
+        else toast('ブラウザに保存できませんでした',true);
+        break;
+      }
       if(hasErrors(units)){ toast('エラーがあるため反映できません。一覧の赤い数字と右の「検証」を確認してください',true); break; }
       if(saveCustomUnits(units)){ renderStatus(); toast('ゲームに反映しました。ゲーム画面のモード選択から使えます'); }
       else toast('ブラウザに保存できませんでした',true);
       break;
     case 'unapply':
+      if(isM()){ if(confirm(`ゲームの${TERMS.player}を標準データ（js/masters.js）に戻しますか？ 編集中のデータはこのまま残ります。`)){ clearCustomMasters(); renderStatus(); toast(`ゲームの${TERMS.player}は標準データに戻りました`); } break; }
       if(confirm('ゲームを標準データ（js/units.js）に戻しますか？ 編集中のデータはこのまま残ります。')){ clearCustomUnits(); renderStatus(); toast('ゲームは標準データに戻りました'); }
       break;
-    case 'exportJS': downloadText('units.js',unitsToJS(units),'text/javascript'); toast('js/units.js と置き換えると、標準データとして公開できます'); break;
-    case 'exportJSON': downloadText('pencil-units.json',JSON.stringify(units,null,2),'application/json'); break;
+    case 'exportJS': if(isM()){ downloadText('masters.js',mastersToJS(masters),'text/javascript'); toast('js/masters.js と置き換えると、標準データとして公開できます'); break; }
+      downloadText('units.js',unitsToJS(units),'text/javascript'); toast('js/units.js と置き換えると、標準データとして公開できます'); break;
+    case 'exportJSON': if(isM()){ downloadText('pencil-masters.json',JSON.stringify(masters,null,2),'application/json'); break; }
+      downloadText('pencil-units.json',JSON.stringify(units,null,2),'application/json'); break;
     case 'import': document.querySelector('#file').click(); break;
     case 'resetDefault':
+      if(isM()){ if(confirm(`編集中の${TERMS.player}を標準データ（js/masters.js）に戻しますか？ 今の編集内容は消えます。`)){ masters=(typeof DEFAULT_MASTERS!=='undefined'?DEFAULT_MASTERS:[]).map(normalizeMaster); msel=0; rollIdx=null; full(); toast('標準データに戻しました'); } break; }
       if(confirm('編集中のデータを標準データ（js/units.js）に戻しますか？ 今の編集内容は消えます。')){ units=normalizeUnits(DEFAULT_UNITS); sel=0; rollIdx=null; full(); toast('標準データに戻しました'); }
       break;
   }
 });
 // ゲーム側や別タブで反映状態が変わったら表示を更新
-window.addEventListener('storage',e=>{ if(e.key===STORE.units) renderStatus(); });
+window.addEventListener('storage',e=>{ if(e.key===STORE.units||e.key===STORE.masters) renderStatus(); });
 
 boot();

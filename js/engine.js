@@ -6,8 +6,8 @@
         ホストが act() を実行して G をブロードキャスト」で載せ替え可能
    ===================================================================== */
 
-let UNITS=[], MASTERS=[], UNIT_SOURCE='default', UNIT_BROKEN=false;
-function reloadUnits(){ const r=loadUnits(); UNITS=r.units; UNIT_SOURCE=r.source; UNIT_BROKEN=!!r.broken; MASTERS=loadMasters(); }
+let UNITS=[], MASTERS=[], UNIT_SOURCE='default', UNIT_BROKEN=false, MASTER_SOURCE='default', MASTER_BROKEN=false;
+function reloadUnits(){ const r=loadUnits(); UNITS=r.units; UNIT_SOURCE=r.source; UNIT_BROKEN=!!r.broken; const mr=loadMasters(UNITS); MASTERS=mr.masters; MASTER_SOURCE=mr.source; MASTER_BROKEN=!!mr.broken; }
 reloadUnits();
 
 let G;
@@ -633,7 +633,7 @@ function masterTargetable(){
 // =====================================================================
 const ACTIONS = {
   restart(){ newGame(keepRule()); },
-  useDefaultData(){ clearCustomUnits(); reloadUnits(); SHOW_IDS=null; newGame(keepRule()); },
+  useDefaultData(){ clearCustomUnits(); clearCustomMasters(); reloadUnits(); SHOW_IDS=null; newGame(keepRule()); },
   setRule({rule}){ if(G.phase==='mode'&&RULESETS[rule]) G.rule=rule; },
   toggleHandicap(){ if(G.phase==='mode') G.handicap=!G.handicap; },
   chooseMode({mode,level}){

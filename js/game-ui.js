@@ -464,9 +464,10 @@ function showcaseHTML(){
 let SHOW_IDS_PENDING=false;
 
 function modeHTML(){
-  const src = UNIT_SOURCE==='custom'
-    ? `<p class="datainfo">ペンシルエディタで作ったデータ（${UNITS.length}騎）を使っています。<button data-a="useDefaultData">標準データに戻す</button></p>`
-    : UNIT_BROKEN ? `<p class="datainfo warn">エディタのデータにエラーがあったため、標準データを使っています。</p>` : '';
+  const cu=UNIT_SOURCE==='custom', cm=MASTER_SOURCE==='custom';
+  const src = (cu||cm
+    ? `<p class="datainfo">ペンシルエディタで作ったデータ（${[cu?`${TERMS.unit}${UNITS.length}騎`:'',cm?`${TERMS.player}${MASTERS.length}人`:''].filter(Boolean).join('・')}）を使っています。<button data-a="useDefaultData">標準データに戻す</button></p>` : '')
+    + (UNIT_BROKEN||MASTER_BROKEN ? `<p class="datainfo warn">エディタの${UNIT_BROKEN?TERMS.unit:TERMS.player}データにエラーがあったため、標準データを使っています。</p>` : '');
   const show=showcaseHTML();
   return `<div class="mode">
     <div class="title"><small>Fate fan-made pencil battle</small><h2>PENCIL DUEL</h2></div>
@@ -619,5 +620,5 @@ document.addEventListener('mouseover',e=>{
 });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&UI.detail){ UI.detail=null; render(); } });
 // エディタで反映したデータを、別タブから戻ってきたときに読み直す（モード選択画面にいるときだけ）
-window.addEventListener('storage',e=>{ if(e.key===STORE.units && G.phase==='mode'){ reloadUnits(); render(); } });
+window.addEventListener('storage',e=>{ if((e.key===STORE.units||e.key===STORE.masters) && G.phase==='mode'){ reloadUnits(); render(); } });
 newGame(); restoreMatch(); render();
