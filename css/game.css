@@ -537,6 +537,28 @@ body[data-screen="battle"] #app{overflow:hidden}
 .mtile{flex:none;width:96px}
 .mtile .tname{font-size:11px;padding:16px 6px 5px}
 .slot.mslot{margin-left:10px}
+.mhead{display:flex;align-items:center;gap:8px;width:100%;padding:6px 10px;text-align:left;font:700 13px var(--serif);color:var(--gold-hi);
+  border:1px solid var(--gold-lo);border-radius:5px;background:rgba(6,13,34,.6)}
+.mhead .mcaret{flex:none;font-size:10px}
+.mhead .mpicked{display:inline-flex;align-items:center;gap:6px;min-width:0;color:var(--ink);font-weight:400}
+.mhead .mpicked b{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.mhead .mpimg{width:28px;height:28px;border-radius:3px;object-fit:cover;flex:none}
+.mhead .mhint{margin-left:auto;flex:none;color:var(--sub);font-weight:400}
+.mtiles[hidden]{display:none}
+@media (max-width:860px){
+  /* スマホ：編成枠を詰めて横に収める。ボタンは折り返す */
+  .setup{padding:8px 10px;gap:8px}
+  .sethead{padding:8px 10px;gap:8px}
+  .settitle h2{font-size:16px}
+  .slots{flex-wrap:wrap;gap:4px}
+  .slot{width:54px;height:72px}
+  .slot.mslot{margin-left:4px}
+  .setbtns{flex-wrap:wrap}
+  .setbtns button{flex:1 1 auto}
+  .mtile{width:84px}
+  .mhead .mhint{display:none}
+  .roster{grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
+}
 @media (max-width:640px){
   .mchip .mlab,.mchip .pfx,.mchip .mtag:not(.evac):not(.dead){display:none}
   .mchip .gauge{min-width:56px}

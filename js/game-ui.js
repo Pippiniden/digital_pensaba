@@ -6,7 +6,7 @@
    - 画面だけの状態（詳細ウィンドウ・ログの開閉など）は UI に持ち、G には入れない
    ===================================================================== */
 
-const UI = { menu:false, spellPick:false, /* 令呪の即時発動：3つの中から選ぶ表示 */ result:false, resultShown:false, endReady:false,
+const UI = { menu:false, mfold:false, /* マスター選択の折り畳み */ spellPick:false, /* 令呪の即時発動：3つの中から選ぶ表示 */ result:false, resultShown:false, endReady:false,
   roster:{ sort:'default', cls:'', cost:'', q:'', ok:false }, /* キャラクター選択の並べ替え・絞り込み */ detail:null, setupView:null, log:readLogPref(), auto:readPref('pencilduel.auto')==='1' };
 function readPref(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
 function savePref(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
@@ -352,8 +352,14 @@ function setupHTML(){
 }
 
 // マスタールール：マスターの一覧（選んだら右に詳細）
+// 見出しを押すと折り畳める（選び終えたらサーヴァント一覧を広く使える）。UI.mfold：true=畳む
 function masterRosterHTML(pid,view){
-  return `<div class="mroster"><h4>${TERMS.player}を選ぶ${G.mpicks[pid]?'':' <small class="hl">未選択</small>'}</h4><div class="mtiles">${MASTERS.map(d=>{
+  const mp=D(G.mpicks[pid]), fold=UI.mfold&&!!mp;
+  return `<div class="mroster ${fold?'folded':''}"><button class="mhead" data-ui="mToggle" aria-expanded="${!fold}">
+      <span class="mcaret">${fold?'▶':'▼'}</span><span>${TERMS.player}を選ぶ</span>
+      ${mp?`<span class="mpicked">${unitImg(mp,'face','mpimg',mp.name)}<b>${esc(mp.name)}</b><small>C${mp.cost}</small></span>`:'<small class="hl">未選択</small>'}
+      <small class="mhint">${fold?'タップで開く':'タップで折り畳む'}</small></button>
+    <div class="mtiles" ${fold?'hidden':''}>${MASTERS.map(d=>{
     const sel=G.mpicks[pid]===d.id;
     return `<button class="tile mtile ${sel?'sel':''} ${view&&view.id===d.id?'viewing':''}" data-a="setupMaster" data-id="${esc(d.id)}" data-view="${esc(d.id)}">
       ${unitImg(d,'face','pimg',d.name)}<span class="tcost">C${d.cost}</span>${sel?'<span class="order">✓</span>':''}
@@ -593,6 +599,7 @@ function uiAct(a,ds){
     case 'toggleAuto': UI.auto=!UI.auto; savePref('pencilduel.auto',UI.auto?'1':'0'); break;
     case 'toggleMenu': UI.menu=!UI.menu; break;
     case 'spellPick': UI.spellPick=!UI.spellPick; break;
+    case 'mToggle': UI.mfold=!(UI.mfold&&!!D(G.mpicks[G.setupPid])); break;
     case 'rosterCls': UI.roster.cls=ds.v; break;
     case 'rosterReset': UI.roster={...UI.roster, cls:'', cost:'', q:'', ok:false}; break;
   }
@@ -607,6 +614,7 @@ document.addEventListener('click',e=>{
   if(u){ uiAct(u.dataset.ui,u.dataset); return; }
   const b=e.target.closest('[data-a]'); if(!b||b.disabled) return;
   if(b.dataset.view) UI.setupView=b.dataset.view;
+  if(b.dataset.a==='setupMaster'&&b.classList.contains('mtile')) UI.mfold=!b.classList.contains('sel'); // 選んだら畳む／外したら開く
   if(cpuActing() && !FREE_ACTIONS.includes(b.dataset.a)){ if(b.dataset.view) render(); return; } // CPUの手番中は操作を受け付けない
   act(b.dataset.a,{...b.dataset});
 });
