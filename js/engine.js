@@ -94,19 +94,24 @@ function resolveTargets(src,t,picked){
   else if(t==='target') ts=G.target?[U(G.target)]:[];
   return ts.filter(u=>u&&!u.out);
 }
+// 確率の判定（chance）：対象ごとに別々にロールする（全体効果なら1体ずつ判定）
+function chanceRoll(e,who){
+  const r=roll()+1, ok=r<=e.chance;
+  rollFx(who.uid,r-1,{ch:{need:e.chance,ok}});
+  log(`判定ロール（${nm(who)}）出目${r} ≤ ${e.chance} → ${ok?'成功':'失敗'}`, ok?'':'sub');
+  return ok;
+}
 function applyEffects(src,effs,picked){
   for(const e of effs){
-    if(e.chance){
-      const r=roll()+1, ok=r<=e.chance, who=resolveTargets(src,e.t,picked)[0]||src;
-      rollFx(who.uid,r-1,{ch:{need:e.chance,ok}});
-      log(`判定ロール（${dn(src)}）出目${r} ≤ ${e.chance} → ${ok?'成功':'失敗'}`, ok?'':'sub');
-      if(!ok) continue;
-    }
     if(e.t==='master'){
+      if(e.chance&&!chanceRoll(e,src)) continue;
       if(e.k==='star'||e.k==='starLoss') changeStars(src.pid,e.k==='star'?e.v:-e.v);
       continue;
     }
-    resolveTargets(src,e.t,picked).forEach(t=>applyOne(src,t,e));
+    resolveTargets(src,e.t,picked).forEach(t=>{
+      if(e.chance&&!chanceRoll(e,t)) return;
+      applyOne(src,t,e);
+    });
   }
 }
 function changeStars(pid,v){
