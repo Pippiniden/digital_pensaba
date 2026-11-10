@@ -133,14 +133,15 @@ function full(){ saveDraft(); renderAll(); }
 function renderAll(){ renderList(); renderForm(); renderSide(); renderStatus(); }
 
 // 今のタブの検証結果・反映済みデータ
+const issLabel = lv=>lv==='error'?'エラー':lv==='big'?'大警告':isM()?'小警告':'注意';
 const issuesNow = ()=>isM()?validateMasters(masters,units):validateUnits(units);
 function renderStatus(){
   const applied=isM()?loadMasters(units):loadUnits(), iss=issuesNow();
-  const e=iss.filter(x=>x.level==='error').length, w=iss.filter(x=>x.level==='warn').length;
+  const e=iss.filter(x=>x.level==='error').length, w=iss.filter(x=>x.level==='warn').length, bg=iss.filter(x=>x.level==='big').length;
   const dirty=JSON.stringify(list())!==JSON.stringify(isM()?applied.masters:applied.units);
   document.querySelector('#status').innerHTML=
     `<b class="sub">${isM()?TERMS.player:TERMS.unit}：</b><span class="${dirty?'dirty':'clean'}">${dirty?'● ゲームに未反映の変更があります':`✓ ゲームと同じ内容（${applied.source==='custom'?'反映済みデータ':'標準データ'}）`}</span>`+
-    ` <span class="sub">エラー${e}・注意${w}</span>`;
+    ` <span class="sub">エラー${e}・${isM()?`大警告${bg}・小警告${w}`:`注意${w}`}</span>`;
   document.querySelector('#unapply').hidden = applied.source!=='custom';
   document.querySelector('#exportJS').textContent=`${isM()?'masters.js':'units.js'} を書き出し`;
   document.querySelector('#simbtn').hidden=isM(); // バランス検証はサーヴァントだけ
@@ -156,10 +157,10 @@ function renderList(){
   document.querySelector('#list').innerHTML=`${tabsHTML()}
     <div class="row"><b>${isM()?TERMS.player:TERMS.unit}一覧</b><span class="sub small">${L.length}${isM()?'人':'体'}</span></div>
     <div class="ulist">${L.map((u,i)=>{
-      const e=iss.filter(x=>x.i===i&&x.level==='error').length, w=iss.filter(x=>x.i===i&&x.level==='warn').length;
+      const e=iss.filter(x=>x.i===i&&x.level==='error').length, w=iss.filter(x=>x.i===i&&x.level==='warn').length, bg=iss.filter(x=>x.i===i&&x.level==='big').length;
       return `<button class="uitem ${i===si?'on':''}" data-act="sel" data-i="${i}">
         ${isM()?'':clsBadge(u.cls,true)}${faceImg(u,'face xs')}<span class="uname">${esc(u.name)||'（名前なし）'}</span><span class="sub small">C${u.cost}</span>
-        ${e?`<span class="dot err" title="エラー${e}件">${e}</span>`:w?`<span class="dot wrn" title="注意${w}件">${w}</span>`:''}</button>`;
+        ${e?`<span class="dot err" title="エラー${e}件">${e}</span>`:bg?`<span class="dot big" title="大警告${bg}件${w?`・小警告${w}件`:''}">${bg}</span>`:w?`<span class="dot wrn" title="${isM()?'小警告':'注意'}${w}件">${w}</span>`:''}</button>`;
     }).join('')}</div>
     <div class="row">
       <button class="small" data-act="add">＋ 追加</button>
@@ -222,7 +223,8 @@ function renderMasterForm(el){
     <p class="sub small nm">マスタールールは1試合1回・3つから1つ。マスターチームは3画で、同じ効果は1回まで（使うと行動回数-1）。マスターチームでは「自軍${TERMS.unit}」の効果は選んだ1騎にかかります。</p>
     ${m.spells.map((s,i)=>`<div class="subcard">
       <div class="row"><b>令呪${i+1}</b></div>
-      <div class="fields"><label>名前<input data-p="spells.${i}.name" value="${esc(s.name)}"></label></div>
+      <div class="fields"><label>名前<input data-p="spells.${i}.name" value="${esc(s.name)}"></label>
+        <label>汎用令呪から入力<select data-spl="${i}"><option value="">（選ぶと名前と効果を置き換えます）</option>${SPELL_TPL.map((t,k)=>opt(k,`${t.name}（${t.tgt}）`,'')).join('')}</select></label></div>
       ${effList(`spells.${i}.eff`,s.eff,'master')}
       <div class="preview mprev" data-prev="spell" data-i="${i}">${esc(effsText(s.eff,null,mTLabel))}</div>
       ${ownLineIn(`spells.${i}.line`,s.line,MASTER_LINE_KEYS.spell)}
@@ -242,7 +244,7 @@ function renderMasterSide(el){
       <div id="rollres" class="rollres">${rollResultHTML(m)}</div>
     </div>
     <div class="sidecard"><b>検証</b>
-      ${iss.length?`<ul class="issues">${iss.map(x=>`<li class="${x.level}">${x.level==='error'?'エラー':'注意'}：${esc(x.msg)}</li>`).join('')}</ul>`:'<p class="ok small nm">問題は見つかりませんでした。</p>'}
+      ${iss.length?`<ul class="issues">${iss.map(x=>`<li class="${x.level}">${issLabel(x.level)}：${esc(x.msg)}</li>`).join('')}</ul>`:'<p class="ok small nm">問題は見つかりませんでした。</p>'}
     </div>
     <div class="sidecard"><b>数値の目安</b>
       <table class="stats">
@@ -426,8 +428,13 @@ function effRow(path,j,e,ctx,n,atKind){
       <button data-act="effDel" data-path="${path}" data-i="${j}" title="削除">×</button>
     </span>
     <div class="effprev">${esc(fxText(e))}</div>
+    ${ctx==='master'&&/^faces\./.test(path)?`<div class="effref ${refOver(e,path)?'over':''}">${esc(refText(e,path))}</div>`:''}
   </div>`;
 }
+// 補助の効果に出す、マスターシートの目安（小さく）。path は faces.<面>.eff.<番号>
+const refFace = path=>+path.split('.')[1];
+const refText = (e,path)=>{ const m=cur(); return m?masterRefText(e,refFace(path),m.cost):''; };
+const refOver = (e,path)=>{ const m=cur(), r=m&&masterRef(e,refFace(path),m.cost); return !!(r&&e.v>r.ref)||!!(m&&(masterSlot(e)||{}).c==='forbid'); };
 // 3種のカードを並べたプレビュー（画像欄用）
 const cardPreviewHTML=u=>`<span class="ccrow">${['R','B','G'].map(k=>cmdCardHTML(u,{c:k})).join('')}</span>`;
 // 入力中は再描画せず、説明文だけ更新する（入力欄のフォーカスを保つため）
@@ -435,6 +442,7 @@ function updatePreviews(){
   const u=cur(); if(!u) return;
   document.querySelectorAll('.eff[data-ep]').forEach(el=>{ const e=getPath(u,el.dataset.ep); if(e) el.querySelector('.effprev').textContent=fxText(e); });
   if(isM()){
+    document.querySelectorAll('.eff[data-ep^="faces."]').forEach(el=>{ const e=getPath(u,el.dataset.ep), r=el.querySelector('.effref'); if(e&&r){ r.textContent=refText(e,el.dataset.ep); r.classList.toggle('over',refOver(e,el.dataset.ep)); } });
     document.querySelectorAll('[data-prev="mface"]').forEach(el=>el.textContent=mFaceText(u.faces[+el.dataset.i]));
     document.querySelectorAll('[data-prev="spell"]').forEach(el=>el.textContent=effsText(u.spells[+el.dataset.i].eff,null,mTLabel));
     document.querySelectorAll('[data-fitout]').forEach(el=>{ const [k,a]=el.dataset.fitout.split('.'); el.textContent=`${u.fit[k][a]}%`; });
@@ -482,7 +490,7 @@ function renderSide(){
       <div id="rollres" class="rollres">${rollResultHTML(u)}</div>
     </div>
     <div class="sidecard"><b>検証</b>
-      ${iss.length?`<ul class="issues">${iss.map(x=>`<li class="${x.level}">${x.level==='error'?'エラー':'注意'}：${esc(x.msg)}</li>`).join('')}</ul>`:'<p class="ok small nm">問題は見つかりませんでした。</p>'}
+      ${iss.length?`<ul class="issues">${iss.map(x=>`<li class="${x.level}">${issLabel(x.level)}：${esc(x.msg)}</li>`).join('')}</ul>`:'<p class="ok small nm">問題は見つかりませんでした。</p>'}
     </div>
     <div class="sidecard"><b>数値の目安</b>
       <table class="stats">
@@ -568,6 +576,10 @@ document.addEventListener('input',e=>{
 document.addEventListener('change',e=>{
   const el=e.target;
   if(el.id==='tplsel') tplKey=el.value;
+  if(el.dataset&&el.dataset.spl!==undefined&&el.value!==''){ // 汎用令呪テンプレ：名前と効果を置き換える（名前はあとで自由に変えてよい）
+    const m=cur(), sp=m&&m.spells[+el.dataset.spl], t=SPELL_TPL[+el.value];
+    if(sp&&t){ sp.name=t.name; sp.eff=clone(t.eff).map(normEff); full(); toast(`令呪${+el.dataset.spl+1}を「${t.name}」のテンプレに置き換えました`); }
+  }
   if(el.id==='rollPost'){ rollPost=el.checked; renderSide(); }
   if(el.id==='file'&&el.files[0]){
     const f=el.files[0], rd=new FileReader();

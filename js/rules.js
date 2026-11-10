@@ -81,6 +81,86 @@ const RULESETS = {
 RULESETS.mteam = { name:'マスターチーム', partyMax:3, crit:'d100', master:true, mTeam:true, costCap:13, spells:3, lateBonus:6,
   desc:`${TERMS.unit}3騎＋${TERMS.player}1人・合計コスト13以下で戦うチームバトル。${TERMS.player}フェイズは補助と令呪（3画）。相手の${TERMS.unit}を全員${TERMS.out}にすれば勝利。` };
 
+// ---------- 泥ペンマスシート（マスター作成の基準。エディタの警告と目安表示に使う） ----------
+// HP はコスト×hpPerCost を基準に ±hpRange まで補正してよい（hpStep 刻み）。
+// 補助の6面：4番（index 3）は必ず効果あり（他より強め）。4番以外で効果がある面はコストと同じ数。補助の効果はそのターンだけ
+// 同じ種類の効果（効果・色・対象が同じ）は補助全体で sameMax まで。全体と単体は別種
+// forbid：補助に入れてはいけない効果（回避は(1回)・魅了はロール3以下の敵単体なら limit1 扱いで可）
+// limit1：補助全体で1枠まで（主に4番）／ limit2：補助全体で2枠まで（主に4番）
+// ref：目安値 [星4以下の4番以外, 4番, 星5の4番以外, 4番]（星5 = コスト star5Cost 以上）。single＝単体にすると増える量
+const MSHEET = {
+  hpPerCost:100, hpRange:100, hpStep:50, sameMax:3, star5Cost:5, faceMain:3,
+  forbid:{ np:'NPの即時増加は補助に入れられません（「攻撃時NP+x%(1回)」などにしてください）', invul:'無敵は補助に入れられません（令呪クラスの効果です）',
+    stun:'スタンは補助に入れられません（令呪クラスの効果です）', instantDeath:'即死は入れられません' },
+  limit1:['cleanse','strip','actsUp','fear'],   // ＋ 回避(1回)・魅了(ロール3以下の敵単体)
+  limit2:['buffImmune','debuffImmune'],
+  single:['ally_svt','enemy_svt'],
+  ref:{
+    dmg_enemy_svt:{name:'敵単体ダメージ', vals:[80,100,100,120]},
+    dmg_enemy_master:{name:'敵マスター単体ダメージ', vals:[100,150,120,200]},
+    atk:{name:'攻撃ダメージ+', vals:[10,30,20,40], single:10},
+    atk_R:{name:'Busterダメージ+', vals:[20,40,30,50], single:10},
+    atk_B:{name:'Artsダメージ+', vals:[20,40,30,50], single:10},
+    atk_G:{name:'Quickダメージ+', vals:[20,40,30,50], single:10},
+    def:{name:'被ダメージ-（攻撃ダメージ系より-10）', vals:[0,20,10,30], single:10},
+    onAtkNp_B:{name:'Arts攻撃時NP+', vals:[10,15,10,20], single:5},
+    onAtkNp:{name:'攻撃時NP+', vals:[5,10,5,15], single:5},
+    onAtkStar_G:{name:'Quick攻撃時スター', vals:[4,6,5,7], single:1},
+    onAtkStar:{name:'攻撃時スター', vals:[2,4,3,5], single:1},
+    critRoll:{name:'クリティカルレベル+', vals:[1,2,1,3], single:1},
+    heal:{name:'HP回復', vals:[30,80,60,100], single:20},
+    poison:{name:'毒ダメージ（敵単体）', vals:[40,60,50,80]},
+    burn:{name:'やけどダメージ（敵単体）', vals:[40,60,50,80]},
+  },
+};
+
+// 汎用令呪テンプレ（FGOのマスター礼装がもと）。選ぶと令呪の名前と効果を置き換える。名前は自由に変えてよい
+// 対象：svt＝味方単体（マスタールールでは自軍の1騎、マスターチームでは選んだ1騎） / ally_all＝味方全体
+const SPELL_TPL = [
+  ['応急手当','味方単体',{k:'heal',t:'svt',v:200}],
+  ['瞬間強化','味方単体',{k:'atk',t:'svt',v:40,turns:1}],
+  ['緊急回避','味方単体',{k:'evade',t:'svt',turns:1},{k:'actsUp',t:'svt',v:1,times:1}],
+  ['全体強化','味方全体',{k:'atk',t:'ally_all',v:20,turns:1}],
+  ['ガンド','敵単体',{k:'stun',t:'enemy_svt',turns:1}],
+  ['全体回復','味方全体',{k:'heal',t:'ally_all',v:100}],
+  ['霊子譲渡','味方単体',{k:'np',t:'svt',v:30}],
+  ['コマンドシャッフル','味方単体',{k:'actsUp',t:'svt',v:3,times:1}],
+  ['オシリスの塵','味方単体',{k:'invul',t:'svt',turns:1}],
+  ['イシスの雨','味方単体',{k:'cleanse',t:'svt'},{k:'actsUp',t:'svt',v:1,times:1}],
+  ['メジェドの眼','味方単体',{k:'skillCharge',t:'svt',v:1}],
+  ['魔力放出','味方単体',{k:'atk',t:'svt',v:60,color:'R',turns:1}],
+  ['騎士の誓い','味方単体',{k:'guts',t:'svt',v:400,turns:1,times:1}],
+  ['反応強化','味方単体',{k:'atk',t:'svt',v:40,color:'G',turns:1},{k:'onAtkStar',t:'svt',v:4,color:'G',turns:1}],
+  ['鉄の専心','味方単体',{k:'critRoll',t:'svt',v:4,turns:2}],
+  ['必至','味方単体',{k:'sureHit',t:'svt',turns:1},{k:'actsUp',t:'svt',v:1,times:1}],
+  ['ランブル・パーティー','味方全体',{k:'atk',t:'ally_all',v:20,color:'G',turns:1},{k:'onAtkStar',t:'ally_all',v:2,color:'G',turns:1}],
+  ['必殺トライデント','味方単体',{k:'pierce',t:'svt',turns:1}],
+  ['シーハウス・シャワー','味方単体',{k:'heal',t:'svt',v:150},{k:'np',t:'svt',v:10}],
+  ['霊子向上','味方単体',{k:'atk',t:'svt',v:40,color:'B',turns:1},{k:'onAtkNp',t:'svt',v:20,color:'B',turns:1}],
+  ['完勝への布石','味方単体',{k:'onAtkStar',t:'svt',v:8,turns:1}],
+  ['パニッシュメント','敵単体',{k:'buffImmune',t:'enemy_svt',times:1},{k:'fear',t:'enemy_svt',times:1}],
+  ['霊子向上・全','味方全体',{k:'atk',t:'ally_all',v:20,color:'B',turns:1},{k:'onAtkNp',t:'ally_all',v:10,color:'B',turns:1}],
+  ['生存への布石','味方単体',{k:'debuffImmune',t:'svt',times:1},{k:'actsUp',t:'svt',v:1,times:1}],
+  ['ダウン・スライド','敵単体',{k:'np',t:'enemy_svt',v:-35}],
+  ['コード:F','味方単体',{k:'npPow',t:'svt',v:100,turns:1}],
+  ['コード:H','味方単体',{k:'onAtkNp',t:'svt',v:15,turns:1}],
+  ['浄化回復','味方単体',{k:'heal',t:'svt',v:150},{k:'cleanse',t:'svt'}],
+  ['幻想強化','味方単体',{k:'atk',t:'svt',v:30,turns:1},{k:'npPow',t:'svt',v:50,turns:1}],
+  ['予測回避','味方単体',{k:'evade',t:'svt',turns:3,times:1},{k:'actsUp',t:'svt',v:1,times:1}],
+  ['ブルー・スプラッシュ','味方単体',{k:'atk',t:'svt',v:40,color:'B',turns:1},{k:'npPow',t:'svt',v:50,times:1}],
+  ['ファースト・シャイン','味方全体',{k:'npPow',t:'ally_all',v:80,times:1}],
+  ['オセチ・パッケージ','味方単体',{k:'maxHp',t:'svt',v:200}],
+  ['オーバー・チャージャー','味方単体',{k:'npPow',t:'svt',v:80,turns:1},{k:'cleanse',t:'svt'}],
+  ['スター・ブラスター','味方単体',{k:'critPow',t:'svt',v:100,turns:1}],
+  ['エスケープ・ポッド','味方単体',{k:'evade',t:'svt',turns:3,times:1},{k:'heal',t:'svt',v:150}],
+  ['一斉突撃','味方全体',{k:'atk',t:'ally_all',v:40,color:'R',turns:1}],
+  ['三重治療','味方単体',{k:'regenHp',t:'svt',v:50,times:3}],
+  ['魔力変換','味方単体',{k:'np',t:'svt',v:10},{k:'onAtkNp',t:'svt',v:10,turns:1}],
+  ['オリエンテーリング','味方単体',{k:'atk',t:'svt',v:40,color:'G',turns:1},{k:'npPow',t:'svt',v:50,times:1}],
+  ['キャンプファイヤー','味方全体',{k:'critPow',t:'ally_all',v:50,turns:1}],
+  ['サバイバルキット','味方単体',{k:'cleanse',t:'svt'},{k:'np',t:'svt',v:10}],
+].map(([name,tgt,...eff])=>({name,tgt,eff}));
+
 // ---------- マスターフェイズ（マスタールール） ----------
 const MASTER_ACTS = { support:'補助', attack:'攻撃', spell:'令呪', evac:'退避' };
 

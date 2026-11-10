@@ -16,7 +16,7 @@ button.danger{color:var(--r)}
 .uitem.on{border-color:var(--gold-hi);background:linear-gradient(90deg,rgba(214,178,94,.25),var(--panel2));box-shadow:0 0 8px rgba(214,178,94,.3)}
 .uname{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dot{min-width:18px;height:18px;border-radius:9px;font-size:11px;display:grid;place-items:center;color:#fff;padding:0 5px;font-weight:700}
-.dot.err{background:var(--r)}.dot.wrn{background:var(--warn)}
+.dot.err{background:var(--r)}.dot.wrn{background:var(--warn)}.dot.big{background:#e8742a}
 
 /* クラス入力 */
 .clsin{display:flex;align-items:center;gap:6px}
@@ -88,7 +88,7 @@ label.mini input[type=number]{width:62px}
 /* 右側 */
 .sidecard{padding:14px;margin-bottom:12px}
 .issues{margin:6px 0 0;padding-left:18px;font-size:12px}
-.issues li.error{color:var(--r)}.issues li.warn{color:var(--warn)}
+.issues li.error{color:var(--r)}.issues li.warn{color:var(--warn)}.issues li.big{color:#ff9c5c;font-weight:600}
 .ok{color:var(--g)}
 table.stats{width:100%;border-collapse:collapse;font-size:12px;margin:6px 0}
 table.stats td,table.stats th{border-bottom:1px solid var(--line);padding:4px;text-align:left;font-weight:normal}
@@ -191,3 +191,5 @@ table.simmx td.self{color:var(--sub)}
 .eff .traitin{width:7em}
 .eff .desctext{flex:1 1 16em;min-width:0}
 label.mini.chk{cursor:pointer}
+
+.effref{flex-basis:100%;font-size:10.5px;color:var(--sub);opacity:.85;line-height:1.4}.effref:empty{display:none}.effref.over{color:var(--warn);opacity:1}

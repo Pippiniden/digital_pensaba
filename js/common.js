@@ -211,7 +211,64 @@ function normalizeMaster(m){
   return { id:String(m.id||''), name:String(m.name||''), cls:TERMS.player, traits:[], cost:num(m.cost), hp:num(m.hp,100), master:true,
     fit:normFit(m.fit), lines:Object.fromEntries(Object.keys(MASTER_LINE_KEYS).map(k=>[k,strList(ln[k])])), faces, spells };
 }
+// ---------- 泥ペンマスシート（MSHEET）に沿った警告と目安 ----------
+// 補助の効果が「入れてはいけない」「リミット枠」のどれに当たるか。{c:'forbid'|'limit1'|'limit2', msg} または null
+function masterSlot(e){
+  const F=MSHEET.forbid;
+  if(e.k==='np'&&e.v>0&&!/^enemy/.test(e.t)) return {c:'forbid',msg:F.np};
+  if(F[e.k]&&e.k!=='np') return {c:'forbid',msg:F[e.k]};
+  if(e.k==='evade') return e.times===1?{c:'limit1',msg:'回避(1回)はリミット1枠（補助全体で1つ・主に4番）'}:{c:'forbid',msg:'回避は「回数1」のときだけ入れられます'};
+  if(e.k==='charm') return e.t==='enemy_svt'&&e.chance&&e.chance<=3?{c:'limit1',msg:'魅了(ロール3以下)はリミット1枠（補助全体で1つ・主に4番）'}:{c:'forbid',msg:'魅了は「敵サーヴァント単体・ロール3以下」のときだけ入れられます'};
+  if(MSHEET.limit1.includes(e.k)) return {c:'limit1',msg:`${(FX[e.k]||{}).name||e.k}はリミット1枠（補助全体で1つ・主に4番）`};
+  if(MSHEET.limit2.includes(e.k)) return {c:'limit2',msg:`${(FX[e.k]||{}).name||e.k}はリミット2枠（補助全体で2つまで・主に4番）`};
+  return null;
+}
+// 参考用補助効果一覧の目安値。fi＝補助の面（0始まり）。{name, ref（この面・このコストの目安）, adj（単体の加算分）, vals} または null
+function masterRef(e,fi,cost){
+  const c=e.color||'', R=MSHEET.ref;
+  const key={ dmg:e.t==='enemy_master'?'dmg_enemy_master':e.t==='enemy_svt'?'dmg_enemy_svt':null,
+    atk:'atk'+(c?'_'+c:''), onAtkNp:!c?'onAtkNp':c==='B'?'onAtkNp_B':null, onAtkStar:!c?'onAtkStar':c==='G'?'onAtkStar_G':null,
+    def:'def', critRoll:'critRoll', heal:'heal', poison:e.t==='enemy_svt'?'poison':null, burn:e.t==='enemy_svt'?'burn':null }[e.k];
+  const r=key&&R[key]; if(!r) return null;
+  const v=r.vals[(cost>=MSHEET.star5Cost?2:0)+(fi===MSHEET.faceMain?1:0)]; if(!(v>0)) return null;
+  const adj=e.t==='ally_svt'?(r.single||0):0;
+  return {name:r.name, ref:v+adj, adj, vals:r.vals};
+}
+// 補助の効果1つの説明（エディタに小さく出す）。目安値と、禁止・リミット枠の注意
+function masterRefText(e,fi,cost){
+  const r=masterRef(e,fi,cost), s=masterSlot(e), out=[];
+  if(r) out.push(`目安 ${r.ref}${r.adj?`（単体+${r.adj}込み）`:''}　${r.name}　★4以下 ${r.vals[0]}/${r.vals[1]}・★5 ${r.vals[2]}/${r.vals[3]}（4番以外/4番）`);
+  if(s) out.push(`${s.c==='forbid'?'⚠ ':''}${s.msg}`);
+  return out.join('　／　');
+}
+function checkMasterSheet(m,add){
+  const base=m.cost*MSHEET.hpPerCost, lo=Math.max(1,base-MSHEET.hpRange), hi=base+MSHEET.hpRange;
+  if(m.hp<lo||m.hp>hi) add('big',`HP${m.hp}がシートの範囲外です（コスト${m.cost}×${MSHEET.hpPerCost}を基準に±${MSHEET.hpRange}：${lo}〜${hi}）`);
+  else if((m.hp-base)%MSHEET.hpStep) add('warn',`HPは基準（${base}）から${MSHEET.hpStep}刻みで補正する目安です（今${m.hp-base>0?'+':''}${m.hp-base}）`);
+  const real=f=>f.eff.filter(e=>e.k!=='desc');
+  const main=MSHEET.faceMain;
+  if(!m.faces[main]||!real(m.faces[main]).length) add('big',`補助${main+1}番は必ず効果を入れます（他より強めに）`);
+  const others=m.faces.filter((f,i)=>i!==main&&real(f).length).length;
+  if(others>m.cost) add('big',`補助の成功枠が多すぎます（${main+1}番以外で効果のある面が${others}つ。コスト${m.cost}まで）`);
+  else if(others<m.cost) add('warn',`補助の成功枠が足りません（${main+1}番以外で効果のある面は、コストと同じ${m.cost}つが目安。今${others}つ）`);
+  const same=new Map(), lim={limit1:[],limit2:[]};
+  m.faces.forEach((f,fi)=>real(f).forEach(e=>{
+    const w=`補助${fi+1}`, name=(FX[e.k]||{}).name||e.k, s=masterSlot(e);
+    if(s){
+      if(s.c==='forbid') add('big',`${w}：${name} — ${s.msg}`);
+      else{ lim[s.c].push(fi); if(fi!==main) add('warn',`${w}：${name}は主に${main+1}番にだけ入れる効果です`); }
+    }
+    const key=`${e.k}|${e.color||''}|${e.t==='svt'?'ally_all':e.t}`, a=same.get(key)||{n:0,name:`${e.color?TERMS[e.color]+'の':''}${name}`,t:e.t,fs:[]};
+    a.n++; a.fs.push(fi+1); same.set(key,a);
+    const r=masterRef(e,fi,m.cost);
+    if(r&&e.v>r.ref) add('warn',`${w}：${name}${e.v}が目安（${r.ref}）を超えています`);
+  }));
+  for(const a of same.values()) if(a.n>MSHEET.sameMax) add('big',`同じ種類の効果が多すぎます：${a.name}（${mTLabel(a.t)}）が${a.n}つ（補助${a.fs.join('・')}）。補助全体で${MSHEET.sameMax}つまで`);
+  if(lim.limit1.length>1) add('big',`リミット1枠の効果が${lim.limit1.length}つ入っています（補助${lim.limit1.map(i=>i+1).join('・')}）。補助全体で1つまで`);
+  if(lim.limit2.length>2) add('big',`リミット2枠の効果が${lim.limit2.length}つ入っています（補助${lim.limit2.map(i=>i+1).join('・')}）。補助全体で2つまで`);
+}
 // units を渡すと、サーヴァントとIDが重なっていないかも確かめる（ゲームはIDでサーヴァント→マスターの順に探すため）
+// level：'error'（反映できない） / 'big'（大警告：シートの決まりに反する） / 'warn'（小警告・注意：シートの目安から外れる）
 function validateMasters(ms,units=[]){
   const issues=[], ids=new Map(), uids=new Set(units.map(u=>u.id)), allTraits=new Set(units.flatMap(u=>u.traits||[]));
   if(!ms.length) issues.push({i:-1,level:'warn',msg:`${TERMS.player}が1人もいません（マスタールールが遊べません）`});
@@ -225,6 +282,7 @@ function validateMasters(ms,units=[]){
     if(!(m.cost>=0)) add('error','コストは0以上にしてください');
     if(!(m.hp>0)) add('error','HPは1以上にしてください');
     traitUseCheck([...m.faces,...m.spells].flatMap(x=>x.eff),allTraits,add);
+    checkMasterSheet(m,add);
     m.faces.forEach((f,fi)=>{ if(f.eff.length&&!f.label.trim()) add('warn',`補助${fi+1}：面の名前が空です`); });
     m.spells.forEach((s,si)=>{ if(!s.name.trim()) add('warn',`令呪${si+1}：名前が空です`); });
     // 補助の効果はそのターンだけなので、効果時間なしの注意は出さない
