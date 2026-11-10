@@ -612,7 +612,10 @@ document.addEventListener('click',e=>{
   const a=b.dataset.act, u=cur();
   switch(a){
     case 'tab': if(b.dataset.tab!==tab){ tab=b.dataset.tab==='masters'?'masters':'units'; rollIdx=null; try{ localStorage.setItem('pencilduel.editorTab',tab); }catch(e){} renderAll(); window.scrollTo({top:0}); } break;
-    case 'sel': setSel(+b.dataset.i); rollIdx=null; renderAll(); window.scrollTo({top:0}); break;
+    case 'sel': { // 一覧のスクロール位置は保つ（順番にキャラを見ていくときに先頭へ戻らないように）
+      const ul=document.querySelector('.ulist'), lt=ul?ul.scrollTop:0;
+      setSel(+b.dataset.i); rollIdx=null; renderAll(); window.scrollTo({top:0});
+      const u2=document.querySelector('.ulist'); if(u2) u2.scrollTop=lt; break; }
     case 'add': { const L=list(); L.push(isM()?newMaster():newUnit()); setSel(L.length-1); rollIdx=null; full(); break; }
     case 'dup': { const L=list(), i=selIdx(), c=clone(u); c.id=uniqueId(c.id); c.name+='（コピー）'; L.splice(i+1,0,c); setSel(i+1); full(); break; }
     case 'del': if(confirm(`「${u.name||'名前なし'}」を削除しますか？`)){ const L=list(), i=selIdx(); L.splice(i,1); setSel(Math.max(0,Math.min(i,L.length-1))); rollIdx=null; full(); } break;
