@@ -611,5 +611,33 @@ const DEFAULT_UNITS = [
       {"name":"兎の跳躍","eff":[{"k":"evade","t":"self","v":0,"turns":1},{"k":"critPow","t":"self","v":20,"turns":1}]}
     ],
     "ult":{"name":"死は満ち、月は欠ける","c":"G","eff":[{"k":"dmg","t":"target","v":200},{"k":"instantDeath","t":"target","v":0,"chance":1}],"ruby":"ルナティック・スクラッチ"}
+  },
+  {
+    "id":"kalki", "name":"カルキ", "cls":"ルーラー", "cost":5, "hp":900,
+    "lines":{
+      "start":[],
+      "attack":[],
+      "extra":[],
+      "damage":[],
+      "skill":[],
+      "np":[],
+      "npDamage":[],
+      "defeat":[],
+      "win":[]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":90,"np":0,"star":0},"post":{"c":"R","dmg":120,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"B","dmg":70,"np":15,"star":0},"post":{"c":"B","dmg":80,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":70,"np":10,"star":0},"post":{"c":"B","dmg":80,"np":15,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"B","dmg":90,"np":0,"star":0,"eff":[{"k":"atkTrait","t":"self","v":50,"at":"pre","turns":2,"trait":"悪"}]}},
+      {"acts":3,"pre":{"c":"B","dmg":60,"np":10,"star":0},"post":{"c":"B","dmg":70,"np":15,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":50,"np":0,"star":4},"post":{"c":"G","dmg":60,"np":0,"star":6}}
+    ],
+    "skills":[
+      {"name":"対邪悪","eff":[{"k":"atkTrait","t":"self","v":50,"turns":1,"trait":"悪"}],"rank":"EX"},
+      {"name":"精神分離・機体人心","eff":[{"k":"atk","t":"self","v":20,"turns":1},{"k":"mentalImmune","t":"self","v":0,"turns":3}],"rank":"A"},
+      {"name":"スキル3","eff":[{"k":"atk","t":"self","v":10,"turns":3},{"k":"def","t":"self","v":10,"turns":3},{"k":"pierce","t":"self","v":0,"turns":1},{"k":"onAtkNp","t":"self","v":10,"turns":3},{"k":"regenHp","t":"self","v":40,"turns":3},{"k":"guts","t":"self","v":80,"turns":3}]}
+    ],
+    "ult":{"name":"終極よ、最果てを廻れ","c":"B","eff":[{"k":"atkTrait","t":"self","v":50,"turns":3,"trait":"悪","at":"pre"},{"k":"dmg","t":"enemy_all","v":400}],"ruby":"クリタ・ユガ"}
   }
 ];
