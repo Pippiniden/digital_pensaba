@@ -176,7 +176,8 @@ UI notes: in the master rule (not mteam) the master is drawn as a card beside th
 | key | Meaning | Where it is implemented |
 |---|---|---|
 | `critPow` | Critical damage **+x** (additive, not a multiplier) | `resolveCommand` |
-| `critRoll` | "Critical roll −x" = critical level **+x** | `resolveCommand` |
+| `critRoll` | "クリティカル率アップ" (was クリティカルロール-) = critical level **+x**; pair of `critDown` (クリティカル率ダウン) | `resolveCommand` |
+| `debuffUp` / `debuffDown` | 弱体成功率アップ／ダウン: when the holder applies a debuff (`FX[k].buff===false`) to an **enemy**, the `chance` roll threshold N becomes N+up−down (0–6; "必ず" counts as 6, so only `debuffDown` can make it fail; `debuffUp` only helps effects with `chance`). One use is consumed per effect (not per target). Not for self/ally targets or instant effects | `debuffRate` / `applyEffects` / `chanceRoll` |
 | `critMult` | "Crit multiplier": on a crit, damage becomes (damage before the crit step) × x% **instead of** +30/+60 and the color-buff doubling; `critPow` is still added after. Highest value wins. NP / stars keep the normal crit ×2 | `resolveCommand` |
 | `healBlock` | Debuff: blocks `heal` and `regenHp` (not the HP gained from `maxHp`) | `applyOne`, `endPhase` |
 | `poison` / `burn` | DoT of value v at turn end (0 → `RULES.dot`) | `endPhase`, `dotVal` |

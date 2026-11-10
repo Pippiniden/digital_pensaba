@@ -131,7 +131,8 @@ const FX = {
   evade:{name:'回避',buff:true}, invul:{name:'無敵',buff:true},
   sureHit:{name:'必中',buff:true}, pierce:{name:'無敵貫通',buff:true}, guts:{name:'ガッツ',buff:true,val:true},
   taunt:{name:'ターゲット集中',buff:true},
-  critRoll:{name:'クリティカルロール-',buff:true,val:true}, // クリティカルレベル+x
+  critRoll:{name:'クリティカル率アップ',buff:true,val:true}, // クリティカルレベル+x
+  debuffUp:{name:'弱体成功率アップ',buff:true,val:true},     // 自分が敵に付ける弱体の判定ロール（ロールN以下）をN+xにする（成功率ダウンと相殺）
   ignoreDef:{name:'被ダメージ減少無視',buff:true},           // 相手の[被ダメージ-x]を受けずに攻撃
   debuffImmune:{name:'弱体無効',buff:true},                  // 弱体効果・弱体ダメージを受けない
   mentalImmune:{name:'精神異常無効',buff:true},              // 精神異常(mental)の弱体を受けない
@@ -163,7 +164,8 @@ const FX = {
   fear:{name:'恐怖',buff:false,mental:true},                             // 行動回数-1
   drain:{name:'HP減少',buff:false,val:true,perm:true},      // ターン終了時に値ぶんの弱体ダメージ。重複する（合計）。永続でよい
   sealSkill:{name:'スキル封印',buff:false}, sealUlt:{name:'宝具封印',buff:false},
-  critDown:{name:'クリティカル発生率ダウン',buff:false,val:true},
+  critDown:{name:'クリティカル率ダウン',buff:false,val:true},
+  debuffDown:{name:'弱体成功率ダウン',buff:false,val:true},   // 自分が敵に付ける弱体の判定ロールをN-xにする。「必ず」の弱体もロール6以下の判定になる
   healBlock:{name:'回復無効',buff:false},                   // HP回復・毎ターンHP回復を受けない // 攻撃時のクリティカルレベル-x（シンプルは出目+x）
   // 即時
   heal:{name:'HP回復',val:true,inst:true}, np:{name:'NP増減',val:true,inst:true}, star:{name:'スター獲得',val:true,inst:true},
@@ -190,10 +192,10 @@ const FX = {
 // ---------- 効果の分類（エディタで「分類 → 種類」の2段で選ぶ） ----------
 // ここにない効果は最後の「その他」に入る
 const FX_GROUPS = [
-  ['攻撃強化', ['atk','npPow','atkVs','atkTrait','ignoreDef','sureHit','pierce','critPow','critMult','critRoll','cardConv','onAtkStar','onAtkNp']],
+  ['攻撃強化', ['atk','npPow','atkVs','atkTrait','ignoreDef','sureHit','pierce','critPow','critMult','critRoll','debuffUp','cardConv','onAtkStar','onAtkNp']],
   ['防御・耐性', ['def','defTrait','evade','invul','guts','taunt','nullUnder','counter','maxHp','debuffImmune','mentalImmune']],
   ['継続・ターン', ['actsUp','regenHp','regenNp','regenStar','onHitNp','onHitStar']],
-  ['弱体', ['atkDown','npPowDown','defDown','critDown','poison','burn','spread','drain','curse','stun','charm','fear','sealSkill','sealUlt','healBlock','buffImmune']],
+  ['弱体', ['atkDown','npPowDown','defDown','critDown','debuffDown','poison','burn','spread','drain','curse','stun','charm','fear','sealSkill','sealUlt','healBlock','buffImmune']],
   ['回復・即時', ['heal','np','star','starLoss','cleanse','cleanseMental','strip','buffExtend','skillCharge']],
   ['攻撃・特殊', ['dmg','multiHit','selfDmg','instantDeath','copyRoll']],
   ['表示', ['desc']],

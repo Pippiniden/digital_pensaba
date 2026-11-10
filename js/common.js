@@ -419,7 +419,9 @@ function fxText(e){
     case 'critPow': s=`クリティカル威力+${e.v}`; break;
     case 'critMult': s=`クリティカル時ダメージ×${e.v}%`; break;
     case 'guts': s=`ガッツ(HP${e.v})`; break;
-    case 'critRoll': s=`クリティカルロール-${e.v}(Lv+${e.v})`; break;
+    case 'critRoll': s=`クリティカル率アップ(Lv+${e.v})`; break;
+    case 'debuffUp': s=`弱体成功率アップ(ロール+${e.v})`; break;
+    case 'debuffDown': s=`弱体成功率ダウン(ロール-${e.v})`; break;
     case 'poison': s=`毒${e.v||RULES.dot}`; break;
     case 'burn': s=`やけど${e.v||RULES.dot}`; break;
     case 'starLoss': s=`${TERMS.star}${e.v}個消失`; break;
@@ -439,7 +441,7 @@ function fxText(e){
     case 'onHitNp': s=`被ダメージ時${TERMS.gauge}+${e.v}%`; break;
     case 'onHitStar': s=`被ダメージ時${TERMS.star}${e.v}個獲得`; break;
     case 'maxHp': s=`最大HP+${e.v}`; break;
-    case 'critDown': s=`クリティカル発生率ダウン(Lv-${e.v})`; break;
+    case 'critDown': s=`クリティカル率ダウン(Lv-${e.v})`; break;
     case 'cardConv': s=`カード変換→${e.color?TERMS[e.color]:'(色未指定)'}`; break;
     case 'buffExtend': s=`強化の効果時間+${e.v}T`; break;
     case 'skillCharge': s=`使用済みスキル${e.v}個を再使用可能に`; break;

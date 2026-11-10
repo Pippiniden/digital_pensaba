@@ -178,11 +178,18 @@ function resolveTargets(src,t,picked){
   return ts.filter(u=>u&&!u.out);
 }
 // 確率の判定（chance）：対象ごとに別々にロールする（全体効果なら1体ずつ判定）
-function chanceRoll(e,who){
-  const r=roll()+1, ok=r<=e.chance;
-  rollFx(who.uid,r-1,{ch:{need:e.chance,ok}});
-  log(`判定ロール（${nm(who)}）出目${r} ≤ ${e.chance} → ${ok?'成功':'失敗'}`, ok?'':'sub');
+function chanceRoll(e,who,need=e.chance){
+  const r=roll()+1, ok=r<=need;
+  rollFx(who.uid,r-1,{ch:{need,ok}});
+  log(`判定ロール（${nm(who)}）出目${r} ≤ ${need} → ${ok?'成功':'失敗'}`, ok?'':'sub');
   return ok;
+}
+// 弱体の成功率：敵に付ける弱体の判定は、弱体成功率アップ(+x)／ダウン(-x)でロールの基準値をずらす（0〜6）。
+// 「必ず」の弱体はロール6以下として扱うので、ダウンがあるときだけ失敗しうる。アップは確率つきの弱体にだけ効く
+function debuffRate(src,e){
+  if(!(FX[e.k]&&FX[e.k].buff===false)) return null;
+  const up=mods(src,'debuffUp'), dn=mods(src,'debuffDown');
+  return (up.list.length||dn.list.length)?{up:up.sum,dn:dn.sum,list:[...up.list,...dn.list],used:false}:null;
 }
 // o.tmp：マスターの補助（このターンだけ）。付いた効果は終了フェイズで消える
 function applyEffects(src,effs,picked,o={}){
@@ -193,11 +200,17 @@ function applyEffects(src,effs,picked,o={}){
       if(e.k==='star'||e.k==='starLoss') changeStars(src.pid,e.k==='star'?e.v:-e.v);
       continue;
     }
+    const rate=debuffRate(src,e);
     resolveTargets(src,e.t,picked).forEach(t=>{
-      if(e.chance&&!chanceRoll(e,t)) return;
+      if(rate&&t.pid!==src.pid&&(e.chance||rate.dn)){ // 敵への弱体：成功率アップ／ダウンで判定をずらす
+        rate.used=true;
+        const need=Math.max(0,Math.min(6,(e.chance||6)+rate.up-rate.dn));
+        if(need<6&&!chanceRoll(e,t,need)) return;
+      } else if(e.chance&&!chanceRoll(e,t)) return;
       if(e.k==='dmg'){ if(src.master) fixedHit(src,t,effVal(e,t)); return; } // 宝具のダメージは resolveUlt で処理
       applyOne(src,t,e,o);
     });
+    if(rate&&rate.used) consume(src,rate.list); // 判定に使ったら回数を1消費（全体効果でも1回）
   }
 }
 function changeStars(pid,v){
@@ -417,8 +430,8 @@ function attackHit(att,cmd,tgt,o,lab){
   if(!o.extra){
     const stars=G.players[att.pid].stars;
     if(stars>0){
-      const cr=mods(att,'critRoll'), cd=mods(att,'critDown'); // critDown＝クリティカル発生率ダウン（弱体）
-      if(ruleset().crit==='d6'){ // シンプルルール：1d6 の出目（クリティカルロール-x で出目を下げる）が必要値以下で成功
+      const cr=mods(att,'critRoll'), cd=mods(att,'critDown'); // critDown＝クリティカル率ダウン（弱体）
+      if(ruleset().crit==='d6'){ // シンプルルール：1d6 の出目（クリティカル率アップ(critRoll)で出目を下げる）が必要値以下で成功
         const need=critNeedD6(stars), r=roll()+1, rv=r-cr.sum+cd.sum;
         crit=(need>=6&&!cd.sum)||rv<=need;
         note.push(`クリ判定 出目${r}${cr.sum?`-${cr.sum}`:''}${cd.sum?`+${cd.sum}`:''} ≤ ${need} ${crit?'成功':'失敗'}`);
