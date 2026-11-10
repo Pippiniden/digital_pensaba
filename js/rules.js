@@ -191,6 +191,10 @@ const FX = {
 
 // ---------- 効果の分類（エディタで「分類 → 種類」の2段で選ぶ） ----------
 // ここにない効果は最後の「その他」に入る
+// 条件つき効果（Eff.cond）：条件を満たす相手にだけ働く。condUse の効果は「使う瞬間」（ダメージ計算）に攻撃・防御の相手を見る。
+// それ以外は付与するときに対象を見る（満たさない対象には付かない・効かない）
+const COND_KINDS = { trait:'属性', fx:'状態', hpBelow:'HP○%以下', hpAbove:'HP○%以上', npFull:'NP満タン', cls:'クラス' };
+['atk','atkDown','def','defDown'].forEach(k=>{ if(FX[k]) FX[k].condUse=true; });
 const FX_GROUPS = [
   ['攻撃強化', ['atk','npPow','atkVs','atkTrait','ignoreDef','sureHit','pierce','critPow','critMult','critRoll','debuffUp','cardConv','onAtkStar','onAtkNp']],
   ['防御・耐性', ['def','defTrait','evade','invul','guts','taunt','nullUnder','counter','maxHp','debuffImmune','mentalImmune']],

@@ -149,7 +149,7 @@ function cmdValue(u,c,stars,tgt){
   }
   return d*hitsOf(c.eff);
 }
-function allocEV(alloc){
+function allocEV(alloc,noChain){
   const tgt=[...alive(1-G.cur)].sort((a,b)=>maxHp(b)-maxHp(a))[0], stars=G.players[G.cur].stars;
   const slots=[]; Object.entries(alloc).forEach(([uid,n])=>{ for(let i=0;i<n;i++) slots.push(U(uid)); });
   if(!slots.length) return 0;
@@ -159,7 +159,7 @@ function allocEV(alloc){
     per.set(u,{v:cs.reduce((s,c)=>s+cmdValue(u,c,stars,tgt),0)/6, pR:cs.filter(c=>c.c==='R'&&c.dmg>0).length/6,
       ex:cs.reduce((s,c)=>s+(c.c==='ASC'?(u.asc?0:ASC_VALUE):(c.dmg||0)*hitsOf(c.eff)),0)/6}); } return per.get(u); };
   let v=slots.reduce((s,u)=>s+stat(u).v,0);
-  if(slots.length===3) v+=slots.reduce((p,u)=>p*stat(u).pR,1)*RULES.chainR*3;
+  if(slots.length===3&&!noChain) v+=slots.reduce((p,u)=>p*stat(u).pR,1)*RULES.chainR*3;
   if(slots.length===3&&slots.every(s=>s===slots[0])) v+=stat(slots[0]).ex; // ブレイブチェインの追加攻撃（補正・クリティカルなし）
   return v;
 }
@@ -184,8 +184,9 @@ function cpuUltUser(){
   if(u&&cpuHard()&&ultPower(u)>0&&ultPower(u)<turnPower()) return null;
   return u;
 }
-// このターンに割り振った行動の見込みダメージ（ブレイブチェインはおおよそ+60）
+// このターンに割り振った行動の見込みダメージ。つよい以上は allocEV（クリティカル期待値・ブレイブチェインの追加攻撃を含み、Busterチェインは含めない）
 function turnPower(){
+  if(cpuHard()) return allocEV(G.alloc,true);
   return Object.entries(G.alloc).reduce((s,[uid,n])=>s+n*avgDmg(U(uid)),0)+(Object.values(G.alloc).some(n=>n===3)?60:0);
 }
 function usableSkills(){
@@ -218,6 +219,26 @@ function cpuGuardScore(u,si){
   }
   return ts.some(t=>hpR(t)<.35) ? base : Math.min(base,0);
 }
+// つよい以上：このターンの攻撃回数（宝具を撃つならその1回、通常ならその対象が割り振られた行動数の合計）
+function attackCount(ts){
+  if(G.ult) return ts.some(t=>t.uid===G.ult)?1:0;
+  return ts.reduce((s,t)=>s+(G.alloc[t.uid]||0),0);
+}
+// 攻撃強化：対象が何回攻撃するかで価値が決まる（3回以上は迷わず、2回で使う、1回だけなら温存。数ターン続く強化は1回でも少し価値あり）
+function atkBuffScore(e,ts){
+  const n=attackCount(ts.filter(t=>t.pid===G.cur));
+  if(n>=3) return 4;
+  if(n===2) return 3;
+  return n===1&&(e.turns||0)>1 ? 2 : n===1 ? 1.5 : 0;
+}
+// スター付与：次のクリティカルレベル（シンプルルールは出目の上限）に届いて、その分の期待ダメージ（攻撃回数×上昇した確率×クリティカル追加ダメージ）が見込めるときに使う
+function starSkillScore(v,pid){
+  if(G.ult) return .5;
+  const st=G.players[pid].stars, d6=ruleset().crit==='d6';
+  const p=s=>s<=0?0:d6?Math.min(1,critNeedD6(s)/6):critChance(critLevel(s))/100;
+  const n=Object.values(G.alloc).reduce((s,x)=>s+x,0);
+  return n*(p(st+v)-p(st))*RULES.critDmg/4.5;
+}
 // スキルの使いどき：効果ごとに「今使う価値」を点数化し、2点以上なら使う
 function cpuSkillScore(u,si){
   const s=D(u.def).skills[si];
@@ -229,10 +250,15 @@ function cpuEffScore(u,effs,picked,si){
   let sc=0;
   for(const e of effs){
     if(FX[e.k]&&FX[e.k].noTgt) continue; // 説明文・連続攻撃（スキルでは使わない）
-    const ts=e.t==='master'?[]:resolveTargets(u,e.t,picked), acting=ts.some(isActing);
+    let ts=e.t==='master'?[]:resolveTargets(u,e.t,picked);
+    if(e.cond){ // 条件つき：付与時に見る効果は条件を満たす対象だけ／使う瞬間に見る効果（攻撃・防御補正）は条件を満たす敵がいるときだけ
+      if(FX[e.k]&&FX[e.k].condUse){ if(!enemies.some(x=>condOk(e.cond,x))) continue; }
+      else ts=ts.filter(t=>condOk(e.cond,t));
+    }
+    const acting=ts.some(isActing);
     const foes=ts.filter(t=>t.pid!==u.pid);
     switch(e.k){
-      case 'atk': sc+=acting?3:0; break;
+      case 'atk': sc+=cpuHard()?atkBuffScore(e,ts):acting?3:0; break;
       case 'critPow': sc+=acting&&!G.ult&&critLevel(stars)>=3?3:0; break;
       case 'ignoreDef': sc+=acting&&enemies.some(x=>has(x,'def'))?3:.5; break;
       case 'debuffImmune': sc+=ts.some(t=>hpR(t)<.7)?1.5:.5; break;
@@ -272,7 +298,7 @@ function cpuEffScore(u,effs,picked,si){
       case 'skillCharge': sc+=ts.some(t=>t.used.some((x,i)=>x&&!(t===u&&i===si)))?3:-1; break;
       case 'cleanse': sc+=ts.some(t=>t.fx.some(x=>FX[x.k].buff===false))?2:0; break;
       case 'np': sc+=ts.some(t=>t.np<RULES.ultCost&&t.np+e.v>=RULES.ultCost)?4:ts.some(t=>t.np<RULES.ultCost)?1.5:0; break;
-      case 'star': sc+=G.ult?.5:2; break;
+      case 'star': sc+=cpuHard()?starSkillScore(e.v,u.pid):G.ult?.5:2; break;
       case 'stun': case 'charm': sc+=3; break;
       case 'poison': case 'burn': sc+=ts.some(t=>!has(t,e.k))?2:0; break;
       case 'curse': case 'atkDown': sc+=2; break;

@@ -18,6 +18,25 @@ const num = (v,d=0)=>Number.isFinite(+v)&&v!==''&&v!=null ? +v : d;
 const strList = v=>(Array.isArray(v)?v:v==null?[]:[v]).map(x=>String(x??'').trim()).filter(Boolean);
 // 属性：重複を除いた配列
 const normTraits = v=>[...new Set(strList(v))];
+// 条件（cond）：{k:COND_KINDS のキー, v:値, not?:true}。不正なら null
+function normCond(c){
+  if(!c||!COND_KINDS[c.k]) return null;
+  const o={k:c.k};
+  if(c.k==='trait'||c.k==='cls'){ const v=String(c.v??'').trim(); if(!v) return null; o.v=v; }
+  else if(c.k==='fx'){ const v=String(c.v??''); o.v=(v==='*debuff'||v==='*buff'||(FX[v]&&!FX[v].inst&&!FX[v].noTgt))?v:'*debuff'; }
+  else if(c.k==='hpBelow'||c.k==='hpAbove') o.v=Math.min(100,Math.max(1,Math.round(num(c.v,50))||50));
+  if(c.not) o.not=true;
+  return o;
+}
+// 条件の説明文。use＝使う瞬間に見る効果（相手＝攻撃・防御の相手）／それ以外は「対象」
+function condText(c,use){
+  if(!c) return '';
+  const s=use?'相手':'対象';
+  const b={ trait:`${s}が〔${c.v}〕属性`, cls:`${s}が${c.v}`,
+    fx:c.v==='*debuff'?`${s}が弱体状態`:c.v==='*buff'?`${s}が強化状態`:`${s}が${(FX[c.v]||{}).name||c.v}状態`,
+    hpBelow:`${s}のHPが${c.v}%以下`, hpAbove:`${s}のHPが${c.v}%以上`, npFull:`${s}の${TERMS.gauge}が100%` }[c.k];
+  return b?`${b}${c.not?'でないとき':'のとき'}`:'';
+}
 function normEff(e){
   e=e||{};
   const o={k:String(e.k||'atk'), t:String(e.t||'self'), v:num(e.v)};
@@ -25,6 +44,7 @@ function normEff(e){
   if(['R','B','G'].includes(e.color)) o.color=e.color;
   if(e.vs&&FX[e.vs]&&FX[e.vs].buff===false) o.vs=String(e.vs); // 弱体状態特攻の対象の弱体
   const tr=String(e.trait??'').trim(); if(tr) o.trait=tr; // 属性特攻・特防の対象の属性
+  const cd=normCond(e.cond); if(cd&&!(FX[o.k]&&FX[o.k].noTgt)) o.cond=cd; // 条件つき効果
   if(EFF_AT[e.at]) o.at=e.at; // 攻撃の前/後（未指定なら既定のタイミング。rules.js の EFF_AT）
   if(e.max&&FX[o.k]&&FX[o.k].maxOk) o.max=true; // 値＝対象の最大HP（軽減不可）
   const tx=String(e.text??'').trim(); if(tx&&o.k==='desc') o.text=tx; // 説明文
@@ -138,7 +158,9 @@ function validateUnits(units){
 }
 // 特攻・特防の属性を、どのサーヴァントも持っていなければ注意
 function traitUseCheck(effs,allTraits,add){
-  const miss=[...new Set(effs.filter(e=>FX[e.k]&&FX[e.k].trait&&e.trait&&!allTraits.has(e.trait)).map(e=>e.trait))];
+  const miss=[...new Set([
+    ...effs.filter(e=>FX[e.k]&&FX[e.k].trait&&e.trait&&!allTraits.has(e.trait)).map(e=>e.trait),
+    ...effs.filter(e=>e.cond&&e.cond.k==='trait'&&e.cond.v&&!allTraits.has(e.cond.v)).map(e=>e.cond.v)])];
   if(miss.length) add('warn',`属性「${miss.join('」「')}」を持つ${TERMS.unit}がいません（特攻・特防が発動しません）`);
 }
 function checkEffs(effs,ctx,where,add){
@@ -158,6 +180,10 @@ function checkEffs(effs,ctx,where,add){
     if(e.vs&&e.k!=='atkVs') add('warn',`${w}：この効果では弱体の種類の指定は使われません`);
     if(FX[e.k].trait&&!e.trait) add('error',`${w}：${FX[e.k].name}は対象の属性を指定してください`);
     if(e.trait&&!FX[e.k].trait) add('warn',`${w}：この効果では属性の指定は使われません`);
+    if(e.cond){
+      if(FX[e.k].noTgt) add('warn',`${w}：この効果では条件は使われません`);
+      else if((e.cond.k==='trait'||e.cond.k==='cls')&&!e.cond.v) add('warn',`${w}：条件の${COND_KINDS[e.cond.k]}が空です`);
+    }
     if(e.k==='critMult'&&e.v>0&&e.v<=100) add('warn',`${w}：クリティカル倍率が100%以下だと、クリティカルでダメージが増えません`);
     if(e.k==='maxHp'&&e.times!=null) add('warn',`${w}：最大HP+は回数では減りません（ターンで指定してください）`);
     if(['buffExtend','skillCharge'].includes(e.k)&&!(e.v>0)) add('error',`${w}：値は1以上にしてください`);
@@ -456,7 +482,7 @@ function fxText(e){
     default: s=FX[e.k]?FX[e.k].name:e.k;
   }
   const dur=[e.times!=null?`${e.times}回`:'', e.turns!=null?`${e.turns}T`:''].filter(Boolean).join('・');
-  return s+(dur?`(${dur})`:'')+(e.chance?`［ロール${e.chance}以下］`:'')+(EFF_AT[e.at]&&e.k!=='dmg'?`［${EFF_AT[e.at]}］`:'');
+  return s+(dur?`(${dur})`:'')+(e.cond?`［${condText(e.cond,FX[e.k]&&FX[e.k].condUse)}］`:'')+(e.chance?`［ロール${e.chance}以下］`:'')+(EFF_AT[e.at]&&e.k!=='dmg'?`［${EFF_AT[e.at]}］`:'');
 }
 function tLabel(t,pick){
   if(t==='picked') return PICKS[pick]&&pick ? PICKS[pick] : TARGETS.picked;

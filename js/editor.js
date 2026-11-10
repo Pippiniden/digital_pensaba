@@ -116,7 +116,7 @@ function fixEff(e){
   if(!f.maxOk) delete e.max;
   if(e.k!=='desc') delete e.text;
   else if(e.text==null) e.text='';
-  if(f.noTgt){ e.t=e.t==='svt'?'svt':'self'; delete e.chance; delete e.at; } // 対象・確率・タイミングを使わない効果
+  if(f.noTgt){ e.t=e.t==='svt'?'svt':'self'; delete e.chance; delete e.at; delete e.cond; } // 対象・確率・タイミングを使わない効果
   if(e.k==='multiHit'&&!(e.v>=2)) e.v=2;
 }
 
@@ -373,6 +373,21 @@ function effAtSel(p,e,atKind){
   const def=EFF_AT_DEFAULT[atKind], defLabel=def==='order'?'並び順':EFF_AT[def];
   return `<label class="mini" title="攻撃（ダメージ）の前に適用するか、後に適用するか"><span>タイミング</span><select data-p="${p}.at" data-t="optstr">${opt('',`既定（${defLabel}）`,e.at||'')}${Object.entries(EFF_AT).map(([k,v])=>opt(k,v,e.at)).join('')}</select></label>`;
 }
+// 条件（cond）の入力：種類 → 値 →「でないとき」。使う瞬間に見る効果（攻撃・防御補正）は「相手」、それ以外は「対象」を見る
+function condIn(p,e,f){
+  const c=e.cond, s=f.condUse?'相手':'対象';
+  const kind=`<label class="mini" title="条件を満たす${s}にだけ効果が働きます"><span>条件（${s}）</span><select data-act="condKind" data-ep="${p}">${opt('','なし',c?c.k:'')}${Object.entries(COND_KINDS).map(([k,v])=>opt(k,v,c&&c.k)).join('')}</select></label>`;
+  if(!c) return kind;
+  const fxs=Object.keys(FX).filter(k=>!FX[k].inst&&!FX[k].noTgt&&FX[k].buff!=null);
+  const val={
+    trait:`<input class="traitin" list="traitlist" data-p="${p}.cond.v" data-t="optstr" value="${esc(c.v||'')}" placeholder="属性名">`,
+    cls:`<select data-p="${p}.cond.v">${[...new Set([...CLASSES,c.v].filter(Boolean))].map(k=>opt(k,k,c.v)).join('')}</select>`,
+    fx:`<select data-p="${p}.cond.v">${opt('*debuff','いずれかの弱体',c.v)}${opt('*buff','いずれかの強化',c.v)}${fxs.map(k=>opt(k,FX[k].name,c.v)).join('')}</select>`,
+    hpBelow:`<input type="number" min="1" max="100" data-p="${p}.cond.v" data-t="num" value="${c.v}"><span class="sub">%</span>`,
+    hpAbove:`<input type="number" min="1" max="100" data-p="${p}.cond.v" data-t="num" value="${c.v}"><span class="sub">%</span>`,
+  }[c.k]||'';
+  return kind+(val?`<label class="mini">${val}</label>`:'')+`<label class="mini chk"><input type="checkbox" data-p="${p}.cond.not" data-t="bool" ${c.not?'checked':''}><span>でないとき</span></label>`;
+}
 function effRow(path,j,e,ctx,n,atKind){
   const p=`${path}.${j}`, f=FX[e.k]||{};
   // 効果は「分類 → 種類」の2段で選ぶ（1つのリストだと長すぎるため。分類は rules.js の FX_GROUPS）
@@ -403,6 +418,7 @@ function effRow(path,j,e,ctx,n,atKind){
     ${f.trait?`<label class="mini"><span>属性</span><input class="traitin" list="traitlist" data-p="${p}.trait" data-t="optstr" value="${esc(e.trait||'')}" placeholder="属性名"></label>`:''}
     ${e.k==='atkVs'?`<label class="mini"><span>弱体</span><select data-p="${p}.vs" data-t="optstr">${opt('','どれでも',e.vs||'')}${Object.keys(FX).filter(k=>FX[k].buff===false).map(k=>opt(k,FX[k].name,e.vs)).join('')}</select></label>`:''}
     ${f.noTgt?'':`<label class="mini"><span>確率</span><select data-p="${p}.chance" data-t="optnum">${opt('','必ず',e.chance??'')}${[1,2,3,4,5].map(k=>opt(k,`ロール${k}以下`,e.chance)).join('')}</select></label>`}
+    ${f.noTgt?'':condIn(p,e,f)}
     ${f.noTgt?'':effAtSel(p,e,atKind)}
     <span class="effops">
       <button data-act="effMove" data-path="${path}" data-i="${j}" data-d="-1" ${j?'':'disabled'} title="上へ">↑</button>
@@ -524,6 +540,15 @@ document.addEventListener('input',e=>{
   if(el.dataset.act==='cmdType'){
     const old=getPath(cur(),el.dataset.path);
     setPath(cur(),el.dataset.path,makeCmd(el.value,old));
+    return full();
+  }
+  if(el.dataset.act==='condKind'){ // 条件の種類：なし／属性／状態／HP…
+    const e=getPath(cur(),el.dataset.ep); if(!e) return;
+    if(!el.value) delete e.cond;
+    else { const old=e.cond&&e.cond.k===el.value?e.cond:null;
+      e.cond={k:el.value, v:{trait:'',cls:CLASSES[0],fx:'*debuff',hpBelow:50,hpAbove:50,npFull:undefined}[el.value]};
+      if(e.cond.v===undefined) delete e.cond.v;
+      if(old) e.cond=old; }
     return full();
   }
   if(el.dataset.act==='effGrp'){ // 分類を変えたら、その分類の最初の効果にする

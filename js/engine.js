@@ -134,6 +134,11 @@ function mods(u,k,color){
   const list=u.fx.filter(e=>e.k===k && (!color || !e.color || e.color===color));
   return {sum:list.reduce((s,e)=>s+e.v,0), list};
 }
+// 条件つきの効果を含む mods：相手 other が条件を満たすものだけ数える（other なしなら条件つきは数えない）
+function modsC(u,k,color,other){
+  const list=u.fx.filter(e=>e.k===k && (!color || !e.color || e.color===color) && (!e.cond||condOk(e.cond,other)));
+  return {sum:list.reduce((s,e)=>s+e.v,0), list};
+}
 function consume(u,list){
   list.forEach(e=>{ if(e.times!=null) e.times--; });
   u.fx=u.fx.filter(e=>e.times==null||e.times>0);
@@ -162,6 +167,23 @@ function recDmg(src,u,real,raw,ko){
 // =====================================================================
 // 効果の適用
 // =====================================================================
+// 条件（Eff.cond）を満たすか。s＝見る相手（なければ満たさない）
+function condOk(c,s){
+  if(!c) return true;
+  if(!s) return false;
+  let r=false;
+  switch(c.k){
+    case 'trait': r=traitsOf(s).includes(c.v); break;
+    case 'cls': r=((D(s.def)||{}).cls)===c.v; break;
+    case 'fx': r=s.fx.some(x=>c.v==='*debuff'?FX[x.k].buff===false:c.v==='*buff'?FX[x.k].buff===true:x.k===c.v); break;
+    case 'hpBelow': r=s.hp<=maxHp(s)*c.v/100; break;
+    case 'hpAbove': r=s.hp>=maxHp(s)*c.v/100; break;
+    case 'npFull': r=s.np>=RULES.ultCost; break;
+  }
+  return c.not?!r:r;
+}
+// 条件を付与時に見る効果か（ダメージ計算で相手を見る condUse 以外）
+const condAtApply = e=>!!e.cond&&!(FX[e.k]&&FX[e.k].condUse);
 function resolveTargets(src,t,picked){
   let ts=[];
   const m=masterOf(src.pid), em=masterOf(1-src.pid);
@@ -196,12 +218,14 @@ function applyEffects(src,effs,picked,o={}){
   for(const e of effs){
     if(FX[e.k]&&FX[e.k].noTgt) continue; // 連続攻撃・説明文は効果を持たない（連続攻撃は攻撃側で使う）
     if(e.t==='master'){
+      if(condAtApply(e)&&!condOk(e.cond,src)) continue;
       if(e.chance&&!chanceRoll(e,src)) continue;
       if(e.k==='star'||e.k==='starLoss') changeStars(src.pid,e.k==='star'?e.v:-e.v);
       continue;
     }
     const rate=debuffRate(src,e);
     resolveTargets(src,e.t,picked).forEach(t=>{
+      if(condAtApply(e)&&!condOk(e.cond,t)){ log(`${nm(t)}：条件（${condText(e.cond)}）を満たさないため「${FX[e.k].name}」は効果なし`,'sub'); return; }
       if(rate&&t.pid!==src.pid&&(e.chance||rate.dn)){ // 敵への弱体：成功率アップ／ダウンで判定をずらす
         rate.used=true;
         const need=Math.max(0,Math.min(6,(e.chance||6)+rate.up-rate.dn));
@@ -297,6 +321,7 @@ function applyOne0(src,t,e,o={}){
   const inst={k:e.k,v:e.v,color:e.color||null,turns:e.turns??null,times:e.times??null,owner:src.pid};
   if(e.vs) inst.vs=e.vs;
   if(e.trait) inst.trait=e.trait;
+  if(e.cond) inst.cond=e.cond; // 条件つき（使う瞬間に見る効果はダメージ計算で判定）
   if(o.tmp){ inst.tmp=true; inst.turns=null; } // 補助：このターンの終了フェイズまで
   t.fx.push(inst);
   if(e.k==='maxHp') t.hp+=e.v; // 最大HPが増えたぶん HP も増える
@@ -359,7 +384,7 @@ function fixedHit(src,t,v){
 }
 // 攻撃側の補正（被ダメージ減少無視なら相手の def を見ない）。使った効果も返す
 function dmgMods(att,tgt,color){
-  const a=mods(att,'atk',color), ad=mods(att,'atkDown');
+  const a=modsC(att,'atk',color,tgt), ad=modsC(att,'atkDown',null,tgt);
   // ハンデの攻撃ダメージ+ も足す
   let sum=a.sum-ad.sum+(hasHcap(att)?G.hcap.atk:0); const usedA=[...a.list,...ad.list], usedT=[];
   if(tgt&&!tgt.out){
@@ -369,10 +394,10 @@ function dmgMods(att,tgt,color){
     // 属性特攻：対象が属性 trait を持っていれば加算
     const tt=traitsOf(tgt), at=att.fx.filter(e=>e.k==='atkTrait'&&tt.includes(e.trait));
     if(at.length){ sum+=at.reduce((s,e)=>s+e.v,0); usedA.push(...at); }
-    const dd=mods(tgt,'defDown'); sum+=dd.sum; usedT.push(...dd.list);
+    const dd=modsC(tgt,'defDown',null,att); sum+=dd.sum; usedT.push(...dd.list);
     const ig=att.fx.find(e=>e.k==='ignoreDef');
-    if(ig){ if(mods(tgt,'def').list.length) usedA.push(ig); }
-    else { const df=mods(tgt,'def'); sum-=df.sum; usedT.push(...df.list);
+    if(ig){ if(modsC(tgt,'def',null,att).list.length) usedA.push(ig); }
+    else { const df=modsC(tgt,'def',null,att); sum-=df.sum; usedT.push(...df.list);
       // 属性特防：攻撃してきた相手が属性 trait を持っていれば減算（被ダメージ減少無視なら見ない）
       const ta=traitsOf(att), dt=tgt.fx.filter(e=>e.k==='defTrait'&&ta.includes(e.trait));
       if(dt.length){ sum-=dt.reduce((s,e)=>s+e.v,0); usedT.push(...dt); } }
@@ -527,7 +552,8 @@ function resolveUlt(u,tgt){
       if(u.out) break;
       // マスタールール：全体宝具は敵マスターにも当たる（退避中なら当たらない。無敵・回避などでは防げない）
       const em=masterOf(1-u.pid), hitM=e.t==='enemy_all'&&em&&!em.out&&!G.players[em.pid].evac&&!mTeam();
-      const ts = e.t==='enemy_all' ? [...alive(1-u.pid),...(hitM?[em]:[])] : [tgt].filter(x=>x&&!x.out);
+      let ts = e.t==='enemy_all' ? [...alive(1-u.pid),...(hitM?[em]:[])] : [tgt].filter(x=>x&&!x.out);
+      if(e.cond) ts=ts.filter(t=>condOk(e.cond,t)); // 条件つきダメージ：満たす対象だけ
       if(!ts.length) break;
       const usedA=new Set(), lab=hits>1?`（${h+1}/${hits}）`:'';
       for(const t of ts){
