@@ -8,7 +8,7 @@
    - 除外：特殊なキャラ（例：NP獲得が特殊なメディア）を相手・総当たりから外す。選択はブラウザに保存
    ===================================================================== */
 
-const SIM = { rule:'simple', target:'sel', range:'same', handicap:true, full:false, n:500, run:null, res:null };
+const SIM = { rule:'team', target:'sel', range:'same', handicap:true, full:false, n:500, run:null, res:null };
 const SIM_NS = [100,300,500,1000,3000];
 const SIM_EXCL_KEY = 'pencilduel.simExclude';
 SIM.exclOpen = false;
@@ -96,8 +96,8 @@ function renderSim(){
       :'1騎同士で戦います。'}先攻はランダム、${SIM_TURN_LIMIT}ターンで決着しなければ引き分け（勝率は0.5勝扱い）。</p>
     <div class="simopts">
       <label>ルール<select data-sim="rule" ${run?'disabled':''}>
-        <option value="simple" ${sel(SIM.rule,'simple')}>シンプル（1対1）</option>
-        <option value="team" ${sel(SIM.rule,'team')}>チーム（3対3）</option></select></label>
+        <option value="team" ${sel(SIM.rule,'team')}>チーム（3対3）</option>
+        <option value="simple" ${sel(SIM.rule,'simple')}>シンプル（1対1）</option></select></label>
       <label>対象<select data-sim="target" ${run?'disabled':''}>
         <option value="sel" ${sel(SIM.target,'sel')}>選択中：${esc(t?t.name:'-')}（C${t?t.cost:'-'}）</option>
         <option value="all" ${sel(SIM.target,'all')}>${team?'全キャラ（1体ずつ）':'全キャラ総当たり'}</option></select></label>

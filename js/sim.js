@@ -13,10 +13,11 @@ const SIM_LEVEL = 'hard';     // 両陣営の CPU の強さ（cpu.js の CPU_LEV
 const SIM_STEP_LIMIT = 30000; // 念のための無限ループ止め
 
 // picks=[[id..],[id..]] で1試合。結果は陣営0 視点
-function simGame(picks,rule,handicap){
+// mpicks=[マスターID|null, ...]（マスターのあるルールだけ）、level=CPUの強さ（省略時 SIM_LEVEL）
+function simGame(picks,rule,handicap,mpicks,level){
   newGame({rule, handicap});
-  applyMode({mode:'cpu', level:SIM_LEVEL, cpu:[true,true], names:['A','B']});
-  G.picks=picks.map(p=>p.slice()); G.phase='init';
+  applyMode({mode:'cpu', level:level||SIM_LEVEL, cpu:[true,true], names:['A','B']});
+  G.picks=picks.map(p=>p.slice()); if(mpicks) G.mpicks=mpicks.slice(); G.phase='init';
   startGame();
   const first=G.cur; let steps=0;
   while(G.phase!=='over' && G.turn<=SIM_TURN_LIMIT && steps++<SIM_STEP_LIMIT){
@@ -27,7 +28,7 @@ function simGame(picks,rule,handicap){
   }
   const asc=[0,1].map(p=>G.players[p].party[0].asc);
   return { winner:G.phase==='over'?G.winner:null, turns:G.turn, first, asc, dealt:G.dealt.slice(),
-    out0:G.players[0].party.map(u=>u.out) };
+    out0:G.players[0].party.map(u=>u.out), out1:G.players[1].party.map(u=>u.out) };
 }
 const simErr = (r,e)=>{ r.errors++; r.errMsg=r.errMsg||String(e&&e.message||e); };
 
@@ -91,6 +92,23 @@ function simTeam(t,n,pool,full){
     me.ids.filter(id=>id!==t).forEach(id=>add(r.ally,id,w));
     new Set(op.ids).forEach(id=>add(r.foe,id,w));
     add(r.cost,me.cost,w);
+  }
+  return r;
+}
+
+// ---------- 指定した2つの編成の対戦（バランス検証ページ balance.html 用） ----------
+// A,B = {ids:[サーヴァントID...], m:マスターID|null}。n試合（半分ずつ陣営を入れ替える）。結果は A 視点
+function simMatchup(rule,A,B,n,handicap,level){
+  const r={n,win:0,lose:0,draw:0,turns:0,firstWin:0,firstGames:0,dealtA:0,dealtB:0,aOut:0,aN:A.ids.length,errors:0};
+  for(let i=0;i<n;i++){
+    const sw=i%2===1, P=sw?[B,A]:[A,B];
+    let g;
+    try{ g=simGame(P.map(x=>x.ids),rule,handicap,P.map(x=>x.m||null),level); }catch(e){ simErr(r,e); continue; }
+    const me=sw?1:0, w=g.winner===null?null:(g.winner===me?0:1);
+    if(w===0) r.win++; else if(w===1) r.lose++; else r.draw++;
+    if(g.first===me){ r.firstGames++; if(w===0) r.firstWin++; }
+    r.turns+=g.turns; r.dealtA+=g.dealt[me]; r.dealtB+=g.dealt[1-me];
+    r.aOut+=(sw?g.out1:g.out0).filter(Boolean).length;
   }
   return r;
 }
