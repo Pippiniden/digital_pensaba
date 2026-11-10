@@ -24,9 +24,12 @@ body{
   font:14px/1.6 "Noto Sans JP",system-ui,-apple-system,"Hiragino Sans",sans-serif;
   min-height:100vh;
   background:
+    radial-gradient(ellipse 100% 100% at 50% 50%,transparent 55%,rgba(2,5,16,.65) 100%),
+    radial-gradient(ellipse 75% 70% at 50% 45%,rgba(70,110,200,.16),transparent 70%),
     radial-gradient(1200px 600px at 50% -10%,rgba(61,111,214,.35),transparent 70%),
     radial-gradient(800px 500px at 100% 100%,rgba(214,178,94,.08),transparent 70%),
     repeating-linear-gradient(45deg,rgba(127,166,255,.03) 0 1px,transparent 1px 22px),
+    repeating-linear-gradient(-45deg,rgba(127,166,255,.03) 0 1px,transparent 1px 22px),
     linear-gradient(180deg,var(--bg2),var(--bg));
   background-attachment:fixed;
 }

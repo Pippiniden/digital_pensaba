@@ -177,6 +177,10 @@ function renderList(){
       <button class="small" data-act="move" data-d="-1" ${si>0?'':'disabled'} title="上へ">↑</button>
       <button class="small" data-act="move" data-d="1" ${si<L.length-1?'':'disabled'} title="下へ">↓</button>
       <button class="small danger" data-act="del" ${cur()?'':'disabled'}>削除</button>
+    </div>
+    <div class="row">
+      <button class="small" data-act="exportOne" ${cur()?'':'disabled'} title="選択中の1${isM()?'人':'体'}をJSONで書き出し">1${isM()?'人':'体'}を書き出し</button>
+      <button class="small" data-act="importOne" title="書き出した1${isM()?'人':'体'}のJSON（複数入りでも可）を一覧の末尾に追加">1${isM()?'人':'体'}を読み込み</button>
     </div>`;
 }
 
@@ -321,6 +325,19 @@ function renderForm(){
       <span class="linelab">${lab}${LINE_MIN[k]?`<small>（${LINE_MIN[k]}種類以上）</small>`:''}<span class="sub small" data-linecount="${k}">${u.lines[k].length}件</span></span>
       <textarea data-p="lines.${k}" data-t="lines" rows="${Math.max(2,LINE_MIN[k]||0,u.lines[k].length)}" placeholder="${esc(lab)}のセリフ">${esc(u.lines[k].join(String.fromCharCode(10)))}</textarea></label>`).join('')}</div>
   </section>
+  <section class="sec"><h2>条件つきセリフ</h2>
+    <p class="sub small nm">相手や味方・敵の属性・クラス・状態・HP・キャラクターによって、場面ごとに専用のセリフを出します。上にあるものから順に見て、最初に条件を満たしたものを使い、どれも満たさなければ上の通常セリフを使います（スキル・鉛筆の面の専用セリフがあればそちらが優先）。「相手・対象」は、攻撃の対象・攻撃してきた相手・スキルの対象です（戦闘開始は敵の先頭）。</p>
+    ${(u.condLines||[]).map((c,i)=>`<div class="subcard condline">
+      <div class="row">
+        <label class="mini"><span>場面</span><select data-p="condLines.${i}.key">${Object.entries(LINE_KEYS).map(([k,v])=>opt(k,v,c.key)).join('')}</select></label>
+        <label class="mini"><span>条件を見る人</span><select data-p="condLines.${i}.who" data-act="structural">${Object.entries(LINE_WHO).map(([k,v])=>opt(k,v,c.who)).join('')}</select></label>
+        ${condIn(`condLines.${i}`,c,{},LINE_WHO[c.who||'other'])}
+        <span class="effbtns"><button data-act="clMove" data-i="${i}" data-d="-1" title="上へ">↑</button><button data-act="clMove" data-i="${i}" data-d="1" title="下へ">↓</button><button data-act="clDel" data-i="${i}" title="削除">×</button></span>
+      </div>
+      <textarea data-p="condLines.${i}.lines" data-t="lines" rows="${Math.max(2,(c.lines||[]).length)}" placeholder="この条件のときのセリフ。1行に1つ">${esc((c.lines||[]).join(String.fromCharCode(10)))}</textarea>
+    </div>`).join('')}
+    <button class="small add" data-act="clAdd">＋ 条件つきセリフ</button>
+  </section>
   <section class="sec"><h2>鉛筆の6面</h2>
     <p class="sub small nm">行動回数は行動回数決定フェイズで、コマンドは行動決定フェイズで使います。${RULES.actsTable?'行動回数は全サーヴァント共通の値です。':''}${TERMS.ascFull}面は${TERMS.asc}前に1つ置くのが基本です（霊基再臨しないサーヴァントは置かなくてもかまいません）。</p>
     <div class="faceed">
@@ -389,8 +406,8 @@ function effAtSel(p,e,atKind){
   return `<label class="mini" title="攻撃（ダメージ）の前に適用するか、後に適用するか"><span>タイミング</span><select data-p="${p}.at" data-t="optstr">${opt('',`既定（${defLabel}）`,e.at||'')}${Object.entries(EFF_AT).map(([k,v])=>opt(k,v,e.at)).join('')}</select></label>`;
 }
 // 条件（cond）の入力：種類 → 値 →「でないとき」。使う瞬間に見る効果（攻撃・防御補正）は「相手」、それ以外は「対象」を見る
-function condIn(p,e,f){
-  const c=e.cond, s=f.condUse?'相手':'対象';
+function condIn(p,e,f,lab){
+  const c=e.cond, s=lab||(f.condUse?'相手':'対象');
   const kind=`<label class="mini" title="条件を満たす${s}にだけ効果が働きます"><span>条件（${s}）</span><select data-act="condKind" data-ep="${p}">${opt('','なし',c?c.k:'')}${Object.entries(COND_KINDS).map(([k,v])=>opt(k,v,c&&c.k)).join('')}</select></label>`;
   if(!c) return kind;
   const fxs=Object.keys(FX).filter(k=>!FX[k].inst&&!FX[k].noTgt&&FX[k].buff!=null);
@@ -398,6 +415,7 @@ function condIn(p,e,f){
     trait:`<input class="traitin" list="traitlist" data-p="${p}.cond.v" data-t="optstr" value="${esc(c.v||'')}" placeholder="属性名">`,
     cls:`<select data-p="${p}.cond.v">${[...new Set([...CLASSES,c.v].filter(Boolean))].map(k=>opt(k,k,c.v)).join('')}</select>`,
     fx:`<select data-p="${p}.cond.v">${opt('*debuff','いずれかの弱体',c.v)}${opt('*buff','いずれかの強化',c.v)}${fxs.map(k=>opt(k,FX[k].name,c.v)).join('')}</select>`,
+    id:`<select data-p="${p}.cond.v">${[...new Set([...units.map(x=>x.id),...masters.map(x=>x.id),c.v].filter(Boolean))].map(k=>{ const x=[...units,...masters].find(y=>y.id===k); return opt(k,x?`${x.name}（${k}）`:k,c.v); }).join('')}</select>`,
     hpBelow:`<input type="number" min="1" max="100" data-p="${p}.cond.v" data-t="num" value="${c.v}"><span class="sub">%</span>`,
     hpAbove:`<input type="number" min="1" max="100" data-p="${p}.cond.v" data-t="num" value="${c.v}"><span class="sub">%</span>`,
   }[c.k]||'';
@@ -567,7 +585,7 @@ document.addEventListener('input',e=>{
     const e=getPath(cur(),el.dataset.ep); if(!e) return;
     if(!el.value) delete e.cond;
     else { const old=e.cond&&e.cond.k===el.value?e.cond:null;
-      e.cond={k:el.value, v:{trait:'',cls:CLASSES[0],fx:'*debuff',hpBelow:50,hpAbove:50,npFull:undefined}[el.value]};
+      e.cond={k:el.value, v:{trait:'',cls:CLASSES[0],fx:'*debuff',hpBelow:50,hpAbove:50,npFull:undefined,id:(units[0]||{}).id}[el.value]};
       if(e.cond.v===undefined) delete e.cond.v;
       if(old) e.cond=old; }
     return full();
@@ -594,6 +612,27 @@ document.addEventListener('change',e=>{
     if(sp&&t){ sp.name=t.name; sp.eff=clone(t.eff).map(normEff); full(); toast(`令呪${+el.dataset.spl+1}を「${t.name}」のテンプレに置き換えました`); }
   }
   if(el.id==='rollPost'){ rollPost=el.checked; renderSide(); }
+  if(el.id==='fileOne'&&el.files[0]){ // 単体（または少数）の追加読み込み：今の一覧の末尾に足す。IDが被ったら振り直す
+    const f=el.files[0], rd=new FileReader();
+    rd.onload=()=>{
+      try{
+        const t=String(rd.result).trim(); let raw;
+        try{ raw=JSON.parse(t); }
+        catch(_){ const a=t.indexOf('['), b=t.lastIndexOf(']'); if(a<0||b<a) throw new Error('JSONとして読めません'); raw=JSON.parse(t.slice(a,b+1)); }
+        if(!Array.isArray(raw)) raw=[raw];
+        if(!raw.length||raw.some(x=>!x||typeof x!=='object')) throw new Error('データが空です');
+        if(isM()&&raw.some(x=>!Array.isArray(x.spells))) throw new Error(`${TERMS.player}のデータではありません（spells がありません）`);
+        if(!isM()&&raw.some(x=>!x.faces||!x.skills||!x.ult)) throw new Error(`${TERMS.unit}のデータではありません`);
+        const add=raw.map(isM()?normalizeMaster:normalizeUnit), L=list(), start=L.length;
+        add.forEach(x=>{ const ids=new Set([...units,...masters].map(y=>y.id)); if(!x.id||ids.has(x.id)) x.id=uniqueId(x.id); L.push(x); });
+        setSel(start); rollIdx=null; full();
+        toast(`${f.name} から${add.length}${isM()?'人':'体'}を追加しました（${add.map(x=>x.name).join('、')}）`);
+      }
+      catch(err){ toast(`読み込めませんでした：${err.message}`,true); }
+      el.value='';
+    };
+    rd.readAsText(f);
+  }
   if(el.id==='file'&&el.files[0]){
     const f=el.files[0], rd=new FileReader();
     rd.onload=()=>{
@@ -620,6 +659,9 @@ document.addEventListener('click',e=>{
     case 'dup': { const L=list(), i=selIdx(), c=clone(u); c.id=uniqueId(c.id); c.name+='（コピー）'; L.splice(i+1,0,c); setSel(i+1); full(); break; }
     case 'del': if(confirm(`「${u.name||'名前なし'}」を削除しますか？`)){ const L=list(), i=selIdx(); L.splice(i,1); setSel(Math.max(0,Math.min(i,L.length-1))); rollIdx=null; full(); } break;
     case 'move': { const L=list(), i=selIdx(), j=i+Number(b.dataset.d); if(j<0||j>=L.length) break; [L[i],L[j]]=[L[j],L[i]]; setSel(j); full(); break; }
+    case 'clAdd': { if(!u.condLines) u.condLines=[]; u.condLines.push({key:'attack',who:'other',cond:{k:'trait',v:'神性'},lines:[]}); full(); break; }
+    case 'clDel': u.condLines.splice(+b.dataset.i,1); full(); break;
+    case 'clMove': { const l=u.condLines, i=+b.dataset.i, j=i+Number(b.dataset.d); if(j<0||j>=l.length) break; [l[i],l[j]]=[l[j],l[i]]; full(); break; }
     case 'fitReset': { u.fit[b.dataset.k]={...FIT_DEF[b.dataset.k]}; full(); break; }
     case 'effAdd': { if(!getPath(u,b.dataset.path)) setPath(u,b.dataset.path,[]); getPath(u,b.dataset.path).push(newEff(b.dataset.ctx)); full(); break; }
     case 'effDel': getPath(u,b.dataset.path).splice(+b.dataset.i,1); full(); break;
@@ -653,6 +695,9 @@ document.addEventListener('click',e=>{
     case 'exportJSON': if(isM()){ downloadText('pencil-masters.json',JSON.stringify(masters,null,2),'application/json'); break; }
       downloadText('pencil-units.json',JSON.stringify(units,null,2),'application/json'); break;
     case 'import': document.querySelector('#file').click(); break;
+    case 'exportOne': if(u){ const base=(u.id||'unit').replace(/[^A-Za-z0-9_-]/g,'')||'unit';
+      downloadText(`pencil-${isM()?'master':'unit'}-${base}.json`,JSON.stringify(u,null,2),'application/json'); toast(`「${u.name||u.id}」を書き出しました`); } break;
+    case 'importOne': document.querySelector('#fileOne').click(); break;
     case 'resetDefault':
       if(isM()){ if(confirm(`編集中の${TERMS.player}を標準データ（js/masters.js）に戻しますか？ 今の編集内容は消えます。`)){ masters=(typeof DEFAULT_MASTERS!=='undefined'?DEFAULT_MASTERS:[]).map(normalizeMaster); msel=0; rollIdx=null; full(); toast('標準データに戻しました'); } break; }
       if(confirm('編集中のデータを標準データ（js/units.js）に戻しますか？ 今の編集内容は消えます。')){ units=normalizeUnits(DEFAULT_UNITS); sel=0; rollIdx=null; full(); toast('標準データに戻しました'); }

@@ -273,7 +273,9 @@ const FX = {
 // ここにない効果は最後の「その他」に入る
 // 条件つき効果（Eff.cond）：条件を満たす相手にだけ働く。condUse の効果は「使う瞬間」（ダメージ計算）に攻撃・防御の相手を見る。
 // それ以外は付与するときに対象を見る（満たさない対象には付かない・効かない）
-const COND_KINDS = { trait:'属性', fx:'状態', hpBelow:'HP○%以下', hpAbove:'HP○%以上', npFull:'NP満タン', cls:'クラス' };
+const COND_KINDS = { trait:'属性', fx:'状態', hpBelow:'HP○%以下', hpAbove:'HP○%以上', npFull:'NP満タン', cls:'クラス', id:'キャラクター（ID）' };
+// 条件つきセリフ（condLines）で条件を見る相手：other＝その場面の相手（攻撃の対象・攻撃してきた相手・スキルの対象）/ self＝自分 / ally＝自分以外の味方のだれか / enemy＝敵のだれか
+const LINE_WHO = { other:'相手・対象', self:'自分', ally:'味方のだれか', enemy:'敵のだれか' };
 ['atk','atkDown','def','defDown'].forEach(k=>{ if(FX[k]) FX[k].condUse=true; });
 const FX_GROUPS = [
   ['攻撃強化', ['atk','npPow','atkVs','atkTrait','ignoreDef','sureHit','pierce','critPow','critMult','critRoll','debuffUp','cardConv','onAtkStar','onAtkNp']],
