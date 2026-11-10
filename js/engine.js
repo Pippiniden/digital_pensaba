@@ -63,7 +63,24 @@ function syncU(u){
 const FXHIDE=new Set();
 // o.w を付けると、次の演出までの待ち時間をその値にする（重ねて見せたいとき）
 // o.own：スキル・鉛筆の面の専用セリフ（あれば key の通常セリフの代わりに使う）
-function say(u,key,o={}){ const {own,...r}=o; const t=pickLine(D(u.def),key,own); if(t) fxEmit({t:'say',uid:u.uid,key,text:t,...r}); }
+// o.other：その場面の相手（攻撃の対象・攻撃してきた相手・スキルの対象）。条件つきセリフ（condLines）の判定に使う
+function say(u,key,o={}){ const {own,other,...r}=o; let t='';
+  if(!(own&&own.length)){ const hit=condLineFor(u,key,other); if(hit) t=pickLine(null,key,hit.lines); }
+  if(!t) t=pickLine(D(u.def),key,own);
+  if(t) fxEmit({t:'say',uid:u.uid,key,text:t,...r}); }
+// 条件つきセリフ：場面 key に合い、条件を満たす最初のもの（なければ null）
+function condLineFor(u,key,other){
+  const cl=(D(u.def)||{}).condLines; if(!cl||!cl.length) return null;
+  return cl.find(c=>{
+    if(c.key!==key) return false;
+    switch(c.who){
+      case 'self': return condOk(c.cond,u);
+      case 'ally': return alive(u.pid).some(a=>a!==u&&condOk(c.cond,a));
+      case 'enemy': { const al=alive(1-u.pid); return (al.length?al:G.players[1-u.pid].party).some(a=>condOk(c.cond,a)); } // 決着後（敵が全滅）は敵の編成全体で見る
+      default: return !!other&&condOk(c.cond,other);
+    }
+  })||null;
+}
 // 出たコマンドの専用セリフ（他のサーヴァントの鉛筆をロールしたコマンドは、そのサーヴァントのセリフなので使わない）
 const cmdLine = cmd=>cmd&&!cmd.from?cmd.line:null;
 // フェイズ切り替えの帯。big はターン開始など大きく見せるもの
@@ -175,6 +192,7 @@ function condOk(c,s){
   switch(c.k){
     case 'trait': r=traitsOf(s).includes(c.v); break;
     case 'cls': r=((D(s.def)||{}).cls)===c.v; break;
+    case 'id': r=s.def===c.v; break;
     case 'fx': r=s.fx.some(x=>c.v==='*debuff'?FX[x.k].buff===false:c.v==='*buff'?FX[x.k].buff===true:x.k===c.v); break;
     case 'hpBelow': r=s.hp<=maxHp(s)*c.v/100; break;
     case 'hpAbove': r=s.hp>=maxHp(s)*c.v/100; break;
@@ -523,7 +541,7 @@ function resolveCommand(att,cmd,tgt,o={}){
   }
   applyEffects(att,preE,null); // 攻撃前の効果（防御無視・無敵貫通などを付けてから攻撃）
   if(att.out) return; // 攻撃前の自傷などで倒れた
-  say(att,(o.extra&&(D(att.def).lines.extra||[]).length)?'extra':'attack',{w:250,own:cmdLine(cmd)}); // 吹き出しと攻撃カードを重ねて見せる（エクストラ用が空なら通常の攻撃セリフ。面の専用セリフがあればそちら）
+  say(att,(o.extra&&(D(att.def).lines.extra||[]).length)?'extra':'attack',{w:250,own:cmdLine(cmd),other:tgt}); // 吹き出しと攻撃カードを重ねて見せる（エクストラ用が空なら通常の攻撃セリフ。面の専用セリフがあればそちら）
   // 連続攻撃：同じ攻撃を hits 回。1回ごとに補正・クリティカル・NP・スター・回避/無敵・回数制の効果を処理する
   const hits=hitsOf(cmd.eff);
   if(hits>1) log(`${n} ${cmdChip(cmd)}：${hits}回連続攻撃`,'sub');
@@ -541,7 +559,7 @@ function resolveUlt(u,tgt){
   const ud=D(u.def).ult;
   log(`${nm(u)}の${TERMS.ult}「${esc(ud.name)}」！`,'good');
   fxEmit({t:'cutin',uid:u.uid,title:ud.name,ruby:ud.ruby,col:ud.c});
-  say(u,'np');
+  say(u,'np',{other:tgt});
   st(u).ults++;
   const hits=hitsOf(ud.eff); // 連続攻撃：ダメージ効果それぞれを hits 回
   if(hits>1) log(`${hits}回連続攻撃`,'sub');
@@ -570,7 +588,7 @@ function resolveUlt(u,tgt){
         const b=blocked(u,t);
         if(b){ st(t).blocked++; log(`→ ${nm(t)}${lab}：${b}で無効`); fxEmit({t:'dmg',uid:t.uid,text:b}); }
         else if(!e.max&&nullified(t,dmg)){ st(t).blocked++; log(`→ ${nm(t)}${lab}：${fmt(dmg)}ダメージは${nullified(t,dmg)}以下なので無効`); fxEmit({t:'dmg',uid:t.uid,text:'無効'}); consume(t,usedT); }
-        else { log(`→ ${nm(t)}${lab}：<b>${fmt(dmg)}</b>ダメージ${e.max?'（最大HP・軽減不可）':''}`); consume(t,usedT); dealDamage(t,dmg,true,{np:true,att:u}); if(!t.out&&!h) say(t,'npDamage'); }
+        else { log(`→ ${nm(t)}${lab}：<b>${fmt(dmg)}</b>ダメージ${e.max?'（最大HP・軽減不可）':''}`); consume(t,usedT); dealDamage(t,dmg,true,{np:true,att:u}); if(!t.out&&!h) say(t,'npDamage',{other:u}); }
         if(u.out) break; // 反撃で倒れたら残りの対象には当たらない
       }
       consume(u,[...usedA]);
@@ -602,7 +620,7 @@ function resolveDamage(){
       if(cmd.c==='ASC') ascend(u);
       else resolveCommand(u,cmd,tgt,{extra:true});
     }
-    if(!tgt.out && tgt.hp<hp0) say(tgt,'damage');
+    if(!tgt.out && tgt.hp<hp0) say(tgt,'damage',{other:acts.length?U(acts[0].uid):null});
   }
   flushKo();
   checkWin();
@@ -629,7 +647,7 @@ function startGame(){
   } while(r0===r1);
   G.cur=r0>r1?0:1; G.turn=1;
   log(`${esc(G.players[G.cur].name)} が先攻`,'good');
-  [G.cur,1-G.cur].forEach(pid=>say(G.players[pid].party[0],'start'));
+  [G.cur,1-G.cur].forEach(pid=>{ const f=G.players[pid].party[0]; say(f,'start',{other:G.players[1-pid].party[0]}); });
   beginTurn();
 }
 // シンプルルールのハンデ戦：コスト差が handicapAsc 以上なら、低コスト側を最初から霊基再臨済みにする
@@ -736,7 +754,7 @@ function doSkill(u,si,picked){
   fxEmit({t:'skill',uid:u.uid,si,name:s.name,picked:picked?D(picked.def).name:allLabel(s.eff),
     lines:s.eff.length?effLines(s.eff,s.pick):['効果なし']});
   st(u).skills++;
-  say(u,'skill',{own:s.line}); // スキルの専用セリフがあればそちら
+  say(u,'skill',{own:s.line,other:picked}); // スキルの専用セリフがあればそちら
   applyEffects(u,s.eff,picked);
   u.used[si]=true; // 効果の後に使用済みにする（スキル再使用で自分自身が戻らないように）
   flushKo();

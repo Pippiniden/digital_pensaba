@@ -321,6 +321,19 @@ function renderForm(){
       <span class="linelab">${lab}${LINE_MIN[k]?`<small>（${LINE_MIN[k]}種類以上）</small>`:''}<span class="sub small" data-linecount="${k}">${u.lines[k].length}件</span></span>
       <textarea data-p="lines.${k}" data-t="lines" rows="${Math.max(2,LINE_MIN[k]||0,u.lines[k].length)}" placeholder="${esc(lab)}のセリフ">${esc(u.lines[k].join(String.fromCharCode(10)))}</textarea></label>`).join('')}</div>
   </section>
+  <section class="sec"><h2>条件つきセリフ</h2>
+    <p class="sub small nm">相手や味方・敵の属性・クラス・状態・HP・キャラクターによって、場面ごとに専用のセリフを出します。上にあるものから順に見て、最初に条件を満たしたものを使い、どれも満たさなければ上の通常セリフを使います（スキル・鉛筆の面の専用セリフがあればそちらが優先）。「相手・対象」は、攻撃の対象・攻撃してきた相手・スキルの対象です（戦闘開始は敵の先頭）。</p>
+    ${(u.condLines||[]).map((c,i)=>`<div class="subcard condline">
+      <div class="row">
+        <label class="mini"><span>場面</span><select data-p="condLines.${i}.key">${Object.entries(LINE_KEYS).map(([k,v])=>opt(k,v,c.key)).join('')}</select></label>
+        <label class="mini"><span>条件を見る人</span><select data-p="condLines.${i}.who" data-act="structural">${Object.entries(LINE_WHO).map(([k,v])=>opt(k,v,c.who)).join('')}</select></label>
+        ${condIn(`condLines.${i}`,c,{},LINE_WHO[c.who||'other'])}
+        <span class="effbtns"><button data-act="clMove" data-i="${i}" data-d="-1" title="上へ">↑</button><button data-act="clMove" data-i="${i}" data-d="1" title="下へ">↓</button><button data-act="clDel" data-i="${i}" title="削除">×</button></span>
+      </div>
+      <textarea data-p="condLines.${i}.lines" data-t="lines" rows="${Math.max(2,(c.lines||[]).length)}" placeholder="この条件のときのセリフ。1行に1つ">${esc((c.lines||[]).join(String.fromCharCode(10)))}</textarea>
+    </div>`).join('')}
+    <button class="small add" data-act="clAdd">＋ 条件つきセリフ</button>
+  </section>
   <section class="sec"><h2>鉛筆の6面</h2>
     <p class="sub small nm">行動回数は行動回数決定フェイズで、コマンドは行動決定フェイズで使います。${RULES.actsTable?'行動回数は全サーヴァント共通の値です。':''}${TERMS.ascFull}面は${TERMS.asc}前に1つ置くのが基本です（霊基再臨しないサーヴァントは置かなくてもかまいません）。</p>
     <div class="faceed">
@@ -389,8 +402,8 @@ function effAtSel(p,e,atKind){
   return `<label class="mini" title="攻撃（ダメージ）の前に適用するか、後に適用するか"><span>タイミング</span><select data-p="${p}.at" data-t="optstr">${opt('',`既定（${defLabel}）`,e.at||'')}${Object.entries(EFF_AT).map(([k,v])=>opt(k,v,e.at)).join('')}</select></label>`;
 }
 // 条件（cond）の入力：種類 → 値 →「でないとき」。使う瞬間に見る効果（攻撃・防御補正）は「相手」、それ以外は「対象」を見る
-function condIn(p,e,f){
-  const c=e.cond, s=f.condUse?'相手':'対象';
+function condIn(p,e,f,lab){
+  const c=e.cond, s=lab||(f.condUse?'相手':'対象');
   const kind=`<label class="mini" title="条件を満たす${s}にだけ効果が働きます"><span>条件（${s}）</span><select data-act="condKind" data-ep="${p}">${opt('','なし',c?c.k:'')}${Object.entries(COND_KINDS).map(([k,v])=>opt(k,v,c&&c.k)).join('')}</select></label>`;
   if(!c) return kind;
   const fxs=Object.keys(FX).filter(k=>!FX[k].inst&&!FX[k].noTgt&&FX[k].buff!=null);
@@ -398,6 +411,7 @@ function condIn(p,e,f){
     trait:`<input class="traitin" list="traitlist" data-p="${p}.cond.v" data-t="optstr" value="${esc(c.v||'')}" placeholder="属性名">`,
     cls:`<select data-p="${p}.cond.v">${[...new Set([...CLASSES,c.v].filter(Boolean))].map(k=>opt(k,k,c.v)).join('')}</select>`,
     fx:`<select data-p="${p}.cond.v">${opt('*debuff','いずれかの弱体',c.v)}${opt('*buff','いずれかの強化',c.v)}${fxs.map(k=>opt(k,FX[k].name,c.v)).join('')}</select>`,
+    id:`<select data-p="${p}.cond.v">${[...new Set([...units.map(x=>x.id),...masters.map(x=>x.id),c.v].filter(Boolean))].map(k=>{ const x=[...units,...masters].find(y=>y.id===k); return opt(k,x?`${x.name}（${k}）`:k,c.v); }).join('')}</select>`,
     hpBelow:`<input type="number" min="1" max="100" data-p="${p}.cond.v" data-t="num" value="${c.v}"><span class="sub">%</span>`,
     hpAbove:`<input type="number" min="1" max="100" data-p="${p}.cond.v" data-t="num" value="${c.v}"><span class="sub">%</span>`,
   }[c.k]||'';
@@ -567,7 +581,7 @@ document.addEventListener('input',e=>{
     const e=getPath(cur(),el.dataset.ep); if(!e) return;
     if(!el.value) delete e.cond;
     else { const old=e.cond&&e.cond.k===el.value?e.cond:null;
-      e.cond={k:el.value, v:{trait:'',cls:CLASSES[0],fx:'*debuff',hpBelow:50,hpAbove:50,npFull:undefined}[el.value]};
+      e.cond={k:el.value, v:{trait:'',cls:CLASSES[0],fx:'*debuff',hpBelow:50,hpAbove:50,npFull:undefined,id:(units[0]||{}).id}[el.value]};
       if(e.cond.v===undefined) delete e.cond.v;
       if(old) e.cond=old; }
     return full();
@@ -620,6 +634,9 @@ document.addEventListener('click',e=>{
     case 'dup': { const L=list(), i=selIdx(), c=clone(u); c.id=uniqueId(c.id); c.name+='（コピー）'; L.splice(i+1,0,c); setSel(i+1); full(); break; }
     case 'del': if(confirm(`「${u.name||'名前なし'}」を削除しますか？`)){ const L=list(), i=selIdx(); L.splice(i,1); setSel(Math.max(0,Math.min(i,L.length-1))); rollIdx=null; full(); } break;
     case 'move': { const L=list(), i=selIdx(), j=i+Number(b.dataset.d); if(j<0||j>=L.length) break; [L[i],L[j]]=[L[j],L[i]]; setSel(j); full(); break; }
+    case 'clAdd': { if(!u.condLines) u.condLines=[]; u.condLines.push({key:'attack',who:'other',cond:{k:'trait',v:'神性'},lines:[]}); full(); break; }
+    case 'clDel': u.condLines.splice(+b.dataset.i,1); full(); break;
+    case 'clMove': { const l=u.condLines, i=+b.dataset.i, j=i+Number(b.dataset.d); if(j<0||j>=l.length) break; [l[i],l[j]]=[l[j],l[i]]; full(); break; }
     case 'fitReset': { u.fit[b.dataset.k]={...FIT_DEF[b.dataset.k]}; full(); break; }
     case 'effAdd': { if(!getPath(u,b.dataset.path)) setPath(u,b.dataset.path,[]); getPath(u,b.dataset.path).push(newEff(b.dataset.ctx)); full(); break; }
     case 'effDel': getPath(u,b.dataset.path).splice(+b.dataset.i,1); full(); break;

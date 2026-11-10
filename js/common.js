@@ -24,6 +24,7 @@ function normCond(c){
   const o={k:c.k};
   if(c.k==='trait'||c.k==='cls'){ const v=String(c.v??'').trim(); if(!v) return null; o.v=v; }
   else if(c.k==='fx'){ const v=String(c.v??''); o.v=(v==='*debuff'||v==='*buff'||(FX[v]&&!FX[v].inst&&!FX[v].noTgt))?v:'*debuff'; }
+  else if(c.k==='id'){ const v=String(c.v??'').trim(); if(!v) return null; o.v=v; }
   else if(c.k==='hpBelow'||c.k==='hpAbove') o.v=Math.min(100,Math.max(1,Math.round(num(c.v,50))||50));
   if(c.not) o.not=true;
   return o;
@@ -32,7 +33,7 @@ function normCond(c){
 function condText(c,use){
   if(!c) return '';
   const s=use?'相手':'対象';
-  const b={ trait:`${s}が〔${c.v}〕属性`, cls:`${s}が${c.v}`,
+  const b={ trait:`${s}が〔${c.v}〕属性`, cls:`${s}が${c.v}`, id:`${s}がID「${c.v}」`,
     fx:c.v==='*debuff'?`${s}が弱体状態`:c.v==='*buff'?`${s}が強化状態`:`${s}が${(FX[c.v]||{}).name||c.v}状態`,
     hpBelow:`${s}のHPが${c.v}%以下`, hpAbove:`${s}のHPが${c.v}%以上`, npFull:`${s}の${TERMS.gauge}が100%` }[c.k];
   return b?`${b}${c.not?'でないとき':'のとき'}`:'';
@@ -85,8 +86,16 @@ function normalizeUnit(u){
   const ult=u.ult||{};
   const ln=u.lines||{};
   const lines=Object.fromEntries(Object.keys(LINE_KEYS).map(k=>[k,strList(ln[k])]));
+  const condLines=(Array.isArray(u.condLines)?u.condLines:[]).map(normCondLine).filter(Boolean);
   return { id:String(u.id||''), name:String(u.name||''), cls:normClass(u.cls), traits:normTraits(u.traits), cost:num(u.cost), hp:num(u.hp,100),
-    fit:normFit(u.fit), ...(normLink(u.link)?{link:normLink(u.link)}:{}), lines, faces, skills, ult:Object.assign({name:String(ult.name||''), c:String(ult.c||'R'), eff:(ult.eff||[]).map(normEff)}, String(ult.ruby||'').trim()?{ruby:String(ult.ruby).trim()}:{}) };
+    fit:normFit(u.fit), ...(normLink(u.link)?{link:normLink(u.link)}:{}), lines, ...(condLines.length?{condLines}:{}), faces, skills, ult:Object.assign({name:String(ult.name||''), c:String(ult.c||'R'), eff:(ult.eff||[]).map(normEff)}, String(ult.ruby||'').trim()?{ruby:String(ult.ruby).trim()}:{}) };
+}
+// 条件つきセリフ：{key:LINE_KEYS のキー, who:LINE_WHO のキー, cond:Cond, lines:string[]}。上にあるものから順に見て、最初に条件を満たしたものを使う。不正なら null
+function normCondLine(c){
+  c=c||{};
+  const cond=normCond(c.cond), lines=strList(c.lines);
+  if(!LINE_KEYS[c.key]||!cond||!lines.length) return null;
+  return { key:c.key, who:LINE_WHO[c.who]?c.who:'other', cond, lines };
 }
 // キャラクター設定へのリンク：http(s) のURLだけ受け付ける（それ以外は空）
 function normLink(v){ const s=String(v||'').trim(); return /^https?:\/\/\S+$/i.test(s)?s:''; }
@@ -382,7 +391,7 @@ function unitsToJS(units){
     ...(u.link?[`    "link":${j(u.link)},`]:[]),
     '    "lines":{',
     Object.keys(LINE_KEYS).map(k=>`      ${j(k)}:${j(u.lines[k])}`).join(',\n'),
-    '    },',
+    ...(u.condLines&&u.condLines.length?['    },',`    "condLines":[`,u.condLines.map(c=>`      ${j(c)}`).join(',\n'),'    ],']:['    },']),
     '    "faces":[',
     u.faces.map(f=>`      ${j(f)}`).join(',\n'),
     '    ],',
