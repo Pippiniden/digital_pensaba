@@ -128,8 +128,17 @@ const ownLineIn=(p,arr,fallback)=>`<label class="ownline"><span>専用セリフ�
 
 // ---------- 保存と再描画 ----------
 function saveDraft(){ writeJSON(STORE.draft,units); writeJSON(STORE.mdraft,masters); }
-function light(){ saveDraft(); renderList(); renderSide(); renderStatus(); updatePreviews(); }
-function full(){ saveDraft(); renderAll(); }
+// 再描画してもスクロール位置を保つ（フォームを丸ごと作り直すと、高さが一瞬縮んでページの先頭に戻されるため）
+function keepScroll(fn){
+  const y=window.scrollY, form=document.querySelector('#form'), ul=document.querySelector('.ulist'), lt=ul?ul.scrollTop:0;
+  if(form) form.style.minHeight=form.offsetHeight+'px';
+  fn();
+  const u2=document.querySelector('.ulist'); if(u2) u2.scrollTop=lt;
+  window.scrollTo(0,y);
+  if(form) requestAnimationFrame(()=>{ form.style.minHeight=''; window.scrollTo(0,y); });
+}
+function light(){ saveDraft(); keepScroll(()=>{ renderList(); renderSide(); renderStatus(); updatePreviews(); }); }
+function full(){ saveDraft(); keepScroll(renderAll); }
 function renderAll(){ renderList(); renderForm(); renderSide(); renderStatus(); }
 
 // 今のタブの検証結果・反映済みデータ
