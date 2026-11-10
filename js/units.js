@@ -447,15 +447,15 @@ const DEFAULT_UNITS = [
       "win":["戦いにも抜かりはありません。それがメイドというものです","お疲れとお見受けします。すぐにお紅茶のご用意をいたしますね、マスター"]
     },
     "faces":[
-      {"acts":1,"pre":{"c":"R","dmg":40,"np":0,"star":0},"post":{"c":"R","dmg":50,"np":0,"star":0}},
-      {"acts":2,"pre":{"c":"B","dmg":30,"np":20,"star":0},"post":{"c":"B","dmg":40,"np":25,"star":0}},
-      {"acts":1,"pre":{"c":"B","dmg":20,"np":15,"star":0},"post":{"c":"B","dmg":40,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"R","dmg":30,"np":0,"star":0},"post":{"c":"R","dmg":40,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"B","dmg":20,"np":15,"star":0},"post":{"c":"B","dmg":30,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":20,"np":15,"star":0},"post":{"c":"B","dmg":30,"np":20,"star":0}},
       {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"給仕","eff":[{"k":"heal","t":"ally_all","v":20}],"dmg":0,"np":0,"star":0,"line":["上等なワインを用意いたしました"]}},
       {"acts":3,"pre":{"c":"B","dmg":20,"np":15,"star":0},"post":{"c":"B","dmg":30,"np":20,"star":0}},
-      {"acts":1,"pre":{"c":"G","dmg":20,"np":0,"star":2},"post":{"c":"G","dmg":30,"np":0,"star":4}}
+      {"acts":1,"pre":{"c":"G","dmg":10,"np":0,"star":2},"post":{"c":"G","dmg":20,"np":0,"star":4}}
     ],
     "skills":[
-      {"name":"円卓の忠実なる従者","eff":[{"k":"np","t":"ally_all","v":10},{"k":"regenStar","t":"self","v":2,"turns":3}],"rank":"A"},
+      {"name":"円卓の忠実なる従者","eff":[{"k":"np","t":"picked","v":10},{"k":"regenStar","t":"self","v":2,"turns":3}],"rank":"A","pick":"ally"},
       {"name":"戦闘続行","eff":[{"k":"guts","t":"self","v":80,"turns":5}],"rank":"C"},
       {"name":"執事モード","eff":[{"k":"evade","t":"self","v":0,"times":3}]}
     ],
@@ -539,10 +539,10 @@ const DEFAULT_UNITS = [
       "win":["お色気シーンはいりません。話を続けてください！","疲れましたね。スウェーデンで休暇でも取りましょうか"]
     },
     "faces":[
-      {"acts":1,"pre":{"c":"R","dmg":50,"np":0,"star":0},"post":{"c":"R","dmg":70,"np":0,"star":0}},
-      {"acts":2,"pre":{"c":"R","dmg":50,"np":0,"star":0},"post":{"c":"R","dmg":70,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"R","dmg":50,"np":0,"star":0,"eff":[{"k":"atkDown","t":"ally_all","v":20,"turns":3}]},"post":{"c":"R","dmg":70,"np":0,"star":0,"eff":[{"k":"atkDown","t":"ally_all","v":10,"turns":3}]}},
+      {"acts":2,"pre":{"c":"R","dmg":50,"np":0,"star":0,"eff":[{"k":"strip","t":"ally_all","v":0}]},"post":{"c":"R","dmg":70,"np":0,"star":0,"eff":[{"k":"strip","t":"ally_all","v":0}]}},
       {"acts":1,"pre":{"c":"B","dmg":40,"np":20,"star":0},"post":{"c":"B","dmg":50,"np":25,"star":0}},
-      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"R","dmg":80,"np":0,"star":0,"eff":[{"k":"star","t":"master","v":5},{"k":"selfDmg","t":"self","v":20}]}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"R","dmg":80,"np":0,"star":0,"eff":[{"k":"star","t":"master","v":5},{"k":"selfDmg","t":"self","v":20},{"k":"np","t":"ally_all","v":-10}]}},
       {"acts":3,"pre":{"c":"B","dmg":20,"np":15,"star":0},"post":{"c":"B","dmg":40,"np":20,"star":0}},
       {"acts":1,"pre":{"c":"G","dmg":20,"np":0,"star":4},"post":{"c":"G","dmg":30,"np":0,"star":6}}
     ],
