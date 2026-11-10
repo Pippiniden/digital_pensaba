@@ -697,7 +697,7 @@ const DEFAULT_UNITS = [
       {"acts":1,"pre":{"c":"R","dmg":90,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
       {"acts":1,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
-      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"特殊行動","eff":[{"k":"atk","t":"self","v":20,"turns":3}],"dmg":80,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"鬼切","eff":[{"k":"atk","t":"self","v":20,"turns":3}],"dmg":80,"np":0,"star":0}},
       {"acts":3,"pre":{"c":"B","dmg":50,"np":10,"star":0},"post":{"c":"B","dmg":70,"np":15,"star":0}},
       {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":2},"post":{"c":"G","dmg":50,"np":0,"star":4}}
     ],
@@ -710,7 +710,9 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"titus", "name":"タイタス・クロウ", "cls":"ディティクティブ", "cost":2, "hp":500,
+    "traits":["男性","秩序","中庸","人","地","人型"],
     "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":12,"z":100}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%a5%bf%a5%a4%a5%bf%a5%b9%a1%a6%a5%af%a5%ed%a5%a6",
     "lines":{
       "start":["さぁて…ボコボコにしてやるぜぇ！！…え？神性持ちではない？こりゃあ失礼した…。"],
       "attack":["オラァ！","フン！","ソラ！！"],
@@ -731,7 +733,7 @@ const DEFAULT_UNITS = [
       {"acts":1,"pre":{"c":"R","dmg":50,"np":0,"star":0},"post":{"c":"R","dmg":80,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"R","dmg":50,"np":0,"star":0},"post":{"c":"R","dmg":70,"np":0,"star":0}},
       {"acts":1,"pre":{"c":"B","dmg":30,"np":20,"star":0},"post":{"c":"B","dmg":40,"np":30,"star":0}},
-      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"特殊行動","eff":[{"k":"atk","t":"self","v":30,"turns":3,"at":"post"}],"dmg":20,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"燃ゆる五芒の星","eff":[{"k":"atk","t":"self","v":30,"turns":3,"at":"post"}],"dmg":20,"np":0,"star":0}},
       {"acts":3,"pre":{"c":"B","dmg":30,"np":15,"star":0},"post":{"c":"B","dmg":50,"np":30,"star":0}},
       {"acts":1,"pre":{"c":"G","dmg":20,"np":0,"star":1},"post":{"c":"G","dmg":30,"np":0,"star":2}}
     ],
