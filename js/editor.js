@@ -177,6 +177,10 @@ function renderList(){
       <button class="small" data-act="move" data-d="-1" ${si>0?'':'disabled'} title="上へ">↑</button>
       <button class="small" data-act="move" data-d="1" ${si<L.length-1?'':'disabled'} title="下へ">↓</button>
       <button class="small danger" data-act="del" ${cur()?'':'disabled'}>削除</button>
+    </div>
+    <div class="row">
+      <button class="small" data-act="exportOne" ${cur()?'':'disabled'} title="選択中の1${isM()?'人':'体'}をJSONで書き出し">1${isM()?'人':'体'}を書き出し</button>
+      <button class="small" data-act="importOne" title="書き出した1${isM()?'人':'体'}のJSON（複数入りでも可）を一覧の末尾に追加">1${isM()?'人':'体'}を読み込み</button>
     </div>`;
 }
 
@@ -608,6 +612,27 @@ document.addEventListener('change',e=>{
     if(sp&&t){ sp.name=t.name; sp.eff=clone(t.eff).map(normEff); full(); toast(`令呪${+el.dataset.spl+1}を「${t.name}」のテンプレに置き換えました`); }
   }
   if(el.id==='rollPost'){ rollPost=el.checked; renderSide(); }
+  if(el.id==='fileOne'&&el.files[0]){ // 単体（または少数）の追加読み込み：今の一覧の末尾に足す。IDが被ったら振り直す
+    const f=el.files[0], rd=new FileReader();
+    rd.onload=()=>{
+      try{
+        const t=String(rd.result).trim(); let raw;
+        try{ raw=JSON.parse(t); }
+        catch(_){ const a=t.indexOf('['), b=t.lastIndexOf(']'); if(a<0||b<a) throw new Error('JSONとして読めません'); raw=JSON.parse(t.slice(a,b+1)); }
+        if(!Array.isArray(raw)) raw=[raw];
+        if(!raw.length||raw.some(x=>!x||typeof x!=='object')) throw new Error('データが空です');
+        if(isM()&&raw.some(x=>!Array.isArray(x.spells))) throw new Error(`${TERMS.player}のデータではありません（spells がありません）`);
+        if(!isM()&&raw.some(x=>!x.faces||!x.skills||!x.ult)) throw new Error(`${TERMS.unit}のデータではありません`);
+        const add=raw.map(isM()?normalizeMaster:normalizeUnit), L=list(), start=L.length;
+        add.forEach(x=>{ const ids=new Set([...units,...masters].map(y=>y.id)); if(!x.id||ids.has(x.id)) x.id=uniqueId(x.id); L.push(x); });
+        setSel(start); rollIdx=null; full();
+        toast(`${f.name} から${add.length}${isM()?'人':'体'}を追加しました（${add.map(x=>x.name).join('、')}）`);
+      }
+      catch(err){ toast(`読み込めませんでした：${err.message}`,true); }
+      el.value='';
+    };
+    rd.readAsText(f);
+  }
   if(el.id==='file'&&el.files[0]){
     const f=el.files[0], rd=new FileReader();
     rd.onload=()=>{
@@ -670,6 +695,9 @@ document.addEventListener('click',e=>{
     case 'exportJSON': if(isM()){ downloadText('pencil-masters.json',JSON.stringify(masters,null,2),'application/json'); break; }
       downloadText('pencil-units.json',JSON.stringify(units,null,2),'application/json'); break;
     case 'import': document.querySelector('#file').click(); break;
+    case 'exportOne': if(u){ const base=(u.id||'unit').replace(/[^A-Za-z0-9_-]/g,'')||'unit';
+      downloadText(`pencil-${isM()?'master':'unit'}-${base}.json`,JSON.stringify(u,null,2),'application/json'); toast(`「${u.name||u.id}」を書き出しました`); } break;
+    case 'importOne': document.querySelector('#fileOne').click(); break;
     case 'resetDefault':
       if(isM()){ if(confirm(`編集中の${TERMS.player}を標準データ（js/masters.js）に戻しますか？ 今の編集内容は消えます。`)){ masters=(typeof DEFAULT_MASTERS!=='undefined'?DEFAULT_MASTERS:[]).map(normalizeMaster); msel=0; rollIdx=null; full(); toast('標準データに戻しました'); } break; }
       if(confirm('編集中のデータを標準データ（js/units.js）に戻しますか？ 今の編集内容は消えます。')){ units=normalizeUnits(DEFAULT_UNITS); sel=0; rollIdx=null; full(); toast('標準データに戻しました'); }
