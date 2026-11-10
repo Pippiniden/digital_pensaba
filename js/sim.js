@@ -3,7 +3,7 @@
    バランス検証：対戦を画面なしで回す
    rules → units → common → engine → cpu の後に読み込む（sim-worker.js から importScripts）。
    両陣営とも CPU（つよい）。act() と同じく ACTIONS を cpuDecide() の手で動かす。
-   - シンプルルール：simPair(a,b,n,handicap) … 1騎どうし
+   - シンプルルール：simPair(a,b,n,handicap) … 1騎同士
    - チームバトル  ：simTeam(t,n,pool,full) … t ＋ランダムな味方 vs 同じ合計コスト・同じ人数のランダムな編成
      （full=true なら味方の合計コストが上限ちょうどの編成だけ使う。t は相手側には入らない）
    ===================================================================== */

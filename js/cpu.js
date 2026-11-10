@@ -384,7 +384,7 @@ function cpuMcScores(moves){
     for(let r=0;r<MC_ROLLOUTS;r++){
       const seed=Math.floor(rnd()*2147483647);
       moves.forEach((mv,i)=>{
-        reset(); Math.random=cpuPrng(seed); // 候補どうしで同じ乱数列を使い、運の差を消して比べる
+        reset(); Math.random=cpuPrng(seed); // 候補同士で同じ乱数列を使い、運の差を消して比べる
         mv();
         let n=0;
         while(G.phase!=='over'&&G.turn<cap&&n++<5000){

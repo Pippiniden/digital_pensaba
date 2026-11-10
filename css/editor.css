@@ -154,8 +154,18 @@ table.simmx td.hm{min-width:34px;font-variant-numeric:tabular-nums;color:#fff;
 #simdlg table.simmx td.hm{color:#fff}
 table.simmx td.hm.bad{outline:2px solid #ff8a80;outline-offset:-2px}
 table.simmx td.self{color:var(--sub)}
-.simexcl{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;margin:-2px 0 12px}
-.simexcl>.sub{margin-right:4px}
+.simexcl{margin:0 0 12px;border:1px solid var(--line);border-radius:5px;background:rgba(6,13,34,.4)}
+.xhead{display:flex;align-items:center;gap:8px;width:100%;padding:6px 10px;border:0;box-shadow:none;background:none;text-align:left;font-size:13px}
+.xhead b{margin-left:auto;font-weight:400;color:var(--sub)}
+.xbody{display:flex;flex-direction:column;gap:8px;padding:4px 10px 10px;border-top:1px solid var(--line)}
+.xrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding-top:6px}
+.xlab{font-size:12px;color:var(--sub);margin-right:4px}
+.xrow button.on,.xclsbtn.on{border-color:var(--gold-hi);color:var(--gold-hi)}
+.xcls{display:flex;gap:8px;align-items:flex-start}
+.xclsbtn{flex:none;min-width:130px;justify-content:flex-start;gap:6px;background:var(--panel2);box-shadow:none}
+.xclsbtn img{width:18px;height:18px}
+.xclsbtn.part{border-style:dashed}
+.xchips{display:flex;flex-wrap:wrap;gap:4px 6px}
 .xchip{background:var(--panel2);box-shadow:none;border-color:var(--line);gap:5px}
 .xchip.on{opacity:.55;text-decoration:line-through;border-style:dashed}
 .simgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:0 14px}

@@ -11,6 +11,7 @@
 const SIM = { rule:'simple', target:'sel', range:'same', handicap:true, full:false, n:500, run:null, res:null };
 const SIM_NS = [100,300,500,1000,3000];
 const SIM_EXCL_KEY = 'pencilduel.simExclude';
+SIM.exclOpen = false;
 SIM.excl = new Set(readJSON(SIM_EXCL_KEY)||[]);
 const simExcluded = u=>SIM.excl.has(u.id);
 
@@ -92,7 +93,7 @@ function renderSim(){
       <button class="small" data-act="simClose" title="閉じる">✕</button></div>
     <p class="sub small nm">編集中のデータで、両陣営とも CPU（つよい）の対戦を自動で回します。${team
       ?`対象キャラの味方はランダム（合計コスト${RULES.costCap}以内・できるだけ3騎）、相手は対象キャラを含まない「合計コストと人数が同じ」ランダムな編成です。`
-      :'1騎どうしで戦います。'}先攻はランダム、${SIM_TURN_LIMIT}ターンで決着しなければ引き分け（勝率は0.5勝扱い）。</p>
+      :'1騎同士で戦います。'}先攻はランダム、${SIM_TURN_LIMIT}ターンで決着しなければ引き分け（勝率は0.5勝扱い）。</p>
     <div class="simopts">
       <label>ルール<select data-sim="rule" ${run?'disabled':''}>
         <option value="simple" ${sel(SIM.rule,'simple')}>シンプル（1対1）</option>
@@ -109,12 +110,32 @@ function renderSim(){
       ${run?`<button class="small danger" data-act="simStop">中止</button>`
            :`<button class="primary" data-act="simStart" ${nJobs?'':'disabled'}>実行（${nJobs}${team?'キャラ':'組'} × ${SIM.n}試合）</button>`}
     </div>
-    <div class="simexcl"><span class="sub small">検証から外す</span>${units.map((u,i)=>
-      `<button class="small xchip ${simExcluded(u)?'on':''}" data-act="simExcl" data-i="${i}" aria-pressed="${simExcluded(u)}" ${run?'disabled':''}
-        title="${simExcluded(u)?'クリックで検証に戻す':'クリックで相手・総当たりから外す'}">${esc(u.name)}<span class="sub small">C${u.cost}</span></button>`).join('')}
-      ${SIM.excl.size&&SIM.target==='sel'&&t&&simExcluded(t)?'<span class="sub small">（選択中のキャラは外していても対象として検証します）</span>':''}</div>
+    ${simExclHTML(t,run)}
     ${run?`<div class="simprog"><i style="width:${run.done/run.total*100}%"></i><span>${run.done} / ${run.total} ${team?'キャラ':'組'}</span></div>`:''}
     <div class="simres">${SIM.res?simResultHTML(SIM.res):'<p class="sub small">条件を選んで「実行」を押してください。</p>'}</div>`;
+}
+
+// 「検証から外す」：開閉できる枠の中に、全キャラ → クラス → キャラ の順で並べる。選択中のキャラをワンボタンで外す／戻すこともできる
+function simExclHTML(t,run){
+  const dis=run?'disabled':'', open=SIM.exclOpen, n=units.filter(simExcluded).length;
+  const head=`<button class="xhead" data-act="simExclOpen" aria-expanded="${open}"><span>${open?'▼':'▶'}</span>検証から外す<b>${n?`${n}体`:'なし'}</b></button>`;
+  if(!open) return `<div class="simexcl">${head}</div>`;
+  const cls=[...new Set(units.map(u=>u.cls))].sort((a,b)=>(CLASSES.indexOf(a)+1||99)-(CLASSES.indexOf(b)+1||99));
+  const tOut=t&&simExcluded(t);
+  return `<div class="simexcl open">${head}
+    <div class="xbody">
+      <div class="xrow"><span class="xlab">まとめて</span>
+        <button class="small" data-act="simExclAll" ${dis}>全キャラを外す</button>
+        <button class="small" data-act="simExclNone" ${dis}>全キャラを戻す</button>
+        ${t?`<button class="small ${tOut?'on':''}" data-act="simExclSel" ${dis} title="エディタで選択中のキャラだけを切り替えます">選択中の${esc(t.name)}を${tOut?'戻す':'外す'}</button>
+        <button class="small" data-act="simExclOnly" ${dis} title="選択中のキャラ以外をすべて外します">選択中だけにする</button>`:''}</div>
+      ${cls.map(c=>{ const us=units.map((u,i)=>[u,i]).filter(([u])=>u.cls===c), k=us.filter(([u])=>simExcluded(u)).length, all=k===us.length;
+        return `<div class="xcls"><button class="small xclsbtn ${all?'on':k?'part':''}" data-act="simExclCls" data-c="${esc(c)}" ${dis}
+            title="${all?'このクラスを検証に戻す':'このクラスをまとめて外す'}">${clsIconTag(c)}<span>${esc(c)}</span><small class="sub">${k}/${us.length}</small></button>
+          <span class="xchips">${us.map(([u,i])=>`<button class="small xchip ${simExcluded(u)?'on':''}" data-act="simExcl" data-i="${i}" aria-pressed="${simExcluded(u)}" ${dis}
+            title="${simExcluded(u)?'クリックで検証に戻す':'クリックで相手・総当たりから外す'}">${esc(u.name)}<span class="sub small">C${u.cost}</span></button>`).join('')}</span></div>`; }).join('')}
+      ${n&&SIM.target==='sel'&&tOut?'<p class="sub small">選択中のキャラは外していても、対象としては検証します。</p>':''}
+    </div></div>`;
 }
 
 function simResultHTML(R){
@@ -242,9 +263,16 @@ document.addEventListener('click',e=>{
     case 'simClose': simClose(); break;
     case 'simStart': simStart(); break;
     case 'simStop': simStop(); renderSim(); break;
-    case 'simExcl': {
-      const u=units[+b.dataset.i]; if(!u||SIM.run) break;
-      SIM.excl.has(u.id)?SIM.excl.delete(u.id):SIM.excl.add(u.id);
+    case 'simExclOpen': SIM.exclOpen=!SIM.exclOpen; renderSim(); break;
+    case 'simExcl': case 'simExclAll': case 'simExclNone': case 'simExclSel': case 'simExclOnly': case 'simExclCls': {
+      if(SIM.run) break;
+      const a=b.dataset.act, ids=units.map(u=>u.id).filter(Boolean), t=cur();
+      if(a==='simExcl'){ const u=units[+b.dataset.i]; if(!u) break; SIM.excl.has(u.id)?SIM.excl.delete(u.id):SIM.excl.add(u.id); }
+      else if(a==='simExclAll') ids.forEach(id=>SIM.excl.add(id));
+      else if(a==='simExclNone') SIM.excl.clear();
+      else if(a==='simExclSel'){ if(!t) break; SIM.excl.has(t.id)?SIM.excl.delete(t.id):SIM.excl.add(t.id); }
+      else if(a==='simExclOnly'){ if(!t) break; SIM.excl=new Set(ids.filter(id=>id!==t.id)); }
+      else { const us=units.filter(u=>u.cls===b.dataset.c&&u.id), all=us.every(simExcluded); us.forEach(u=>all?SIM.excl.delete(u.id):SIM.excl.add(u.id)); }
       writeJSON(SIM_EXCL_KEY,[...SIM.excl]); renderSim(); break;
     }
   }

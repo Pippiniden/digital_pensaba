@@ -65,7 +65,7 @@ const RULESETS = {
   team:  { name:'チームバトル', partyMax:3, crit:'d100',
     desc:'3騎まで・コスト合計10以下で編成する基本ルール。' },
   simple:{ name:'シンプル', partyMax:1, crit:'d6', handicapAsc:2, hcapBonus:{gap:3, atk:30, np:10},
-    desc:`1騎どうしで戦う簡易ルール。相手の${TERMS.unit}を${TERMS.out}にすれば勝利。` },
+    desc:`1騎同士で戦う簡易ルール。相手の${TERMS.unit}を${TERMS.out}にすれば勝利。` },
   // master: マスタールール（シンプルルール＋泥ペンマス）。行動回数決定の後にマスターフェイズが入る
   //   masterAtk   ：マスターの攻撃＝コスト×値（master＝相手マスターへ / svt＝相手サーヴァントへ）
   //   lateBonus   ：G.turn がこの値以上（=3ターン目の後攻から）は行動回数+1

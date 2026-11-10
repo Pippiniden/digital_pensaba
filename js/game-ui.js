@@ -544,7 +544,7 @@ function hcapRuleText(rs){
 function handicapNote(pid){
   const rs=ruleset(), mr=!!rs.master, cost=p=>{ const u=G.picks[p][0], m=G.mpicks[p]; return (u?D(u).cost:0)+(mr&&m?D(m).cost:0); };
   const mine=mr&&(G.picks[pid][0]||G.mpicks[pid])?`合計コスト${cost(pid)}。`:'';
-  const opp=G.picks[1-pid][0]; if(!opp||pid===0) return mine+(mr?`${TERMS.unit}＋${TERMS.player}の合計コストを`:'')+'同コストどうしが公平です。';
+  const opp=G.picks[1-pid][0]; if(!opp||pid===0) return mine+(mr?`${TERMS.unit}＋${TERMS.player}の合計コストを`:'')+'同コスト同士が公平です。';
   const h=G.handicap&&rs.handicapAsc;
   return `${mine}相手は${mr?'合計':''}コスト${cost(1-pid)}。${h?hcapRuleText(rs):''}`;
 }
