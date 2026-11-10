@@ -676,5 +676,65 @@ const DEFAULT_UNITS = [
       {"name":"怒号","eff":[{"k":"taunt","t":"self","v":0,"turns":1},{"k":"atkDown","t":"enemy_all","v":10,"turns":3}]}
     ],
     "ult":{"name":"赤い盾","c":"R","eff":[{"k":"dmg","t":"target","v":300},{"k":"invul","t":"self","v":0,"turns":1},{"k":"cleanse","t":"ally_all","v":0}],"ruby":"レッドシールド"}
+  },
+  {
+    "id":"yorimitsu", "name":"源頼光", "cls":"セイバー", "cost":4, "hp":750,
+    "traits":["男性","秩序","善","人","人型"],
+    "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":12,"z":100}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%b8%bb%cd%ea%b8%f7",
+    "lines":{
+      "start":["誅伐、執行","やり過ぎないよう注意しようか…"],
+      "attack":["はっ！","せぇいっ！","痛いか？"],
+      "extra":["いざ──御免っ！"],
+      "damage":["ぐうっ……！"],
+      "skill":["手遊みのようなものだがな","ご覧いただこうか"],
+      "np":["来たれ…我が忠臣！我が息子よ、我が具足よッ！！四天王なぞこの通りだ……。いざッッッ！『四天招雷・天綱恢々』！！！"],
+      "npDamage":["やるな…貴様……！"],
+      "defeat":["私ともあろうものが、不覚……！","これが……油断、か……！"],
+      "win":["ふっ……戦とは、やはり荒々しいものだ","お役に立てたかな？ ────フッ、それは…何よりだ"]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":90,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"特殊行動","eff":[{"k":"atk","t":"self","v":20,"turns":3}],"dmg":80,"np":0,"star":0}},
+      {"acts":3,"pre":{"c":"B","dmg":50,"np":10,"star":0},"post":{"c":"B","dmg":70,"np":15,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":2},"post":{"c":"G","dmg":50,"np":0,"star":4}}
+    ],
+    "skills":[
+      {"name":"無窮の武練","eff":[{"k":"critRoll","t":"self","v":1,"turns":3}],"rank":"A"},
+      {"name":"魔力放出(雷)","eff":[{"k":"atk","t":"self","v":20,"turns":1,"color":"R"},{"k":"evade","t":"self","v":0,"turns":1}],"rank":"B"},
+      {"name":"邪剣・童子切安納","eff":[{"k":"atk","t":"self","v":30,"turns":3},{"k":"atk","t":"self","v":40,"turns":1,"color":"R"}],"rank":"A","line":["良いだろう、見せてやろうか…"]}
+    ],
+    "ult":{"name":"四天招雷・天綱恢々","c":"R","eff":[{"k":"onAtkStar","t":"self","v":2,"turns":3,"at":"pre"},{"k":"dmg","t":"enemy_all","v":450}]}
+  },
+  {
+    "id":"titus", "name":"タイタス・クロウ", "cls":"ディティクティブ", "cost":2, "hp":500,
+    "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":12,"z":100}},
+    "lines":{
+      "start":["おーいおいおいおい…。クソ忌々しい神性の匂いがするぞー？","さぁて…ボコボコにしてやるぜぇ！！…え？神性持ちではない？こりゃあ失礼した…。"],
+      "attack":["オラァ！","フン！","ソラ！！"],
+      "extra":["まぁとりあえず！これで終わってくれ！"],
+      "damage":["イタぁ！"],
+      "skill":["まずは、『敵を知る』事から始めるんだよ…","さぁ、今回の事件の犯人が特定され始めたぞ…"],
+      "np":["我が名はタイタス・クロウ！人として、人類として、人理として！権能の行使から世界を守護する抑止力の具現也！！"],
+      "npDamage":["いでででででででぇ！！なんだ貴様この俺に向かってぇ！"],
+      "defeat":["そりゃあ…人間相手となるとなぁ…！","しく…じった…か…！"],
+      "win":["この俺に…神さまの常識は通用ォしねぇ！","ハァ…ハァ…ハァ…、……やっぱ神以外だとギッリギリの勝負だな…"]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":50,"np":0,"star":0},"post":{"c":"R","dmg":80,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"R","dmg":50,"np":0,"star":0},"post":{"c":"R","dmg":70,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":30,"np":20,"star":0},"post":{"c":"B","dmg":40,"np":30,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"特殊行動","eff":[{"k":"atk","t":"self","v":30,"turns":3,"at":"post"}],"dmg":20,"np":0,"star":0}},
+      {"acts":3,"pre":{"c":"B","dmg":30,"np":15,"star":0},"post":{"c":"B","dmg":50,"np":30,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":20,"np":0,"star":1},"post":{"c":"G","dmg":30,"np":0,"star":2}}
+    ],
+    "skills":[
+      {"name":"神殺し","eff":[{"k":"atkTrait","t":"self","v":50,"turns":1,"trait":"神性"}],"rank":"A-"},
+      {"name":"数秘術","eff":[{"k":"np","t":"self","v":30},{"k":"npPow","t":"self","v":80,"turns":1,"chance":3},{"k":"atkDown","t":"enemy_all","v":30,"turns":3,"chance":2}],"rank":"B"},
+      {"name":"夢見人","eff":[{"k":"star","t":"master","v":8},{"k":"critRoll","t":"ally_all","v":10,"turns":3,"chance":3}],"rank":"A++"}
+    ],
+    "ult":{"name":"我が生涯よ神を焼き尽くせ","c":"R","eff":[{"k":"atkTrait","t":"self","v":50,"turns":3,"trait":"神性","at":"pre"},{"k":"dmg","t":"target","v":380}],"ruby":"タイタス・クロウ・サーガ"}
   }
 ];
