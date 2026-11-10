@@ -7,6 +7,7 @@
 const DEFAULT_UNITS = [
   {
     "id":"artoria", "name":"アルトリア・ペンドラゴン", "cls":"セイバー", "cost":5, "hp":1000,
+    "traits":["秩序","善","地","女性","竜","騎乗","王","アーサー","アルトリア顔","円卓の騎士","人型"],
     "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":12,"z":100}},
     "lines":{
       "start":["始めましょう、マスター","死力を尽くして来るがいい","戦いであれば、蹴散らすのみです","落ち着いて、油断なきように"],
@@ -36,6 +37,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"emiya", "name":"エミヤ", "cls":"アーチャー", "cost":4, "hp":650,
+    "traits":["中立","中庸","人","男性","愛する者"],
     "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":12,"z":100}},
     "lines":{
       "start":["懲りない連中だ","全霊でお相手しよう","正面から？　ふん、勘弁してくれ"],
@@ -65,6 +67,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"cu", "name":"クー・フーリン", "cls":"ランサー", "cost":3, "hp":550,
+    "traits":["秩序","中庸","天","男性","神性","愛する者"],
     "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":12,"z":100}},
     "lines":{
       "start":["おう、かかってきな","少しは楽しめそうじゃねぇか","準備運動？はっ、いらねぇよ！やってりゃ、あったまるだろ"],
@@ -94,6 +97,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"medusa", "name":"メドゥーサ", "cls":"ライダー", "cost":3, "hp":500,
+    "traits":["混沌","善","地","女性","騎乗","神性","蛇"],
     "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":12,"z":100}},
     "lines":{
       "start":["あまり美味しそうな方ではありませんね……","気は乗りませんが……"],
@@ -123,6 +127,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"medea", "name":"メディア", "cls":"キャスター", "cost":3, "hp":500,
+    "traits":["中立","悪","地","女性","アルゴー号ゆかりの者"],
     "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":12,"z":100}},
     "lines":{
       "start":["此処で消えてしまいなさい","始めようかしら"],
@@ -152,6 +157,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"kojiro", "name":"佐々木小次郎", "cls":"アサシン", "cost":1, "hp":400,
+    "traits":["中立","悪","人","男性"],
     "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":12,"z":100}},
     "lines":{
       "start":["佐々木小次郎、推して参る","では、果たし合おうぞ","落としがいのある首よ"],
@@ -181,6 +187,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"heracles", "name":"ヘラクレス", "cls":"バーサーカー", "cost":4, "hp":650,
+    "traits":["混沌","狂","天","男性","神性","ギリシャ神話系男性","アルゴー号ゆかりの者"],
     "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":12,"z":100}},
     "lines":{
       "start":["■■■■■――！"],
@@ -210,6 +217,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"hassan", "name":"呪腕のハサン", "cls":"アサシン", "cost":2, "hp":550,
+    "traits":["秩序","悪","人","男性"],
     "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":12,"z":100}},
     "lines":{
       "start":["瞬きの間に殺してみせよう","アサシンの技、侮らない事だ"],
@@ -239,6 +247,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"mash", "name":"マシュ・キリエライト", "cls":"シールダー", "cost":0, "hp":400,
+    "traits":["秩序","善","地","女性","騎乗","円卓の騎士"],
     "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":12,"z":100}},
     "lines":{
       "start":["戦闘です。マスター、指示を！","武装完了……。行きます、先輩！","見ていてください、マスター"],
@@ -268,6 +277,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"athelstan", "name":"エゼルスタン", "cls":"セイバー", "cost":5, "hp":850,
+    "traits":["秩序","善","人","女性","騎乗","竜","王"],
     "fit":{"face":{"x":59,"y":0,"z":127},"card":{"x":50,"y":12,"z":100}},
     "lines":{
       "start":["私に剣を持たせるのなら……受けて立ちます！","平和のためであれば、私は決して躊躇いません！"],
@@ -281,22 +291,23 @@ const DEFAULT_UNITS = [
       "win":["敵は全滅しましたね。では、先に進みましょう","あら、このアイテムはなんでしょうか？　マスター、どうぞお使いになってください"]
     },
     "faces":[
-      {"acts":1,"pre":{"c":"R","dmg":90,"np":0,"star":0},"post":{"c":"R","dmg":120,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"R","dmg":90,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"R","dmg":90,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
       {"acts":1,"pre":{"c":"B","dmg":60,"np":10,"star":0},"post":{"c":"B","dmg":70,"np":15,"star":0}},
-      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"R","dmg":110,"np":0,"star":0,"eff":[{"k":"ignoreDef","t":"self","v":0,"turns":1}]}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"R","dmg":120,"np":10,"star":2,"eff":[{"k":"ignoreDef","t":"self","v":0,"turns":1}]}},
       {"acts":3,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
       {"acts":1,"pre":{"c":"G","dmg":50,"np":0,"star":4},"post":{"c":"G","dmg":60,"np":0,"star":6}}
     ],
     "skills":[
       {"name":"信仰の加護","eff":[{"k":"debuffImmune","t":"self","v":0,"turns":5},{"k":"heal","t":"self","v":150},{"k":"def","t":"self","v":10,"turns":3},{"k":"atk","t":"self","v":10,"turns":3}],"rank":"B"},
-      {"name":"獅子の紋章","eff":[{"k":"atk","t":"self","v":20,"turns":1},{"k":"invul","t":"self","v":0,"turns":1},{"k":"mentalImmune","t":"self","v":0,"turns":3},{"k":"def","t":"ally_all","v":10,"turns":3}],"rank":"D-"},
-      {"name":"統一王","eff":[{"k":"atk","t":"self","v":20,"turns":1},{"k":"def","t":"self","v":20,"turns":1},{"k":"onAtkStar","t":"self","v":3,"turns":1},{"k":"onAtkNp","t":"self","v":20,"turns":1}],"rank":"A"}
+      {"name":"獅子の紋章","eff":[{"k":"invul","t":"self","v":0,"turns":1},{"k":"mentalImmune","t":"self","v":0,"turns":3},{"k":"atk","t":"self","v":10,"turns":1},{"k":"def","t":"ally_all","v":10,"turns":3}],"rank":"D-"},
+      {"name":"統一王","eff":[{"k":"atk","t":"self","v":20,"turns":1},{"k":"def","t":"self","v":20,"turns":1},{"k":"onAtkStar","t":"self","v":3,"turns":1},{"k":"onAtkNp","t":"self","v":15,"turns":1}],"rank":"A"}
     ],
     "ult":{"name":"統一王の覇光","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":400},{"k":"pierce","t":"self","v":0,"turns":1},{"k":"ignoreDef","t":"self","v":0,"turns":1}],"ruby":"ユナイテッド・キングス・レガリア"}
   },
   {
-    "id":"mnesarete", "name":"ネサレテ", "cls":"アーチャー", "cost":5, "hp":700,
+    "id":"mnesarete", "name":"ネサレテ", "cls":"アーチャー", "cost":5, "hp":750,
+    "traits":["混沌","善","天","神性"],
     "fit":{"face":{"x":100,"y":0,"z":129},"card":{"x":93,"y":12,"z":100}},
     "lines":{
       "start":["邪魔するなら、殺しちゃおうかしら……","こういうの、美しくないわねえ"],
@@ -310,22 +321,23 @@ const DEFAULT_UNITS = [
       "win":["はい、マスターちゃんよくできました～。後でい～っぱい、ご褒美をあげるわね～"]
     },
     "faces":[
-      {"acts":1,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":90,"np":0,"star":0}},
-      {"acts":2,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
       {"acts":1,"pre":{"c":"B","dmg":60,"np":15,"star":0},"post":{"c":"B","dmg":70,"np":20,"star":0}},
-      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"R","dmg":100,"np":0,"star":0,"eff":[{"k":"charm","t":"target","v":0,"turns":1,"chance":1}]}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"R","dmg":100,"np":0,"star":0,"eff":[{"k":"charm","t":"target","v":0,"turns":1,"chance":2}]}},
       {"acts":3,"pre":{"c":"B","dmg":50,"np":10,"star":0},"post":{"c":"B","dmg":60,"np":15,"star":0}},
       {"acts":1,"pre":{"c":"G","dmg":50,"np":0,"star":4},"post":{"c":"G","dmg":60,"np":0,"star":6}}
     ],
     "skills":[
       {"name":"美の顕現","eff":[{"k":"charm","t":"enemy_all","v":0,"turns":1,"chance":2},{"k":"np","t":"enemy_all","v":-10},{"k":"np","t":"self","v":10},{"k":"curse","t":"enemy_all","v":0,"times":1,"chance":1},{"k":"sealSkill","t":"enemy_all","v":0,"turns":1,"chance":1}],"rank":"EX"},
-      {"name":"閨に咲くパンデモス","eff":[{"k":"onAtkNp","t":"self","v":10,"turns":1},{"k":"heal","t":"self","v":100}],"rank":"A"},
-      {"name":"情欲の迷路","eff":[{"k":"atkDown","t":"enemy_all","v":10,"turns":2},{"k":"defDown","t":"enemy_all","v":10,"turns":2},{"k":"critRoll","t":"enemy_all","v":1,"turns":1}]}
+      {"name":"閨に咲くパンデモス","eff":[{"k":"onAtkNp","t":"self","v":10,"turns":1},{"k":"heal","t":"self","v":80},{"k":"regenHp","t":"self","v":20,"turns":3}],"rank":"A"},
+      {"name":"情欲の迷路","eff":[{"k":"atkDown","t":"enemy_all","v":15,"turns":3},{"k":"defDown","t":"enemy_all","v":15,"turns":3},{"k":"critRoll","t":"enemy_all","v":1,"turns":3}]}
     ],
-    "ult":{"name":"明星失墜","c":"R","eff":[{"k":"dmg","t":"target","v":300},{"k":"charm","t":"target","v":0,"turns":1,"chance":2}],"ruby":"イ・プトスィ・トゥ・エロタ"}
+    "ult":{"name":"明星失墜","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":300},{"k":"charm","t":"target","v":0,"turns":1,"chance":3}],"ruby":"イ・プトスィ・トゥ・エロタ"}
   },
   {
     "id":"connla", "name":"コンラ", "cls":"アーチャー", "cost":3, "hp":550,
+    "traits":["中立","中庸","天","神性","人型"],
     "fit":{"face":{"x":60,"y":0,"z":142},"card":{"x":50,"y":12,"z":112}},
     "lines":{
       "start":["道を妨げるというのならば！叩き潰して進みます！","名を名乗る栄誉のために！あなたたちの命を奪います！"],
@@ -343,15 +355,15 @@ const DEFAULT_UNITS = [
       {"acts":2,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":80,"np":0,"star":0}},
       {"acts":1,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":70,"np":25,"star":0}},
       {"acts":2,"pre":{"c":"ASC"},"post":{"c":"B","dmg":70,"np":10,"star":2}},
-      {"acts":3,"pre":{"c":"G","dmg":30,"np":0,"star":2},"post":{"c":"G","dmg":40,"np":0,"star":4}},
-      {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":2},"post":{"c":"G","dmg":40,"np":0,"star":4}}
+      {"acts":3,"pre":{"c":"G","dmg":30,"np":0,"star":3},"post":{"c":"G","dmg":40,"np":0,"star":5}},
+      {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":4},"post":{"c":"G","dmg":40,"np":0,"star":6}}
     ],
     "skills":[
       {"name":"心眼(偽)","eff":[{"k":"evade","t":"self","v":0,"turns":1},{"k":"critPow","t":"self","v":30,"turns":3}],"rank":"A-"},
-      {"name":"フットプリント","eff":[{"k":"mentalImmune","t":"self","v":0,"turns":3},{"k":"atk","t":"self","v":20,"turns":3},{"k":"maxHp","t":"self","v":100,"turns":3}],"rank":"A+"},
+      {"name":"フットプリント","eff":[{"k":"mentalImmune","t":"self","v":0,"turns":3},{"k":"atk","t":"self","v":20,"turns":3},{"k":"maxHp","t":"self","v":150,"turns":5}],"rank":"A+"},
       {"name":"投擲(岩石)","eff":[{"k":"critRoll","t":"self","v":2,"turns":3},{"k":"onAtkStar","t":"self","v":5,"turns":1}],"rank":"A+"}
     ],
-    "ult":{"name":"岩が出てくる不思議な小舟","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":200},{"k":"star","t":"master","v":7}]}
+    "ult":{"name":"岩が出てくる不思議な小舟","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":250},{"k":"star","t":"master","v":8}]}
   },
   {
     "id":"hanzo", "name":"服部半蔵", "cls":"ランサー", "cost":4, "hp":650,
@@ -376,7 +388,7 @@ const DEFAULT_UNITS = [
       {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":2},"post":{"c":"G","dmg":60,"np":0,"star":3}}
     ],
     "skills":[
-      {"name":"無辜の怪物","eff":[{"k":"taunt","t":"self","v":0,"turns":3},{"k":"regenStar","t":"self","v":2,"turns":3}],"rank":"A"},
+      {"name":"無辜の怪物","eff":[{"k":"taunt","t":"self","v":0,"turns":3},{"k":"regenStar","t":"self","v":2,"turns":3},{"k":"evade","t":"self","v":0,"times":1}],"rank":"A"},
       {"name":"忍術","eff":[{"k":"evade","t":"self","v":0,"times":2},{"k":"critRoll","t":"self","v":1,"turns":3}],"rank":"EX"},
       {"name":"闇夜の襲撃者","eff":[{"k":"onAtkStar","t":"self","v":3,"turns":3},{"k":"atk","t":"self","v":20,"turns":3,"color":"G"}],"rank":"C"}
     ],
