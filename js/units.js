@@ -309,7 +309,7 @@ const DEFAULT_UNITS = [
   {
     "id":"mnesarete", "name":"ネサレテ", "cls":"アーチャー", "cost":5, "hp":750,
     "traits":["混沌","善","天","神性"],
-    "fit":{"face":{"x":100,"y":0,"z":129},"card":{"x":93,"y":12,"z":100}},
+    "fit":{"face":{"x":50,"y":20,"z":100},"card":{"x":93,"y":12,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%cd%a5%b5%a5%ec%a5%c6%a1%a6%a5%a2%a5%d5%a5%ed%a5%c7%a5%a3%a5%c6",
     "lines":{
       "start":["邪魔するなら、殺しちゃおうかしら……","こういうの、美しくないわねえ"],
@@ -394,7 +394,7 @@ const DEFAULT_UNITS = [
     ],
     "skills":[
       {"name":"無辜の怪物","eff":[{"k":"taunt","t":"self","v":0,"turns":3},{"k":"regenStar","t":"self","v":2,"turns":3},{"k":"evade","t":"self","v":0,"times":1}],"rank":"A"},
-      {"name":"忍術","eff":[{"k":"evade","t":"self","v":0,"times":2},{"k":"critRoll","t":"self","v":1,"turns":3}],"rank":"EX"},
+      {"name":"忍術","eff":[{"k":"evade","t":"self","v":0,"times":3},{"k":"critRoll","t":"self","v":1,"turns":3}],"rank":"EX"},
       {"name":"闇夜の襲撃者","eff":[{"k":"onAtkStar","t":"self","v":3,"turns":3},{"k":"atk","t":"self","v":20,"turns":3,"color":"G"}],"rank":"C"}
     ],
     "ult":{"name":"是・闇に潜み忍ぶ者","c":"G","eff":[{"k":"dmg","t":"enemy_all","v":300},{"k":"strip","t":"enemy_all","v":0}],"ruby":"レジェンド・ニンジャ・マスター"}
@@ -402,6 +402,7 @@ const DEFAULT_UNITS = [
   {
     "id":"neoptolemus", "name":"ネオプトレモス", "cls":"ライダー", "cost":3, "hp":600,
     "traits":["男性","中立","中庸","人型","神性","王","騎乗","ギリシャ神話系男性"],
+    "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":12,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%cd%a5%aa%a5%d7%a5%c8%a5%ec%a5%e2%a5%b9",
     "lines":{
       "start":["くだらない。勝ち目のない戦いに挑むのは獣以下だ","揃いも揃って……死に急いで何になる"],
@@ -430,9 +431,9 @@ const DEFAULT_UNITS = [
     "ult":{"name":"神威の戦輪","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":250},{"k":"atk","t":"self","v":30,"turns":3}],"ruby":"エペイロス・ハルマ"}
   },
   {
-    "id":"lucan", "name":"ルーカン", "cls":"サーヴァント", "cost":1, "hp":400,
+    "id":"lucan", "name":"ルーカン", "cls":"サーヴァント", "cost":1, "hp":350,
     "traits":["女性","秩序","中庸","地","人型","円卓の騎士"],
-    "fit":{"face":{"x":50,"y":10,"z":106},"card":{"x":50,"y":12,"z":107}},
+    "fit":{"face":{"x":50,"y":6,"z":100},"card":{"x":50,"y":12,"z":107}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%eb%a1%bc%a5%ab%a5%f3",
     "lines":{
       "start":["お相手いたしますわ","あら……お部屋を散らかしそうな方"],
@@ -446,11 +447,11 @@ const DEFAULT_UNITS = [
       "win":["戦いにも抜かりはありません。それがメイドというものです","お疲れとお見受けします。すぐにお紅茶のご用意をいたしますね、マスター"]
     },
     "faces":[
-      {"acts":1,"pre":{"c":"R","dmg":50,"np":0,"star":0},"post":{"c":"R","dmg":70,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"R","dmg":40,"np":0,"star":0},"post":{"c":"R","dmg":50,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"B","dmg":30,"np":20,"star":0},"post":{"c":"B","dmg":40,"np":25,"star":0}},
       {"acts":1,"pre":{"c":"B","dmg":20,"np":15,"star":0},"post":{"c":"B","dmg":40,"np":20,"star":0}},
       {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"給仕","eff":[{"k":"heal","t":"ally_all","v":20}],"dmg":0,"np":0,"star":0,"line":["上等なワインを用意いたしました"]}},
-      {"acts":3,"pre":{"c":"B","dmg":10,"np":15,"star":0},"post":{"c":"B","dmg":30,"np":20,"star":0}},
+      {"acts":3,"pre":{"c":"B","dmg":20,"np":15,"star":0},"post":{"c":"B","dmg":30,"np":20,"star":0}},
       {"acts":1,"pre":{"c":"G","dmg":20,"np":0,"star":2},"post":{"c":"G","dmg":30,"np":0,"star":4}}
     ],
     "skills":[
@@ -494,6 +495,7 @@ const DEFAULT_UNITS = [
   {
     "id":"tezcatlipoca", "name":"テスカトリポカ", "cls":"バーサーカー", "cost":5, "hp":750,
     "traits":["男性","混沌","悪","天","人型","神性","魔性"],
+    "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":12,"z":100}},
     "lines":{
       "start":["我にあらがうか！我と闘うか！その無礼を赦す！対価としてその命を持って我を楽しませよ！！これは所詮、余興である！！"],
       "attack":["肉体とは良い物だ！","簡単に壊れてくれるなよ！","挨拶代わりだ！くらうがいい！"],
@@ -554,6 +556,7 @@ const DEFAULT_UNITS = [
   {
     "id":"bartholomew", "name":"バーソロミュー・ロバーツ", "cls":"ライダー", "cost":2, "hp":450,
     "traits":["秩序","悪","人","人型","男性"],
+    "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":12,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%d0%a1%bc%a5%bd%a5%ed%a5%df%a5%e5%a1%bc%a1%a6%a5%ed%a5%d0%a1%bc%a5%c4",
     "lines":{
       "start":[],
@@ -584,7 +587,7 @@ const DEFAULT_UNITS = [
   {
     "id":"utixorabbit", "name":"ウティホの兎", "cls":"アサシン", "cost":2, "hp":350,
     "traits":["女性","混沌","中庸","地","動物"],
-    "fit":{"face":{"x":50,"y":28,"z":100},"card":{"x":50,"y":12,"z":100}},
+    "fit":{"face":{"x":50,"y":15,"z":100},"card":{"x":50,"y":12,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%a6%a5%c6%a5%a3%a5%db%a4%ce%c5%c6",
     "lines":{
       "start":["直接戦闘だなんて……。私はアサシンなのに！","ちょっと！　私を前線に出さないでよ！"],
@@ -601,7 +604,7 @@ const DEFAULT_UNITS = [
       {"acts":1,"pre":{"c":"R","dmg":40,"np":0,"star":0},"post":{"c":"R","dmg":60,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"B","dmg":30,"np":20,"star":0},"post":{"c":"B","dmg":40,"np":25,"star":0}},
       {"acts":1,"pre":{"c":"G","dmg":20,"np":0,"star":4},"post":{"c":"G","dmg":30,"np":0,"star":6}},
-      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"G","dmg":30,"np":0,"star":0,"eff":[{"k":"evade","t":"self","v":0,"times":2}]}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"G","dmg":30,"np":0,"star":0,"eff":[{"k":"evade","t":"self","v":0,"times":1}]}},
       {"acts":3,"pre":{"c":"G","dmg":20,"np":0,"star":3},"post":{"c":"G","dmg":30,"np":0,"star":5}},
       {"acts":1,"pre":{"c":"G","dmg":10,"np":0,"star":3},"post":{"c":"G","dmg":20,"np":0,"star":5}}
     ],
@@ -615,6 +618,7 @@ const DEFAULT_UNITS = [
   {
     "id":"kalki", "name":"カルキ", "cls":"ルーラー", "cost":5, "hp":900,
     "traits":["男性","秩序","中庸","天","神性"],
+    "fit":{"face":{"x":50,"y":11,"z":100},"card":{"x":50,"y":12,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%A5%AB%A5%EB%A5%AD%28%C7%E9%29",
     "lines":{
       "start":[],
@@ -641,5 +645,35 @@ const DEFAULT_UNITS = [
       {"name":"十大化身","eff":[{"k":"atk","t":"self","v":10,"turns":3},{"k":"def","t":"self","v":10,"turns":3},{"k":"pierce","t":"self","v":0,"turns":1},{"k":"onAtkNp","t":"self","v":10,"turns":3},{"k":"regenHp","t":"self","v":40,"turns":3},{"k":"guts","t":"self","v":80,"turns":3}],"rank":"A+"}
     ],
     "ult":{"name":"終極よ、最果てを廻れ","c":"B","eff":[{"k":"atkTrait","t":"self","v":50,"turns":3,"trait":"悪","at":"pre"},{"k":"dmg","t":"enemy_all","v":400}],"ruby":"クリタ・ユガ"}
+  },
+  {
+    "id":"lamorak", "name":"ラモラック", "cls":"シールダー", "cost":3, "hp":550,
+    "traits":["男性","混沌","中庸","地","円卓の騎士","人型"],
+    "link":"https://seesaawiki.jp/kagemiya/d/%a5%e9%a5%e2%a5%e9%a5%c3%a5%af",
+    "lines":{
+      "start":["なんじゃワリャアアアアアア！　おんどりゃこのワシに喧嘩売っとんのかアアアアア！","ボテくりこかし回してさらにコレシバき倒したろかいワレエエ！","カチコミ行くでええええ！"],
+      "attack":["うらあっ！","ダア！","オオウリャアア！","くたばれえええい！","があああ！"],
+      "extra":["ずおりゃああっ！　吹っ飛べエエエエア！　そして死ねやあっ！"],
+      "damage":["クソがあっ！"],
+      "skill":["いてまうぞコラア！","ナメた態度取ったら許されへんでえ！","アアン！？","見なやこの力瘤！"],
+      "np":["生かして返す気は無いでええええっ！！　赤い盾でいてもうたらあああああっ！！"],
+      "npDamage":["後悔すんなやあああっ！"],
+      "defeat":["ワシはまだやれるで！　やるったらやるんやアアアア！","ごっついわ……いつかタマ獲ったる……！"],
+      "win":["くだらんわ！　ワシが殴るまでもなかったのう！","円卓最強はこのワシじゃあああああっ！！"]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":60,"np":0,"star":0},"post":{"c":"R","dmg":90,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"R","dmg":60,"np":0,"star":0},"post":{"c":"R","dmg":80,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"R","dmg":50,"np":0,"star":0},"post":{"c":"R","dmg":70,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"R","dmg":80,"np":10,"star":0}},
+      {"acts":3,"pre":{"c":"B","dmg":30,"np":15,"star":0},"post":{"c":"B","dmg":40,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":20,"np":0,"star":2},"post":{"c":"G","dmg":30,"np":0,"star":3}}
+    ],
+    "skills":[
+      {"name":"勇猛","eff":[{"k":"mentalImmune","t":"self","v":0,"turns":3},{"k":"atk","t":"self","v":30,"turns":3}],"rank":"A"},
+      {"name":"戦闘続行","eff":[{"k":"guts","t":"self","v":200,"turns":5}],"rank":"A+"},
+      {"name":"怒号","eff":[{"k":"taunt","t":"self","v":0,"turns":1},{"k":"atkDown","t":"enemy_all","v":10,"turns":3}]}
+    ],
+    "ult":{"name":"赤い盾","c":"R","eff":[{"k":"dmg","t":"target","v":300},{"k":"invul","t":"self","v":0,"turns":1},{"k":"cleanse","t":"ally_all","v":0}],"ruby":"レッドシールド"}
   }
 ];
