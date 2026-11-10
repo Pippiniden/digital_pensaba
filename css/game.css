@@ -270,6 +270,7 @@ body[data-screen="battle"] #app{overflow:hidden}
   background:linear-gradient(180deg,var(--gold-hi),var(--gold) 55%,var(--gold-lo));-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 18px rgba(214,178,94,.35))}
 .showcase{display:flex;justify-content:center;gap:8px;margin:0 auto 18px;flex-wrap:wrap}
 .showtile{position:relative;width:78px;aspect-ratio:3/4;border-radius:4px;overflow:hidden;border:1px solid var(--gold);box-shadow:var(--frame);animation:rise .5s calc(var(--i)*70ms) both}
+.showtile.still{animation:none}
 .showtile .pcls{width:20px;height:20px;top:3px;left:3px}
 @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
 .datainfo{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 12px;border:1px dashed var(--gold-lo);border-radius:4px;font-size:13px;background:rgba(10,21,51,.6)}

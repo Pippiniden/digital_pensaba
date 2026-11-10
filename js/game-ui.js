@@ -575,8 +575,11 @@ function showcaseHTML(){
     if(!SHOW_IDS_PENDING){ SHOW_IDS_PENDING=true; probeFaces().then(()=>{ SHOW_IDS=pickShowcase(); SHOW_IDS_PENDING=false; if(G.phase==='mode') render(); }); }
     return '';
   }
-  return SHOW_IDS.map(D).filter(Boolean).map((d,i)=>`<div class="showtile" style="--i:${i}">${unitImg(d,'face','pimg',d.name)}${clsIconTag(d.cls,'pcls')}</div>`).join('');
+  // 登場アニメーションは最初の1回だけ（render() は毎回 #app を作り直すので、付けたままだと選ぶたびに再生される）
+  const still=SHOW_PLAYED; SHOW_PLAYED=true;
+  return SHOW_IDS.map(D).filter(Boolean).map((d,i)=>`<div class="showtile${still?' still':''}" style="--i:${i}">${unitImg(d,'face','pimg',d.name)}${clsIconTag(d.cls,'pcls')}</div>`).join('');
 }
+let SHOW_PLAYED=false;
 let SHOW_IDS_PENDING=false;
 
 function modeHTML(){
