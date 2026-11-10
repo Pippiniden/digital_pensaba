@@ -172,12 +172,14 @@ function renderList(){
 }
 
 // ---------- マスターの編集（マスタールール・マスターチーム用） ----------
+// 新しいマスターはコスト4（星4）のひな形。警告が出ない状態から始める
 function newMaster(){
-  return { id:uniqueId('master'), name:'新しいマスター', cls:TERMS.player, cost:2, hp:120, master:true, fit:normFit(), lines:Object.fromEntries(Object.keys(MASTER_LINE_KEYS).map(k=>[k,[]])),
-    faces:[ {label:'無',eff:[]}, {label:'強化魔術',eff:[{k:'atk',t:'svt',v:20}]}, {label:'治癒魔術',eff:[{k:'heal',t:'svt',v:80}]},
-            {label:'無',eff:[]}, {label:'魔力供給',eff:[{k:'np',t:'svt',v:20}]}, {label:'魔弾',eff:[{k:'dmg',t:'enemy_master',v:40}]} ],
-    spells:[ {name:'令呪：宝具解放',eff:[{k:'np',t:'svt',v:100}]}, {name:'令呪：回復',eff:[{k:'heal',t:'svt',v:200}]}, {name:'令呪：強化',eff:[{k:'atk',t:'svt',v:30,turns:3}]} ] };
+  const t=masterTpl(4), sp=n=>{ const x=SPELL_TPL.find(y=>y.name===n); return {name:x.name,eff:clone(x.eff).map(normEff)}; };
+  return { id:uniqueId('master'), name:'新しいマスター', cls:TERMS.player, cost:4, hp:t.hp, master:true, fit:normFit(), lines:Object.fromEntries(Object.keys(MASTER_LINE_KEYS).map(k=>[k,[]])),
+    faces:t.faces, spells:[sp('霊子譲渡'),sp('応急手当'),sp('瞬間強化')] };
 }
+// 令呪テンプレの選択肢：名前＋効果（対象つき）のかんたんな紹介
+const spellTplLabel = t=>`${t.name}｜${effsText(t.eff,null,mTLabel)}`;
 const mFaceText = f=>f.eff.length?effsText(f.eff,null,mTLabel):'無（何も起きない）';
 function renderMasterForm(el){
   const m=cur();
@@ -192,6 +194,8 @@ function renderMasterForm(el){
       <label>コスト<input type="number" min="0" data-p="cost" data-t="num" value="${m.cost}"><small data-mprev="atk">攻撃：相手${TERMS.player}へ${m.cost*ma.master}・相手${TERMS.unit}へ${m.cost*ma.svt}（マスタールール）</small></label>
       <label>HP<input type="number" min="1" step="5" data-p="hp" data-t="num" value="${m.hp}"><small>0になると自軍${TERMS.unit}がこの値のダメージを受ける</small></label>
     </div>
+    <div class="row tplrow"><button class="small" data-act="applyMTpl">このコストのテンプレを適用</button>
+      <small class="sub">HPと補助の6面を、コスト${m.cost}の標準値（HP＝コスト×100・4番は強め・ほかはコストと同じ数の面）に置き換えます（令呪・セリフは変えません）</small></div>
   </section>
   <section class="sec"><h2>画像</h2>
     <p class="sub small nm"><code>${IMG_DIR}</code> にIDと同じ名前の ${IMG_EXT} を置くと自動で使われます（なければ仮画像）。</p>
@@ -224,7 +228,7 @@ function renderMasterForm(el){
     ${m.spells.map((s,i)=>`<div class="subcard">
       <div class="row"><b>令呪${i+1}</b></div>
       <div class="fields"><label>名前<input data-p="spells.${i}.name" value="${esc(s.name)}"></label>
-        <label>汎用令呪から入力<select data-spl="${i}"><option value="">（選ぶと名前と効果を置き換えます）</option>${SPELL_TPL.map((t,k)=>opt(k,`${t.name}（${t.tgt}）`,'')).join('')}</select></label></div>
+        <label>汎用令呪から入力<select data-spl="${i}"><option value="">（選ぶと名前と効果を置き換えます）</option>${SPELL_TPL.map((t,k)=>opt(k,spellTplLabel(t),'')).join('')}</select></label></div>
       ${effList(`spells.${i}.eff`,s.eff,'master')}
       <div class="preview mprev" data-prev="spell" data-i="${i}">${esc(effsText(s.eff,null,mTLabel))}</div>
       ${ownLineIn(`spells.${i}.line`,s.line,MASTER_LINE_KEYS.spell)}
@@ -612,6 +616,10 @@ document.addEventListener('click',e=>{
       if(!confirm(`コスト${u.cost}・${tplKey} のテンプレで、HPと鉛筆の6面を置き換えますか？`)) break;
       const err=applyCardTpl(u); if(err){ toast(err,true); break; }
       full(); toast(`${tplKey}（コスト${u.cost}）のテンプレを適用しました`); break; }
+    case 'applyMTpl': {
+      if(!confirm(`コスト${u.cost}のテンプレで、HPと補助の6面を置き換えますか？`)) break;
+      const t=masterTpl(u.cost); u.hp=t.hp; u.faces=t.faces.map((f,i)=>({...f,...(u.faces[i]&&u.faces[i].line?{line:u.faces[i].line}:{})}));
+      full(); toast(`コスト${u.cost}のテンプレを適用しました`); break; }
     case 'roll': doRoll(); break;
     case 'apply':
       if(isM()){

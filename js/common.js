@@ -241,6 +241,22 @@ function masterRefText(e,fi,cost){
   if(s) out.push(`${s.c==='forbid'?'⚠ ':''}${s.msg}`);
   return out.join('　／　');
 }
+// コスト相応のマスターのひな形（HPと補助の6面）。4番は強め・ほかはコストと同じ数の面に目安値ちょうどの効果を入れる（シート準拠なので警告は出ない）
+function masterTpl(cost){
+  cost=Math.max(0,Math.round(cost)||0);
+  const R=MSHEET.ref, star5=cost>=MSHEET.star5Cost, v=(key,main)=>R[key].vals[(star5?2:0)+(main?1:0)];
+  const slots=[ // 4番以外に入れる順番（コストぶんだけ先頭から）
+    ['強化魔術',[{k:'atk',t:'svt',v:v('atk')}]],
+    ['治癒魔術',[{k:'heal',t:'svt',v:v('heal')}]],
+    ['魔力供給',[{k:'onAtkNp',t:'svt',v:v('onAtkNp')}]],
+    ['魔弾',[{k:'dmg',t:'enemy_svt',v:v('dmg_enemy_svt')}]],
+    ['星の加護',[{k:'onAtkStar',t:'svt',v:v('onAtkStar')}]],
+  ];
+  const order=[1,4,2,5,0], faces=Array.from({length:6},()=>({label:'無',eff:[]}));
+  order.slice(0,Math.min(cost,slots.length)).forEach((fi,i)=>{ faces[fi]={label:slots[i][0],eff:slots[i][1].map(normEff)}; });
+  faces[MSHEET.faceMain]={label:'秘術',eff:[{k:'atk',t:'svt',v:v('atk',true)},{k:'heal',t:'svt',v:v('heal',true)}].map(normEff)};
+  return {hp:Math.max(MSHEET.hpStep,cost*MSHEET.hpPerCost), faces};
+}
 function checkMasterSheet(m,add){
   const base=m.cost*MSHEET.hpPerCost, lo=Math.max(1,base-MSHEET.hpRange), hi=base+MSHEET.hpRange;
   if(m.hp<lo||m.hp>hi) add('big',`HP${m.hp}がシートの範囲外です（コスト${m.cost}×${MSHEET.hpPerCost}を基準に±${MSHEET.hpRange}：${lo}〜${hi}）`);
@@ -249,8 +265,9 @@ function checkMasterSheet(m,add){
   const main=MSHEET.faceMain;
   if(!m.faces[main]||!real(m.faces[main]).length) add('big',`補助${main+1}番は必ず効果を入れます（他より強めに）`);
   const others=m.faces.filter((f,i)=>i!==main&&real(f).length).length;
-  if(others>m.cost) add('big',`補助の成功枠が多すぎます（${main+1}番以外で効果のある面が${others}つ。コスト${m.cost}まで）`);
-  else if(others<m.cost) add('warn',`補助の成功枠が足りません（${main+1}番以外で効果のある面は、コストと同じ${m.cost}つが目安。今${others}つ）`);
+  const want=Math.min(m.cost,5); // 4番以外の面は5つしかない
+  if(others>want) add('big',`補助の成功枠が多すぎます（${main+1}番以外で効果のある面が${others}つ。コスト${m.cost}まで）`);
+  else if(others<want) add('warn',`補助の成功枠が足りません（${main+1}番以外で効果のある面は、コストと同じ${want}つが目安。今${others}つ）`);
   const same=new Map(), lim={limit1:[],limit2:[]};
   m.faces.forEach((f,fi)=>real(f).forEach(e=>{
     const w=`補助${fi+1}`, name=(FX[e.k]||{}).name||e.k, s=masterSlot(e);
