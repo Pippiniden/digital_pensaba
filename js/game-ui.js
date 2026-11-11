@@ -31,7 +31,7 @@ function skillBtns(u,d){
     return `<div class="sks">${sk}<span class="skw" title="${TERMS.ult}の使用を取り消して${TERMS.gauge}を戻す"><button class="sk np ${d.ult.c} ready" data-a="cancelUlt" ${own?'':'disabled'}><i>取消</i><span>${ultNameHTML(d.ult)}</span></button></span></div>`;
   }
   const ready=u.np>=RULES.ultCost&&!u.out, ok=own&&canUlt(u)&&!G.ult&&!G.ultDone&&ready;
-  const tip=`${TERMS.ult}「${d.ult.name}」 [${TERMS[d.ult.c]}] ${effsText(d.ult.eff)}（${TERMS.gauge}${RULES.ultCost}%で使用可）`;
+  const tip=`${TERMS.ult}「${d.ult.name}」 [${TERMS[d.ult.c]}] ${effsText(d.ult.eff,d.ult.pick)}（${TERMS.gauge}${RULES.ultCost}%で使用可）`;
   const ult=`<span class="skw" title="${esc(tip)}"><button class="sk np ${d.ult.c} ${ready?'ready':''}" data-a="useUlt" data-uid="${u.uid}" ${ok?'':'disabled'}><i>${TERMS.ult}</i><span>${ultNameHTML(d.ult)}</span></button></span>`;
   return `<div class="sks">${sk}${ult}</div>`;
 }

@@ -48,7 +48,7 @@ function cpuDecide(){
   switch(G.phase){
     case 'actRoll': return G.actRolled ? ['setAlloc',{alloc:JSON.stringify(cpuAlloc(easy))}] : ['rollActs'];
     case 'skill': {
-      if(G.pending) return ['cardClick',{uid:cpuPickTarget(G.pending.uid,G.pending.si,easy).uid}];
+      if(G.pending) return ['cardClick',{uid:cpuPickTarget(G.pending.uid,G.pending.ult?null:G.pending.si,easy).uid}];
       let m=null;
       if(!G.ult&&!G.ultDone){ const u=cpuUltUser(); if(u) m=['useUlt',{uid:u.uid}]; }
       if(!m){ const s=cpuNextSkill(easy); m=s ? ['useSkill',{uid:s.u.uid,si:String(s.si)}] : ['skillDone']; }
@@ -322,7 +322,7 @@ function cpuEffScore(u,effs,picked,si){
   return sc;
 }
 function cpuPickTarget(uid,si,easy){
-  const u=U(uid), s=D(u.def).skills[si];
+  const u=U(uid), s=si==null?D(u.def).ult:D(u.def).skills[si]; // si なし＝宝具
   const cands=skillCands(u,s);
   if(!cands.length) return u;
   if(easy) return cands[Math.floor(rnd01(`${G.turn}p${uid}${si}`)*cands.length)];

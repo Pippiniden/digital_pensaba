@@ -106,7 +106,7 @@ const roll = ()=>Math.floor(Math.random()*6);       // 面index(0-5)、出目は
 const has = (u,k)=>u.fx.some(e=>e.k===k);
 const disabled = u=>has(u,'stun')||has(u,'charm');           // 行動・スキル・宝具すべて不可
 const canSkill = u=>!u.out&&!disabled(u)&&!has(u,'sealSkill');
-const canUlt = u=>!u.out&&!disabled(u)&&!has(u,'sealUlt');
+const canUlt = u=>!u.out&&!disabled(u)&&!has(u,'sealUlt')&&(!D(u.def).ult.pick||skillCands(u,D(u.def).ult).length>0); // 対象を選ぶ宝具は、選べる相手がいること
 const fmt = n=>Number.isInteger(n)?n:Math.round(n*10)/10;
 const dn = u=>esc(D(u.def).name);
 const nm = u=>`<span class="p${u.pid}">${dn(u)}</span>`;
@@ -122,7 +122,7 @@ function makeMaster(pid,id){ return {uid:`p${pid}m`,pid,idx:-1,def:id,hp:D(id).h
 // 宝具に「攻撃対象」を使う効果がない（全体宝具・補助宝具）なら、対象を選ばず敵全体が対象
 const ultNoTarget = u=>!D(u.def).ult.eff.some(e=>e.t==='target');
 function targetCandidates(){ const es=alive(1-G.cur); const t=es.filter(u=>has(u,'taunt')); return t.length?t:es; }
-function pendingSkill(){ return G.pending ? D(U(G.pending.uid).def).skills[G.pending.si] : null; }
+function pendingSkill(){ return G.pending ? (G.pending.ult ? D(U(G.pending.uid).def).ult : D(U(G.pending.uid).def).skills[G.pending.si]) : null; } // 宝具の対象選びも同じ pending を使う（ult:true）
 // スキルの対象に選べるか（pick：ally=味方 / other=自分以外の味方 / enemy=敵 / any=敵味方）
 function skillPickOk(user,s,u){
   if(!u||u.out||u.master) return false;
@@ -144,7 +144,7 @@ const hitsOf = effs=>Math.min(10,Math.max(1,...(effs||[]).filter(e=>e.k==='multi
 const effVal = (e,t)=>e.max&&t?maxHp(t):e.v;
 // 全体にかかる効果の呼び名（スキル演出の「→ 全体」）
 function allLabel(effs){
-  const ts=new Set(effs.filter(e=>FX[e.k]&&!FX[e.k].noTgt).map(e=>e.t)), a=ts.has('ally_all'), en=ts.has('enemy_all')||ts.has('enemy_both');
+  const ts=new Set(effs.filter(e=>FX[e.k]&&!FX[e.k].noTgt).map(e=>e.t)), a=ts.has('ally_all')||ts.has('ally_other'), en=ts.has('enemy_all')||ts.has('enemy_both');
   return a&&en?'全体':a?'味方全体':en?'敵全体':'';
 }
 function mods(u,k,color){
@@ -208,6 +208,7 @@ function resolveTargets(src,t,picked){
   if(t==='self') ts=[src];
   else if(t==='picked') ts=picked?[picked]:[];
   else if(t==='ally_all') ts=[...alive(src.pid),...(m?[m]:[])]; // マスタールール：味方全体の効果はマスターにも
+  else if(t==='ally_other') ts=alive(src.pid).filter(u=>u.uid!==src.uid); // 自分以外の味方全体（マスターは含まない）
   else if(t==='enemy_all') ts=alive(1-src.pid);
   else if(t==='target') ts=G.target?[U(G.target)]:[];
   else if(t==='svt') ts=picked&&picked.pid===src.pid?[picked]:alive(src.pid); // マスターチームの令呪は選んだ1騎
@@ -263,8 +264,10 @@ function changeStars(pid,v){
 function immuneTo(t,k){
   const b=FX[k].buff;
   let guard=b===true?'buffImmune':b===false?'debuffImmune':null;
-  if(FX[k].mental&&!t.fx.some(x=>x.k===guard)&&t.fx.some(x=>x.k==='mentalImmune')) guard='mentalImmune';
-  const g=guard&&t.fx.find(x=>x.k===guard); if(!g) return false;
+  // 種類指定つき（vs）は、その効果だけ防ぐ。指定なしはすべて防ぐ
+  const matches=x=>x.k===guard&&(!x.vs||x.vs===k);
+  if(FX[k].mental&&!t.fx.some(matches)&&t.fx.some(x=>x.k==='mentalImmune')) guard='mentalImmune';
+  const g=guard&&t.fx.find(guard==='mentalImmune'?(x=>x.k===guard):matches); if(!g) return false;
   consume(t,[g]); log(`${nm(t)}は${FX[guard].name}で「${FX[k].name}」を防いだ`,'sub');
   return true;
 }
@@ -555,8 +558,9 @@ function resolveCommand(att,cmd,tgt,o={}){
   // 攻撃後の効果（例：自身の弱体解除）
   applyEffects(att,postE,null);
 }
-function resolveUlt(u,tgt){
+function resolveUlt(u,tgt,picked){
   const ud=D(u.def).ult;
+  if(picked===undefined) picked=G.ultPick?U(G.ultPick):null;
   log(`${nm(u)}の${TERMS.ult}「${esc(ud.name)}」！`,'good');
   fxEmit({t:'cutin',uid:u.uid,title:ud.name,ruby:ud.ruby,col:ud.c});
   say(u,'np',{other:tgt});
@@ -565,7 +569,7 @@ function resolveUlt(u,tgt){
   if(hits>1) log(`${hits}回連続攻撃`,'sub');
   for(const e of ultEffOrder(ud.eff)){
     if(u.out) break; // 反撃で倒れたら残りの効果は出ない
-    if(e.k!=='dmg'){ applyEffects(u,[e],null); continue; }
+    if(e.k!=='dmg'){ applyEffects(u,[e],picked); continue; }
     for(let h=0;h<hits;h++){
       if(u.out) break;
       // マスタールール：全体宝具は敵マスターにも当たる（退避中なら当たらない。無敵・回避などでは防げない）
@@ -672,7 +676,7 @@ const hcapText = ()=>G.hcap?`攻撃ダメージ+${G.hcap.atk}・獲得${TERMS.ga
 // 攻撃・被弾・チェインで得るNPに、ハンデのNP獲得量アップを掛ける（スキルなどで直接増えるNPには掛けない）
 const npRate = (u,v)=>hasHcap(u)&&G.hcap.np?Math.round(v*(100+G.hcap.np)/100):v;
 function beginTurn(){
-  Object.assign(G,{phase:'actRoll',actRolled:false,maxActs:{},alloc:{},rolled:[],ult:null,ultNp:null,target:null,targetAll:false,gen:0,pending:null,copy:null,guard:null,mastered:false,ultDone:false,spellPick:null});
+  Object.assign(G,{phase:'actRoll',actRolled:false,maxActs:{},alloc:{},rolled:[],ult:null,ultPick:null,ultNp:null,target:null,targetAll:false,gen:0,pending:null,copy:null,guard:null,mastered:false,ultDone:false,spellPick:null});
   const P=G.players[G.cur];
   if(P.evac){ P.evac=false; log(`${esc(P.name)}の${TERMS.player}が退避から戻った`,'sub'); }
   log(`━ ターン${G.turn}：${esc(G.players[G.cur].name)} ━`,'h');
@@ -718,10 +722,12 @@ function endPhase(){
   // 弱体ダメージ：攻防補正・無敵・回避・クリティカルの影響なし。弱体無効で防がれる。毒・やけどはそれぞれ重複せず最大値
   pids.forEach(pid=>alive(pid).forEach(u=>{
     const top=k=>Math.max(0,...u.fx.filter(e=>e.k===k).map(dotVal));
-    const ps=top('poison'), bs=top('burn')*(has(u,'spread')?2:1), ds=mods(u,'drain').sum, d=ps+bs+ds;
+    let ps=top('poison'), bs=top('burn')*(has(u,'spread')?2:1), ds=mods(u,'drain').sum;
+    // 弱体無効：種類指定なし＝すべて防ぐ（1回消費）／種類指定あり＝その弱体ダメージだけ防ぐ
+    const blockDot=(k,v)=>{ if(!v) return v; const g=u.fx.find(e=>e.k==='debuffImmune'&&(!e.vs||e.vs===k)); if(!g) return v; consume(u,[g]); log(`${nm(u)}は${FX.debuffImmune.name}で${FX[k].name}ダメージを防いだ`,'sub'); return 0; };
+    ps=blockDot('poison',ps); bs=blockDot('burn',bs); ds=blockDot('drain',ds);
+    const d=ps+bs+ds;
     if(!d) return;
-    const g=u.fx.find(e=>e.k==='debuffImmune');
-    if(g){ consume(u,[g]); log(`${nm(u)}は弱体無効で弱体ダメージを防いだ`,'sub'); return; }
     log(`${nm(u)} 弱体ダメージ${d}（${[ps?`毒${ps}`:'',bs?`やけど${bs}`:'',ds?`HP減少${ds}`:''].filter(Boolean).join('・')}）`,'bad');
     dealDamage(u,d,false);
   }));
@@ -745,6 +751,19 @@ function win(pid){ G.winner=pid; G.phase='over'; log(`${esc(G.players[pid].name)
 function applyMode(cfg){
   Object.assign(G,{mode:cfg.mode, level:cfg.level, cpu:cfg.cpu, speed:cfg.speed||G.speed, phase:'setup'});
   cfg.names.forEach((n,i)=>G.players[i].name=n);
+}
+// 宝具を使う（picked＝対象を選ぶ宝具で選んだ1体）
+function startUlt(u,picked){
+  const uid=u.uid;
+  if(masterRule()&&!D(u.def).ult.eff.some(e=>e.k==='dmg')){
+    // マスタールール：ダメージのない宝具は、行動回数-1でその場で使い、スキルフェイズを続けて行動決定へ進める
+    u.np=0; syncU(u); G.ultDone=true; resolveUlt(u,null,picked);
+    const top=Object.entries(G.alloc).filter(([,n])=>n>0).sort((a,b)=>b[1]-a[1])[0];
+    if(top){ G.alloc[top[0]]--; log(`補助${TERMS.ult}のため行動回数-1（${dn(U(top[0]))}）`,'sub'); }
+    flushKo(); checkWin(); return;
+  }
+  G.ult=uid; G.ultPick=picked?picked.uid:null; G.ultNp=u.np; u.np=0; syncU(u);
+  log(`${nm(u)}が${TERMS.ult}「${esc(D(u.def).ult.name)}」を使用${picked?`（対象：${nm(picked)}）`:''}（このターンの行動になります）`,'good');
 }
 function doSkill(u,si,picked){
   const s=D(u.def).skills[si];
@@ -1077,21 +1096,14 @@ const ACTIONS = {
   useUlt({uid}){
     const u=U(uid);
     if(G.phase!=='skill'||G.pending||G.ult||G.ultDone||u.pid!==G.cur||!canUlt(u)||u.np<RULES.ultCost) return;
-    if(masterRule()&&!D(u.def).ult.eff.some(e=>e.k==='dmg')){
-      // マスタールール：ダメージのない宝具は、行動回数-1でその場で使い、スキルフェイズを続けて行動決定へ進める
-      u.np=0; syncU(u); G.ultDone=true; resolveUlt(u,null);
-      const top=Object.entries(G.alloc).filter(([,n])=>n>0).sort((a,b)=>b[1]-a[1])[0];
-      if(top){ G.alloc[top[0]]--; log(`補助${TERMS.ult}のため行動回数-1（${dn(U(top[0]))}）`,'sub'); }
-      flushKo(); checkWin(); return;
-    }
-    G.ult=uid; G.ultNp=u.np; u.np=0; syncU(u);
-    log(`${nm(u)}が${TERMS.ult}「${esc(D(u.def).ult.name)}」を使用（このターンの行動になります）`,'good');
+    if(D(u.def).ult.pick){ G.pending={uid,ult:true}; return; } // 対象を選ぶ宝具：選んでから発動（取消は cancelPick）
+    startUlt(u,null);
   },
   // 宝具の取り消し（スキルフェイズの間だけ。使ったNPを戻す）
   cancelUlt(){
     if(G.phase!=='skill'||G.pending||!G.ult) return;
     const u=U(G.ult); u.np=Math.min(RULES.gaugeMax,u.np+(G.ultNp??RULES.ultCost));
-    G.ult=null; G.ultNp=null; syncU(u);
+    G.ult=null; G.ultPick=null; G.ultNp=null; syncU(u);
     log(`${nm(u)}の${TERMS.ult}の使用を取り消した`,'sub');
   },
   skillDone(){
@@ -1126,7 +1138,7 @@ const ACTIONS = {
       if(sp.sup) ACTIONS.masterSupportPick({uid}); else if(sp.use) ACTIONS.masterSpellUse({i:sp.i,uid}); else ACTIONS.masterSpell({i:sp.i,uid,now:sp.now});
       return;
     }
-    if(G.pending){ if(pickValid(u)){ const p=G.pending; G.pending=null; doSkill(U(p.uid),p.si,u); } return; }
+    if(G.pending){ if(pickValid(u)){ const p=G.pending; G.pending=null; if(p.ult) startUlt(U(p.uid),u); else doSkill(U(p.uid),p.si,u); } return; }
     if(G.phase==='target' && G.targetAll){ if(u.pid!==G.cur&&!u.out&&!isCpu(G.cur)) resolveDamage(); return; } // 全体宝具：敵を押すと発動
     if(G.phase==='target' && targetCandidates().includes(u)){
       if(G.target===uid && !isCpu(G.cur)) ACTIONS.resolve(); // 選択中の相手をもう一度押すと確定

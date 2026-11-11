@@ -43,7 +43,8 @@ function normEff(e){
   const o={k:String(e.k||'atk'), t:String(e.t||'self'), v:num(e.v)};
   for(const k of ['turns','times','chance']) if(num(e[k])>0) o[k]=num(e[k]);
   if(['R','B','G'].includes(e.color)) o.color=e.color;
-  if(e.vs&&FX[e.vs]&&FX[e.vs].buff===false) o.vs=String(e.vs); // 弱体状態特攻の対象の弱体
+  // vs：弱体状態特攻の対象の弱体 / 弱体無効＝防ぐ弱体の種類 / 強化無効＝防ぐ強化の種類（未指定＝すべて）
+  if(e.vs&&FX[e.vs]&&FX[e.vs].buff===(String(e.k)==='buffImmune')) o.vs=String(e.vs);
   const tr=String(e.trait??'').trim(); if(tr) o.trait=tr; // 属性特攻・特防の対象の属性
   const cd=normCond(e.cond); if(cd&&!(FX[o.k]&&FX[o.k].noTgt)) o.cond=cd; // 条件つき効果
   if(EFF_AT[e.at]) o.at=e.at; // 攻撃の前/後（未指定なら既定のタイミング。rules.js の EFF_AT）
@@ -88,7 +89,7 @@ function normalizeUnit(u){
   const lines=Object.fromEntries(Object.keys(LINE_KEYS).map(k=>[k,strList(ln[k])]));
   const condLines=(Array.isArray(u.condLines)?u.condLines:[]).map(normCondLine).filter(Boolean);
   return { id:String(u.id||''), name:String(u.name||''), cls:normClass(u.cls), traits:normTraits(u.traits), cost:num(u.cost), hp:num(u.hp,100),
-    fit:normFit(u.fit), ...(normLink(u.link)?{link:normLink(u.link)}:{}), lines, ...(condLines.length?{condLines}:{}), faces, skills, ult:Object.assign({name:String(ult.name||''), c:String(ult.c||'R'), eff:(ult.eff||[]).map(normEff)}, String(ult.ruby||'').trim()?{ruby:String(ult.ruby).trim()}:{}) };
+    fit:normFit(u.fit), ...(normLink(u.link)?{link:normLink(u.link)}:{}), lines, ...(condLines.length?{condLines}:{}), faces, skills, ult:Object.assign({name:String(ult.name||''), c:String(ult.c||'R'), eff:(ult.eff||[]).map(normEff)}, String(ult.ruby||'').trim()?{ruby:String(ult.ruby).trim()}:{}, PICKS[ult.pick]&&ult.pick?{pick:ult.pick}:{}) };
 }
 // 条件つきセリフ：{key:LINE_KEYS のキー, who:LINE_WHO のキー, cond:Cond, lines:string[]}。上にあるものから順に見て、最初に条件を満たしたものを使う。不正なら null
 function normCondLine(c){
@@ -161,6 +162,9 @@ function validateUnits(units){
     if(!['R','B','G'].includes(u.ult.c)) add('error',`${TERMS.ult}：色はR/B/Gのどれかにしてください`);
     if(!u.ult.name.trim()) add('warn',`${TERMS.ult}：名前が空です`);
     if(!u.ult.eff.length) add('warn',`${TERMS.ult}：効果がありません`);
+    const uPicked=u.ult.eff.some(e=>e.t==='picked');
+    if(uPicked&&!u.ult.pick) add('error',`${TERMS.ult}：「${TARGETS.picked}」を使うには、対象の選び方を設定してください`);
+    if(u.ult.pick&&!uPicked) add('warn',`${TERMS.ult}：対象を選びますが、「${TARGETS.picked}」への効果がありません`);
     checkEffs(u.ult.eff,'ult',TERMS.ult,add);
   });
   return issues;
@@ -183,10 +187,10 @@ function checkEffs(effs,ctx,where,add){
     if(FX[e.k].val&&e.v===0&&!e.max) add('warn',`${w}：値が0です`);
     if(!FX[e.k].inst&&!FX[e.k].perm&&e.turns==null&&e.times==null) add('warn',`${w}：効果時間がないため、ずっと続きます`);
     if(FX[e.k].timesOnly&&e.turns!=null) add('warn',`${w}：${FX[e.k].name}は回数で指定します（ターンは使われません）`);
-    if(e.k==='instantDeath'&&['self','ally_all'].includes(e.t)) add('warn',`${w}：味方に即死効果がかかります`);
+    if(e.k==='instantDeath'&&['self','ally_all','ally_other'].includes(e.t)) add('warn',`${w}：味方に即死効果がかかります`);
     if(e.chance&&e.chance>=6) add('warn',`${w}：ロール6以下は必ず成功します`);
     if(e.k==='cardConv'&&!e.color) add('error',`${w}：カード変換は変換先の色を指定してください`);
-    if(e.vs&&e.k!=='atkVs') add('warn',`${w}：この効果では弱体の種類の指定は使われません`);
+    if(e.vs&&!['atkVs','debuffImmune','buffImmune'].includes(e.k)) add('warn',`${w}：この効果では弱体の種類の指定は使われません`);
     if(FX[e.k].trait&&!e.trait) add('error',`${w}：${FX[e.k].name}は対象の属性を指定してください`);
     if(e.trait&&!FX[e.k].trait) add('warn',`${w}：この効果では属性の指定は使われません`);
     if(e.cond){
@@ -546,6 +550,7 @@ function fxText(e){
     case 'regenStar': s=`ターン開始時${TERMS.star}${e.v}個獲得`; break;
     case 'atkTrait': s=`〔${e.trait||'属性未指定'}〕特攻+${e.v}`; break;
     case 'defTrait': s=`〔${e.trait||'属性未指定'}〕特防(被ダメージ-${e.v})`; break;
+    case 'debuffImmune': case 'buffImmune': s=e.vs&&FX[e.vs]?`〔${FX[e.vs].name}〕${e.k==='buffImmune'?'強化':'弱体'}無効`:FX[e.k].name; break;
     case 'atkVs': s=`${e.vs&&FX[e.vs]?`〔${FX[e.vs].name}〕状態`:'弱体状態'}特攻+${e.v}`; break;
     case 'counter': s=`反撃(${e.v}ダメージ)`; break;
     case 'onHitNp': s=`被ダメージ時${TERMS.gauge}+${e.v}%`; break;
@@ -596,6 +601,6 @@ function facesTableHTML(d){
 // 操作できないスキル一覧（編成画面・エディタのプレビュー用）
 function skillListHTML(d){
   const rows=d.skills.map((s,i)=>`<div class="skill"><span class="sname">S${i+1} ${i===2?'🔒':''}${skillNameHTML(s)}</span><span class="desc">${esc(effsText(s.eff,s.pick))}${i===2?`（${TERMS.asc}後に使用可）`:''}</span></div>`).join('');
-  const ult=`<div class="skill ult"><span class="sname">${TERMS.ult}「${ultNameHTML(d.ult)}」</span><span class="desc">[${TERMS[d.ult.c]||esc(d.ult.c)}] ${esc(effsText(d.ult.eff))}</span></div>`;
+  const ult=`<div class="skill ult"><span class="sname">${TERMS.ult}「${ultNameHTML(d.ult)}」</span><span class="desc">[${TERMS[d.ult.c]||esc(d.ult.c)}] ${esc(effsText(d.ult.eff,d.ult.pick))}</span></div>`;
   return `<div class="skills">${rows}${ult}</div>`;
 }

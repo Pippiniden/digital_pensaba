@@ -106,7 +106,8 @@ function fixEff(e){
   else if(!f.perm&&e.turns==null&&e.times==null) e.turns=3;
   if((e.k==='poison'||e.k==='burn')&&!e.v) e.v=RULES.dot;
   if(!f.color) delete e.color;
-  if(e.k!=='atkVs') delete e.vs;
+  if(!['atkVs','debuffImmune','buffImmune'].includes(e.k)) delete e.vs;
+  else if(e.vs&&!(FX[e.vs]&&FX[e.vs].buff===(e.k==='buffImmune'))) delete e.vs; // 種類を変えたら、合わない指定は外す
   if(!f.trait) delete e.trait;
   else if(!e.trait) e.trait=allTraits()[0]||'';
   if(e.k==='cardConv'&&!e.color) e.color='R';
@@ -360,9 +361,10 @@ function renderForm(){
         <label>名前<input data-p="ult.name" value="${esc(u.ult.name)}"></label>
         <label>ルビ（任意）<input data-p="ult.ruby" value="${esc(u.ult.ruby||'')}" placeholder="よみがな"></label>
         <label>コマンドの色<select data-p="ult.c">${['R','B','G'].map(c=>opt(c,TERMS[c],u.ult.c)).join('')}</select></label>
+        <label>対象の選び方<select data-p="ult.pick" data-t="optstr" data-act="structural">${Object.entries(PICKS).map(([k,v])=>opt(k,v,u.ult.pick||'')).join('')}</select></label>
       </div>
       ${effList('ult.eff',u.ult.eff,'ult','ult')}
-      <div class="preview" data-prev="ult">${esc(effsText(u.ult.eff))}</div>
+      <div class="preview" data-prev="ult">${esc(effsText(u.ult.eff,u.ult.pick))}</div>
     </div>
   </section>`;
 }
@@ -449,7 +451,7 @@ function effRow(path,j,e,ctx,n,atKind){
     ${f.inst?'':(f.timesOnly||(ctx==='master'&&/^faces./.test(path))?'':optNum(p+'.turns',e.turns,'ターン'))+optNum(p+'.times',e.times,'回数')}
     ${FX[e.k]&&FX[e.k].color?`<label class="mini"><span>色</span><select data-p="${p}.color" data-t="optstr">${opt('','すべて',e.color||'')}${['R','B','G'].map(c=>opt(c,TERMS[c],e.color)).join('')}</select></label>`:''}
     ${f.trait?`<label class="mini"><span>属性</span><input class="traitin" list="traitlist" data-p="${p}.trait" data-t="optstr" value="${esc(e.trait||'')}" placeholder="属性名"></label>`:''}
-    ${e.k==='atkVs'?`<label class="mini"><span>弱体</span><select data-p="${p}.vs" data-t="optstr">${opt('','どれでも',e.vs||'')}${Object.keys(FX).filter(k=>FX[k].buff===false).map(k=>opt(k,FX[k].name,e.vs)).join('')}</select></label>`:''}
+    ${['atkVs','debuffImmune','buffImmune'].includes(e.k)?(()=>{ const bf=e.k==='buffImmune'; return `<label class="mini"><span>${bf?'強化':'弱体'}</span><select data-p="${p}.vs" data-t="optstr">${opt('',e.k==='atkVs'?'どれでも':'すべて',e.vs||'')}${Object.keys(FX).filter(k=>FX[k].buff===bf).map(k=>opt(k,FX[k].name,e.vs)).join('')}</select></label>`; })():''}
     ${f.noTgt?'':`<label class="mini"><span>確率</span><select data-p="${p}.chance" data-t="optnum">${opt('','必ず',e.chance??'')}${[1,2,3,4,5].map(k=>opt(k,`ロール${k}以下`,e.chance)).join('')}</select></label>`}
     ${f.noTgt?'':condIn(p,e,f)}
     ${f.noTgt?'':effAtSel(p,e,atKind)}
@@ -484,7 +486,7 @@ function updatePreviews(){
     return;
   }
   document.querySelectorAll('[data-prev="skill"]').forEach(el=>{ const s=u.skills[+el.dataset.i]; el.textContent=effsText(s.eff,s.pick); });
-  document.querySelectorAll('[data-prev="ult"]').forEach(el=>el.textContent=effsText(u.ult.eff));
+  document.querySelectorAll('[data-prev="ult"]').forEach(el=>el.textContent=effsText(u.ult.eff,u.ult.pick));
   document.querySelectorAll('[data-fitout]').forEach(el=>{ const [k,a]=el.dataset.fitout.split('.'); el.textContent=`${u.fit[k][a]}%`; });
   document.querySelectorAll('[data-linecount]').forEach(el=>el.textContent=`${u.lines[el.dataset.linecount].length}件`);
   document.querySelectorAll('[data-clsprev] img').forEach(im=>{ const src=classIcon(u.cls); if(im.getAttribute('src')!==src){ im.onerror=()=>{ im.onerror=null; im.src=CLASS_ICON_EXTRA; }; im.src=src; } });
