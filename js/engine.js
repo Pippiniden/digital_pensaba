@@ -304,15 +304,27 @@ function applyOne(src,t,e,o={}){ applyOne0(src,t,e,o); syncU(t); }
 function applyOne0(src,t,e,o={}){
   if(t.master&&mTeam()&&FX[e.k].buff===false){ log(`${nm(t)}は${TERMS.unit}に守られていて弱体を受けない`,'sub'); return; } // マスターチーム：マスターは弱体を受けない
   if(immuneTo(t,e.k)) return;
+  { // 即時効果への無効（強化解除・即死・NP減少・スター消失）。NP減少・スター消失は敵からのものだけ防ぐ
+    const hostile=src&&src.pid!==t.pid;
+    const gk=e.k==='strip'?'stripImmune':e.k==='instantDeath'?'deathImmune':e.k==='np'&&e.v<0&&hostile?'npDownImmune':e.k==='starLoss'&&hostile?'starLossImmune':null;
+    const g=gk&&t.fx.find(x=>x.k===gk);
+    if(g){ consume(t,[g]); log(`${nm(t)}は${FX[gk].name}で「${FX[e.k].name}」を防いだ`,'sub'); return; }
+  }
   switch(e.k){
     case 'heal': if(has(t,'healBlock')){ log(`${nm(t)}は回復無効でHPが回復しない`,'sub'); return; }
       t.hp=Math.min(maxHp(t),t.hp+e.v); log(`${nm(t)} HP${e.v}回復`,'good'); return;
     case 'np': addNp(t,e.v); log(`${nm(t)} ${TERMS.gauge}${e.v>=0?'+':''}${e.v}%`); return;
     case 'star': changeStars(t.pid,e.v); return;
     case 'starLoss': changeStars(t.pid,-e.v); return;
-    case 'cleanse': t.fx=t.fx.filter(x=>FX[x.k].buff!==false); log(`${nm(t)}の弱体を解除`,'good'); return;
+    case 'cleanse': { // vs 指定ならその弱体だけ解除
+      const nmv=e.vs&&FX[e.vs]?`「${FX[e.vs].name}」`:'弱体';
+      t.fx=t.fx.filter(x=>FX[x.k].buff!==false||(e.vs&&x.k!==e.vs)); log(`${nm(t)}の${nmv}を解除`,'good'); return;
+    }
     case 'cleanseMental': t.fx=t.fx.filter(x=>!FX[x.k].mental); log(`${nm(t)}の精神異常を解除`,'good'); return;
-    case 'strip': t.fx=t.fx.filter(x=>FX[x.k].buff!==true); clampHp(t); log(`${nm(t)}の強化を解除`,'bad'); return;
+    case 'strip': {
+      const nmv=e.vs&&FX[e.vs]?`「${FX[e.vs].name}」`:'強化';
+      t.fx=t.fx.filter(x=>FX[x.k].buff!==true||(e.vs&&x.k!==e.vs)); clampHp(t); log(`${nm(t)}の${nmv}を解除`,'bad'); return;
+    }
     case 'buffExtend': {
       const bs=t.fx.filter(x=>FX[x.k].buff===true&&x.turns!=null); bs.forEach(x=>x.turns+=e.v);
       log(`${nm(t)}の強化${bs.length}個の効果時間+${e.v}T`, bs.length?'good':'sub'); return;

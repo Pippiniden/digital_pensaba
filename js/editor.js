@@ -106,8 +106,8 @@ function fixEff(e){
   else if(!f.perm&&e.turns==null&&e.times==null) e.turns=3;
   if((e.k==='poison'||e.k==='burn')&&!e.v) e.v=RULES.dot;
   if(!f.color) delete e.color;
-  if(!['atkVs','debuffImmune','buffImmune'].includes(e.k)) delete e.vs;
-  else if(e.vs&&!(FX[e.vs]&&FX[e.vs].buff===(e.k==='buffImmune'))) delete e.vs; // 種類を変えたら、合わない指定は外す
+  if(!(e.k in VS_KINDS)) delete e.vs;
+  else if(e.vs&&!vsOk(e.k,e.vs)) delete e.vs; // 種類を変えたら、合わない指定は外す
   if(!f.trait) delete e.trait;
   else if(!e.trait) e.trait=allTraits()[0]||'';
   if(e.k==='cardConv'&&!e.color) e.color='R';
@@ -451,7 +451,7 @@ function effRow(path,j,e,ctx,n,atKind){
     ${f.inst?'':(f.timesOnly||(ctx==='master'&&/^faces./.test(path))?'':optNum(p+'.turns',e.turns,'ターン'))+optNum(p+'.times',e.times,'回数')}
     ${FX[e.k]&&FX[e.k].color?`<label class="mini"><span>色</span><select data-p="${p}.color" data-t="optstr">${opt('','すべて',e.color||'')}${['R','B','G'].map(c=>opt(c,TERMS[c],e.color)).join('')}</select></label>`:''}
     ${f.trait?`<label class="mini"><span>属性</span><input class="traitin" list="traitlist" data-p="${p}.trait" data-t="optstr" value="${esc(e.trait||'')}" placeholder="属性名"></label>`:''}
-    ${['atkVs','debuffImmune','buffImmune'].includes(e.k)?(()=>{ const bf=e.k==='buffImmune'; return `<label class="mini"><span>${bf?'強化':'弱体'}</span><select data-p="${p}.vs" data-t="optstr">${opt('',e.k==='atkVs'?'どれでも':'すべて',e.vs||'')}${Object.keys(FX).filter(k=>FX[k].buff===bf).map(k=>opt(k,FX[k].name,e.vs)).join('')}</select></label>`; })():''}
+    ${e.k in VS_KINDS?(()=>{ const bf=VS_KINDS[e.k]; return `<label class="mini"><span>${bf?'強化':'弱体'}</span><select data-p="${p}.vs" data-t="optstr">${opt('',e.k==='atkVs'?'どれでも':'すべて',e.vs||'')}${Object.keys(FX).filter(k=>FX[k].buff===bf).map(k=>opt(k,FX[k].name,e.vs)).join('')}</select></label>`; })():''}
     ${f.noTgt?'':`<label class="mini"><span>確率</span><select data-p="${p}.chance" data-t="optnum">${opt('','必ず',e.chance??'')}${[1,2,3,4,5].map(k=>opt(k,`ロール${k}以下`,e.chance)).join('')}</select></label>`}
     ${f.noTgt?'':condIn(p,e,f)}
     ${f.noTgt?'':effAtSel(p,e,atKind)}

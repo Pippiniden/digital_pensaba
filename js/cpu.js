@@ -279,6 +279,9 @@ function cpuEffScore(u,effs,picked,si){
       case 'drain': sc+=foes.length?2:-1; break;
       case 'cleanseMental': sc+=ts.some(t=>t.fx.some(x=>FX[x.k].mental))?3:0; break;
       case 'mentalImmune': sc+=.5; break;
+      case 'deathImmune': sc+=enemies.some(x=>x.fx.some(f=>f.k==='instantDeath'))||ts.some(t=>hpR(t)<.5)?1:.3; break;
+      case 'stripImmune': sc+=ts.some(t=>t.fx.some(x=>FX[x.k].buff))?1:.3; break;
+      case 'npDownImmune': case 'starLossImmune': sc+=.3; break;
       case 'nullUnder': sc+=ts.some(t=>hpR(t)<.8)?2:1; break;
       case 'actsUp': sc+=ts.length&&!foes.length?2:0; break;
       case 'starLoss': sc+=foes.some(t=>G.players[t.pid].stars>0)?2:0; break;
@@ -305,13 +308,13 @@ function cpuEffScore(u,effs,picked,si){
       case 'cardConv': sc+=acting?1.5:.5; break;
       case 'buffExtend': sc+=ts.some(t=>t.fx.some(x=>FX[x.k].buff===true&&x.turns!=null))?2:0; break;
       case 'skillCharge': sc+=ts.some(t=>t.used.some((x,i)=>x&&!(t===u&&i===si)))?3:-1; break;
-      case 'cleanse': sc+=ts.some(t=>t.fx.some(x=>FX[x.k].buff===false))?2:0; break;
+      case 'cleanse': sc+=ts.some(t=>t.fx.some(x=>e.vs?x.k===e.vs:FX[x.k].buff===false))?2:0; break;
       case 'np': sc+=ts.some(t=>t.np<RULES.ultCost&&t.np+e.v>=RULES.ultCost)?4:ts.some(t=>t.np<RULES.ultCost)?1.5:0; break;
       case 'star': sc+=cpuHard()?starSkillScore(e.v,u.pid):G.ult?.5:2; break;
       case 'stun': case 'charm': sc+=3; break;
       case 'poison': case 'burn': sc+=ts.some(t=>!has(t,e.k))?2:0; break;
       case 'curse': case 'atkDown': sc+=2; break;
-      case 'strip': sc+=ts.some(t=>t.fx.some(x=>FX[x.k].buff))?2:0; break;
+      case 'strip': sc+=ts.some(t=>t.fx.some(x=>e.vs?x.k===e.vs:FX[x.k].buff))?2:0; break;
       case 'defDown': sc+=ts.some(t=>t.pid===u.pid)?-1:1; break;
       case 'dmg': sc+=foes.length?2:0; break;
       case 'npPow': sc+=ts.some(t=>G.ult===t.uid||(t.np>=RULES.ultCost&&!G.ult))?3:.5; break;

@@ -44,7 +44,7 @@ function normEff(e){
   for(const k of ['turns','times','chance']) if(num(e[k])>0) o[k]=num(e[k]);
   if(['R','B','G'].includes(e.color)) o.color=e.color;
   // vs：弱体状態特攻の対象の弱体 / 弱体無効＝防ぐ弱体の種類 / 強化無効＝防ぐ強化の種類（未指定＝すべて）
-  if(e.vs&&FX[e.vs]&&FX[e.vs].buff===(String(e.k)==='buffImmune')) o.vs=String(e.vs);
+  if(e.vs&&vsOk(String(e.k),e.vs)) o.vs=String(e.vs);
   const tr=String(e.trait??'').trim(); if(tr) o.trait=tr; // 属性特攻・特防の対象の属性
   const cd=normCond(e.cond); if(cd&&!(FX[o.k]&&FX[o.k].noTgt)) o.cond=cd; // 条件つき効果
   if(EFF_AT[e.at]) o.at=e.at; // 攻撃の前/後（未指定なら既定のタイミング。rules.js の EFF_AT）
@@ -190,7 +190,7 @@ function checkEffs(effs,ctx,where,add){
     if(e.k==='instantDeath'&&['self','ally_all','ally_other'].includes(e.t)) add('warn',`${w}：味方に即死効果がかかります`);
     if(e.chance&&e.chance>=6) add('warn',`${w}：ロール6以下は必ず成功します`);
     if(e.k==='cardConv'&&!e.color) add('error',`${w}：カード変換は変換先の色を指定してください`);
-    if(e.vs&&!['atkVs','debuffImmune','buffImmune'].includes(e.k)) add('warn',`${w}：この効果では弱体の種類の指定は使われません`);
+    if(e.vs&&!(e.k in VS_KINDS)) add('warn',`${w}：この効果では弱体の種類の指定は使われません`);
     if(FX[e.k].trait&&!e.trait) add('error',`${w}：${FX[e.k].name}は対象の属性を指定してください`);
     if(e.trait&&!FX[e.k].trait) add('warn',`${w}：この効果では属性の指定は使われません`);
     if(e.cond){
@@ -551,6 +551,7 @@ function fxText(e){
     case 'atkTrait': s=`〔${e.trait||'属性未指定'}〕特攻+${e.v}`; break;
     case 'defTrait': s=`〔${e.trait||'属性未指定'}〕特防(被ダメージ-${e.v})`; break;
     case 'debuffImmune': case 'buffImmune': s=e.vs&&FX[e.vs]?`〔${FX[e.vs].name}〕${e.k==='buffImmune'?'強化':'弱体'}無効`:FX[e.k].name; break;
+    case 'cleanse': case 'strip': s=e.vs&&FX[e.vs]?`〔${FX[e.vs].name}〕解除`:FX[e.k].name; break;
     case 'atkVs': s=`${e.vs&&FX[e.vs]?`〔${FX[e.vs].name}〕状態`:'弱体状態'}特攻+${e.v}`; break;
     case 'counter': s=`反撃(${e.v}ダメージ)`; break;
     case 'onHitNp': s=`被ダメージ時${TERMS.gauge}+${e.v}%`; break;

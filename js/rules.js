@@ -94,7 +94,7 @@ const MSHEET = {
   forbid:{ np:'NPの即時増加は補助に入れられません（「攻撃時NP+x%(1回)」などにしてください）', invul:'無敵は補助に入れられません（令呪クラスの効果です）',
     stun:'スタンは補助に入れられません（令呪クラスの効果です）', instantDeath:'即死は入れられません' },
   limit1:['cleanse','strip','actsUp','fear'],   // ＋ 回避(1回)・魅了(ロール3以下の敵単体)
-  limit2:['buffImmune','debuffImmune'],
+  limit2:['buffImmune','debuffImmune','deathImmune','stripImmune','npDownImmune','starLossImmune'],
   single:['ally_svt','enemy_svt'],
   ref:{
     dmg_enemy_svt:{name:'敵単体ダメージ', vals:[80,100,100,120]},
@@ -238,6 +238,11 @@ const FX = {
   cardConv:{name:'カード変換',buff:true,color:true},          // 行動決定で出たコマンド(R/B/G)を color の色に変える（1回変えるごとに回数を1消費）
   // 弱体
   buffImmune:{name:'強化無効',buff:false},                   // 強化効果を受けない
+  // 即時効果への無効（強化として付く。防ぐたびに回数を1消費）
+  stripImmune:{name:'強化解除無効',buff:true},               // 強化解除を受けない
+  deathImmune:{name:'即死無効',buff:true},                   // 即死を受けない
+  npDownImmune:{name:'NP減少無効',buff:true},                // 敵からのNP減少を受けない
+  starLossImmune:{name:'スター消失無効',buff:true},          // 敵からのスター消失を受けない
   poison:{name:'毒',buff:false,val:true}, burn:{name:'やけど',buff:false,val:true}, // ターン終了時に値ぶんの弱体ダメージ
   spread:{name:'延焼',buff:false},                           // やけどのダメージ2倍
   curse:{name:'呪い',buff:false,timesOnly:true},             // 被弾時にNPが増えない。重ねると回数が増える
@@ -274,13 +279,16 @@ const FX = {
 // ここにない効果は最後の「その他」に入る
 // 条件つき効果（Eff.cond）：条件を満たす相手にだけ働く。condUse の効果は「使う瞬間」（ダメージ計算）に攻撃・防御の相手を見る。
 // それ以外は付与するときに対象を見る（満たさない対象には付かない・効かない）
+// 種類（vs）を指定できる効果と、指定できる種類（true＝強化 / false＝弱体）。cleanse / strip は「その種類だけ解除」
+const VS_KINDS = { atkVs:false, debuffImmune:false, buffImmune:true, cleanse:false, strip:true };
+const vsOk = (k,vs)=>k in VS_KINDS && !!FX[vs] && FX[vs].buff===VS_KINDS[k];
 const COND_KINDS = { trait:'属性', fx:'状態', hpBelow:'HP○%以下', hpAbove:'HP○%以上', npFull:'NP満タン', cls:'クラス', id:'キャラクター（ID）' };
 // 条件つきセリフ（condLines）で条件を見る相手：other＝その場面の相手（攻撃の対象・攻撃してきた相手・スキルの対象）/ self＝自分 / ally＝自分以外の味方のだれか / enemy＝敵のだれか
 const LINE_WHO = { other:'相手・対象', self:'自分', ally:'味方のだれか', enemy:'敵のだれか' };
 ['atk','atkDown','def','defDown'].forEach(k=>{ if(FX[k]) FX[k].condUse=true; });
 const FX_GROUPS = [
   ['攻撃強化', ['atk','npPow','atkVs','atkTrait','ignoreDef','sureHit','pierce','critPow','critMult','critRoll','debuffUp','cardConv','onAtkStar','onAtkNp']],
-  ['防御・耐性', ['def','defTrait','evade','invul','guts','taunt','nullUnder','counter','maxHp','debuffImmune','mentalImmune']],
+  ['防御・耐性', ['def','defTrait','evade','invul','guts','taunt','nullUnder','counter','maxHp','debuffImmune','mentalImmune','deathImmune','stripImmune','npDownImmune','starLossImmune']],
   ['継続・ターン', ['actsUp','regenHp','regenNp','regenStar','onHitNp','onHitStar']],
   ['弱体', ['atkDown','npPowDown','defDown','critDown','debuffDown','poison','burn','spread','drain','curse','stun','charm','fear','sealSkill','sealUlt','healBlock','buffImmune']],
   ['回復・即時', ['heal','np','star','starLoss','cleanse','cleanseMental','strip','buffExtend','skillCharge']],
