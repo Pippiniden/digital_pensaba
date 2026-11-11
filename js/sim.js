@@ -70,8 +70,8 @@ function simTeamPlan(t,pool,full){
   foes.forEach(c=>(byKey[key(c)]=byKey[key(c)]||[]).push(c));
   let ok=mine.filter(c=>byKey[key(c)]);
   if(full&&ok.some(c=>c.cost===RULES.costCap)) ok=ok.filter(c=>c.cost===RULES.costCap);
-  const size=Math.max(0,...ok.map(c=>c.ids.length));
-  return { allies:ok.filter(c=>c.ids.length===size), byKey, key };
+  // 3騎（partyMax）の編成だけ。人数が足りない編成（5コスト2騎など）は使わない
+  return { allies:ok.filter(c=>c.ids.length===RULESETS.team.partyMax), byKey, key };
 }
 const simPick = a=>a[Math.floor(Math.random()*a.length)];
 const simByHp = ids=>ids.slice().sort((a,b)=>D(b).hp-D(a).hp); // CPU の編成と同じく HP が高い順

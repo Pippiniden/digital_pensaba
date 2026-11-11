@@ -83,9 +83,11 @@ function enumTeams(filter=B.filter){
     };
     rec(0,[],0);
   }
-  if(max===1||filter==='all') return out;
-  if(filter==='full') return out.filter(t=>t.cost===cap);
-  return out.filter(t=>t.ids.length>=max||!U.some(u=>!t.ids.includes(u.id)&&t.cost+u.cost<=cap));
+  if(max===1) return out;
+  // 戦闘は満員（3騎）前提で調整しているので、人数が足りない編成（5コスト2騎など）は常に除外する
+  const full3=out.filter(t=>t.ids.length>=max);
+  if(filter==='full') return full3.filter(t=>t.cost===cap);
+  return full3;
 }
 const sample=(a,k)=>{ if(!(k>0)||k>=a.length) return a.slice(); const b=a.slice(); for(let i=0;i<k;i++){ const j=i+Math.floor(Math.random()*(b.length-i)); [b[i],b[j]]=[b[j],b[i]]; } return b.slice(0,k); };
 const oppOk=(a,b)=>a!==b&&(B.opp==='all'||(a.cost===b.cost&&a.ids.length===b.ids.length));
@@ -143,8 +145,7 @@ function planMaster(){
     if(max===1) setups=sample(U.map(u=>[u.id]),B.sv);
     else{
       const lim=capOf()-Math.max(mi.cost,mj.cost), ok=combos.filter(x=>x.c<=lim);
-      const top=Math.max(0,...ok.map(x=>x.ids.length));
-      setups=sample(ok.filter(x=>x.ids.length===top).map(x=>x.ids),B.sv);
+      setups=sample(ok.filter(x=>x.ids.length===max).map(x=>x.ids),B.sv); // 満員（3騎）だけ
     }
     for(const ids of setups){
       const a=mkTeam(ids,mi.id), b=mkTeam(ids,mj.id);
