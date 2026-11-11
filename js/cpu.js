@@ -298,7 +298,7 @@ function cpuEffScore(u,effs,picked,si){
       case 'onHitNp': sc+=ts.some(t=>t.np<RULES.ultCost)?1.5:.5; break;
       case 'counter': sc+=ts.some(t=>t.pid===u.pid)?2:-1; break;
       case 'atkVs': sc+=acting&&enemies.some(x=>x.fx.some(f=>e.vs?f.k===e.vs:FX[f.k].buff===false))?3:.5; break;
-      case 'atkTrait': sc+=acting&&enemies.some(x=>traitsOf(x).includes(e.trait))?3:.5; break;
+      case 'atkTrait': sc+=acting&&traitsOf(cpuPredictTarget()).includes(e.trait)?3:0; break; // 殴る予定の相手（cpuPredictTarget）がその属性のときだけ使う
       case 'defTrait': sc+=ts.some(t=>t.pid===u.pid&&hpR(t)<.8)&&enemies.some(x=>traitsOf(x).includes(e.trait))?2.5:.5; break;
       case 'critDown': sc+=foes.length?1.5:-1; break;
       case 'debuffUp': sc+=acting?1:0; break;
@@ -323,6 +323,12 @@ function cpuEffScore(u,effs,picked,si){
     }
   }
   return sc;
+}
+// スキルを使う段階で殴る相手を予測する（攻撃対象は後のターゲット段階で決まるため）。
+// 候補のうち脅威度（cpuThreat）が最も高い相手＝つよいの脅威度判断が選びそうな相手
+function cpuPredictTarget(){
+  const c=targetCandidates();
+  return c.reduce((b,t)=>cpuThreat(t)>cpuThreat(b)?t:b, c[0]);
 }
 function cpuPickTarget(uid,si,easy){
   const u=U(uid), s=si==null?D(u.def).ult:D(u.def).skills[si]; // si なし＝宝具
