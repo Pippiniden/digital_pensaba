@@ -143,15 +143,27 @@ function full(){ saveDraft(); keepScroll(renderAll); }
 function renderAll(){ renderList(); renderForm(); renderSide(); renderStatus(); }
 
 // 今のタブの検証結果・反映済みデータ
-const issLabel = lv=>lv==='error'?'エラー':lv==='big'?'大警告':isM()?'小警告':'注意';
-const issuesNow = ()=>isM()?validateMasters(masters,units):validateUnits(units);
+const issLabel = lv=>lv==='error'?'エラー':lv==='big'?'大警告':lv==='line'?'セリフ':isM()?'小警告':'注意';
+// 確認済み（無視する）警告：タブ・キャラID・メッセージで覚える。内容が変わって別の警告になれば、また出る。エラーは無視できない
+const ACK_KEY='pencilduel.ackIssues';
+let acked=new Set(); try{ const a=JSON.parse(localStorage.getItem(ACK_KEY)||'[]'); if(Array.isArray(a)) acked=new Set(a); }catch(e){}
+const saveAck=()=>{ try{ localStorage.setItem(ACK_KEY,JSON.stringify([...acked])); }catch(e){} };
+const issAll = ()=>(isM()?validateMasters(masters,units):validateUnits(units)).map(x=>{ const it=list()[x.i]; return {...x,k:`${tab}|${it?it.id:'*'}|${x.msg}`}; });
+const isIgn = x=>x.level!=='error'&&acked.has(x.k);
+const issuesNow = ()=>issAll().filter(x=>!isIgn(x));
+// 右の「検証」欄：i＝今のキャラの番号。無視ボタンと、無視した警告（戻せる）つき
+function issBoxHTML(i){
+  const all=issAll().filter(x=>x.i===i||x.i===-1), live=all.filter(x=>!isIgn(x)), ign=all.filter(isIgn);
+  return (live.length?`<ul class="issues">${live.map(x=>`<li class="${x.level}">${issLabel(x.level)}：${esc(x.msg)}${x.level==='error'?'':` <button class="small ack" data-act="ack" data-k="${esc(x.k)}" title="確認済みにして表示しない">無視</button>`}</li>`).join('')}</ul>`:'<p class="ok small nm">問題は見つかりませんでした。</p>')
+   +(ign.length?`<details class="ign"><summary>無視した警告（${ign.length}件）</summary><ul class="issues">${ign.map(x=>`<li class="${x.level}">${issLabel(x.level)}：${esc(x.msg)} <button class="small ack" data-act="unack" data-k="${esc(x.k)}">戻す</button></li>`).join('')}</ul></details>`:'');
+}
 function renderStatus(){
   const applied=isM()?loadMasters(units):loadUnits(), iss=issuesNow();
-  const e=iss.filter(x=>x.level==='error').length, w=iss.filter(x=>x.level==='warn').length, bg=iss.filter(x=>x.level==='big').length;
+  const e=iss.filter(x=>x.level==='error').length, w=iss.filter(x=>x.level==='warn').length, bg=iss.filter(x=>x.level==='big').length, ln=iss.filter(x=>x.level==='line').length;
   const dirty=JSON.stringify(list())!==JSON.stringify(isM()?applied.masters:applied.units);
   document.querySelector('#status').innerHTML=
     `<b class="sub">${isM()?TERMS.player:TERMS.unit}：</b><span class="${dirty?'dirty':'clean'}">${dirty?'● ゲームに未反映の変更があります':`✓ ゲームと同じ内容（${applied.source==='custom'?'反映済みデータ':'標準データ'}）`}</span>`+
-    ` <span class="sub">エラー${e}・${isM()?`大警告${bg}・小警告${w}`:`注意${w}`}</span>`;
+    ` <span class="sub">エラー${e}・${isM()?`大警告${bg}・小警告${w}`:`注意${w}`}${ln?`・セリフ${ln}`:''}</span>`;
   document.querySelector('#unapply').hidden = applied.source!=='custom';
   document.querySelector('#exportJS').textContent=`${isM()?'masters.js':'units.js'} を書き出し`;
   document.querySelector('#simbtn').hidden=isM(); // バランス検証はサーヴァントだけ
@@ -167,10 +179,10 @@ function renderList(){
   document.querySelector('#list').innerHTML=`${tabsHTML()}
     <div class="row"><b>${isM()?TERMS.player:TERMS.unit}一覧</b><span class="sub small">${L.length}${isM()?'人':'体'}</span></div>
     <div class="ulist">${L.map((u,i)=>{
-      const e=iss.filter(x=>x.i===i&&x.level==='error').length, w=iss.filter(x=>x.i===i&&x.level==='warn').length, bg=iss.filter(x=>x.i===i&&x.level==='big').length;
+      const e=iss.filter(x=>x.i===i&&x.level==='error').length, w=iss.filter(x=>x.i===i&&x.level==='warn').length, bg=iss.filter(x=>x.i===i&&x.level==='big').length, ln=iss.filter(x=>x.i===i&&x.level==='line').length;
       return `<button class="uitem ${i===si?'on':''}" data-act="sel" data-i="${i}">
         ${isM()?'':clsBadge(u.cls,true)}${faceImg(u,'face xs')}<span class="uname">${esc(u.name)||'（名前なし）'}</span><span class="sub small">C${u.cost}</span>
-        ${e?`<span class="dot err" title="エラー${e}件">${e}</span>`:bg?`<span class="dot big" title="大警告${bg}件${w?`・小警告${w}件`:''}">${bg}</span>`:w?`<span class="dot wrn" title="${isM()?'小警告':'注意'}${w}件">${w}</span>`:''}</button>`;
+        ${e?`<span class="dot err" title="エラー${e}件">${e}</span>`:bg?`<span class="dot big" title="大警告${bg}件${w?`・小警告${w}件`:''}">${bg}</span>`:w?`<span class="dot wrn" title="${isM()?'小警告':'注意'}${w}件">${w}</span>`:ln?`<span class="dot lin" title="セリフ${ln}件">${ln}</span>`:''}</button>`;
     }).join('')}</div>
     <div class="row">
       <button class="small" data-act="add">＋ 追加</button>
@@ -252,7 +264,6 @@ function renderMasterForm(el){
 }
 function renderMasterSide(el){
   const m=cur(); if(!m){ el.innerHTML=''; return; }
-  const iss=validateMasters(masters,units).filter(x=>x.i===msel||x.i===-1);
   el.innerHTML=`
     <div class="sidecard">
       <div class="row"><b>補助の鉛筆プレビュー</b><span class="grow"></span><button class="primary small" data-act="roll">転がす</button></div>
@@ -262,7 +273,7 @@ function renderMasterSide(el){
       <div id="rollres" class="rollres">${rollResultHTML(m)}</div>
     </div>
     <div class="sidecard"><b>検証</b>
-      ${iss.length?`<ul class="issues">${iss.map(x=>`<li class="${x.level}">${issLabel(x.level)}：${esc(x.msg)}</li>`).join('')}</ul>`:'<p class="ok small nm">問題は見つかりませんでした。</p>'}
+      ${issBoxHTML(msel)}
     </div>
     <div class="sidecard"><b>数値の目安</b>
       <table class="stats">
@@ -510,7 +521,6 @@ function renderSide(){
   const u=cur(), el=document.querySelector('#side');
   if(isM()) return renderMasterSide(el);
   if(!u){ el.innerHTML=''; return; }
-  const iss=validateUnits(units).filter(x=>x.i===sel||x.i===-1);
   const a=faceStats(u,false), b=faceStats(u,true), all=units.map(x=>faceStats(x,false));
   const av=k=>all.reduce((s,x)=>s+x[k],0)/all.length, r=n=>Math.round(n*10)/10, pct=n=>`${Math.round(n*100)}%`;
   const mix=m=>m.map(([t,n])=>`${t==='ASC'?TERMS.asc:TERMS[t]}${n}`).join(' ');
@@ -523,7 +533,7 @@ function renderSide(){
       <div id="rollres" class="rollres">${rollResultHTML(u)}</div>
     </div>
     <div class="sidecard"><b>検証</b>
-      ${iss.length?`<ul class="issues">${iss.map(x=>`<li class="${x.level}">${issLabel(x.level)}：${esc(x.msg)}</li>`).join('')}</ul>`:'<p class="ok small nm">問題は見つかりませんでした。</p>'}
+      ${issBoxHTML(sel)}
     </div>
     <div class="sidecard"><b>数値の目安</b>
       <table class="stats">
@@ -652,6 +662,8 @@ document.addEventListener('click',e=>{
   const b=e.target.closest('button[data-act]'); if(!b||b.disabled) return;
   const a=b.dataset.act, u=cur();
   switch(a){
+    case 'ack': acked.add(b.dataset.k); saveAck(); light(); break;
+    case 'unack': acked.delete(b.dataset.k); saveAck(); light(); break;
     case 'tab': if(b.dataset.tab!==tab){ tab=b.dataset.tab==='masters'?'masters':'units'; rollIdx=null; try{ localStorage.setItem('pencilduel.editorTab',tab); }catch(e){} renderAll(); window.scrollTo({top:0}); } break;
     case 'sel': { // 一覧のスクロール位置は保つ（順番にキャラを見ていくときに先頭へ戻らないように）
       const ul=document.querySelector('.ulist'), lt=ul?ul.scrollTop:0;

@@ -109,7 +109,7 @@ function normalizeUnits(raw){
 }
 
 // ---------- 検証 ----------
-// 戻り値: [{i: ユニット番号(全体なら-1), level:'error'|'warn', msg}]
+// 戻り値: [{i: ユニット番号(全体なら-1), level:'error'|'warn'|'line', msg}]（line＝セリフ未設定・不足。警告とは別に数える）
 function validateUnits(units){
   const issues=[], ids=new Map();
   if(!units.length) issues.push({i:-1,level:'error',msg:`${TERMS.unit}が1体もありません`});
@@ -124,8 +124,8 @@ function validateUnits(units){
     if(u.link&&!normLink(u.link)) add('warn','キャラクター設定のリンクは http:// か https:// で始まるURLにしてください（読み込み時に無視されます）');
     if(!u.cls.trim()) add('warn','クラスが空です');
     const noLine=Object.keys(LINE_KEYS).filter(k=>!u.lines[k].length);
-    if(noLine.length) add('warn',`セリフ未設定：${noLine.map(k=>LINE_KEYS[k]).join('・')}`);
-    for(const [k,n] of Object.entries(LINE_MIN)) if(u.lines[k].length && u.lines[k].length<n) add('warn',`${LINE_KEYS[k]}のセリフは${n}種類以上にしてください（今は${u.lines[k].length}種類）`);
+    if(noLine.length) add('line',`セリフ未設定：${noLine.map(k=>LINE_KEYS[k]).join('・')}`);
+    for(const [k,n] of Object.entries(LINE_MIN)) if(u.lines[k].length && u.lines[k].length<n) add('line',`${LINE_KEYS[k]}のセリフは${n}種類以上にしてください（今は${u.lines[k].length}種類）`);
     if(!(u.hp>0)) add('error','HPは1以上にしてください');
     if(!(u.cost>=0)) add('error','コストは0以上にしてください');
     if(u.cost>RULES.costCap) add('error',`コストが上限${RULES.costCap}を超えているため編成できません`);
