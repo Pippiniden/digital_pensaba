@@ -272,7 +272,7 @@ function cpuEffScore(u,effs,picked,si){
       case 'ignoreDef': sc+=acting&&enemies.some(x=>has(x,'def'))?3:.5; break;
       case 'debuffImmune': sc+=ts.some(t=>hpR(t)<.7)?1.5:.5; break;
       case 'buffImmune': sc+=foes.length?2:-1; break;
-      case 'fear': case 'sealSkill': sc+=foes.length?2:-1; break;
+      case 'fear': case 'actsDown': case 'sealSkill': sc+=foes.length?2:-1; break;
       case 'sealUlt': sc+=foes.some(t=>t.np>=RULES.ultCost-30)?4:foes.length?1:-1; break;
       case 'spread': sc+=foes.some(t=>has(t,'burn'))?2:.5; break;
       case 'instantDeath': sc+=foes.length?5:-5; break;

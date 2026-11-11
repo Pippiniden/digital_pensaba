@@ -980,9 +980,9 @@ const ACTIONS = {
       if(disabled(u)){ u.face=null; log(`${nm(u)}は行動不能`,'bad'); }
       else {
         const f=roll(); u.face={i:f,kind:'acts'}; rolls.push({uid:u.uid,f});
-        const fear=has(u,'fear')?1:0, up=mods(u,'actsUp'); consume(u,up.list); syncU(u);
-        m=Math.max(0,Math.min(RULES.actionsMax, faceActs(D(u.def),f)+bonus+late+zero+second+up.sum-fear));
-        log(`${nm(u)} 出目${f+1} → 最大行動${m}${bonus?`（${TERMS.out}ボーナス+${bonus}）`:''}${late?'（3ターン目後攻から+1）':''}${zero?'（前ターン0回行動+1）':''}${second?'（後攻の初ターン+1）':''}${up.sum?`（最大行動回数+${up.sum}）`:''}${fear?'（恐怖-1）':''}`, m?'':'bad');
+        const fear=has(u,'fear')?1:0, dn=mods(u,'actsDown').sum, up=mods(u,'actsUp'); consume(u,up.list); syncU(u);
+        m=Math.max(0,Math.min(RULES.actionsMax, faceActs(D(u.def),f)+bonus+late+zero+second+up.sum-fear-dn));
+        log(`${nm(u)} 出目${f+1} → 最大行動${m}${bonus?`（${TERMS.out}ボーナス+${bonus}）`:''}${late?'（3ターン目後攻から+1）':''}${zero?'（前ターン0回行動+1）':''}${second?'（後攻の初ターン+1）':''}${up.sum?`（最大行動回数+${up.sum}）`:''}${fear?'（恐怖-1）':''}${dn?`（最大行動回数-${dn}）`:''}`, m?'':'bad');
       }
       G.maxActs[u.uid]=m; const a=Math.min(m,left); G.alloc[u.uid]=a; left-=a;
     });
