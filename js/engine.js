@@ -10,6 +10,8 @@ let UNITS=[], MASTERS=[], UNIT_SOURCE='default', UNIT_BROKEN=false, MASTER_SOURC
 function reloadUnits(){ const r=loadUnits(); UNITS=r.units; UNIT_SOURCE=r.source; UNIT_BROKEN=!!r.broken; const mr=loadMasters(UNITS); MASTERS=mr.masters; MASTER_SOURCE=mr.source; MASTER_BROKEN=!!mr.broken; }
 reloadUnits();
 
+// 実験用：マスターチームの令呪が行動回数を使わない（0=従来 / 1=使わず、使うとそのターンの補助は無し / 2=使わず、補助とも併用・続けて何度でも）
+let SPELL_FREE = 0;
 let G;
 function newGame(o={}){
   G = { phase:'mode', mode:null, rule:o.rule||'team', handicap:o.handicap??true, cpu:[false,false], level:'normal', speed:(typeof window!=='undefined'&&window.SPEED_PREF)||700, seed:String(Math.random()),
@@ -819,7 +821,7 @@ const masterAtkDmg = (m,t)=>Math.max(0,D(m.def).cost*ruleset().masterAtk[t.maste
 // マスターチームは残りがあり、生存サーヴァントが全員1回以上行動でき、行動を1回減らせる
 function canDeclareSpell(){
   const P=G.players[G.cur]; if(!(P.spellLeft>0)||P.spell==='decl') return false;
-  if(mTeam()) return P.spellUsed.some((u,i)=>!u&&D(P.master.def).spells[i].eff.length) && alive(G.cur).every(u=>(G.maxActs[u.uid]||0)>0) && totalAlloc()>0;
+  if(mTeam()) return P.spellUsed.some((u,i)=>!u&&D(P.master.def).spells[i].eff.length) && alive(G.cur).every(u=>(G.maxActs[u.uid]||0)>0) && (SPELL_FREE||totalAlloc()>0);
   return Object.values(G.maxActs).some(n=>n>0);
 }
 // 相手マスターへのダメージを令呪で防げる（残りがあり、宣言中でない）
@@ -1059,9 +1061,9 @@ const ACTIONS = {
         if(!pickOk(side,picked,G.cur)){ G.spellPick={i:k,side}; return; }
       }
       G.spellPick=null;
-      const top=Object.entries(G.alloc).filter(([,n])=>n>0).sort((a,b)=>b[1]-a[1])[0];
-      G.alloc[top[0]]--; log(`令呪を使用：行動回数-1（${dn(U(top[0]))}）・残り${P.spellLeft-1}画`,'sub');
-      if(!useSpell(m,k,picked)) masterDone(); return;
+      if(!SPELL_FREE){ const top=Object.entries(G.alloc).filter(([,n])=>n>0).sort((a,b)=>b[1]-a[1])[0];
+        G.alloc[top[0]]--; log(`令呪を使用：行動回数-1（${dn(U(top[0]))}）・残り${P.spellLeft-1}画`,'sub'); }
+      if(!useSpell(m,k,picked)){ if(SPELL_FREE===2){ flushKo(); checkWin(); } else masterDone(); } return;
     }
     if(now){
       const k=Number(i), s=D(m.def).spells[k]; if(!s||P.stars<need) return;

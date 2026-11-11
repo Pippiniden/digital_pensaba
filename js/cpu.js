@@ -79,12 +79,21 @@ function cpuDecide(){
 // ---------- マスタールール ----------
 // マスターフェイズ：宣言済みの令呪があれば使う → 令呪を即時で使う価値があれば使う → 攻撃で倒せるなら攻撃 → 攻撃か補助
 // 攻撃対象のマスターは守る側がサーヴァントで受けるか選べるので、CPU はサーヴァントの攻撃でマスターを狙わない
+// 令呪の点数。CPU_SPELL_AGG: 'sum'=効果の点数を足す（従来）/ 'max'=一番高い効果だけ / 'avg'=効果の平均×√個数（効果が多いだけで高得点にならない）
+let CPU_SPELL_AGG = 'max';
+function cpuSpellScore(m,effs,t){
+  const f=(CPU_SPELL_GUARD===true||CPU_SPELL_GUARD===m.pid)?cpuGuardEff:cpuEffScore;
+  if(CPU_SPELL_AGG==='sum'||effs.length<2) return f(m,effs,t,-1);
+  const sc=effs.map(e=>f(m,[e],t,-1)), n=sc.length;
+  if(CPU_SPELL_AGG==='max') return Math.max(...sc);
+  return sc.reduce((a,b)=>a+b,0)/n*Math.sqrt(n);
+}
 function cpuMaster(easy){
   const m=masterOf(G.cur), d=D(m.def), P=G.players[G.cur], em=masterOf(1-G.cur), es=alive(1-G.cur)[0], rs=ruleset();
   // 令呪の価値が一番高いもの（マスターチームで対象を選ぶ令呪は、味方ごとに試して一番よい1騎）
   const spellBest=()=>{ let best={i:0,sc:-Infinity,uid:null};
     d.spells.forEach((s,i)=>{ if(P.spellUsed[i]||!s.eff.length) return;
-      (spellPicks(s)?pickCands(pickSide(s.eff),G.cur):[null]).forEach(t=>{ const v=cpuEffScore(m,s.eff,t,-1); if(v>best.sc) best={i,sc:v,uid:t&&t.uid}; }); });
+      (spellPicks(s)?pickCands(pickSide(s.eff),G.cur):[null]).forEach(t=>{ const v=cpuSpellScore(m,s.eff,t)+cpuSpellKill(m,s.eff,t); if(v>best.sc) best={i,sc:v,uid:t&&t.uid}; }); });
     return best; };
   if(G.spellPick){ // 対象の選択待ち（補助の「選んだ敵1体」など）：一番効く相手を選ぶ
     const sp=G.spellPick, effs=sp.sup?sp.sup.eff:d.spells[sp.i].eff;
@@ -94,7 +103,7 @@ function cpuMaster(easy){
   }
   if(P.spell==='decl'){ const b=spellBest(); return ['masterSpellUse',{i:String(b.i),...(b.uid?{uid:b.uid}:{})}]; }
   if(rs.mTeam){ // マスターチーム：補助か令呪（行動-1と引き換えなので、価値が高いときだけ）
-    if(!easy&&canDeclareSpell()){ const b=spellBest(); if(b.sc>=4) return ['masterSpell',{i:String(b.i),...(b.uid?{uid:b.uid}:{})}]; }
+    if(!easy&&canDeclareSpell()&&!spellReserved(m)){ const b=spellBest(); if(b.sc-spellActCost()-spellKeepValue(m)>=spellMinTeam()) return ['masterSpell',{i:String(b.i),...(b.uid?{uid:b.uid}:{})}]; }
     return ['masterSupport'];
   }
   const opts=[['masterSupport']];
@@ -106,6 +115,81 @@ function cpuMaster(easy){
   // 相手マスターへの攻撃は、倒せば相手サーヴァントにマスターの最大HP分のダメージ（相手が令呪で守る場合もある）
   if(em&&!em.out&&!G.players[em.pid].evac&&d.cost>=2) return ['masterAttack',{to:'master'}];
   return ['masterSupport'];
+}
+// 令呪のダメージで敵サーヴァントを倒しきれるときの加点（1騎につき +KILL_BONUS）。固定ダメージなので無敵・回避・補正は関係なく、根性持ちは倒せない扱い。
+// CPU_SPELL_KILL: true=両陣営で有効 / 0・1=その陣営だけ有効（バランス検証の比較用）/ false=無効
+let CPU_SPELL_KILL = true;
+let CPU_SPELL_RESERVE = false; // 自分のマスターが次の一撃で倒れる位置にいるとき、最後の1画は防御用に取っておく（true=両陣営 / 0・1=その陣営だけ）
+// 相手が次に出せる「敵マスターへの最大ダメージ」（補助ダイスの面と、未使用の令呪）
+function masterThreat(pid){
+  const fm=masterOf(1-pid); if(!fm||fm.out) return 0; const fd=D(fm.def), Pf=G.players[1-pid]; let mx=0;
+  const scan=effs=>effs.forEach(x=>{ if(x.k==='dmg'&&(x.t==='enemy_master'||x.t==='enemy_both')) mx=Math.max(mx,effVal(x,masterOf(pid))); });
+  fd.faces.forEach(f=>scan(f.eff)); fd.spells.forEach((sp,i)=>{ if(!Pf.spellUsed[i]) scan(sp.eff); });
+  return mx;
+}
+let CPU_SPELL_RESERVE_SKIP = null; // 比較用：このマスターIDは取っておかない
+const spellReserved = m=>m.def!==CPU_SPELL_RESERVE_SKIP&&(CPU_SPELL_RESERVE===true||CPU_SPELL_RESERVE===m.pid)&&G.players[m.pid].spellLeft<=1&&m.hp<=masterThreat(m.pid);
+// 令呪を防御用に取っておく価値（期待値）：相手の一撃で自分のマスターが倒れる確率 × 倒れたときの損失（最大HP×生存サーヴァント数。100ダメージ=1点）× 係数。
+// 確率＝補助ダイスの致命面の数/6 ＋ 未使用の致命令呪があれば0.5（上限1）。係数 CPU_SPELL_EVK=0 で無効。
+let CPU_SPELL_EVK = 0; // true の代わりに数値。0=見ない
+function spellKeepValue(m){
+  if(!CPU_SPELL_EVK||m.def===CPU_SPELL_RESERVE_SKIP||m.hp<=0) return 0;
+  const fm=masterOf(1-m.pid); if(!fm||fm.out) return 0;
+  const fd=D(fm.def), Pf=G.players[1-m.pid]; let faces=0, spells=0;
+  const lethal=effs=>effs.some(x=>x.k==='dmg'&&(x.t==='enemy_master'||x.t==='enemy_both')&&effVal(x,m)>=m.hp);
+  fd.faces.forEach(f=>{ if(lethal(f.eff)) faces++; });
+  fd.spells.forEach((sp,i)=>{ if(!Pf.spellUsed[i]&&lethal(sp.eff)) spells++; });
+  const p=Math.min(1,faces/6+(spells?.5:0)); if(!p) return 0;
+  return CPU_SPELL_EVK*p*D(m.def).hp*alive(m.pid).length/100;
+}
+let CPU_SPELL_SETUP = 0; // 敵マスターへの削りダメージ＝次の令呪で仕留められる残りHPにする布石の加点（0=見ない）
+let CPU_SPELL_BURN = 0; // 敵マスターへの「防がれる大ダメージ」＝相手の令呪を切らせる手の加点（1画あたり。0=見ない）
+let CPU_SPELL_GUARD = false; // 測定の結果オフ（慎二入り4万試合で49.1%、全マスター3万試合で49.8%＝改善なし）。true=両陣営 / 0・1=その陣営だけ（比較用）/ false=無効。 令呪の回避・無敵も、敵の宝具に合わせて使う（cpuGuardEff）
+const cpuSpellNew = pid=>CPU_SPELL_KILL===true||CPU_SPELL_KILL===pid;
+// マスターチームで令呪を使う最低点（行動-1と引き換え）。令呪の点数を「一番高い効果だけ」にして（CPU_SPELL_AGG）4に戻した（効果が多いだけで高得点になり、使いすぎるマスターがいたため）。マスタールールの宣言方式は、点をいくつにしても負けたので使わない
+let SPELL_MIN_TEAM = 4;
+// 令呪を使うと、割り振った行動が1回減る（一番多く割り振った騎から）。その1回分の期待ダメージを点数に換算して引く
+let CPU_SPELL_COSTPID = true; // true=両陣営 / 0・1=その陣営だけ（比較用）
+let CPU_SPELL_COSTK = 0; // 100ダメージ=何点か（0=引かない）
+function spellActCost(){
+  const k=CPU_SPELL_COSTK; if(!k||!(CPU_SPELL_COSTPID===true||CPU_SPELL_COSTPID===G.cur)) return 0;
+  const top=Object.entries(G.alloc).filter(([,n])=>n>0).sort((a,b)=>b[1]-a[1])[0]; if(!top) return 0;
+  const less={...G.alloc,[top[0]]:top[1]-1};
+  return Math.max(0,allocEV(G.alloc,true)-allocEV(less,true))/100*k;
+}
+let SPELL_MIN_BY = {}; // 比較用：マスターID別に最低点を上書き
+const spellMinTeam = ()=>{ const m=masterOf(G.cur); return m&&SPELL_MIN_BY[m.def]!=null?SPELL_MIN_BY[m.def]:cpuSpellNew(G.cur)?SPELL_MIN_TEAM:4; };
+const KILL_BONUS = 6;
+function cpuSpellKill(m,effs,picked){
+  if(!cpuSpellNew(m.pid)) return 0;
+  const foes=alive(1-m.pid); let n=0, sc0=0;
+  const killable=(t,v)=>!t.out&&!has(t,'guts')&&v>=t.hp;
+  for(const e of effs){
+    if(e.k!=='dmg') continue;
+    if(e.t==='enemy_svt'){ if(picked&&picked.pid!==m.pid&&killable(picked,effVal(e,picked))) n++; }
+    else if(e.t==='enemy_all'||e.t==='enemy_both') n+=foes.filter(t=>killable(t,effVal(e,t))).length;
+    // 敵マスターへのダメージ：倒すと敵サーヴァントがマスターの最大HP分のダメージを受ける。
+    // ただし相手に令呪が残っていれば（cpuGuard が）防ぐので無駄になる。守れないときだけ、巻き込んで倒せる数を加点
+    if(e.t==='enemy_master'||e.t==='enemy_both'){
+      const em=masterOf(1-m.pid);
+      // 倒しきれるダメージは、相手に令呪が残っていれば防がれて「相手の令呪を1画切らせる」手になる。相手に使える令呪が残っているときだけ加点
+      // 倒しきれない大ダメージでも、次の令呪で仕留められる残りHPまで削れるなら、相手に令呪を切らせる布石になる
+      if(CPU_SPELL_SETUP&&em&&!em.out&&effVal(e,em)<em.hp){
+        const Pm=G.players[m.pid]; let mx=0;
+        D(m.def).spells.forEach((sp,i)=>{ if(Pm.spellUsed[i]||sp.eff===effs) return; sp.eff.forEach(x=>{ if(x.k==='dmg'&&(x.t==='enemy_master'||x.t==='enemy_both')) mx=Math.max(mx,effVal(x,em)); }); });
+        if(mx>0&&em.hp-effVal(e,em)<=mx) sc0+=CPU_SPELL_SETUP;
+      }
+      if(CPU_SPELL_BURN&&em&&!em.out&&canGuardSpell(em.pid)&&effVal(e,em)>=em.hp){
+        const Pe=G.players[em.pid], left=Math.min(Pe.spellLeft,Pe.spellUsed.filter((u,i)=>!u&&D(em.def).spells[i].eff.length).length);
+        if(left>0) sc0+=CPU_SPELL_BURN*left;
+      }
+      if(em&&!em.out&&!canGuardSpell(em.pid)&&effVal(e,em)>=em.hp){
+        const full=D(em.def).hp;
+        n+=foes.filter(t=>!has(t,'guts')&&t.hp<=full).length;
+      }
+    }
+  }
+  return n*KILL_BONUS+sc0;
 }
 // 守る側の選択：令呪で守るのは、受けるとマスターが瀕死になるときだけ。
 // サーヴァントの攻撃は、サーヴァントが倒れそうならマスターで受け、マスターが倒れる（＝サーヴァントにマスターの最大HP分）ならサーヴァントで受ける
@@ -215,11 +299,15 @@ function cpuNextSkill(easy){
 // 敵が宝具を撃てる → 狙われそうな味方（全体宝具なら誰でも）に回避・無敵が付くなら最優先。
 // そうでなければ、倒れそうなとき（HP35%未満）まで温存する。シンプルルールでは効果がなかったので使わない
 function cpuGuardScore(u,si){
-  const base=cpuSkillScore(u,si), s=D(u.def).skills[si];
+  const s=D(u.def).skills[si];
+  return cpuGuardEff(u,s.eff,s.pick?cpuPickTarget(u.uid,si,false):null,si);
+}
+// 効果の並び（スキル・令呪）に回避・無敵があるとき、敵の宝具に合わせた点数にする
+function cpuGuardEff(u,effs,picked,si){
+  const base=cpuEffScore(u,effs,picked,si);
   if(ruleset().partyMax===1) return base;
-  const gs=s.eff.filter(e=>e.k==='evade'||e.k==='invul'); if(!gs.length) return base;
-  const picked=s.pick?cpuPickTarget(u.uid,si,false):null;
-  const ts=gs.flatMap(e=>resolveTargets(u,e.t,picked));
+  const gs=effs.filter(e=>e.k==='evade'||e.k==='invul'); if(!gs.length) return base;
+  const ts=gs.flatMap(e=>e.t==='master'?[]:resolveTargets(u,e.t,picked));
   const ready=alive(1-u.pid).filter(e=>e.np>=RULES.ultCost&&canUlt(e));
   if(ready.length){
     const likely=[...alive(u.pid)].sort((a,b)=>maxHp(b)-maxHp(a))[0]; // 単体宝具が来そうな相手（つよいの狙い方と同じく大物）
