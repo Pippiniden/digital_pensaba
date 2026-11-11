@@ -70,7 +70,7 @@ function glowHTML(fxs){
   return key?`<i class="glow gl-${key}"></i>`:'';
 }
 function svtHTML(u){
-  const d=D(u.def), ph=G.phase, sh=shown(u), mhp=maxHp({def:u.def,fx:sh.fx});
+  const d=D(u.def), ph=G.phase, sh=shown(u), mhp=maxHp({def:u.def,fx:sh.fx,pid:u.pid});
   const allocable=canAllocMore(u);
   const pickable=allocable || (G.spellPick&&pickOk(G.spellPick.side,u,G.cur)) || (G.copy&&copyCands(U(G.copy.uid)).includes(u)) || (G.pending&&pickValid(u)) || (!G.pending&&!G.copy&&ph==='target'&&targetCandidates().includes(u));
   const acting=G.ult?G.ult===u.uid:(G.alloc[u.uid]||0)>0;
@@ -78,7 +78,7 @@ function svtHTML(u){
   // スキルを使える自分のサーヴァント（スキル欄が隠れる小さい表示のとき、ⓘ を光らせて知らせる）
   const canSk=u.pid===G.cur&&ph==='skill'&&!G.pending&&!cpuActing()&&(d.skills.some((s,i)=>skillUsable(u,i))||!G.ult&&!G.ultDone&&canUlt(u)&&u.np>=RULES.ultCost);
   const cls=['svt',sh.out?'out':'',pickable?'pickable':'',tgt?'targeted':'',acting&&u.pid===G.cur?'acting':'',canSk?'canskill':''].join(' ');
-  const fx=(hasHcap(u)?`<span class="chip fx buff hcapchip">ハンデ：${hcapText()}</span>`:'')+sh.fx.map(e=>`<span class="chip fx ${FX[e.k].buff?'buff':'debuff'}">${fxText(e)}</span>`).join('');
+  const fx=(hasHcap(u)?`<span class="chip fx buff hcapchip">ハンデ：${hcapText()}</span>`:'')+costChip(u)+sh.fx.map(e=>`<span class="chip fx ${FX[e.k].buff?'buff':'debuff'}">${fxText(e)}</span>`).join('');
   // スマホの簡易表示用：効果の数（強化▲・弱体▼）。中身は拡大ウィンドウで見る
   const nb=sh.fx.filter(e=>FX[e.k].buff===true).length, nd=sh.fx.filter(e=>FX[e.k].buff===false).length;
   const pfx=nb||nd?`<span class="pfx">${nb?`<b class="buff">▲${nb}</b>`:''}${nd?`<b class="debuff">▼${nd}</b>`:''}</span>`:'';
@@ -317,10 +317,12 @@ function logHTML(){
     <div id="log" class="log">${G.log.slice(-200).map(l=>`<div class="${l.cls}">${l.msg}</div>`).join('')}</div></aside>`;
 }
 
+// マスターチームのコスト補正（常時。効果ではないのでここで別に表示する）
+const costChip = u=>{ const c=costBonus(u); return c?`<span class="chip fx ${c.n>0?'buff':'debuff'}">${TERMS.player}コスト補正：${costBonusText(u)}</span>`:''; };
 // ---------- 詳細（対戦中の ⓘ・編成画面の右側で共用） ----------
 function unitDetailHTML(d,u){
   if(d.master) return masterDetailHTML(d,u);
-  const hc=u&&hasHcap(u)?`<span class="chip fx buff">ハンデ：${hcapText()}</span>`:'';
+  const hc=(u&&hasHcap(u)?`<span class="chip fx buff">ハンデ：${hcapText()}</span>`:'')+(u?costChip(u):'');
   const fx=u&&(u.fx.length||hc)?`<h4>効果</h4><div class="fxs open">${hc}${u.fx.map(e=>`<span class="chip fx ${FX[e.k].buff?'buff':'debuff'}">${fxText(e)}</span>`).join('')}</div>`:'';
   return `<div class="udetail">
     <div class="udtop">

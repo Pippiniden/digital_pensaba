@@ -116,6 +116,13 @@ const totalAlloc = ()=>Object.values(G.alloc).reduce((a,b)=>a+b,0);
 // 行動回数は必ず使い切る：割り振る合計は「最大行動回数の合計」と上限（actionsMax）の小さい方ちょうど
 const requiredAlloc = ()=>Math.min(RULES.actionsMax, Object.values(G.maxActs).reduce((a,b)=>a+b,0));
 const remainingRolls = ()=>Object.entries(G.alloc).reduce((s,[uid,n])=>U(uid).out?s:s+n-G.rolled.filter(r=>r.uid===uid).length,0);
+// マスターチーム：自軍マスターのコストに応じた、サーヴァント全員への常時補正 {atk,hp}（基準 RULESETS.mteam.costBonus.base のコストでは 0）。
+// fx ではないので、強化解除・弱体解除・弱体状態特攻の対象にならない。マスター自身・マスターチーム以外では null
+function costBonus(u){
+  const b=ruleset().costBonus; if(!b||!u||u.master||u.pid==null||!G.mpicks||!G.mpicks[u.pid]) return null;
+  const n=mcost(u.pid)-b.base; return n?{atk:n*b.atk,hp:n*b.hp,n}:null;
+}
+const costBonusText = u=>{ const c=costBonus(u); return c?`攻撃ダメージ${c.atk>0?'+':''}${c.atk}・最大HP${c.hp>0?'+':''}${c.hp}`:''; };
 function makeUnit(pid,idx,id){ return {uid:`p${pid}u${idx}`,pid,idx,def:id,hp:D(id).hp,np:0,asc:false,out:false,used:[false,false,false],fx:[],face:null}; }
 // マスター：サーヴァントと同じ形（fx・hp・out）にして、効果やダメージの処理を共用する。out＝瀕死
 function makeMaster(pid,id){ return {uid:`p${pid}m`,pid,idx:-1,def:id,hp:D(id).hp,np:0,asc:false,out:false,used:[],fx:[],face:null,master:true}; }
@@ -163,7 +170,7 @@ function consume(u,list){
 const dotVal = e=>e.v||RULES.dot; // 毒・やけどの値（0は旧データなので RULES.dot）
 function addNp(u,v){ if(!u.out) u.np=Math.max(0,Math.min(RULES.gaugeMax,u.np+v)); }
 // 最大HP（定義のHP＋最大HP+の合計）。最大HP+が切れたら HP を最大値まで下げる（1未満にはしない）
-const maxHp = u=>D(u.def).hp+mods(u,'maxHp').sum;
+const maxHp = u=>D(u.def).hp+mods(u,'maxHp').sum+(costBonus(u)?costBonus(u).hp:0);
 function clampHp(u){ if(!u.out&&u.hp>maxHp(u)) u.hp=Math.max(1,maxHp(u)); }
 // スターの獲得：手番側はこのターンの発生スター（G.gen）、相手側は手持ちに直接加える
 function gainStars(pid,v){ if(pid===G.cur) G.gen+=v; else G.players[pid].stars+=v; }
@@ -419,7 +426,7 @@ function fixedHit(src,t,v){
 function dmgMods(att,tgt,color){
   const a=modsC(att,'atk',color,tgt), ad=modsC(att,'atkDown',null,tgt);
   // ハンデの攻撃ダメージ+ も足す
-  let sum=a.sum-ad.sum+(hasHcap(att)?G.hcap.atk:0); const usedA=[...a.list,...ad.list], usedT=[];
+  let sum=a.sum-ad.sum+(hasHcap(att)?G.hcap.atk:0)+(costBonus(att)?costBonus(att).atk:0); const usedA=[...a.list,...ad.list], usedT=[];
   if(tgt&&!tgt.out){
     // 弱体状態特攻：対象が指定の弱体（vs 未指定なら何か1つ）を受けていれば加算
     const vs=att.fx.filter(e=>e.k==='atkVs'&&tgt.fx.some(x=>e.vs?x.k===e.vs:FX[x.k].buff===false));
@@ -652,6 +659,7 @@ function startGame(){
   G.players.forEach((P,pid)=>{ P.party=G.picks[pid].map((id,i)=>makeUnit(pid,i,id)); P.stars=0;
     P.master=masterRule()&&G.mpicks[pid]?makeMaster(pid,G.mpicks[pid]):null; P.spell=null; P.spellLeft=ruleset().spells||1; P.spellUsed=[false,false,false]; P.evac=false; P.zeroNext=false; });
   applyHandicap();
+  if(ruleset().costBonus) G.players.forEach((P,pid)=>{ P.party.forEach(u=>{ u.hp=maxHp(u); }); const t=P.party[0]&&costBonusText(P.party[0]); if(t) log(`${esc(P.name)}：${TERMS.player}のコスト${mcost(pid)}（基準${ruleset().costBonus.base}）→ ${TERMS.unit}は ${t}`,'h'); });
   log('先攻・後攻の決定','h');
   let r0,r1;
   do{

@@ -55,7 +55,7 @@ const DEFAULT_MASTERS = [
     ],
     "spells":[
       {"name":"鶴翼三連","eff":[{"k":"sureHit","t":"self","v":0,"turns":3},{"k":"dmg","t":"enemy_master","v":250}],"line":["トレース、オン！"]},
-      {"name":"無限の剣製","eff":[{"k":"dmg","t":"enemy_all","v":150},{"k":"atkDown","t":"enemy_all","v":30,"turns":3},{"k":"critRoll","t":"ally_all","v":2,"turns":3}],"line":["この体は無限の剣で出来ていた――"]},
+      {"name":"無限の剣製","eff":[{"k":"dmg","t":"enemy_all","v":50},{"k":"atkDown","t":"enemy_all","v":15,"turns":3},{"k":"critRoll","t":"ally_all","v":2,"turns":3}],"line":["この体は無限の剣で出来ていた――"]},
       {"name":"射殺す百頭","eff":[{"k":"dmg","t":"enemy_svt","v":200}],"line":["ナインライブズブレイドワークス……うおおおお！"]}
     ]
   },
