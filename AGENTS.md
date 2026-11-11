@@ -89,6 +89,7 @@ Balance page (balance.html): rules → units → masters → common → balance 
 
 ### 4.3 Rule constants — `RULES` (rules.js)
 `costCap:10, partyMax:3, actionsMax:3, actsTable:[0,1,1,3,2,2], gaugeOnHit:10, gaugeMax:100, ultCost:100, chainR:30, chainB:20, chainG:10, critDmg:30, critDmgR:60, dot:20, dotTiming:'current'|'all'`.
+- `RULESETS.team.secondBonus`: the second player's first turn (`G.turn===2`) gives every servant +1 max actions (applied in `rollActs`; still capped at 3 total actions). Measured 6000 random 3v3 games, hard vs hard: first-player win rate 55.1% → 50.7%.
 - `actsTable`: action count per pencil face (index 0–5 = face 1–6), shared by all units. Set to `null` to use each face's own `acts` instead. Always read it through `faceActs(d, i)`.
 - Critical: `critLevel(stars)` → level 0–7 from `CRIT_TABLE`, `critChance(level)` → % (Lv1 10 / Lv2 20 / Lv3 35 / Lv4 50 / Lv5 75 / Lv6 90 / Lv7 100; thresholds at 1/6/11/16/21/26/31 stars).
 - `RULESETS` (rules.js) holds per-rule settings: `team` (3 units, d100 crit), `simple` (1 unit, d6 crit via `CRIT_D6_TABLE` / `critNeedD6`, `handicapAsc:2`) `master` (simple + a master per side, `master:true`, see §5.4) and `mteam` (team + master, `mTeam:true`, `costCap:13`, see §5.5). The active one is `G.rule`; read it through `ruleset()` (engine.js). Party size comes from `ruleset().partyMax`, not `RULES`.

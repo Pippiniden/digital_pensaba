@@ -58,11 +58,12 @@ function critNeedD6(stars){ let n=0; CRIT_D6_TABLE.forEach(([s,v])=>{ if(stars>=
 
 // ---------- ルールの種類 ----------
 // team  : チームバトルルール（3on3・合計コスト10・クリティカルは1d100）
+//         secondBonus：後攻の最初のターン（G.turn===2）は全員の最大行動回数+1（先攻有利の緩和。6000戦で先攻勝率 55%→51%）
 // simple: シンプルルール（1on1・クリティカルは1d6）。宝具はチームバトルと同じくスキルフェイズで使う
 //         handicapAsc：ハンデ戦ON のとき、この値以上のコスト差があれば低コスト側が最初から霊基再臨済み
 //         hcapBonus  ：さらにコスト差が gap 以上なら、低コスト側のサーヴァントは攻撃ダメージ+atk・獲得NP+np%（攻撃・被弾・チェインのNP）
 const RULESETS = {
-  team:  { name:'チームバトル', partyMax:3, crit:'d100',
+  team:  { name:'チームバトル', partyMax:3, crit:'d100', secondBonus:true,
     desc:'3騎まで・コスト合計10以下で編成する基本ルール。' },
   simple:{ name:'シンプル', partyMax:1, crit:'d6', handicapAsc:2, hcapBonus:{gap:3, atk:30, np:10},
     desc:`1騎同士で戦う簡易ルール。相手の${TERMS.unit}を${TERMS.out}にすれば勝利。` },
