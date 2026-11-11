@@ -224,7 +224,7 @@ function renderCtl(){
           sel('k',[[3,'3チーム'],[5,'5チーム'],[10,'10チーム'],[20,'20チーム'],[50,'50チーム'],[0,'すべて']],B.k,B.view==='rank'?'1編成あたりの相手':'相手の数（ランダム抽出）'):''}
         ${B.view==='master'?sel('sv',[[3,'3'],[6,'6'],[9,'9'],[20,'20'],[0,'すべて']],B.sv,'マスターの組ごとのサーヴァント編成数'):''}
         ${sel('n',[[10,'10試合'],[20,'20試合'],[50,'50試合'],[100,'100試合'],[300,'300試合']],B.n,'1対戦あたり')}
-        ${sel('level',[['normal','ふつう'],['hard','つよい']],B.level,'CPUの強さ')}
+        ${sel('level',[['normal','ふつう'],['hard','つよい（先読みなし・速い）'],['hard+','つよい（先読みあり・遅い）']],B.level,'CPUの強さ')}
         ${rs().handicapAsc&&B.view!=='master'?`<label class="chk"><input type="checkbox" data-s="handicap" ${B.handicap?'checked':''} ${dis}>ハンデ戦（コスト差${rs().handicapAsc}以上で低コスト側が${TERMS.ascFull}済み、${rs().hcapBonus.gap}以上でさらに攻撃+${rs().hcapBonus.atk}・獲得NP+${rs().hcapBonus.np}%）</label>`:''}
       </div>
       ${needTeam?`<div class="seg">${[['pool','全編成と対戦'],['duel','2つの編成の直接対決']].map(([v,l])=>`<button class="${B.vs===v?'on':''}" data-b="set" data-k="vs" data-v="${v}" ${dis}>${l}</button>`).join('')}</div>
@@ -269,7 +269,7 @@ function renderRes(){
   const R=B.res; if(!R){ $('#res').innerHTML='<section class="card"><p class="sub small nm">条件を選んで「検証を実行」を押してください。</p></section>'; return; }
   if(!R.items.length){ $('#res').innerHTML='<section class="card"><p class="sub small nm">集計中…</p></section>'; return; }
   const errs=R.items.reduce((s,x)=>s+x.r.errors,0), msg=(R.items.find(x=>x.r.errMsg)||{r:{}}).r.errMsg;
-  const cond=[`${RULESETS[R.rule].name}`,`データ：${BSRC[R.src]}`,`1対戦${R.n}試合`,`CPU：${R.level==='hard'?'つよい':'ふつう'}`,
+  const cond=[`${RULESETS[R.rule].name}`,`データ：${BSRC[R.src]}`,`1対戦${R.n}試合`,`CPU：${R.level==='hard+'?'つよい（先読みあり）':R.level==='hard'?'つよい（先読みなし）':'ふつう'}`,
     ...(RULESETS[R.rule].handicapAsc&&R.view!=='master'?[`ハンデ${R.handicap?'あり':'なし'}`]:[]),...(R.excl?['除外あり']:[]),
     R.done?`${(R.ms/1000).toFixed(1)}秒`:'実行中'].join(' ／ ');
   const body=R.view==='master'?resMaster(R):R.view==='team'?resTeam(R):resRank(R);

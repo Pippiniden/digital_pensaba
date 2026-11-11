@@ -9,14 +9,18 @@
    ===================================================================== */
 
 const SIM_TURN_LIMIT = 100;   // これを超えたら引き分け
-const SIM_LEVEL = 'hard';     // 両陣営の CPU の強さ（cpu.js の CPU_LEVELS。expert は先読みで重いので使わない。変えたら editor-sim.js の説明文も）
+if(typeof CPU_LOOKAHEAD!=='undefined') CPU_LOOKAHEAD=false; // 既定は先読みなしの「つよい」（先読みありだと1試合が数十倍遅い。これまでの検証結果とも揃う）
+const SIM_LEVEL = 'hard';
+const SIM_LEVEL_LOOK = 'hard+'; // 「つよい（先読みあり）」。ゲームの「つよい」と同じ強さ。cpu.js の CPU_LOOKAHEAD を試合ごとに切り替える擬似レベル（1試合が数十倍遅い）     // 両陣営の CPU の強さ（cpu.js の CPU_LEVELS。expert は先読みで重いので使わない。変えたら editor-sim.js の説明文も）
 const SIM_STEP_LIMIT = 30000; // 念のための無限ループ止め
 
 // picks=[[id..],[id..]] で1試合。結果は陣営0 視点
 // mpicks=[マスターID|null, ...]（マスターのあるルールだけ）、level=CPUの強さ（省略時 SIM_LEVEL）
 function simGame(picks,rule,handicap,mpicks,level){
   newGame({rule, handicap});
-  applyMode({mode:'cpu', level:level||SIM_LEVEL, cpu:[true,true], names:['A','B']});
+  const look=level===SIM_LEVEL_LOOK;
+  if(typeof CPU_LOOKAHEAD!=='undefined') CPU_LOOKAHEAD=look; // 'hard+' だけ先読みあり。それ以外は先読みなし
+  applyMode({mode:'cpu', level:look?'hard':(level||SIM_LEVEL), cpu:[true,true], names:['A','B']});
   G.picks=picks.map(p=>p.slice()); if(mpicks) G.mpicks=mpicks.slice(); G.phase='init';
   startGame();
   const first=G.cur; let steps=0;

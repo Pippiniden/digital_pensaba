@@ -6,16 +6,25 @@
    強さの調整は cpuSkillScore（スキルの使いどき）と cpuBestTarget（攻撃対象）で。
    ===================================================================== */
 
-// 難易度。hard 以上は攻撃対象を「脅威度」で選び、宝具をダメージ見込みで撃つ。expert は攻撃対象を先読み（モンテカルロ）で決める（シンプルルールではスキル・宝具も）
+// 難易度。hard 以上は攻撃対象を「脅威度」で選び、宝具をダメージ見込みで撃つ。さらに攻撃対象は先読み（モンテカルロ）で決める：
+// hard は軽く（試行 MC_R_HARD 回・先 MC_T_HARD ターン）、expert はじっくり（MC_R_EXPERT 回・MC_T_EXPERT ターン。シンプルルールではスキル・宝具も）
 const CPU_LEVELS = {
   easy:  {name:'よわい',   desc:'スキルや攻撃対象をほぼ気まぐれに選ぶ'},
   normal:{name:'ふつう',   desc:'状況を見てスキル・行動配分・攻撃対象を選ぶ'},
-  hard:  {name:'つよい',   desc:'危険な相手から集中して狙い、宝具も撃ちどきを選ぶ'},
-  expert:{name:'超つよい', desc:'攻撃対象（シンプルではスキル・宝具）を先読みして選ぶ'},
+  hard:  {name:'つよい',   desc:'危険な相手を狙い、攻撃対象は少し先を読んで選ぶ。宝具も撃ちどきを選ぶ'},
+  expert:{name:'超つよい', desc:'攻撃対象（シンプルではスキル・宝具）をじっくり先読みして選ぶ'},
 };
 const cpuHard = ()=>G.level==='hard'||G.level==='expert';
-const MC_ROLLOUTS = 16;  // 超つよい：攻撃対象の候補ごとに決着まで試す回数
-const MC_TURNS = 40;     // 1回の試しで進める最大ターン数（超えたら残りHPで評価）
+// 先読み：攻撃対象の候補ごとに、決着まで（または打ち切りまで）試す回数と、1回の試しで進める最大ターン数（超えたら残りHPで評価）
+// 測定（つよい旧版との対戦・3v3同コスト）：4/10 → 57% 勝ち・1回約30ms、16/40 → 64% 勝ち・1回約140ms。試行回数が強さをほぼ決め、ターン数は10まで減らしても影響が小さい
+const MC_R_HARD = 4,    MC_T_HARD = 10;
+const MC_R_EXPERT = 16, MC_T_EXPERT = 40;
+const mcRollouts = ()=>G.level==='expert'?MC_R_EXPERT:MC_R_HARD;
+const mcTurns    = ()=>G.level==='expert'?MC_T_EXPERT:MC_T_HARD;
+// false にすると hard は先読みなしの脅威度判断（旧つよい）になる。バランス検証（sim.js）は速さのため false にする
+let CPU_LOOKAHEAD = true;
+// 先読みの試しの最中は true。試しの中の「つよい」は先読みせず脅威度で選ぶ（先読みの入れ子を防ぐ）
+let cpuInRollout = false;
 const isCpu = pid=>!!(G.cpu&&G.cpu[pid]);
 const actor = ()=>G.phase==='setup'?G.setupPid:G.phase==='guard'?1-G.cur:G.cur; // guard＝守る側が選ぶ
 const cpuActing = ()=>!['mode','setup','over'].includes(G.phase) && isCpu(actor()); // 編成はCPU分も人が選ぶ（おまかせ＝setupCpu）
@@ -199,7 +208,7 @@ function cpuNextSkill(easy){
   const list=usableSkills();
   if(easy) return list.find(x=>rnd01(`${G.turn}s${x.u.uid}${x.si}`)<.3)||null;
   let best=null;
-  for(const x of list){ const sc=cpuHard()?cpuGuardScore(x.u,x.si):cpuSkillScore(x.u,x.si); if(sc>=2&&(!best||sc>best.sc)) best={...x,sc}; }
+  for(const x of list){ const sc=cpuHard()?cpuGuardScore(x.u,x.si):cpuSkillScore(x.u,x.si); if(sc>=(cpuHard()?3:2)&&(!best||sc>best.sc)) best={...x,sc}; } // つよい以上は3点以上で使う（2→3は勝率同等だった）
   return best;
 }
 // つよい（チームバトル）：回避・無敵を含むスキルは、敵の宝具（NP100%）に合わせて使う。
@@ -341,7 +350,7 @@ function estDamage(t){
 function cpuBestTarget(easy){
   const c=targetCandidates();
   if(easy) return c[Math.floor(rnd01(`${G.turn}t`)*c.length)];
-  if(G.level==='expert') return cpuMcTarget();
+  if(G.level==='expert'||(G.level==='hard'&&CPU_LOOKAHEAD&&!cpuInRollout)) return cpuMcTarget();
   if(cpuHard()) return cpuThreatTarget();
   let best=c[0], bs=-Infinity;
   for(const t of c){
@@ -375,7 +384,7 @@ function cpuThreatTarget(){
 }
 
 // ---------- 超つよい：攻撃対象を先読みで選ぶ（モンテカルロ） ----------
-// 候補ごとに局面をコピーし、その相手を攻撃してから両陣営「つよい」で決着まで MC_ROLLOUTS 回進めて、勝った回数が多い相手を選ぶ。
+// 候補ごとに局面をコピーし、その相手を攻撃してから両陣営「つよい」（先読みなし）で決着まで mcRollouts() 回進めて、勝った回数が多い相手を選ぶ。
 // 実際の出目は知らない（試しの乱数は別物）。ルール処理はエンジンそのものなので、ルールを変えても追従する
 let cpuMcMemo=null;
 function cpuMcTarget(){
@@ -399,17 +408,18 @@ function cpuMcSkill(h){
   const score=cpuMcScores(cands.map(m=>()=>ACTIONS[m[0]](m[1]||{})));
   const hi=cands.findIndex(m=>JSON.stringify(m)===JSON.stringify(h));
   let bi=0; score.forEach((s,i)=>{ if(s>score[bi]) bi=i; });
-  return hi<0||score[bi]-score[hi]>=MC_MARGIN*MC_ROLLOUTS ? cands[bi] : h;
+  return hi<0||score[bi]-score[hi]>=MC_MARGIN*mcRollouts() ? cands[bi] : h;
 }
-// 候補（局面を進める関数）ごとに、両陣営「つよい」で決着まで MC_ROLLOUTS 回試した評価の合計
+// 候補（局面を進める関数）ごとに、両陣営「つよい」（先読みなし）で決着まで mcRollouts() 回試した評価の合計
 function cpuMcScores(moves){
-  const me=G.cur, cap=G.turn+MC_TURNS, rnd=Math.random;
+  const me=G.cur, cap=G.turn+mcTurns(), R=mcRollouts(), rnd=Math.random;
   // エンジンが触る画面用の状態も退避して、試しの後に元へ戻す
   const save={g:JSON.stringify(G), G, fxq:FXQ.slice(), hold:JSON.stringify(FXHOLD), hide:[...FXHIDE], ko:KO_PEND.slice()};
   const reset=()=>{ G=JSON.parse(save.g); G.level='hard'; FXQ.length=0; for(const k in FXHOLD) delete FXHOLD[k]; FXHIDE.clear(); KO_PEND.length=0; KO_PEND.push(...save.ko); };
   const score=moves.map(()=>0);
+  cpuInRollout=true;
   try{
-    for(let r=0;r<MC_ROLLOUTS;r++){
+    for(let r=0;r<R;r++){
       const seed=Math.floor(rnd()*2147483647);
       moves.forEach((mv,i)=>{
         reset(); Math.random=cpuPrng(seed); // 候補同士で同じ乱数列を使い、運の差を消して比べる
@@ -423,7 +433,7 @@ function cpuMcScores(moves){
       });
     }
   } finally {
-    Math.random=rnd; G=save.G;
+    cpuInRollout=false; Math.random=rnd; G=save.G;
     FXQ.length=0; FXQ.push(...save.fxq);
     for(const k in FXHOLD) delete FXHOLD[k]; Object.assign(FXHOLD,JSON.parse(save.hold));
     FXHIDE.clear(); save.hide.forEach(k=>FXHIDE.add(k));
