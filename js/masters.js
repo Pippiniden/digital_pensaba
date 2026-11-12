@@ -133,15 +133,15 @@ const DEFAULT_MASTERS = [
     "lines":{"support":["サーヴァントバトル、コマンド・オーダー！","ゆけっ、我が傀儡よ！","ハッハッハッハ……"],"attack":["聖杯戦争は命のやり取りなのだ！"],"spell":["サーヴァントなど勝つための道具にすぎん！","こうなっては令呪を使うほかあるまい！"]},
     "faces":[
       {"label":"無","eff":[]},
-      {"label":"シャドウフレイム","eff":[{"k":"dmg","t":"enemy_all","v":20}],"line":["ハッハッハッハ……焼け焦げろ！"]},
-      {"label":"シャドウスラッシュ","eff":[{"k":"dmg","t":"enemy_master","v":100}],"line":["貴様はこのシャドウカイザーが仕留める！","サーヴァントバトルとは殺し合いだ！"]},
+      {"label":"シャドウフレイム","eff":[{"k":"dmg","t":"enemy_all","v":15}],"line":["ハッハッハッハ……焼け焦げろ！"]},
+      {"label":"シャドウスラッシュ","eff":[{"k":"dmg","t":"enemy_master","v":80}],"line":["貴様はこのシャドウカイザーが仕留める！","サーヴァントバトルとは殺し合いだ！"]},
       {"label":"シャドウインパルス","eff":[{"k":"dmg","t":"enemy_svt","v":80},{"k":"defDown","t":"enemy_svt","v":10}]},
       {"label":"シャドウサンダー","eff":[{"k":"dmg","t":"enemy_svt","v":80}],"line":["轟け、闇の雷鳴よ！"]},
       {"label":"シャドウカース","eff":[{"k":"defDown","t":"enemy_svt","v":10}],"line":["呪われるがいい！","闇の魂よ！"]}
     ],
     "spells":[
       {"name":"ダークブレイザー","eff":[{"k":"stun","t":"enemy_svt","v":0,"turns":1}],"line":["貴様には死が相応しい！"]},
-      {"name":"ミラージュソード","eff":[{"k":"dmg","t":"enemy_master","v":300}],"line":["シャドウカイザーが直々に仕留めてやる！"]},
+      {"name":"ミラージュソード","eff":[{"k":"dmg","t":"enemy_master","v":150}],"line":["シャドウカイザーが直々に仕留めてやる！"]},
       {"name":"シャドウコマンダー","eff":[{"k":"sureHit","t":"ally_svt","v":0,"turns":1},{"k":"actsUp","t":"ally_svt","v":1,"times":1}],"line":["サーヴァントバトル、シャドウ・オーダー！","確実に仕留めるのだ、我が傀儡よ！"]}
     ]
   },
@@ -152,22 +152,54 @@ const DEFAULT_MASTERS = [
       {"label":"みんな、ぶっとばせ！","eff":[{"k":"atk","t":"svt","v":20,"color":"R"}],"line":["一気にぶっとばしてやれ！","サーヴァントバトル！　コマンド・オーダー！"]},
       {"label":"応援","eff":[{"k":"desc","t":"svt","v":0,"text":"コータは精一杯応援している"}],"line":["みんな、がんばってくれ！"]},
       {"label":"変幻自在の攻撃だ！","eff":[{"k":"onAtkNp","t":"svt","v":10,"color":"B"}],"line":["サーヴァントバトル！　コマンド・オーダー！"]},
-      {"label":"必殺の作戦だ！","eff":[{"k":"atk","t":"ally_svt","v":30,"color":"R"},{"k":"onAtkNp","t":"ally_svt","v":10,"color":"B"},{"k":"onAtkStar","t":"ally_svt","v":3,"color":"G"}],"line":["とびっきりの作戦、いくぞ！"]},
+      {"label":"必殺の作戦だ！","eff":[{"k":"atk","t":"ally_svt","v":20,"color":"R"},{"k":"onAtkNp","t":"ally_svt","v":10,"color":"B"},{"k":"onAtkStar","t":"ally_svt","v":4,"color":"G"}],"line":["とびっきりの作戦、いくぞ！"]},
       {"label":"ひらめき","eff":[{"k":"desc","t":"svt","v":0,"text":"コータは何かひらめいたようだ"}],"line":["そうか、そうだったのか！","わかったぞ！"]},
       {"label":"スピードで撹乱しろ！","eff":[{"k":"onAtkStar","t":"enemy_master","v":3,"color":"G"}],"line":["スピードで攻めろ！","サーヴァントバトル！　コマンド・オーダー！"]}
     ],
     "spells":[
       {"name":"コマンド：リカバリー","eff":[{"k":"heal","t":"ally_svt","v":200}],"line":["みんな、大丈夫か！？"]},
-      {"name":"コマンド：オーバーパワー","eff":[{"k":"np","t":"ally_svt","v":20},{"k":"npPow","t":"svt","v":70,"turns":1}],"line":["俺達の絆を見せてやろう！"]},
+      {"name":"コマンド：オーバーパワー","eff":[{"k":"np","t":"ally_svt","v":15},{"k":"npPow","t":"svt","v":70,"turns":1}],"line":["俺達の絆を見せてやろう！"]},
       {"name":"コマンド：スピーダー","eff":[{"k":"evade","t":"ally_svt","v":0,"turns":1},{"k":"actsUp","t":"ally_svt","v":1,"times":1}],"line":["かわせ、オレのサーヴァント！"]}
+    ]
+  },
+  {
+    "id":"m_erika", "name":"黒咲恵梨佳", "cost":5, "hp":500,
+    "faces":[
+      {"label":"血晶魔術・爆破","eff":[{"k":"dmg","t":"enemy_master","v":100}]},
+      {"label":"血晶魔術・治癒","eff":[{"k":"heal","t":"ally_svt","v":80}]},
+      {"label":"血晶魔術・加速","eff":[{"k":"atk","t":"ally_svt","v":15},{"k":"atk","t":"ally_svt","v":40,"color":"G"},{"k":"critPow","t":"ally_svt","v":30}]},
+      {"label":"起源血晶の欠片","eff":[{"k":"heal","t":"ally_all","v":80},{"k":"cleanse","t":"ally_all","v":0}]},
+      {"label":"血晶魔術・覚醒","eff":[{"k":"onAtkNp","t":"svt","v":10},{"k":"onAtkNp","t":"ally_svt","v":15,"color":"G"},{"k":"onAtkStar","t":"ally_svt","v":3,"color":"G"}]},
+      {"label":"血晶魔術・閃光","eff":[{"k":"star","t":"master","v":6},{"k":"atk","t":"ally_svt","v":10,"color":"G"},{"k":"critPow","t":"ally_svt","v":40,"color":"G"}]}
+    ],
+    "spells":[
+      {"name":"血晶魔術・反転","eff":[{"k":"stun","t":"enemy_svt","v":0,"turns":1},{"k":"defDown","t":"enemy_svt","v":20,"turns":1}]},
+      {"name":"起源血晶","eff":[{"k":"heal","t":"ally_all","v":130},{"k":"cleanse","t":"ally_all","v":0},{"k":"debuffImmune","t":"ally_all","v":0,"turns":1},{"k":"np","t":"ally_all","v":5}]},
+      {"name":"血晶魔術・","eff":[{"k":"dmg","t":"enemy_svt","v":100},{"k":"dmg","t":"enemy_master","v":150}]}
+    ]
+  },
+  {
+    "id":"m_seiji", "name":"柏木星司", "cost":5, "hp":400,
+    "faces":[
+      {"label":"","eff":[{"k":"onAtkStar","t":"ally_svt","v":2}]},
+      {"label":"","eff":[{"k":"onAtkStar","t":"ally_svt","v":2}]},
+      {"label":"","eff":[{"k":"onAtkStar","t":"ally_svt","v":2}]},
+      {"label":"","eff":[{"k":"atk","t":"ally_svt","v":30,"color":"R"}]},
+      {"label":"","eff":[{"k":"atk","t":"ally_svt","v":20,"color":"R"}]},
+      {"label":"","eff":[{"k":"atk","t":"ally_svt","v":20,"color":"R"}]}
+    ],
+    "spells":[
+      {"name":"竜の心臓","eff":[{"k":"np","t":"ally_svt","v":40},{"k":"hitNpSeal","t":"ally_svt","v":0,"turns":1,"sure":true},{"k":"selfDmg","t":"ally_svt","v":50},{"k":"selfDmg","t":"self","v":50}]},
+      {"name":"EMCカートリッジ","eff":[{"k":"critRoll","t":"svt","v":2,"turns":1},{"k":"np","t":"svt","v":-20}]},
+      {"name":"Quad_Burst","eff":[{"k":"dmg","t":"enemy_svt","v":180},{"k":"selfDmg","t":"self","v":200}]}
     ]
   },
   {
     "id":"m_ssetsuna", "name":"五月雨刹那", "cost":4, "hp":400,
     "fit":{"face":{"x":50,"y":0,"z":100}},
     "faces":[
-      {"label":"","eff":[{"k":"onAtkStar","t":"ally_svt","v":3},{"k":"onAtkNp","t":"svt","v":5,"cond":{"k":"trait","v":"女性"}}]},
-      {"label":"","eff":[{"k":"star","t":"master","v":6},{"k":"atk","t":"svt","v":10}]},
+      {"label":"","eff":[{"k":"onAtkStar","t":"ally_svt","v":3},{"k":"onAtkNp","t":"ally_svt","v":5,"cond":{"k":"trait","v":"女性"}}]},
+      {"label":"","eff":[{"k":"star","t":"master","v":6},{"k":"atk","t":"svt","v":10,"cond":{"k":"trait","v":"女性","self":true}}]},
       {"label":"","eff":[{"k":"atk","t":"ally_svt","v":30,"color":"R"},{"k":"critRoll","t":"svt","v":1,"cond":{"k":"trait","v":"女性"}}]},
       {"label":"","eff":[{"k":"charm","t":"enemy_svt","v":0,"chance":4,"cond":{"k":"trait","v":"女性"}}]},
       {"label":"","eff":[{"k":"onAtkNp","t":"ally_svt","v":15,"color":"B"},{"k":"atk","t":"svt","v":10,"cond":{"k":"trait","v":"女性","self":true}}]},
@@ -175,8 +207,8 @@ const DEFAULT_MASTERS = [
     ],
     "spells":[
       {"name":"緊急回避","eff":[{"k":"evade","t":"ally_svt","v":0,"turns":1},{"k":"actsUp","t":"ally_svt","v":1,"times":1},{"k":"np","t":"svt","v":20,"cond":{"k":"trait","v":"女性"}}]},
-      {"name":"流脈利用式治癒","eff":[{"k":"cleanse","t":"ally_svt","v":0},{"k":"heal","t":"ally_svt","v":150}]},
-      {"name":"火炎放出","eff":[{"k":"actsDown","t":"enemy_svt","v":1,"turns":1},{"k":"critDown","t":"enemy_svt","v":1,"turns":1},{"k":"dmg","t":"enemy_svt","v":80},{"k":"atkDown","t":"enemy_svt","v":10,"turns":1,"cond":{"k":"trait","v":"男性","self":true}}]}
+      {"name":"流脈利用式治癒","eff":[{"k":"cleanse","t":"ally_svt","v":0},{"k":"heal","t":"ally_svt","v":150},{"k":"atk","t":"ally_svt","v":30,"turns":1,"cond":{"k":"trait","v":"女性","self":true}}]},
+      {"name":"火炎放出","eff":[{"k":"actsDown","t":"enemy_svt","v":1,"turns":1},{"k":"critDown","t":"enemy_svt","v":1,"turns":1},{"k":"dmg","t":"enemy_svt","v":80},{"k":"atkDown","t":"enemy_svt","v":15,"turns":1,"cond":{"k":"trait","v":"男性"}}]}
     ]
   },
   {
@@ -205,7 +237,7 @@ const DEFAULT_MASTERS = [
       {"label":"鉄拳","eff":[{"k":"dmg","t":"enemy_master","v":100}],"line":["ふはははは！　貴様に術など不要！"]},
       {"label":"陰陽術","eff":[{"k":"dmg","t":"enemy_svt","v":80}],"line":["どれ……小手調べをしてやろう","神秘で我に勝てると思うな！"]},
       {"label":"蜜の援護","eff":[{"k":"heal","t":"svt","v":80}],"line":["晴明様、お手伝いいたします！"]},
-      {"label":"陰陽術","eff":[{"k":"dmg","t":"enemy_svt","v":80}],"line":["どれ……小手調べをしてやろう","神秘で我に勝てると思うな！"]},
+      {"label":"占術","eff":[{"k":"atkDown","t":"enemy_all","v":10}],"line":["ふははははは！　貴様の動きなど占うまでも無い！"]},
       {"label":"霊符","eff":[{"k":"atk","t":"ally_svt","v":20}],"line":["どれ……これが必要というわけか？"]}
     ],
     "spells":[
@@ -246,6 +278,23 @@ const DEFAULT_MASTERS = [
       {"name":"ケミカルブースト","eff":[{"k":"actsUp","t":"ally_svt","v":3,"times":1}],"line":["悪に障害は無いのさぁ！"]},
       {"name":"違法改造","eff":[{"k":"skillCharge","t":"ally_svt","v":1}],"line":["さあ、キリキリ働きなよ！"]},
       {"name":"巨大メス","eff":[{"k":"dmg","t":"enemy_master","v":300}],"line":["さーて、解剖のお時間だよ！"]}
+    ]
+  },
+  {
+    "id":"m_chudovishche", "name":"チュドーヴィシチェ", "cost":2, "hp":240,
+    "fit":{"face":{"x":50,"y":16,"z":100}},
+    "faces":[
+      {"label":"にじり寄り","eff":[]},
+      {"label":"咀嚼","eff":[{"k":"dmg","t":"enemy_master","v":70}]},
+      {"label":"這い回り","eff":[]},
+      {"label":"咀嚼","eff":[{"k":"dmg","t":"enemy_svt","v":80},{"k":"heal","t":"self","v":40}]},
+      {"label":"咀嚼","eff":[{"k":"dmg","t":"enemy_svt","v":50}]},
+      {"label":"よだれを垂らす","eff":[]}
+    ],
+    "spells":[
+      {"name":"繧ｿ繝吶Ν","eff":[{"k":"dmg","t":"enemy_master","v":100},{"k":"heal","t":"self","v":50}]},
+      {"name":"4B494C4C","eff":[{"k":"dmg","t":"enemy_svt","v":80},{"k":"heal","t":"self","v":50}]},
+      {"name":"ｻ爨ﾋ､ｿ､､","eff":[{"k":"atkDown","t":"enemy_svt","v":30,"turns":1},{"k":"fear","t":"enemy_svt","v":0,"turns":1,"chance":3}]}
     ]
   }
 ];
