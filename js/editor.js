@@ -377,8 +377,54 @@ function renderForm(){
       ${effList('ult.eff',u.ult.eff,'ult','ult')}
       <div class="preview" data-prev="ult">${esc(effsText(u.ult.eff,u.ult.pick))}</div>
     </div>
+    ${cutinEdHTML(u)}
   </section>`;
+  ctUpdate(true);
 }
+// ---------- 宝具カットイン（改行位置・顔アップ位置・プレビュー・注意） ----------
+// 中身は ctUpdate が入れる（名前やルビの入力中もフォーカスを保ったまま更新するため）
+const cutinEdHTML=u=>`<div class="subcard ctedit">
+      <div class="row"><b>カットイン</b><span class="grow"></span><button class="small" data-act="ctReplay">▶ 再生</button></div>
+      <div class="ctbr" data-ctbr></div>
+      <div class="ctwarn" data-ctwarn></div>
+      <div class="ctprev" data-ctprev></div>
+      <div class="fitgrp"><b>帯の顔アップ（立ち絵のどこを大きく見せるか）</b>
+        ${[['x','左右'],['y','上下'],['z','拡大']].map(([a,lab])=>`<label class="fitrow"><span>${lab}</span>
+          <input type="range" min="${fitRange('np',a)[0]}" max="${fitRange('np',a)[1]}" step="1" data-p="fit.np.${a}" data-t="num" value="${u.fit.np[a]}">
+          <output data-fitout="np.${a}">${u.fit.np[a]}%</output></label>`).join('')}
+        <button class="small" data-act="fitReset" data-k="np">リセット</button></div>
+    </div>`;
+// 改行位置の選択: 「自動」「1行」、文字と文字の間をクリックするとそこで改行
+function ctBrHTML(ult){
+  const a=[...ult.name], br=ult.br;
+  return `<span class="ctbr-lab">改行位置</span>
+    <button class="small ${br==null?'on':''}" data-act="ctBr" data-br="">自動</button>
+    <button class="small ${br===0?'on':''}" data-act="ctBr" data-br="0">1行</button>
+    <span class="ctbr-chars">${a.map((c,i)=>`<span>${esc(c)}</span>`+(i<a.length-1?`<button type="button" class="ctgap${br===i+1?' on':''}" data-act="ctBr" data-br="${i+1}" title="ここで改行"></button>`:'')).join('')}</span>`;
+}
+// プレビューを作り直す（内容が変わったときだけ。force = 再生し直す）
+function ctUpdate(force){
+  const u=cur(), box=document.querySelector('[data-ctprev]'); if(!u||isM()||!box) return;
+  const key=JSON.stringify([u.id,u.ult.name,u.ult.ruby,u.ult.br,u.ult.c]);
+  const brEl=document.querySelector('[data-ctbr]'), bk=JSON.stringify([u.ult.name,u.ult.br]);
+  if(brEl.dataset.key!==bk){ brEl.dataset.key=bk; brEl.innerHTML=ctBrHTML(u.ult); }
+  const old=box.querySelector('.ct');
+  if(!force&&old&&box.dataset.key===key){ // 顔アップの位置だけ: 作り直さず値だけ差し替える
+    ['x','y','z'].forEach(a=>old.style.setProperty('--g'+a,u.fit.np[a]+'%')); return; }
+  box.dataset.key=key;
+  box.innerHTML=cutinStageHTML(u,u.ult,{hold:true});
+  // 「再生」以外（入力中など）は最後のコマへ飛ばす（1文字打つたびに演出が始まらないように）
+  if(!force) box.querySelector('.ct').getAnimations({subtree:true}).forEach(a=>{ try{ a.finish(); }catch(e){} });
+  ctMeasure();
+  if(document.fonts&&document.fonts.status!=='loaded') document.fonts.ready.then(ctMeasure);
+}
+function ctMeasure(){
+  const u=cur(), st=document.querySelector('[data-ctprev] .ct'), w=document.querySelector('[data-ctwarn]'); if(!u||!st||!w) return;
+  const r=cutinLayout(st,u.ult), iss=cutinIssues(r,u.ult);
+  w.innerHTML=iss.length?iss.map(s=>`<div class="iss warn">⚠ ${esc(s)}</div>`).join(''):'<div class="ok">✓ カットインに収まっています</div>';
+}
+// プレビューの幅が変わったら測り直す
+if(typeof ResizeObserver!=='undefined') new ResizeObserver(()=>ctMeasure()).observe(document.querySelector('#form'));
 function cmdEd(path,c,isPre){
   const types=CMD_TYPES.filter(t=>t!=='ASC'||isPre||c.c==='ASC');
   const label=t=>t==='ASC'?`${TERMS.ascFull}面`:t==='W'?`${TERMS.W}（白）`:TERMS[t];
@@ -498,6 +544,8 @@ function updatePreviews(){
   }
   document.querySelectorAll('[data-prev="skill"]').forEach(el=>{ const s=u.skills[+el.dataset.i]; el.textContent=effsText(s.eff,s.pick); });
   document.querySelectorAll('[data-prev="ult"]').forEach(el=>el.textContent=effsText(u.ult.eff,u.ult.pick));
+  if(u.ult.br>0&&u.ult.br>=[...u.ult.name].length) delete u.ult.br; // 名前を短くして改行位置が無効になったら自動に戻す
+  ctUpdate();
   document.querySelectorAll('[data-fitout]').forEach(el=>{ const [k,a]=el.dataset.fitout.split('.'); el.textContent=`${u.fit[k][a]}%`; });
   document.querySelectorAll('[data-linecount]').forEach(el=>el.textContent=`${u.lines[el.dataset.linecount].length}件`);
   document.querySelectorAll('[data-clsprev] img').forEach(im=>{ const src=classIcon(u.cls); if(im.getAttribute('src')!==src){ im.onerror=()=>{ im.onerror=null; im.src=CLASS_ICON_EXTRA; }; im.src=src; } });
@@ -677,6 +725,8 @@ document.addEventListener('click',e=>{
     case 'clDel': u.condLines.splice(+b.dataset.i,1); full(); break;
     case 'clMove': { const l=u.condLines, i=+b.dataset.i, j=i+Number(b.dataset.d); if(j<0||j>=l.length) break; [l[i],l[j]]=[l[j],l[i]]; full(); break; }
     case 'fitReset': { u.fit[b.dataset.k]={...FIT_DEF[b.dataset.k]}; full(); break; }
+    case 'ctBr': { if(b.dataset.br==='') delete u.ult.br; else u.ult.br=+b.dataset.br; light(); break; }
+    case 'ctReplay': ctUpdate(true); break;
     case 'effAdd': { if(!getPath(u,b.dataset.path)) setPath(u,b.dataset.path,[]); getPath(u,b.dataset.path).push(newEff(b.dataset.ctx)); full(); break; }
     case 'effDel': getPath(u,b.dataset.path).splice(+b.dataset.i,1); full(); break;
     case 'effMove': { const l=getPath(u,b.dataset.path), i=+b.dataset.i, j=i+Number(b.dataset.d); [l[i],l[j]]=[l[j],l[i]]; full(); break; }

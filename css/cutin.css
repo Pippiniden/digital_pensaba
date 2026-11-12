@@ -1,0 +1,123 @@
+/* =====================================================================
+   宝具カットイン（ゲームの演出 .cutin と、エディタのプレビュー .ctprev で共用）
+   HTML は js/cutin.js の cutinStageHTML、宝具名の配置は cutinLayout。
+   試作・調整用のサンプル: docs/cutin-np-sample.html
+
+   レイヤー（奥→手前）
+     .ct-band   傾いた枠。中に 塗り(.ct-fill + 顔アップ .ct-ghost)・稲妻(.ct-edge)・下帯(.ct-strip)
+                → 全部が同じ角度で傾くので、稲妻は必ず帯の縁に沿う
+     .ct-strip  宝具名の下帯。中に .ct-title（ルビ + 宝具名）
+     .ct-top    上部中央「宝具発動」
+     .ct-chara  立ち絵（透過画像のアルファから白フチ）
+
+   動き: 登場(すばやく) = --ix/--iy、ドリフト(終了 --T まで等速) = --dx/--dy/--ds。
+         translate は両方の合計なので、2つのアニメが同時に効く。
+   ステージは 16:9。中身はすべて cqw/cqh（ステージの幅・高さの%）なので、大きさを変えても崩れない
+   ===================================================================== */
+@property --ix{syntax:'<length>';inherits:false;initial-value:0px}
+@property --iy{syntax:'<length>';inherits:false;initial-value:0px}
+@property --dx{syntax:'<length>';inherits:false;initial-value:0px}
+@property --dy{syntax:'<length>';inherits:false;initial-value:0px}
+@property --ds{syntax:'<number>';inherits:false;initial-value:1}
+
+/* 色（宝具のカード色 R/B/G）。B が基本 */
+.ct{--deep:#03123a;--mid:#0b3c9e;--bright:#2a86ff;--glow:#9ad6ff;--pale:#dff0ff;--tilt:-7deg;--T:2.6s;
+  position:relative;aspect-ratio:16/9;container-type:size;overflow:hidden;pointer-events:none;
+  animation:ctOut .35s calc(var(--T) - .35s) ease-in forwards}
+.ct.R{--deep:#2a0508;--mid:#8f1a14;--bright:#ff4f36;--glow:#ffb39f;--pale:#ffe6de}
+.ct.G{--deep:#03200f;--mid:#127a3b;--bright:#35d276;--glow:#a9f3c7;--pale:#e0fff0}
+.ct.hold{animation:none} /* エディタのプレビュー: 最後のコマで止める */
+
+/* 動く要素の共通ルール: --in = 登場アニメ名 / --inT 長さ / --inD 遅れ / --dxe,--dye,--dse = ドリフトの終点 */
+.ct .mv{translate:calc(var(--ix) + var(--dx)) calc(var(--iy) + var(--dy));
+  animation:var(--in) var(--inT,.45s) cubic-bezier(.2,.9,.2,1) var(--inD,0s) both,
+            ctDrift var(--T) linear both}
+@keyframes ctDrift{
+  from{--dx:0px;--dy:0px;--ds:1}
+  to{--dx:var(--dxe,0px);--dy:var(--dye,0px);--ds:var(--dse,1)}}
+
+/* ---- 帯 ---- */
+.ct-band{position:absolute;left:-10cqw;width:120cqw;top:23cqh;height:50cqh;transform:rotate(var(--tilt));
+  --in:ctInBand;--dxe:2.5cqw;--dye:-.3cqw}
+.ct-fill{position:absolute;inset:0;overflow:hidden;
+  background:
+    radial-gradient(60% 120% at 62% 50%,color-mix(in srgb,var(--bright) 55%,transparent),transparent 70%),
+    linear-gradient(90deg,var(--deep),var(--mid) 35%,var(--deep) 80%,var(--mid))}
+/* 帯に透ける顔アップ: 立ち絵を単色化して流用。位置はエディタの fit.np（--gx/--gy/--gz） */
+.ct-ghost{position:absolute;left:8cqw;top:-25%;width:58cqw;height:150%;
+  background:var(--img) var(--gx,50%) var(--gy,14%)/var(--gz,105%) auto no-repeat;
+  filter:grayscale(1) brightness(1.5) contrast(.85);mix-blend-mode:luminosity;opacity:.45;
+  -webkit-mask-image:radial-gradient(60% 55% at 50% 45%,#000 40%,transparent 75%);
+          mask-image:radial-gradient(60% 55% at 50% 45%,#000 40%,transparent 75%);
+  scale:calc(var(--ds) * 1.12);
+  --in:ctInFade;--inT:.8s;--dxe:-3cqw;--dse:.92}
+
+/* 稲妻: 帯の上端・下端に中心を合わせる。揺らぎは SVG フィルタ #ct-zap（cutin.js が1回だけ差し込む） */
+.ct-edge{position:absolute;left:0;width:100%;height:3.2cqh;
+  background:linear-gradient(90deg,transparent 2%,var(--bright) 12%,var(--pale) 40%,#fff 55%,var(--glow) 75%,transparent 98%);
+  filter:url(#ct-zap) blur(.25cqh) drop-shadow(0 0 1.2cqh var(--bright))}
+.ct-edge.top{top:-1.6cqh}
+.ct-edge.bot{bottom:-1.1cqh;height:2.2cqh;opacity:.85}
+.ct-edge::after{content:"";position:absolute;left:8%;right:6%;top:42%;height:16%;background:#fff;filter:blur(.08cqh)}
+
+/* ---- 宝具名の下帯（帯の中。下端 = 帯の下端 = 下の稲妻） ---- */
+.ct-strip{position:absolute;left:4.8cqw;width:72cqw;bottom:0;height:21cqh;
+  background:linear-gradient(90deg,color-mix(in srgb,var(--deep) 92%,transparent) 60%,transparent);
+  border-top:.25cqh solid color-mix(in srgb,var(--glow) 70%,transparent);
+  box-shadow:0 -.4cqh 1.6cqh color-mix(in srgb,var(--bright) 50%,transparent);
+  --in:ctInLeft;--inD:.15s;--dxe:-1.3cqw}
+/* --tw は立ち絵が左へ寄ってくる分（ドリフト）を見込んだ幅 */
+.ct-title{position:absolute;left:10cqw;bottom:1.6cqh;width:42cqw;display:flex;flex-direction:column;align-items:flex-start}
+.ct-line{display:block;margin:0;height:var(--lh);line-height:var(--lh);white-space:nowrap;transform-origin:left center}
+
+/* ルビ。--drop は宝具名が縦に縮んだ・2行になったときに cutinLayout が入れる（名前との間隔を保つ） */
+.ct-ruby{--lh:3.4cqh;margin:1.2cqh 0 calc(-1.1cqh - var(--drop,0px)) 1.2cqw;
+  font:700 1.84cqw "Noto Serif JP",serif;letter-spacing:.3em;color:var(--pale);text-shadow:0 0 .6cqw var(--bright);
+  --in:ctInLeft;--inD:.4s;--dxe:.6cqw}
+.ct-ruby:empty{display:none}
+
+/* 宝具名: background-clip:text なので行の高さは文字より大きく取る（はみ出た部分は透明になる） */
+.ct-name{--fs:6cqw;--lh:calc(var(--fs) * 1.4);font:900 var(--fs) "Noto Serif JP",serif;letter-spacing:.04em;color:#fff;
+  background:linear-gradient(180deg,#fff 45%,var(--pale) 70%,var(--glow));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 0 .35cqw var(--bright)) drop-shadow(0 .3cqw .4cqw rgba(0,0,20,.85));
+  --in:ctInName;--inT:.5s;--inD:.3s;--dxe:1.4cqw}
+/* ルビが無いときは宝具名を大きく */
+.ct-title:has(.ct-ruby:empty) .ct-name{--fs:6.8cqw}
+
+/* ---- 上部中央「宝具発動」 ---- */
+.ct-top{position:absolute;left:0;right:0;top:7cqh;display:flex;justify-content:center}
+.ct-top span{display:inline-flex;align-items:center;gap:1.6cqw;
+  font:700 2.6cqw/1 "Noto Serif JP",serif;letter-spacing:.6em;text-indent:.6em;color:#fff;
+  text-shadow:0 0 .25cqw var(--deep),0 0 .6cqw var(--deep),0 0 1.4cqw var(--bright);
+  scale:var(--ds);--in:ctInTop;--inT:.6s;--inD:.25s;--dse:1.06}
+.ct-top span::before,.ct-top span::after{content:"";width:9cqw;height:.18cqw;box-shadow:0 0 .6cqw var(--bright),0 0 .2cqw var(--deep)}
+.ct-top span::before{background:linear-gradient(90deg,transparent,#fff)}
+.ct-top span::after{background:linear-gradient(90deg,#fff,transparent)}
+
+/* ---- 立ち絵 ---- */
+.ct-chara{position:absolute;right:-2.1cqw;bottom:-8cqh;height:114cqh;aspect-ratio:1086/1448;
+  background:var(--img) center/contain no-repeat;
+  filter:drop-shadow(.25cqh 0 0 #fff) drop-shadow(-.25cqh 0 0 #fff) drop-shadow(0 .25cqh 0 #fff) drop-shadow(0 -.25cqh 0 #fff)
+    drop-shadow(0 0 1.4cqh color-mix(in srgb,var(--deep) 60%,transparent));
+  -webkit-mask-image:linear-gradient(180deg,#000 80%,transparent 99%);mask-image:linear-gradient(180deg,#000 80%,transparent 99%);
+  scale:var(--ds);transform-origin:50% 70%;
+  --in:ctInRight;--inT:.55s;--inD:.08s;--dxe:-1cqw;--dse:1.03}
+
+.ct-flash{position:absolute;inset:0;background:#fff;animation:ctFlash .35s .05s ease-out both}
+
+@keyframes ctInBand{from{--ix:-120cqw}}
+@keyframes ctInLeft{from{--ix:-5cqw;opacity:0}}
+@keyframes ctInName{from{--ix:-6cqw;opacity:0}}
+@keyframes ctInRight{from{--ix:14cqw;opacity:0}}
+@keyframes ctInTop{from{--iy:-2cqh;opacity:0;letter-spacing:1.2em}}
+@keyframes ctInFade{from{opacity:0}}
+@keyframes ctFlash{from{opacity:0}20%{opacity:.75}to{opacity:0}}
+@keyframes ctOut{to{opacity:0;translate:-3cqw 0}}
+
+/* ゲーム: 画面全体を暗くして、中央に 16:9 のステージ */
+.cutin{position:fixed;inset:0;z-index:50;display:grid;place-items:center;pointer-events:none;
+  background:rgba(2,6,20,.55);animation:ctDim var(--T,2.6s) both}
+.cutin .ct{width:min(100vw,calc(100vh * 16 / 9))}
+@keyframes ctDim{0%{opacity:0}8%{opacity:1}88%{opacity:1}100%{opacity:0}}
+
+@media (prefers-reduced-motion:reduce){.ct,.ct *{animation-duration:.01s!important;animation-delay:0s!important}}

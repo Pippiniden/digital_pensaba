@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>宝具カットイン サンプル</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@700;900&family=Noto+Sans+JP:wght@700&display=swap" rel="stylesheet">
+<style>
+/* ================================================================
+   宝具カットイン 構成サンプル（CSS + インラインSVGフィルタのみ / 画像は立ち絵1枚）
+   レイヤー（奥→手前）
+     1 .np-band      傾いた帯（グラデ）+ 帯に透ける拡大顔 .np-ghost
+     2 .np-edge      電光の縁（SVGフィルタで揺らす）
+     3 .np-shard     光の破片（切り替え可）
+     4 .np-strip     宝具名の下帯。中に .np-title（プレート + ルビ + 宝具名）
+     5 .np-top       上部中央の「宝具発動」（切り替え可）
+     6 .np-chara     立ち絵（白フチ）
+
+   動きの仕組み:
+     登場(すばやく)  … --ix / --iy を動かす
+     ドリフト(ゆっくり、カットイン終了 --T までずっと) … --dx / --dy / --ds を動かす
+     translate = 登場 + ドリフト の合計。別々の変数なので2つのアニメが同時に効く
+   ================================================================ */
+@property --ix{syntax:'<length>';inherits:false;initial-value:0px}
+@property --iy{syntax:'<length>';inherits:false;initial-value:0px}
+@property --dx{syntax:'<length>';inherits:false;initial-value:0px}
+@property --dy{syntax:'<length>';inherits:false;initial-value:0px}
+@property --ds{syntax:'<number>';inherits:false;initial-value:1}
+/* 位置調整パネル用: --ox/--oy = ずらす量, --k = 大きさ倍率（子要素に引き継がない） */
+@property --ox{syntax:'<length>';inherits:false;initial-value:0px}
+@property --oy{syntax:'<length>';inherits:false;initial-value:0px}
+@property --k{syntax:'<number>';inherits:false;initial-value:1}
+
+:root{
+  /* 色は全部ここ。R/B/G は .np.R / .np.G で差し替え */
+  --deep:#03123a; --mid:#0b3c9e; --bright:#2a86ff; --glow:#9ad6ff; --pale:#dff0ff;
+  --gold-hi:#fbeab0; --gold:#c9a24e; --gold-lo:#8a6524;
+  --img:url(../img/units/artoria.webp);
+  --tilt:-7deg;
+  --gx:50%; --gy:14%; --gz:105%;   /* 拡大顔の位置（エディタの fit と同じ考え方） */
+  --T:2.6s;                        /* カットイン全体の長さ。ドリフトの終点 = ここ */
+  --amt:1;                         /* ドリフト量の倍率 */
+}
+.np.R{--deep:#2a0508;--mid:#8f1a14;--bright:#ff4f36;--glow:#ffb39f;--pale:#ffe6de}
+.np.G{--deep:#03200f;--mid:#127a3b;--bright:#35d276;--glow:#a9f3c7;--pale:#e0fff0}
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{min-height:100vh;display:grid;place-items:center;align-content:center;gap:10px;padding:16px;
+  font-family:"Noto Sans JP",sans-serif;color:#223;
+  background:#eef0f5 conic-gradient(#dde1ea 25%,#f6f7fa 0 50%,#dde1ea 0 75%,#f6f7fa 0) 0 0/24px 24px}
+body.dark{background:#0a0e1a;color:#ccd}
+.bar{display:flex;gap:8px 14px;flex-wrap:wrap;justify-content:center;align-items:center;font-size:13px}
+.bar button,.bar select,.bar input:not([type]){font:inherit;padding:5px 10px;border:1px solid #889;background:#fff;color:#223;border-radius:6px}
+.bar button{cursor:pointer}
+.bar input:not([type]){width:15em}
+.bar label{display:inline-flex;align-items:center;gap:4px}
+.bar input[type=range]{width:90px}
+.seg{display:inline-flex;align-items:center;gap:4px}
+.seg b{font-weight:700;margin-right:2px}
+.seg button.on{background:#223;color:#fff;border-color:#223}
+/* 改行位置の指定 */
+.brk{display:flex;align-items:center;flex-wrap:wrap;gap:0;font-size:15px;background:#fff;border:1px solid #ccd;border-radius:8px;padding:6px 10px;color:#223}
+.brk b{font-size:13px;margin-right:8px}
+.brk button{font:inherit;font-size:12px;padding:3px 8px;border:1px solid #889;background:#fff;border-radius:6px;cursor:pointer;margin-right:4px}
+.brk button.on{background:#223;color:#fff}
+.brk .bc{padding:2px 0}
+.brk i{display:inline-block;width:9px;height:24px;cursor:pointer;position:relative}
+.brk i::after{content:"";position:absolute;left:4px;top:3px;bottom:3px;width:1px;background:#ccd}
+.brk i:hover::after{background:#889;width:2px;left:3px}
+.brk i.on::after{background:#d33;width:3px;left:3px;top:0;bottom:0}
+.warn{font-size:13px;color:#a40;text-align:center}
+.warn .ok{color:#272}
+
+/* 位置調整パネル */
+.adj{width:min(100%,1280px);font-size:13px;background:#fff;border:1px solid #ccd;border-radius:8px;padding:8px 12px;color:#223}
+.adj summary{cursor:pointer;font-weight:700}
+.adj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:6px 18px;margin:10px 0}
+.adj-row{display:grid;grid-template-columns:6.5em 1fr;gap:2px 6px;align-items:center;padding:4px 0;border-top:1px dashed #dde}
+.adj-row b{grid-row:span 3}
+.adj-row label{display:grid;grid-template-columns:3em 1fr 3.4em;align-items:center;gap:4px}
+.adj-row input{width:100%}
+.adj-row output{font-family:monospace;text-align:right}
+.adj-out{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start}
+.adj-out textarea{flex:1;min-width:260px;height:7.5em;font:12px monospace}
+.adj-out button{font:inherit;padding:5px 10px;border:1px solid #889;background:#fff;border-radius:6px;cursor:pointer}
+
+/* ===== ステージ: 16:9。中身は cqw/cqh なので画面幅に追従 ===== */
+.np{position:relative;width:min(100%,1280px);aspect-ratio:16/9;container-type:size;overflow:hidden;
+  animation:npOut .35s calc(var(--T) - .35s) ease-in forwards}
+.np.hold{animation:none}
+
+/* ---- 動く要素の共通ルール ----
+   --in = 登場アニメ名, --inT = 長さ, --inD = 遅れ
+   --dxe / --dye / --dse = ドリフトの終点（終了時にここへ着く） */
+.mv{translate:calc(var(--ix) + var(--dx) + var(--ox)) calc(var(--iy) + var(--dy) + var(--oy));
+  animation:var(--in) var(--inT,.45s) cubic-bezier(.2,.9,.2,1) var(--inD,0s) both}
+.np.drift .mv{animation:
+  var(--in) var(--inT,.45s) cubic-bezier(.2,.9,.2,1) var(--inD,0s) both,
+  npDrift var(--T) linear both}   /* 等速: 最後まで同じ速さで動き、終了の瞬間に終点 */
+@keyframes npDrift{
+  from{--dx:0px;--dy:0px;--ds:1}
+  to{--dx:calc(var(--dxe,0px) * var(--amt));--dy:calc(var(--dye,0px) * var(--amt));--ds:calc(1 + (var(--dse,1) - 1) * var(--amt))}}
+
+/* ---- 1 帯 ----
+   .np-band は「傾いた枠」だけ。塗り(.np-fill)・稲妻(.np-edge)・下帯(.np-strip)はすべてこの中に入れる
+   → 全部が同じ角度・同じ基準で傾くので、稲妻は必ず帯の縁にぴったり沿う */
+.np-band{position:absolute;left:-10cqw;width:120cqw;top:23cqh;height:50cqh;
+  transform:rotate(var(--tilt));
+  --in:inBand;--dxe:2.5cqw;--dye:-.3cqw}
+.np-fill{position:absolute;inset:0;overflow:hidden;
+  background:
+    radial-gradient(60% 120% at 62% 50%,color-mix(in srgb,var(--bright) 55%,transparent),transparent 70%),
+    linear-gradient(90deg,var(--deep),var(--mid) 35%,var(--deep) 80%,var(--mid))}
+
+/* 帯に透ける拡大顔: 立ち絵を単色化して流用。位置は --gx/--gy/--gz。ゆっくりズームアウト */
+.np-ghost{position:absolute;left:8cqw;top:-25%;width:58cqw;height:150%;
+  background:var(--img) var(--gx) var(--gy)/var(--gz) auto no-repeat;
+  filter:grayscale(1) brightness(1.5) contrast(.85);
+  mix-blend-mode:luminosity;opacity:.45;
+  -webkit-mask-image:radial-gradient(60% 55% at 50% 45%,#000 40%,transparent 75%);
+          mask-image:radial-gradient(60% 55% at 50% 45%,#000 40%,transparent 75%);
+  scale:calc(var(--ds) * 1.12);
+  --in:inGhost;--inT:.8s;--dxe:-3cqw;--dse:.92}
+
+/* ---- 2 電光の縁 ---- */
+/* 帯の上端・下端に中心を合わせる（帯と一緒に動くので登場・ドリフトは無し = --in:none） */
+.np-edge{position:absolute;left:0;width:100%;height:3.2cqh;
+  background:linear-gradient(90deg,transparent 2%,var(--bright) 12%,var(--pale) 40%,#fff 55%,var(--glow) 75%,transparent 98%);
+  filter:url(#zap) blur(.25cqh) drop-shadow(0 0 1.2cqh var(--bright));
+  --in:none}
+.np-edge.top{top:-1.6cqh}
+.np-edge.bot{bottom:-1.1cqh;height:2.2cqh;opacity:.85}
+.np-edge::after{content:"";position:absolute;left:8%;right:6%;top:42%;height:16%;background:#fff;filter:blur(.08cqh)}
+
+/* ---- 3 光の破片 ---- */
+.np.p-off #shards{display:none}
+.np-shard{position:absolute;width:var(--w);height:calc(var(--w)*.32);
+  background:radial-gradient(closest-side,#fff 35%,var(--glow) 65%,transparent);
+  clip-path:polygon(0 50%,35% 0,100% 50%,35% 100%);
+  rotate:var(--r);animation:npFlow var(--d) linear var(--dl) infinite}
+.np-shard.s{background:radial-gradient(closest-side,#fff,color-mix(in srgb,var(--glow) 60%,transparent) 55%,transparent);
+  clip-path:none;height:var(--w);border-radius:50%}
+
+/* ---- 4 宝具名の下帯（中にタイトル） ---- */
+/* 帯の中に置き、下端 = 帯の下端（= 下の稲妻）。帯と一緒に傾くので自分では回さない。
+   ドリフトは帯の分(2.5cqw)が加わるので、ここは差し引いて合計 1.2cqw 程度に */
+.np-strip{position:absolute;left:4.8cqw;width:72cqw;bottom:0;height:21cqh;
+  background:linear-gradient(90deg,color-mix(in srgb,var(--deep) 92%,transparent) 60%,transparent);
+  border-top:.25cqh solid color-mix(in srgb,var(--glow) 70%,transparent);
+  box-shadow:0 -.4cqh 1.6cqh color-mix(in srgb,var(--bright) 50%,transparent);
+  --in:inLeft;--inD:.15s;--dxe:-1.3cqw}
+
+/* --tw は立ち絵が左へ寄ってくる分（ドリフト）を見込んで狭め */
+.np-title{position:absolute;left:10cqw;bottom:1.6cqh;--tw:42cqw;width:var(--tw);
+  display:flex;flex-direction:column;align-items:flex-start}
+.np-line{display:block;height:var(--lh);line-height:var(--lh);white-space:nowrap;transform-origin:left center}
+
+/* 「宝具」プレート（ラベル=プレートのときだけ表示）。帯の傾きを打ち消して水平に */
+.np:not(.lab-plate) .np-tag{display:none}
+.np-tag{padding:.25cqh;margin-left:.6cqw;rotate:calc(var(--tilt) * -1);
+  --hex:polygon(7% 0,93% 0,100% 50%,93% 100%,7% 100%,0 50%);
+  clip-path:var(--hex);
+  background:linear-gradient(180deg,var(--gold-hi),var(--gold) 45%,var(--gold-lo) 55%,var(--gold-hi));
+  --in:inLeft;--inD:.3s}
+.np-tag span{display:block;clip-path:var(--hex);padding:.55cqh 2.2cqw .65cqh;
+  background:linear-gradient(180deg,#0f2c74,#061743);
+  font:700 1.5cqw/1 "Noto Serif JP",serif;letter-spacing:.5em;text-indent:.5em;color:#fff}
+.np.R .np-tag span{background:linear-gradient(180deg,#6e1410,#2b0605)}
+.np.G .np-tag span{background:linear-gradient(180deg,#0f5a2c,#04220f)}
+
+/* 2026-11-12 調整値を反映: 横 +0.4cqw / 縦 +1.1cqh（margin-bottom で名前側へ寄せる）/ 大きさ ×1.08 */
+.np-ruby{--lh:3.4cqh;margin:1.2cqh 0 calc(-1.1cqh - var(--drop,0px)) 1.2cqw;font:700 calc(1.84cqw * var(--k)) "Noto Serif JP",serif;letter-spacing:.3em;
+  color:var(--pale);text-shadow:0 0 .6cqw var(--bright);
+  --in:inLeft;--inD:.4s;--dxe:.6cqw}
+.np-ruby:empty{display:none}
+
+/* 宝具名: background-clip:text なので行の高さは文字より大きく取る */
+.np-name{--fs:6cqw;--lh:calc(var(--fs) * 1.4 * var(--k));margin:0;font:900 calc(var(--fs) * var(--k)) "Noto Serif JP",serif;letter-spacing:.04em;
+  color:#fff;
+  background:linear-gradient(180deg,#fff 45%,var(--pale) 70%,var(--glow));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  filter:drop-shadow(0 0 .35cqw var(--bright)) drop-shadow(0 .3cqw .4cqw rgba(0,0,20,.85));
+  --in:inName;--inT:.5s;--inD:.3s;--dxe:1.4cqw}
+
+/* ルビが無いときは宝具名を大きく（行の高さも一緒に伸びる） */
+/* （幅は立ち絵で決まっているので、大きくしすぎると横に潰れる。6.8cqw くらいが限度） */
+.np-title:has(.np-ruby:empty) .np-name{--fs:6.8cqw}
+
+/* ---- 5 上部中央「宝具発動」（ラベル=上部のときだけ表示） ---- */
+.np:not(.lab-top) .np-top{display:none}
+.np-top{position:absolute;left:0;right:0;top:7cqh;display:flex;justify-content:center;pointer-events:none}
+.np-top span{display:inline-flex;align-items:center;gap:1.6cqw;
+  font:700 calc(2.6cqw * var(--k))/1 "Noto Serif JP",serif;letter-spacing:.6em;text-indent:.6em;color:#fff;
+  /* 明るい背景でも読めるよう、濃い色の縁取り + 帯色の発光 */
+  text-shadow:0 0 .25cqw var(--deep),0 0 .6cqw var(--deep),0 0 1.4cqw var(--bright);
+  scale:var(--ds);--in:inTop;--inT:.6s;--inD:.25s;--dse:1.06}
+.np-top span::before,.np-top span::after{content:"";width:9cqw;height:.18cqw;
+  box-shadow:0 0 .6cqw var(--bright),0 0 .2cqw var(--deep)}
+.np-top span::before{background:linear-gradient(90deg,transparent,#fff)}
+.np-top span::after{background:linear-gradient(90deg,#fff,transparent)}
+
+/* ---- 6 立ち絵 ---- */
+.np-chara{position:absolute;right:-2.1cqw;bottom:-8cqh;height:114cqh;aspect-ratio:1086/1448;
+  background:var(--img) center/contain no-repeat;
+  filter:
+    drop-shadow(.25cqh 0 0 #fff) drop-shadow(-.25cqh 0 0 #fff)
+    drop-shadow(0 .25cqh 0 #fff) drop-shadow(0 -.25cqh 0 #fff)
+    drop-shadow(0 0 1.4cqh color-mix(in srgb,var(--deep) 60%,transparent));
+  -webkit-mask-image:linear-gradient(180deg,#000 80%,transparent 99%);mask-image:linear-gradient(180deg,#000 80%,transparent 99%);
+  scale:calc(var(--ds) * var(--k));transform-origin:50% 70%;
+  --in:inRight;--inT:.55s;--inD:.08s;--dxe:-1cqw;--dse:1.03}
+
+/* 登場時の白フラッシュ */
+.np-flash{position:absolute;inset:0;background:#fff;pointer-events:none;animation:npFlash .35s .05s ease-out both}
+
+/* 登場アニメ（--ix / --iy だけ動かす） */
+@keyframes inBand{from{--ix:-120cqw}}
+@keyframes inLeft{from{--ix:-5cqw;opacity:0}}
+@keyframes inName{from{--ix:-6cqw;opacity:0}}
+@keyframes inRight{from{--ix:14cqw;opacity:0}}
+@keyframes inTop{from{--iy:-2cqh;opacity:0;letter-spacing:1.2em}}
+@keyframes inGhost{from{opacity:0}}
+/* パーティクル: 帯の角度に沿って右上へ流れ、途中でまたたく */
+@keyframes npFlow{
+  0%{opacity:0;translate:-10cqw 0;scale:.4}
+  15%{opacity:1;scale:1}
+  35%{opacity:.5;scale:.7}
+  55%{opacity:1;scale:1.15}
+  85%{opacity:.9}
+  100%{opacity:0;translate:16cqw 0;scale:.5}}
+@keyframes npFlash{from{opacity:.0}20%{opacity:.75}to{opacity:0}}
+@keyframes npOut{to{opacity:0;translate:-3cqw 0}}
+
+@media (prefers-reduced-motion:reduce){.np,.np *{animation-duration:.01s!important;animation-delay:0s!important}}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <filter id="zap" x="-5%" y="-200%" width="110%" height="500%">
+    <feTurbulence type="fractalNoise" baseFrequency=".012 .35" numOctaves="2" seed="4">
+      <animate attributeName="seed" values="1;2;3;4;5;6" dur=".4s" repeatCount="indefinite"/>
+    </feTurbulence>
+    <feDisplacementMap in="SourceGraphic" scale="14" yChannelSelector="G"/>
+  </filter>
+</svg>
+
+<div class="bar">
+  <select id="who"></select>
+  <input id="nm" value="約束された勝利の剣" aria-label="宝具名">
+  <input id="rb" value="エクスカリバー" aria-label="ルビ" style="width:11em">
+  <span class="seg" data-g="col"><b>色</b><button data-v="" class="on">B</button><button data-v="R">R</button><button data-v="G">G</button></span>
+  <button id="replay">▶ 再生</button>
+  <label><input type="checkbox" id="hold"> 最後で止める</label>
+  <label><input type="checkbox" id="dark"> 暗背景</label>
+</div>
+<div class="bar">
+  <span class="seg" data-g="lab"><b>ラベル</b><button data-v="lab-top" class="on">上部「宝具発動」</button><button data-v="lab-plate">宝具プレート</button><button data-v="lab-none">なし</button></span>
+  <span class="seg" data-g="pt"><b>パーティクル</b><button data-v="p-off" class="on">なし</button><button data-v="p-on">あり</button></span>
+  <span class="seg" data-g="mv"><b>動き</b><button data-v="drift" class="on">終了まで動き続ける</button><button data-v="still">登場後に止まる</button></span>
+</div>
+<div class="bar">
+  <label>長さ <input type="range" id="T" min="1.6" max="4" step=".1" value="2.6"> <span id="Tv"></span></label>
+  <label>動きの量 <input type="range" id="amt" min="0" max="3" step=".1" value="1"> <span id="amtv"></span></label>
+  <span>顔アップ:</span>
+  <label>X <input type="range" id="gx" min="0" max="100" value="50"></label>
+  <label>Y <input type="range" id="gy" min="0" max="100" value="14"></label>
+  <label>拡大 <input type="range" id="gz" min="60" max="300" value="105"></label>
+  <code id="gv"></code>
+</div>
+
+<div class="brk" id="brkWrap"><b>改行位置</b><span id="brk" style="display:contents"></span></div>
+<div class="warn" id="warn"></div>
+
+<div class="np lab-top p-off drift" id="np">
+  <div class="np-band mv">
+    <div class="np-fill"><div class="np-ghost mv"></div></div>
+    <div class="np-edge top mv"></div>
+    <div id="shards"></div>
+    <div class="np-strip mv">
+      <div class="np-title">
+        <div class="np-tag mv"><span>宝具</span></div>
+        <div class="np-line np-ruby mv" id="ruby"></div>
+        <h2 class="np-line np-name mv" id="name"></h2>
+      </div>
+    </div>
+    <!-- 下の稲妻は下帯より手前（後に書いた方が上に重なる） -->
+    <div class="np-edge bot mv"></div>
+  </div>
+  <div class="np-top"><span class="mv">宝具発動</span></div>
+  <div class="np-chara mv"></div>
+  <div class="np-flash"></div>
+</div>
+
+<details class="adj" id="adj" open>
+  <summary>位置調整（スライダーで動かして「書き出す」→ 出てきた文字をそのままチャットに貼ってください）</summary>
+  <div class="adj-grid" id="adjGrid"></div>
+  <div class="adj-out">
+    <textarea id="adjText" placeholder="ここに書き出されます。貼り付けて「読み込む」で再現もできます"></textarea>
+    <div style="display:grid;gap:6px">
+      <button id="adjExport">書き出す</button>
+      <button id="adjCopy">コピー</button>
+      <button id="adjImport">読み込む</button>
+      <button id="adjReset">全部リセット</button>
+    </div>
+  </div>
+</details>
+
+<script>
+const np=document.getElementById('np'), $=id=>document.getElementById(id);
+const IDS=['artoria','emiya','heracles','cu','medusa','medea','hassan','kojiro','mash','yorimitsu','tezcatlipoca','kalki','m_rin'];
+$('who').innerHTML=IDS.map(i=>`<option>${i}</option>`).join('');
+function replay(){np.classList.toggle('hold',$('hold').checked);const p=np.parentNode,n=np.nextSibling;p.removeChild(np);void np.offsetWidth;p.insertBefore(np,n)}
+
+/* 1行を幅に収める: まず横に縮め（最小 minX）、足りなければ文字を小さくする */
+/* 文字の実際の上端・下端（行の箱の上からの px）をフォントの寸法から求める */
+const CV=document.createElement('canvas').getContext('2d');
+function glyphBox(el){
+  const cs=getComputedStyle(el);
+  CV.font=`${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+  const m=CV.measureText(el.textContent||'あ'), L=el.clientHeight;
+  const base=(L-(m.fontBoundingBoxAscent+m.fontBoundingBoxDescent))/2+m.fontBoundingBoxAscent;
+  return {top:base-m.actualBoundingBoxAscent, bottom:base+m.actualBoundingBoxDescent};
+}
+/* 1行を幅に収める。文字サイズ(font-size)は変えず、transform の scale だけで縮める。
+   縮める基準点 = 文字の左下 → どんな長さでも文字の下端の位置は変わらない。
+   まず横だけ縮め（最小 minX）、それでも足りなければ縦も同じ割合で縮める。戻り値 = 縦の縮み率 */
+function fitLine(el,minX=.6){
+  el.style.transform='';
+  const maxW=el.parentNode.clientWidth-el.offsetLeft, w=el.scrollWidth;
+  const g=glyphBox(el);
+  el.style.transformOrigin=`left ${g.bottom}px`;
+  if(w<=maxW) return {sy:1,g};
+  const sx=maxW/w, sy=Math.min(1,sx/minX);
+  el.style.transform=`scale(${sx},${sy})`;
+  return {sy,g};
+}
+/* 長い名前を2行に分ける位置: 真ん中に近い区切り文字（・ や空白など）の後ろ。無ければ真ん中 */
+function splitName(t){
+  const a=[...t], mid=a.length/2;
+  let best=Math.round(mid), bd=1e9;
+  a.forEach((c,i)=>{ if(/[・･　 、,／\/〜~＝=]/.test(c)){const d=Math.abs(i+1-mid); if(d<bd&&d<=a.length*.25){bd=d;best=i+1}} });
+  return [a.slice(0,best).join('').trim(), a.slice(best).join('').trim()];
+}
+/* 宝具名の配置。1行で縮める / 2行に折り返す のうち、文字が大きく見える方を選ぶ。
+   どちらでも「文字の下端」は同じ位置。戻り値 = ルビを下げる量(px) */
+const NAME_MINX=.5;      // 横だけで詰める限界（これより細くなると縦も縮める）
+const TWO_H=1.15;        // 2行のときの高さ上限（1行の文字の高さに対する倍率。少しだけルビ側へはみ出してよい）
+const TWO_PREF=.7;       // 2行に切り替える目安（上の説明）
+/* br = 改行位置の指定（エディタで設定する想定）
+     undefined … 自動（1行で縮める / 2行に折り返す のうち良い方。区切り文字か真ん中で改行）
+     0         … 1行固定
+     n (>0)    … n文字目の後ろで改行（2行固定）
+   戻り値 = {drop: ルビを下げる量px, lines: 実際の行, sy: 縦の縮み率} */
+function layoutName(el,text,br){
+  el.style.cssText=el.style.cssText.replace(/(white-space|line-height|height|transform|transform-origin)[^;]*;?/g,'');
+  el.textContent=text;
+  const g0=glyphBox(el), h0=el.clientHeight, maxW=el.parentNode.clientWidth-el.offsetLeft;
+  const chars=[...text];
+  const forceTwo=br>0&&br<chars.length, forceOne=br===0;
+  // 1行案
+  const w1=el.scrollWidth, sx1=Math.min(1,maxW/w1), sy1=Math.min(1,sx1/NAME_MINX);
+  // 2行案
+  let two=null;
+  if(forceTwo||(!forceOne&&sy1<1&&chars.length>=8)){
+    const fs=parseFloat(getComputedStyle(el).fontSize), lh=fs*1.08;
+    const [l1,l2]=forceTwo?[chars.slice(0,br).join('').trim(),chars.slice(br).join('').trim()]:splitName(text);
+    el.textContent=l1+'\n'+l2;
+    el.style.whiteSpace='pre';el.style.lineHeight=lh+'px';
+    const cs=getComputedStyle(el);CV.font=`${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    const m1=CV.measureText(l1), m2=CV.measureText(l2);
+    const base=i=>i*lh+(lh-(m1.fontBoundingBoxAscent+m1.fontBoundingBoxDescent))/2+m1.fontBoundingBoxAscent;
+    const g={top:base(0)-m1.actualBoundingBoxAscent,bottom:base(1)+m2.actualBoundingBoxDescent};
+    el.style.height=(g.bottom+fs*.12)+'px';
+    const w2=el.scrollWidth, uh=TWO_H*(g0.bottom-g0.top)/(g.bottom-g.top);
+    const u=Math.min(uh,maxW/w2/NAME_MINX), sx=Math.min(u,maxW/w2);
+    two={u,sx,g,uh,lines:[l1,l2]};
+    // 自動のとき: 2行の文字が1行案の TWO_PREF 倍以上の大きさなら2行にする（1行で縦に縮むと上が空くので、少し小さくても2行を優先）
+    if(!forceTwo&&u<sy1*TWO_PREF){ two=null; el.style.cssText=el.style.cssText.replace(/(white-space|line-height|height)[^;]*;?/g,''); el.textContent=text; }
+  }
+  let sx,sy,g;
+  if(two){({sx,g}=two);sy=two.u;} else {sx=sx1;sy=sy1;g=g0;}
+  // 縮める基準点 = 文字の左下。高さが変わっても下端は同じ（要素は下ぞろえなので下端の位置は固定）
+  el.style.transformOrigin=`left ${g.bottom}px`;
+  if(sx<1||sy<1) el.style.transform=`scale(${sx},${sy})`;
+  // ルビ位置: 見た目の文字の上端が、1行・等倍のときより上下した分だけルビも動かす
+  const h=el.clientHeight;
+  const visTop=(h0-h)+g.bottom-(g.bottom-g.top)*sy;   // 1行時の要素上端を 0 とした見た目の上端
+  // 要素が高くなるとルビは自動で (h-h0) 上がるので、その分を差し引く
+  return {drop:visTop-g0.top+(h-h0), lines:two?two.lines:[text], sy:two?two.u/two.uh:sy};
+}
+/* ===== 改行位置の指定（エディタの入力欄のつもり） =====
+   文字と文字の間をクリック → そこで改行。「自動」「1行」ボタンも */
+let BR;   // undefined=自動 / 0=1行 / n=n文字目の後ろ
+function brUI(){
+  const a=[...$('nm').value];
+  if(BR>0&&BR>=a.length)BR=undefined;
+  $('brk').innerHTML=`<button data-br="auto" class="${BR===undefined?'on':''}">自動</button><button data-br="0" class="${BR===0?'on':''}">1行</button> `+
+    a.map((c,i)=>`<span class="bc">${c.replace(/[&<>]/g,'')}</span>`+(i<a.length-1?`<i data-br="${i+1}" class="${BR===i+1?'on':''}" title="ここで改行"></i>`:'')).join('');
+}
+$('brk').onclick=e=>{const b=e.target.closest('[data-br]');if(!b)return;const v=b.dataset.br;BR=v==='auto'?undefined:+v;brUI();setText()};
+function setText(){
+  $('ruby').textContent=$('rb').value;
+  const r=layoutName($('name'),$('nm').value,BR);
+  document.querySelector('.np-title').style.setProperty('--drop',r.drop.toFixed(1)+'px');
+  fitLine($('ruby'),.7);
+  // 警告: 1行あたりが長すぎて縦にも縮んでいる（= 文字が小さくなっている）とき
+  const w=[];
+  if(r.sy<.97) w.push(`${r.lines.length===1?'1行に':'この改行位置だと'}収まりきらず、文字が ${Math.round(r.sy*100)}% に縮みます。${r.lines.length===1?'改行位置を指定してください':'改行位置を変えるか、名前を短くしてください'}`);
+  if(r.lines.length===2&&BR===undefined) w.push(`自動改行: 「${r.lines[0]}／${r.lines[1]}」で表示されます。意図と違う場合は改行位置を指定してください`);
+  $('warn').innerHTML=w.map(s=>`<div>⚠ ${s.replace(/[&<>]/g,'')}</div>`).join('')||'<div class="ok">✓ 収まっています</div>';
+}
+/* 光の破片: 固定シードで毎回同じ配置 */
+function makeShards(N=22){
+  let s=7;const r=()=>(s=(s*16807)%2147483647)/2147483647;
+  let h='';
+  for(let i=0;i<N;i++){
+    // 帯の中に置くので帯と同じ向き。x = 帯の幅の%, y = 帯の高さの%（少し外にもはみ出す）
+    const x=8+r()*80, t=0;
+    const y=-10+r()*120;
+    const d=.9+r()*1.3;
+    const dot=r()<.3, w=dot?(1+r()*1.6):(2.5+r()*3.5);
+    h+=`<i class="np-shard${dot?' s':''}" style="left:${x.toFixed(1)}%;top:${y.toFixed(1)}%;--w:${w.toFixed(1)}cqw;--r:${(-25+r()*30).toFixed(0)}deg;--d:${d.toFixed(2)}s;--dl:${(-r()*d).toFixed(2)}s"></i>`;
+  }
+  $('shards').innerHTML=h;
+}
+function setGhost(){
+  const x=$('gx').value,y=$('gy').value,z=$('gz').value;
+  np.style.setProperty('--gx',x+'%');np.style.setProperty('--gy',y+'%');np.style.setProperty('--gz',z+'%');
+  $('gv').textContent=`fit.np = {x:${x}, y:${y}, z:${z}}`;
+}
+function setTime(){
+  np.style.setProperty('--T',$('T').value+'s');$('Tv').textContent=$('T').value+'秒';
+  np.style.setProperty('--amt',$('amt').value);$('amtv').textContent='×'+$('amt').value;
+}
+/* 切り替えボタン: 同じグループ内で1つだけ on。値はそのまま .np のクラスになる */
+document.querySelectorAll('.seg').forEach(g=>g.onclick=e=>{
+  const b=e.target.closest('button');if(!b)return;
+  g.querySelectorAll('button').forEach(x=>{x.classList.remove('on');if(x.dataset.v)np.classList.remove(x.dataset.v)});
+  b.classList.add('on');if(b.dataset.v)np.classList.add(b.dataset.v);
+  replay();
+});
+$('who').onchange=()=>{np.style.setProperty('--img',`url(../img/units/${$('who').value}.webp)`);replay()};
+$('nm').oninput=()=>{BR=undefined;brUI();setText()};   // 名前が変わったら改行位置は自動に戻す
+$('rb').oninput=setText;
+brUI();
+['gx','gy','gz'].forEach(k=>$(k).oninput=setGhost);
+$('T').oninput=$('amt').oninput=setTime;$('T').onchange=$('amt').onchange=replay;
+$('replay').onclick=replay;$('hold').onchange=replay;
+$('dark').onchange=()=>document.body.classList.toggle('dark',$('dark').checked);
+/* ===== 位置調整パネル =====
+   x = 横(cqw: 画面幅の%) / y = 縦(cqh: 画面高さの%) / k = 大きさ倍率。
+   下帯の中の要素（宝具名・ルビ）は帯の傾きに沿った向きで動く */
+const ADJ=[
+  {id:'chara', sel:'.np-chara',      label:'立ち絵',    x:1,y:1,k:1},
+  {id:'name',  sel:'.np-name',       label:'宝具名',    x:1,y:1,k:1},
+  {id:'ruby',  sel:'.np-ruby',       label:'ルビ',      x:1,y:1,k:1},
+  {id:'top',   sel:'.np-top span',   label:'宝具発動',  x:1,y:1,k:1},
+  {id:'strip', sel:'.np-strip',      label:'下帯',      x:1,y:1},
+  {id:'band',  sel:'.np-band',       label:'帯',        y:1},
+  {id:'edgeT', sel:'.np-edge.top',   label:'稲妻(上)',  y:1},
+  {id:'edgeB', sel:'.np-edge.bot',   label:'稲妻(下)',  y:1},
+];
+const adj={};   // {id:{x,y,k}}
+const LS='cutinSample.adj.v2';   // v1 の調整値は初期値に反映済みなので読み込まない（二重にずれるため）
+function applyAdj(){
+  ADJ.forEach(a=>{
+    const v=adj[a.id]||{}, el=document.querySelector(a.sel);
+    el.style.setProperty('--ox',(v.x||0)+'cqw');
+    el.style.setProperty('--oy',(v.y||0)+'cqh');
+    el.style.setProperty('--k',v.k??1);
+    ['x','y','k'].forEach(p=>{const i=document.querySelector(`[data-adj="${a.id}.${p}"]`);if(i){i.value=v[p]??(p==='k'?1:0);i.nextElementSibling.textContent=(+i.value).toFixed(p==='k'?2:1)}});
+  });
+  setText();
+  try{localStorage.setItem(LS,JSON.stringify(adj))}catch(e){}
+}
+$('adjGrid').innerHTML=ADJ.map(a=>{
+  const sl=(p,lab,min,max,st)=>a[p]?`<label>${lab}<input type="range" data-adj="${a.id}.${p}" min="${min}" max="${max}" step="${st}"><output></output></label>`:'';
+  return `<div class="adj-row"><b>${a.label}</b>${sl('x','横',-15,15,.1)}${sl('y','縦',-15,15,.1)}${sl('k','大きさ',.5,1.6,.01)}</div>`;
+}).join('');
+$('adjGrid').oninput=e=>{
+  const t=e.target.dataset.adj;if(!t)return;
+  const [id,p]=t.split('.');(adj[id]??={})[p]=+e.target.value;
+  applyAdj();
+};
+/* 書き出し: 調整値（0 や 1 の項目は省く）+ 切り替えの状態 */
+function exportText(){
+  const a={};
+  Object.entries(adj).forEach(([id,v])=>{const o={};if(v.x)o.x=v.x;if(v.y)o.y=v.y;if(v.k!=null&&v.k!==1)o.k=v.k;if(Object.keys(o).length)a[id]=o});
+  const seg={};document.querySelectorAll('.seg').forEach(g=>seg[g.dataset.g]=g.querySelector('.on')?.dataset.v||'');
+  const st={adj:a,seg,T:+$('T').value,amt:+$('amt').value,ghost:{x:+$('gx').value,y:+$('gy').value,z:+$('gz').value},who:$('who').value,name:$('nm').value,ruby:$('rb').value,br:BR??null};
+  return '宝具カットイン調整 v1\n'+JSON.stringify(st);
+}
+function importText(s){
+  const st=JSON.parse(s.slice(s.indexOf('{')));
+  Object.keys(adj).forEach(k=>delete adj[k]);Object.assign(adj,st.adj||{});
+  if(st.seg)Object.entries(st.seg).forEach(([g,v])=>document.querySelector(`.seg[data-g="${g}"] button[data-v="${v}"]`)?.click());
+  if(st.T)$('T').value=st.T;if(st.amt!=null)$('amt').value=st.amt;
+  if(st.ghost){$('gx').value=st.ghost.x;$('gy').value=st.ghost.y;$('gz').value=st.ghost.z}
+  if(st.who){$('who').value=st.who;np.style.setProperty('--img',`url(../img/units/${st.who}.webp)`)}
+  if(st.name!=null)$('nm').value=st.name;if(st.ruby!=null)$('rb').value=st.ruby;
+  BR=st.br??undefined;brUI();
+  setTime();setGhost();applyAdj();replay();
+}
+$('adjExport').onclick=()=>{$('adjText').value=exportText()};
+$('adjCopy').onclick=()=>{$('adjText').value||($('adjText').value=exportText());$('adjText').select();navigator.clipboard?.writeText($('adjText').value).catch(()=>{})};
+$('adjImport').onclick=()=>{try{importText($('adjText').value)}catch(e){alert('読み込めませんでした: '+e.message)}};
+$('adjReset').onclick=()=>{Object.keys(adj).forEach(k=>delete adj[k]);applyAdj();replay()};
+try{Object.assign(adj,JSON.parse(localStorage.getItem(LS)||'{}'))}catch(e){}
+
+new ResizeObserver(setText).observe(np);
+document.fonts.ready.then(setText);
+makeShards();setGhost();setTime();applyAdj();
+</script>
+</body>
+</html>

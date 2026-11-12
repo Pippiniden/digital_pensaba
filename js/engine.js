@@ -583,7 +583,7 @@ function resolveUlt(u,tgt,picked){
   const ud=D(u.def).ult;
   if(picked===undefined) picked=G.ultPick?U(G.ultPick):null;
   log(`${nm(u)}の${TERMS.ult}「${esc(ud.name)}」！`,'good');
-  fxEmit({t:'cutin',uid:u.uid,title:ud.name,ruby:ud.ruby,col:ud.c});
+  fxEmit({t:'cutin',uid:u.uid,title:ud.name,ruby:ud.ruby,br:ud.br,col:ud.c});
   say(u,'np',{other:tgt});
   st(u).ults++;
   const hits=hitsOf(ud.eff); // 連続攻撃：ダメージ効果それぞれを hits 回
