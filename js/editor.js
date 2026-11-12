@@ -90,11 +90,40 @@ function makeCmd0(t,old){
   if(t==='W') return {c:'W',label:old.label||'特殊行動',eff:old.eff||[{k:'heal',t:'self',v:20}],dmg:0,np:0,star:0};
   return {c:t,dmg:old.dmg||20,np:0,star:0}; // 属性を変えたらNP・スターは0に戻す
 }
-function newEff(ctx){
+function newEff(ctx,path){
   if(ctx==='ult') return {k:'dmg',t:'target',v:80};
-  if(ctx==='master') return {k:'atk',t:'svt',v:20};
+  if(ctx==='master') return /^spells\./.test(path||'')?{k:'atk',t:'ally_svt',v:20,turns:1}:{k:'atk',t:'ally_svt',v:20}; // 令呪の継続効果は1ターン、補助の面はそのターンだけ（ターン数なし）
   if(ctx==='special') return {k:'heal',t:'self',v:20};
   return {k:'atk',t:'self',v:10,turns:3};
+}
+// ---------- 効果の種類を変えたときの自動設定（値・対象・ターン） ----------
+// 値の目安（なければ20）。FX_VAL_MASTER＝マスターの補助・令呪で別の値を使うもの
+const FX_VAL = { atk:20, atkDown:10, def:10, defDown:10, critPow:30, critMult:200, guts:100, critRoll:1, debuffUp:1, debuffDown:1, critDown:1, nullUnder:30,
+  onAtkStar:3, onAtkNp:10, actsUp:1, actsDown:1, regenHp:20, regenNp:5, regenStar:2, atkVs:50, atkTrait:50, defTrait:50, counter:20, onHitNp:10, onHitStar:3,
+  maxHp:100, poison:20, burn:20, drain:20, heal:100, np:20, star:5, starLoss:5, buffExtend:1, skillCharge:1, dmg:200, selfDmg:20, npPow:80, npPowDown:50, multiHit:2 };
+const FX_VAL_MASTER = { heal:30, dmg:50, star:5 };
+// 1ターンで足りる効果（ほかは3ターン）
+const FX_TURN1 = ['evade','invul','pierce','sureHit','stun','sealSkill','sealUlt','charm','fear','ignoreDef','actsDown','taunt'];
+// 対象の側：ally＝味方側（既定は自分） / enemy＝敵側 / master＝マスター（スター） / selfOnly＝自分だけ
+const FX_SIDE = { star:'master', starLoss:'enemy', strip:'enemy', instantDeath:'enemy', dmg:'enemy', selfDmg:'selfOnly', copyRoll:'selfOnly' };
+const sideOfFx = k=>FX_SIDE[k]||((FX[k]||{}).buff===false?'enemy':'ally');
+const T_ALLY = ['self','ally_all','ally_other','master','svt','ally_svt','picked'], T_ENEMY = ['enemy_all','target','enemy_svt','enemy_master','enemy_both','picked'];
+const T_DEF = { ally:{skill:'self',ult:'self',special:'self',master:'ally_svt'}, enemy:{skill:'enemy_all',ult:'enemy_all',special:'target',master:'enemy_svt'},
+  master:{skill:'master',ult:'master',special:'master',master:'master'}, selfOnly:{skill:'self',ult:'self',special:'self',master:'self'} };
+// 種類を変えた効果に、その種類らしい値・対象・ターンを入れる。ctx＝skill/ult/special/master、path＝効果の位置（令呪か補助の面かの判別用）
+function autoEff(e,ctx,path){
+  const f=FX[e.k]||{}, m=ctx==='master';
+  if(f.noTgt){ fixEff(e); return; }
+  e.v=f.val?((m&&FX_VAL_MASTER[e.k])||FX_VAL[e.k]||20):0;
+  delete e.turns; delete e.times;
+  if(!f.inst&&!f.perm){
+    if(f.timesOnly) e.times=1;
+    else if(!(m&&/^faces\./.test(path||''))) e.turns=m?1:(FX_TURN1.includes(e.k)?1:3); // 令呪の継続効果は1ターン（補助の面はそのターンだけなのでターン数なし）
+  }
+  const side=sideOfFx(e.k), allowed=TGT_BY_CTX[ctx]||[];
+  const ok=side==='ally'?T_ALLY:side==='enemy'?T_ENEMY:[T_DEF[side][ctx]];
+  if(!(allowed.includes(e.t)&&ok.includes(e.t))){ const d=e.k==='dmg'&&ctx==='ult'?'target':T_DEF[side][ctx]; e.t=allowed.includes(d)?d:allowed[0]; } // 合う対象なら今の選択を残す
+  fixEff(e);
 }
 // 効果の種類を変えたときに、使わない項目を片づける
 function fixEff(e){
@@ -501,7 +530,7 @@ function effRow(path,j,e,ctx,n,atKind){
     :numIn(p+'.v',e.v,e.k==='multiHit'?'回数':'値')):'';
   if(e.k==='desc') return `<div class="eff" data-ep="${p}">
     <select class="effgrp" data-act="effGrp" data-ep="${p}" data-ctx="${ctx}" aria-label="効果の分類">${groups.map(([g,ks])=>opt(g,`${g}（${ks.length}）`,grp)).join('')}</select>
-    <select data-p="${p}.k" data-act="effKind" aria-label="効果の種類">${kinds.map(k=>opt(k,FX[k].name,e.k)).join('')}</select>
+    <select data-p="${p}.k" data-act="effKind" data-ctx="${ctx}" aria-label="効果の種類">${kinds.map(k=>opt(k,FX[k].name,e.k)).join('')}</select>
     <input class="desctext" data-p="${p}.text" value="${esc(e.text||'')}" placeholder="説明文（スキル・${TERMS.ult}の説明がこの文章になります）">
     <span class="effops">
       <button data-act="effMove" data-path="${path}" data-i="${j}" data-d="-1" ${j?'':'disabled'} title="上へ">↑</button>
@@ -512,7 +541,7 @@ function effRow(path,j,e,ctx,n,atKind){
   </div>`;
   return `<div class="eff" data-ep="${p}">
     <select class="effgrp" data-act="effGrp" data-ep="${p}" data-ctx="${ctx}" aria-label="効果の分類">${groups.map(([g,ks])=>opt(g,`${g}（${ks.length}）`,grp)).join('')}</select>
-    <select data-p="${p}.k" data-act="effKind" aria-label="効果の種類">${kinds.map(k=>opt(k,FX[k].name,e.k)).join('')}${kinds.includes(e.k)?'':opt(e.k,(FX[e.k]||{}).name||e.k,e.k)}</select>
+    <select data-p="${p}.k" data-act="effKind" data-ctx="${ctx}" aria-label="効果の種類">${kinds.map(k=>opt(k,FX[k].name,e.k)).join('')}${kinds.includes(e.k)?'':opt(e.k,(FX[e.k]||{}).name||e.k,e.k)}</select>
     ${f.noTgt?'':`<select data-p="${p}.t" aria-label="対象">${tg.map(t=>opt(t,(ctx==='master'?mTLabel(t):TARGETS[t])||t,e.t)).join('')}</select>`}
     ${val}
     ${f.inst?'':(f.timesOnly||(ctx==='master'&&/^faces./.test(path))?'':optNum(p+'.turns',e.turns,'ターン'))+optNum(p+'.times',e.times,'回数')}
@@ -663,12 +692,12 @@ document.addEventListener('input',e=>{
   if(el.dataset.act==='effGrp'){ // 分類を変えたら、その分類の最初の効果にする
     const e=getPath(cur(),el.dataset.ep), g=fxGroups().find(([n])=>n===el.value), k=g&&g[1].find(k=>fxOnlyIn(k,el.dataset.ctx));
     if(!e||!k) return;
-    e.k=k; fixEff(e); if(isM()&&/^faces\./.test(el.dataset.ep)) delete e.turns;
+    e.k=k; autoEff(e,el.dataset.ctx,el.dataset.ep); if(isM()&&/^faces\./.test(el.dataset.ep)) delete e.turns;
     return full();
   }
   if(!el.dataset.p) return;
   setPath(cur(),el.dataset.p,conv(el));
-  if(el.dataset.act==='effKind'){ const e=getPath(cur(),el.dataset.p.replace(/\.k$/,'')); fixEff(e);
+  if(el.dataset.act==='effKind'){ const ep=el.dataset.p.replace(/\.k$/,''), e=getPath(cur(),ep); autoEff(e,el.dataset.ctx,ep);
     if(isM()&&/^faces\./.test(el.dataset.p)) delete e.turns; // 補助の効果はそのターンだけ（ターン数は使わない）
     return full(); }
   if(el.dataset.act==='structural') return full();
@@ -737,7 +766,7 @@ document.addEventListener('click',e=>{
     case 'fitReset': { u.fit[b.dataset.k]={...FIT_DEF[b.dataset.k]}; full(); break; }
     case 'ctBr': { if(b.dataset.br==='') delete u.ult.br; else u.ult.br=+b.dataset.br; light(); break; }
     case 'ctReplay': ctUpdate(true); break;
-    case 'effAdd': { if(!getPath(u,b.dataset.path)) setPath(u,b.dataset.path,[]); getPath(u,b.dataset.path).push(newEff(b.dataset.ctx)); full(); break; }
+    case 'effAdd': { if(!getPath(u,b.dataset.path)) setPath(u,b.dataset.path,[]); getPath(u,b.dataset.path).push(newEff(b.dataset.ctx,b.dataset.path)); full(); break; }
     case 'effDel': getPath(u,b.dataset.path).splice(+b.dataset.i,1); full(); break;
     case 'effMove': { const l=getPath(u,b.dataset.path), i=+b.dataset.i, j=i+Number(b.dataset.d); [l[i],l[j]]=[l[j],l[i]]; full(); break; }
     case 'applyTpl': {
