@@ -1,0 +1,27 @@
+/* タップ時プリズムエフェクト（js/tapfx.js）。ゲームUIとは別コンテナ。z-index は --tapfx-z で調整 */
+#tapfx{position:fixed;inset:0;z-index:var(--tapfx-z,60);pointer-events:none;overflow:hidden}
+.tapfx-p{position:absolute;box-sizing:border-box;pointer-events:none;background:transparent;
+  width:var(--size);height:var(--size);border:var(--stroke) solid var(--color);
+  filter:drop-shadow(0 0 calc(var(--glow,5px)*.4) var(--color)) drop-shadow(0 0 var(--glow,5px) var(--color));
+  margin:calc(var(--size)/-2) 0 0 calc(var(--size)/-2);transform:rotate(45deg);
+  opacity:0;will-change:translate,rotate,scale,opacity;
+  /* 動き・拡大・フェードを別アニメにして、キーフレーム境界での減速→再加速（カクつき）をなくす。
+     animationend は最後（フェード）に合わせて1回だけ鳴らす */
+  animation:tapfx-move var(--duration) cubic-bezier(.16,.7,.3,1) forwards,
+            tapfx-grow var(--duration) cubic-bezier(.2,.7,.3,1) forwards,
+            tapfx-fade var(--duration) linear forwards}
+.tapfx-p::after{content:'';position:absolute;inset:2px;border:1px solid rgba(255,255,255,.85);opacity:var(--hl,1)}
+@keyframes tapfx-move{
+  from{translate:0 0;rotate:0deg}
+  to{translate:var(--dx) var(--dy);rotate:var(--spin)}
+}
+@keyframes tapfx-grow{
+  from{scale:.35}
+  35%,to{scale:1.1}
+}
+@keyframes tapfx-fade{
+  0%{opacity:0}
+  10%{opacity:var(--alpha)}
+  100%{opacity:0}
+}
+@media (prefers-reduced-motion:reduce){#tapfx{display:none}}

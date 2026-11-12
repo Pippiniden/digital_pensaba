@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>タップエフェクト調整</title>
+<link rel="stylesheet" href="../css/tapfx.css">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;background:#060d22;color:#dfe8ff;font:14px/1.5 "Noto Sans JP",system-ui,sans-serif;display:grid;grid-template-columns:1fr 340px;height:100vh}
+  #pad{position:relative;display:grid;place-items:center;text-align:center;color:#6d7fb0;cursor:crosshair;user-select:none;touch-action:none;
+    background:radial-gradient(circle at 50% 40%,#13204a,#060d22 70%)}
+  #pad small{display:block;margin-top:6px;font-size:12px}
+  #panel{overflow:auto;padding:12px 14px;background:#0b1536;border-left:1px solid #26366b}
+  h1{font-size:15px;margin:0 0 8px}
+  .row{display:grid;grid-template-columns:7.5em 1fr 3.8em;gap:6px;align-items:center;margin:3px 0}
+  .row input[type=range]{width:100%}
+  .row output{text-align:right;font-variant-numeric:tabular-nums;color:#9fb4ff}
+  .row.chk{grid-template-columns:auto 1fr}
+  button{font:inherit;color:#fff;background:#2a3f86;border:1px solid #4c66c4;border-radius:4px;padding:4px 10px;cursor:pointer}
+  button:hover{background:#36509f}
+  .btns{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+  textarea{width:100%;height:230px;background:#050a1c;color:#cfe0ff;border:1px solid #26366b;border-radius:4px;font:12px/1.5 Consolas,monospace;padding:6px}
+  #msg{min-height:1.4em;color:#8fe3a8;font-size:12px}
+  @media (max-width:800px){body{grid-template-columns:1fr;grid-template-rows:40vh 1fr}#panel{border-left:0;border-top:1px solid #26366b}}
+</style>
+</head>
+<body>
+<div id="pad"><div>ここをタップ／クリック<small>連打OK。右の値を動かすと次のタップから反映</small></div></div>
+<div id="panel">
+  <h1>タップエフェクト調整</h1>
+  <div id="ctl"></div>
+  <div class="row chk"><input type="checkbox" id="slow"><label for="slow">ゆっくり再生（表示時間×4。確認用・書き出しには影響なし）</label></div>
+  <div class="row chk"><input type="checkbox" id="auto"><label for="auto">自動で連続発生（中央付近）</label></div>
+  <div class="btns">
+    <button id="export">書き出し（コピー）</button>
+    <button id="import">テキストから読み込み</button>
+    <button id="reset">初期値に戻す</button>
+  </div>
+  <div id="msg"></div>
+  <textarea id="out" spellcheck="false"></textarea>
+</div>
+<script src="../js/tapfx.js"></script>
+<script>
+// tapfx.js の EFFECT_CONFIG をそのまま書き換えて試す（ここでの変更は js/tapfx.js には反映されない。書き出した値を貼り付ける）
+const DEF = Object.assign({}, EFFECT_CONFIG);
+const SPEC = [ // key, 表示名, min, max, step
+  ['count','粒子数',1,20,1],['groups','方向グループ数',1,8,1],
+  ['size','大きさ px',4,80,1],['stroke','輪郭の太さ px',1,10,0.5],
+  ['distance','飛散距離 px',0,150,1],['duration','表示時間 ms',150,3000,10],
+  ['opacity','最大不透明度',0.05,1,0.01],
+  ['hueMin','色相 最小',0,360,1],['hueMax','色相 最大',0,360,1],
+  ['sat','彩度 %',0,100,1],['light','明度 %',20,100,1],
+  ['baseAngle','中心方向 °(90=下)',-180,180,1],['spread','グループ間の開き °',0,360,1],['jitter','角度ばらつき ±°',0,90,1],
+  ['spin','回転量 ±°',0,360,1],['glow','発光 px',0,20,0.5],['highlight','白ハイライト 0/1',0,1,1],
+  ['randomize','サイズ等ばらつき',0,0.6,0.01]
+];
+const real = Object.assign({}, EFFECT_CONFIG); // 実際の値（slow の倍率前）
+const ctl = document.getElementById('ctl'), $ = id => document.getElementById(id);
+const rows = {};
+for (const [k,label,mn,mx,st] of SPEC) {
+  const d = document.createElement('div'); d.className = 'row';
+  d.innerHTML = `<label>${label}</label><input type="range" min="${mn}" max="${mx}" step="${st}"><output></output>`;
+  const r = d.querySelector('input'), o = d.querySelector('output');
+  r.addEventListener('input', () => { real[k] = +r.value; sync(); });
+  rows[k] = [r,o]; ctl.appendChild(d);
+}
+function sync() {
+  for (const [k] of SPEC) { const [r,o] = rows[k]; r.value = real[k]; o.textContent = real[k]; }
+  Object.assign(EFFECT_CONFIG, real);
+  if ($('slow').checked) EFFECT_CONFIG.duration = real.duration * 4;
+}
+function text() {
+  const keys = Object.keys(DEF);
+  return 'const EFFECT_CONFIG = {\n' + keys.map(k => `  ${k}: ${real[k]}`).join(',\n') + '\n};';
+}
+function msg(t) { $('msg').textContent = t; }
+$('slow').onchange = sync;
+$('reset').onclick = () => { Object.assign(real, DEF); sync(); msg('初期値に戻しました'); };
+$('export').onclick = () => {
+  const t = text(); $('out').value = t;
+  (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => msg('コピーしました。そのまま貼り付けて指示してください'), () => { $('out').select(); msg('下の欄を選択しました。コピーしてください'); });
+};
+$('import').onclick = () => {
+  let n = 0;
+  for (const m of $('out').value.matchAll(/(\w+)\s*:\s*(-?[\d.]+)/g)) if (m[1] in real) { real[m[1]] = +m[2]; n++; }
+  sync(); msg(n + ' 項目を読み込みました');
+};
+let timer = null;
+$('auto').onchange = e => {
+  clearInterval(timer);
+  if (e.target.checked) timer = setInterval(() => { const r = $('pad').getBoundingClientRect(); tapfxSpawn(r.left + r.width / 2 + (Math.random() - .5) * 200, r.top + r.height / 2 + (Math.random() - .5) * 120); }, 500);
+};
+sync();
+</script>
+</body>
+</html>
