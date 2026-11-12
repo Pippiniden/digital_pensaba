@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>カード枠 v2（参考画像寄せ）</title>
+<style>
+:root{--v-all:0;--v-black:0;--v-start:55%;--v-edge:.55;--v-cdark:0%;--v-band:.85;--v-bandh:30%;
+--r:#d8403a;--b:#2f6be0;--g:#27a95f;--gold:#d4a94a;--gold-hi:#f6e3a1;--gold-lo:#7a5a1c;--serif:"Noto Serif JP","Yu Mincho",serif}
+body{margin:0;padding:20px;background:#0b1226;color:#dfe6ff;font-family:system-ui,"Yu Gothic",sans-serif}
+h1{font-size:18px;margin:0 0 4px} p.n{margin:0 0 16px;color:#9aa6c4;font-size:13px}
+.tune{max-width:640px;margin:0 0 18px;padding:12px 14px;border:1px solid #243158;border-radius:8px;background:#0f1832;font-size:12px}
+.tune label{display:grid;grid-template-columns:150px 1fr 56px;gap:8px;align-items:center;margin:5px 0}
+.tune output{text-align:right;color:#f6e3a1;font-variant-numeric:tabular-nums}
+.tune input[type=range]{width:100%}
+.tune button{background:#1c2a52;color:#dfe6ff;border:1px solid #3a4a80;border-radius:4px;padding:4px 12px;cursor:pointer;margin:8px 8px 0 0}
+.tune textarea{width:100%;box-sizing:border-box;height:120px;margin-top:8px;background:#060c20;color:#cfe;border:1px solid #243158;border-radius:4px;font:12px/1.5 ui-monospace,Consolas,monospace}
+.row{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end;margin-bottom:22px}
+.cell{display:flex;flex-direction:column;align-items:center;font-size:11px;color:#9aa6c4;gap:4px}
+
+/* ===== カード本体（幅に連動：すべて cqw） ===== */
+.ccard{--cc:var(--r);--ct:#ff7a62;position:relative;flex:none;width:170px;aspect-ratio:2/3;container-type:inline-size;
+  border-radius:calc(var(--u,1.7px)*3.2);overflow:hidden;background:#1a1010;box-shadow:0 calc(var(--u,1.7px)*.8) calc(var(--u,1.7px)*2.5) rgba(0,0,0,.6)}
+.ccard.R{--cc:var(--r);--ct:#ff7a62;--cd:#3a0808}
+.ccard.B{--cc:var(--b);--ct:#6fa2ff;--cd:#081a4a}
+.ccard.G{--cc:var(--g);--ct:#5fe39a;--cd:#06301b}
+/* 色のにじみ（縁を濃く、中央は絵を見せる） */
+.ccard .tint{position:absolute;inset:0;z-index:0;background:radial-gradient(ellipse at 50% 40%,var(--ct),var(--cc) 55%,var(--cd))}
+.ccimg{position:absolute;inset:0;width:100%;height:100%;z-index:1;object-fit:cover;object-position:50% 12%}
+/* 絵の周囲に色を重ねて縁を染める */
+.ccard .vig{position:absolute;inset:0;z-index:2;pointer-events:none;
+  background:
+   linear-gradient(rgba(0,0,0,var(--v-all)),rgba(0,0,0,var(--v-all))),
+   radial-gradient(ellipse at 50% 45%,transparent var(--v-start),rgba(0,0,0,var(--v-black)) 100%),
+   radial-gradient(ellipse at 50% 45%,transparent var(--v-start),color-mix(in srgb,color-mix(in srgb,var(--cc),#000 var(--v-cdark)) calc(var(--v-edge)*100%),transparent) 100%)}
+/* 斜めの細い光の筋（ごく薄く） */
+.ccard .streak{position:absolute;inset:0;z-index:2;pointer-events:none;mix-blend-mode:screen;opacity:.55;
+  background:
+   linear-gradient(115deg,transparent 58%,rgba(255,255,255,.28) 58.4%,transparent 59.2%),
+   linear-gradient(115deg,transparent 64%,rgba(255,255,255,.16) 64.3%,transparent 65%),
+   linear-gradient(115deg,transparent 72%,rgba(255,255,255,.22) 72.3%,transparent 73%)}
+/* 下の暗い帯 */
+.ccard .band{position:absolute;left:0;right:0;bottom:0;height:var(--v-bandh);z-index:3;pointer-events:none;
+  background:linear-gradient(180deg,transparent,color-mix(in srgb,color-mix(in srgb,var(--cd) 85%,#000) calc(var(--v-band)*100%),transparent) 80%)}
+/* 帯の上の金の細線 */
+.ccard .bline{position:absolute;left:5cqw;right:5cqw;bottom:21.5cqw;height:max(1px,.5cqw);z-index:4;
+  background:linear-gradient(90deg,transparent,var(--gold) 12%,var(--gold-hi) 50%,var(--gold) 88%,transparent)}
+/* 二重の金枠（外：しっかり／内：細く薄く） */
+.ccard .fr{position:absolute;inset:0;z-index:6;pointer-events:none;border-radius:3.2cqw;
+  box-shadow:inset 0 0 0 max(1.5px,1.3cqw) transparent;
+  border:max(1.5px,1.1cqw) solid transparent;
+  background:linear-gradient(135deg,#fff0b8,#c99a3a 28%,#8a6420 52%,#e6c46a 78%,#fff0b8) border-box;
+  -webkit-mask:linear-gradient(#000 0 0) padding-box exclude,linear-gradient(#000 0 0);mask:linear-gradient(#000 0 0) exclude,linear-gradient(#000 0 0)}
+.ccard .fr{-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude}
+.ccard .fr2{position:absolute;inset:2.6cqw;z-index:6;pointer-events:none;border-radius:1.6cqw;
+  border:max(.5px,.4cqw) solid rgba(246,227,161,.7)}
+/* 小さな菱形 */
+.ccard .dia{position:absolute;z-index:7;width:3.4cqw;height:3.4cqw;background:linear-gradient(135deg,#fff0b8,#c99a3a);
+  transform:rotate(45deg);box-shadow:0 0 1cqw rgba(0,0,0,.6)}
+.dia.bl{left:4.2cqw;bottom:4.2cqw}.dia.br{right:4.2cqw;bottom:4.2cqw}
+.dia.tr{right:4.2cqw;top:4.2cqw}
+/* 角の小さな切り欠き飾り（上下の中央にも） */
+.ccard .dia.s{width:2cqw;height:2cqw}
+/* 数字ボックス */
+.ccard .ccdmg{position:absolute;z-index:8;left:6cqw;top:6cqw;min-width:17cqw;box-sizing:border-box;text-align:center;
+  padding:1.2cqw 3cqw;font-family:var(--serif);font-weight:500;font-size:11.5cqw;line-height:1.15;color:#fff;
+  background:linear-gradient(180deg,rgba(14,16,30,.92),rgba(6,8,18,.95));
+  border:max(1px,.8cqw) solid var(--gold);border-radius:1.6cqw;
+  box-shadow:0 0 0 max(.5px,.3cqw) #000,inset 0 0 0 max(.5px,.3cqw) rgba(246,227,161,.25),0 .6cqw 1.6cqw rgba(0,0,0,.6)}
+/* 種別名 */
+.ccard .ccname{position:absolute;z-index:8;left:0;right:0;bottom:6.5cqw;text-align:center;font-family:var(--serif);font-weight:600;
+  font-size:15.5cqw;line-height:1;letter-spacing:.04em;color:#fff;
+  text-shadow:0 0 2.4cqw var(--cc),0 0 1cqw var(--cc),0 .5cqw .8cqw rgba(0,0,0,.8)}
+/* 小サイズ：帯の線・菱形・小さな飾りを省く */
+.ccard.sm .bline,.ccard.sm .dia,.ccard.sm .streak{display:none}
+
+/* ===== 宝具（金）===== */
+.ccard.ULT{--cc:#c99a3a;--ct:#ffe9a8;--cd:#3a2806;box-shadow:0 0 calc(var(--u,1.7px)*3) rgba(246,227,161,.7),0 calc(var(--u,1.7px)*.8) calc(var(--u,1.7px)*2.5) rgba(0,0,0,.6)}
+.ccard.ULT .ccname{color:var(--gold-hi);text-shadow:0 0 2.4cqw #c99a3a,0 .5cqw .8cqw #000}
+.ccard.ULT .fr2{border-color:rgba(255,243,196,.95);box-shadow:inset 0 0 2cqw rgba(246,227,161,.45)}
+</style></head><body>
+<h1>カード枠 v2（参考画像寄せ）</h1>
+<p class="n">唐草などの装飾は省略。細い金の二重枠・暗い下帯・金の細線・小さな菱形・数字ボックス・種別名のグロー。すべてCSSのみ。</p>
+
+<div class="tune" id="tune"></div>
+<div class="row" id="main"></div>
+<p class="n">サイズ違い（Arts：40 / 74 / 110 / 170px）。40px は飾りを省略。</p>
+<div class="row" id="sz"></div>
+
+<script>
+const IMG='<img class="ccimg" src="../img/units/athelstan.webp" alt="">';
+const card=(col,name,dmg,w,cls='')=>`<div class="cell"><div class="ccard ${col} ${cls}" style="width:${w||170}px;--u:${(w||170)/100}px">
+ <div class="tint"></div>${IMG}<div class="vig"></div><div class="streak"></div><div class="band"></div><div class="bline"></div>
+ <i class="dia bl"></i><i class="dia br"></i><i class="dia tr s"></i>
+ <div class="fr"></div><div class="fr2"></div>
+ <span class="ccdmg">${dmg}</span><span class="ccname">${name}</span></div>${w||'170'}px</div>`;
+/* ===== 明暗調整 ===== */
+const PARAMS=[
+ // [CSS変数, ラベル, min, max, step, 既定, 単位(CSSに付ける)]
+ ['--v-all','全体を暗くする',0,0.7,0.01,0,''],
+ ['--v-black','縁を暗くする',0,0.9,0.01,0,''],
+ ['--v-edge','縁の色の濃さ',0,1,0.01,0.55,''],
+ ['--v-cdark','縁の色を黒に寄せる',0,80,1,0,'%'],
+ ['--v-start','暗く/色づく範囲の開始',20,90,1,55,'%'],
+ ['--v-band','下帯の濃さ',0,1,0.01,0.85,''],
+ ['--v-bandh','下帯の高さ',15,50,1,30,'%'],
+];
+const KEY='cardframe.tune';let V={};
+try{V=JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){}
+PARAMS.forEach(p=>{if(typeof V[p[0]]!=='number')V[p[0]]=p[5]});
+tune.innerHTML=PARAMS.map(p=>`<label>${p[1]}<input type="range" data-k="${p[0]}" min="${p[2]}" max="${p[3]}" step="${p[4]}" value="${V[p[0]]}"><output></output></label>`).join('')
+ +'<button id="reset">初期値に戻す</button><button id="copy">数値をコピー</button><span id="msg" style="color:#8fd"></span><textarea id="out" readonly></textarea>';
+function apply(){
+  const lines=[];
+  PARAMS.forEach(p=>{const v=V[p[0]];document.documentElement.style.setProperty(p[0],v+p[6]);
+    const el=tune.querySelector(`[data-k="${p[0]}"]`);el.value=v;el.nextElementSibling.textContent=v+p[6];
+    lines.push(`${p[0]}:${v}${p[6]};`)});
+  out.value=':root{\n  '+lines.join('\n  ')+'\n}\n/* JSON */\n'+JSON.stringify(V);
+  try{localStorage.setItem(KEY,JSON.stringify(V))}catch(e){}
+}
+tune.addEventListener('input',e=>{const k=e.target.dataset&&e.target.dataset.k;if(!k)return;V[k]=+e.target.value;apply()});
+reset.onclick=()=>{PARAMS.forEach(p=>V[p[0]]=p[5]);apply()};
+copy.onclick=async()=>{try{await navigator.clipboard.writeText(out.value);msg.textContent='コピーしました'}catch(e){out.select();document.execCommand('copy');msg.textContent='コピーしました'}setTimeout(()=>msg.textContent='',1500)};
+apply();
+main.innerHTML=card('R','Buster',60)+card('B','Arts',40)+card('G','Quick',30)+card('R 　ULT'.replace('　',''),'宝具',330);
+sz.innerHTML=[40,74,110,170].map(w=>card('B','Arts',40,w,w<60?'sm':'')).join('');
+</script></body></html>

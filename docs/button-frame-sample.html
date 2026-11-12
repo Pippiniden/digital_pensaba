@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>タイトルボタン サンプル</title>
+<style>
+:root{--serif:"Noto Serif JP","Yu Mincho",serif;--cream:#f6e8c0}
+body{margin:0;padding:24px 16px;background:radial-gradient(ellipse at 50% 0,#10224f,#060c20 70%);color:#dfe6ff;font-family:system-ui,"Yu Gothic",sans-serif;min-height:100vh}
+h1{font-size:16px;margin:0 0 4px;text-align:center}p.n{margin:0 0 22px;color:#9aa6c4;font-size:12px;text-align:center}
+.menu{display:flex;flex-direction:column;gap:1.1em;align-items:center;max-width:420px;margin:0 auto;font-size:18px}
+.cols{display:flex;gap:40px;justify-content:center;flex-wrap:wrap}
+
+/* ===== ボタン（すべて em：font-size で全体が拡縮）===== */
+.bt{--c0:.7em;position:relative;display:block;box-sizing:border-box;width:100%;padding:.95em 2.2em;margin:0 1.2em;max-width:calc(100% - 2.4em);
+  background:none;border:0;cursor:pointer;font:inherit;font-family:var(--serif);font-weight:600;letter-spacing:.12em;text-align:center;
+  color:var(--cream);text-shadow:0 0 .5em rgba(255,226,150,.55),0 .08em .12em rgba(0,0,0,.8);transition:filter .15s,transform .1s;-webkit-tap-highlight-color:transparent}
+.bt:hover{filter:brightness(1.15)}.bt:active{transform:translateY(1px);filter:brightness(.95)}
+.bt .l{position:absolute;pointer-events:none;
+  clip-path:polygon(var(--c) 0,calc(100% - var(--c)) 0,100% var(--c),100% calc(100% - var(--c)),calc(100% - var(--c)) 100%,var(--c) 100%,0 calc(100% - var(--c)),0 var(--c))}
+.bt .l1{inset:0;--c:.7em;background:linear-gradient(180deg,#fff3c4 0%,#d9ac4a 30%,#8a6420 55%,#e6c46a 80%,#fff0b8 100%)}
+.bt .l2{inset:.14em;--c:.64em;background:linear-gradient(180deg,#0b1a42,#040a22)}
+.bt .l3{inset:.4em;--c:.54em;background:linear-gradient(180deg,#f3d77f,#b88a2c 50%,#f3d77f)}
+.bt .l4{inset:.46em;--c:.5em;background:
+   radial-gradient(ellipse at 50% 0,rgba(120,160,255,.28),transparent 60%),
+   linear-gradient(180deg,#0c1f52,#050c26 70%,#0a1a44)}
+.bt .tx{position:relative;z-index:3}
+/* 左右のダイヤ飾り */
+.bt .orn{position:absolute;top:50%;width:1.7em;height:1.7em;transform:translateY(-50%);z-index:4;pointer-events:none;filter:drop-shadow(0 .05em .12em rgba(0,0,0,.7))}
+.bt .orn.l{left:-1.25em}.bt .orn.r{right:-1.25em}
+/* 上下のきらめき */
+.bt .gl{position:absolute;left:50%;width:46%;height:.2em;transform:translateX(-50%);z-index:5;pointer-events:none;
+  background:radial-gradient(ellipse at center,#fff 0,rgba(255,236,170,.75) 30%,transparent 70%)}
+.bt .gl.t{top:-.1em}.bt .gl.b{bottom:-.1em}
+.bt .gl::after{content:'';position:absolute;left:50%;top:50%;width:.1em;height:.7em;transform:translate(-50%,-50%);
+  background:linear-gradient(180deg,transparent,rgba(255,244,200,.9),transparent)}
+
+/* 主ボタン（金） */
+.bt.pri{color:#4a2f08;text-shadow:0 .06em 0 rgba(255,246,214,.7)}
+.bt.pri .l2{background:linear-gradient(180deg,#a8771f,#6e4b10)}
+.bt.pri .l3{background:linear-gradient(180deg,#fff6cf,#f0cd6a 50%,#fff6cf)}
+.bt.pri .l4{background:radial-gradient(ellipse at 50% 20%,#fff1b0,#f2c95c 45%,#c8942e)}
+</style></head><body>
+<svg width="0" height="0" style="position:absolute"><defs>
+ <linearGradient id="gg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff3c4"/><stop offset=".45" stop-color="#c99a3a"/><stop offset="1" stop-color="#7a5a1c"/></linearGradient>
+ <symbol id="orn" viewBox="0 0 40 40"><path d="M2 20 14 6l12 14-12 14z" fill="url(#gg)"/><path d="M8 20l6-7 6 7-6 7z" fill="#071634"/><path d="M12.2 20l1.8-2.2 1.8 2.2-1.8 2.2z" fill="#f3d77f"/><path d="M24 20l7-8 7 8-7 8z" fill="url(#gg)"/><path d="M28 20l3-3.6 3 3.6-3 3.6z" fill="#071634"/></symbol>
+ <symbol id="ornr" viewBox="0 0 40 40"><use href="#orn" transform="translate(40 0) scale(-1 1)"/></symbol>
+</defs></svg>
+
+<h1>タイトルボタン サンプル</h1>
+<p class="n">参考画像より背景を暗めに。すべてCSS＋インラインSVG（飾りのダイヤだけ）。文字は実テキストなので内容が変わっても崩れません。</p>
+<div class="cols">
+ <div class="menu" id="m1"></div>
+ <div class="menu" id="m2" style="font-size:13px;width:260px"></div>
+</div>
+
+<script>
+const btn=(t,pri)=>`<button class="bt${pri?' pri':''}"><i class="l l1"></i><i class="l l2"></i><i class="l l3"></i><i class="l l4"></i>
+<svg class="orn l"><use href="#orn"/></svg><svg class="orn r"><use href="#ornr"/></svg><i class="gl t"></i><i class="gl b"></i><span class="tx">${t}</span></button>`;
+const L=[['クイックバトル',1],['ローカル対戦'],['チュートリアル'],['設定']];
+m1.innerHTML=L.map(([t,p])=>btn(t,p)).join('');
+m2.innerHTML=L.map(([t,p])=>btn(t,p)).join('');
+</script></body></html>

@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>カード枠サンプル</title>
+<style>
+:root{--r:#e0483c;--b:#3b78e6;--g:#2fb86a;--gold:#c99a3a;--gold-hi:#f6e3a1;--gold-lo:#6b4e14;--serif:"Noto Serif JP","Yu Mincho",serif}
+body{margin:0;padding:20px;background:#0b1226;color:#dfe6ff;font-family:system-ui,"Yu Gothic",sans-serif}
+h1{font-size:18px;margin:0 0 4px} p.n{margin:0 0 18px;color:#9aa6c4;font-size:13px}
+section{margin:0 0 26px;padding:14px;border:1px solid #243158;border-radius:8px;background:#0f1832}
+h2{font-size:14px;margin:0 0 4px;color:var(--gold-hi)} .d{font-size:12px;color:#9aa6c4;margin:0 0 12px}
+.row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end}
+button{background:#1c2a52;color:#dfe6ff;border:1px solid #3a4a80;border-radius:4px;padding:3px 10px;cursor:pointer;margin-left:8px}
+
+/* ---- 共通：現状（base.css と同じ） ---- */
+.ccard{--cc:var(--r);position:relative;flex:none;width:110px;aspect-ratio:2/3;border-radius:7px;overflow:hidden;
+  background:linear-gradient(180deg,#2a3557,#121a33);border:2px solid var(--cc);box-shadow:0 0 0 1px var(--gold),0 3px 10px rgba(0,0,0,.5)}
+.ccard.R{--cc:var(--r);background:radial-gradient(ellipse at 50% 30%,#ff8a6a,#c0332a 45%,#3d0a0c)}
+.ccard.B{--cc:var(--b);background:radial-gradient(ellipse at 50% 30%,#8fb6ff,#2f62d6 45%,#0a1a4a)}
+.ccard.G{--cc:var(--g);background:radial-gradient(ellipse at 50% 30%,#8ff0b4,#23a35d 45%,#06301b)}
+.ccard .art{position:absolute;inset:0;z-index:1;background:
+  radial-gradient(circle at 50% 28%,rgba(255,255,255,.55) 0 9%,transparent 10%),
+  radial-gradient(ellipse at 50% 62%,rgba(0,0,0,.45) 0 26%,transparent 27%)}
+.ccard::after{content:'';position:absolute;inset:0;z-index:2;pointer-events:none;
+  background:linear-gradient(180deg,transparent 52%,color-mix(in srgb,var(--cc) 75%,#000) 100%);box-shadow:inset 0 0 0 1px rgba(255,255,255,.25)}
+.ccname,.ccdmg{z-index:5}
+.ccname{position:absolute;left:0;right:0;bottom:6px;text-align:center;font-family:var(--serif);font-weight:700;font-size:15px;letter-spacing:.06em;color:#fff;text-shadow:0 0 4px var(--cc),0 1px 2px #000}
+.ccdmg{position:absolute;top:4px;left:4px;font-size:14px;font-weight:700;padding:0 5px;border-radius:2px;background:rgba(6,13,34,.75);color:var(--gold-hi);border:1px solid var(--gold-lo)}
+.cap{font-size:11px;color:#9aa6c4;text-align:center;margin-top:4px}
+.cell{display:flex;flex-direction:column;align-items:center}
+
+.ccimg{position:absolute;inset:0;width:100%;height:100%;z-index:1;object-fit:cover;object-position:50% 12%}
+.vE .ccimg{inset:6px;width:calc(100% - 12px);height:calc(100% - 12px)}
+.ccard.curULT{box-shadow:0 0 0 1px var(--gold-hi),0 0 14px rgba(246,227,161,.7)}.ccard.curULT .ccname{color:var(--gold-hi)}
+.ccard.vA .ccimg{inset:5px;width:calc(100% - 10px);height:calc(100% - 10px)}
+/* バッジ案（.vB の円形を上書き） */
+.vB.bd1 .ccdmg{width:auto;height:auto;border:0;border-radius:0;background:none;box-shadow:none;display:block;
+  top:9px;left:11px;font-size:20px;font-family:var(--serif);color:#fff;text-shadow:0 0 3px #000,0 0 3px #000,0 1px 2px #000,0 0 6px var(--cc)}
+.vB.bd2 .ccdmg{width:auto;height:auto;border:0;border-radius:0;display:block;top:9px;left:9px;padding:1px 9px 1px 7px;font-size:15px;font-family:var(--serif);color:var(--gold-hi);
+  background:linear-gradient(180deg,#1b2650,#080d22);box-shadow:none;clip-path:polygon(0 0,100% 0,calc(100% - 6px) 100%,0 100%);
+  filter:drop-shadow(0 1px 1px #000)}
+.vB.bd2 .ccdmg::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,#fff3c4,#c99a3a)}
+.vB.bd3 .ccdmg{width:auto;height:auto;border:0;border-radius:0;display:block;top:5px;left:50%;transform:translateX(-50%);padding:0 10px 3px;font-size:14px;font-family:var(--serif);color:var(--gold-hi);
+  background:linear-gradient(180deg,#c99a3a,#6b4e14);box-shadow:none;clip-path:polygon(0 0,100% 0,100% 70%,50% 100%,0 70%)}
+.vB.bd3 .ccdmg{text-shadow:0 1px 1px #000}
+.vB.bd4 .ccdmg{width:auto;height:auto;border:0;border-radius:0;display:block;top:5px;left:5px;padding:5px 12px 5px 6px;font-size:14px;font-family:var(--serif);color:#fff;
+  background:linear-gradient(135deg,var(--cc) 40%,transparent 41%);box-shadow:none;text-shadow:0 1px 2px #000;clip-path:polygon(0 0,70px 0,0 70px)}
+/* 比率スケール版 */
+.vS{container-type:inline-size}
+.vS::before{padding:4.6cqw;border-radius:6cqw}
+.vS::after{inset:4.6cqw;border-radius:3cqw}
+.vS .ccimg{inset:4.6cqw;width:calc(100% - 9.2cqw);height:calc(100% - 9.2cqw)}
+.vB.vS .ccname{left:7cqw;right:7cqw;bottom:7cqw;font-size:11.5cqw;padding:1.5cqw 0;border-width:max(.5px,.7cqw)}
+.vB.vS .ccdmg{top:7cqw;left:7cqw;font-size:13cqw;padding:.8cqw 6cqw .8cqw 5cqw;border:0;border-radius:0;background:linear-gradient(180deg,#1b2650,#080d22);
+  clip-path:polygon(0 0,100% 0,calc(100% - 4cqw) 100%,0 100%);box-shadow:none;width:auto;height:auto;display:block;font-family:var(--serif)}
+.vB.vS .ccdmg::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2.4cqw;background:linear-gradient(180deg,#fff3c4,#c99a3a)}
+.rowlabel{width:100%;font-size:12px;color:#9aa6c4;margin:4px 0 -6px}
+/* ---- A 二重枠＋金属ベベル ---- */
+.vA{border:0;box-shadow:0 4px 12px rgba(0,0,0,.6)}
+.vA::before{content:'';position:absolute;inset:0;z-index:4;border-radius:7px;padding:5px;pointer-events:none;
+  background:linear-gradient(135deg,#fff3c4 0%,#c99a3a 22%,#6b4e14 45%,#e8c766 70%,#fff3c4 100%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+.vA::after{inset:5px;border-radius:3px;background:linear-gradient(180deg,transparent 52%,color-mix(in srgb,var(--cc) 75%,#000) 100%);
+  box-shadow:inset 0 0 0 2px var(--cc),inset 0 0 0 3px rgba(0,0,0,.45),inset 0 0 8px rgba(0,0,0,.5)}
+/* 四隅の飾り */
+.vA .corner{position:absolute;z-index:6;width:9px;height:9px;background:linear-gradient(135deg,#fff3c4,#c99a3a);transform:rotate(45deg);box-shadow:0 0 3px rgba(0,0,0,.7)}
+.corner.tl{left:-1px;top:-1px;transform:rotate(45deg) translate(-3px,-3px)} .corner.tr{right:-1px;top:-1px;transform:rotate(45deg) translate(3px,-3px)}
+.corner.bl{left:-1px;bottom:-1px;transform:rotate(45deg) translate(-3px,3px)} .corner.br{right:-1px;bottom:-1px;transform:rotate(45deg) translate(3px,3px)}
+
+/* ---- B ネームプレート ---- */
+.vB .ccname{left:9px;right:9px;bottom:9px;padding:2px 0;font-size:14px;border-radius:3px;
+  background:linear-gradient(180deg,rgba(20,26,48,.92),rgba(6,10,24,.92));
+  border:1px solid var(--gold);box-shadow:0 0 0 1px #000,inset 0 1px 0 rgba(255,255,255,.25)}
+.vB .ccdmg{top:9px;left:9px;width:26px;height:26px;padding:0;display:grid;place-items:center;font-size:14px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#4a5a90,#0c1431);border:2px solid var(--gold);box-shadow:0 0 0 1px #000,0 2px 4px rgba(0,0,0,.6)}
+
+/* ---- C 光沢（出現時に1回／ホバーで再生） ---- */
+.gloss{position:absolute;inset:0;z-index:7;pointer-events:none;overflow:hidden}
+.gloss::before{content:'';position:absolute;top:-10%;bottom:-10%;left:-60%;width:40%;
+  background:linear-gradient(105deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-12deg)}
+.vC.play .gloss::before{animation:sweep .9s ease-out 1}
+@keyframes sweep{to{left:130%}}
+.vC .ccard-sheen{position:absolute;inset:0;z-index:6;background:linear-gradient(160deg,rgba(255,255,255,.22),transparent 38%);pointer-events:none}
+
+/* ---- D 色別の個性 ---- */
+.vD.R{border:0;box-shadow:0 4px 12px rgba(0,0,0,.6)}
+.vD.R::before{content:'';position:absolute;inset:0;z-index:4;padding:5px;pointer-events:none;
+  clip-path:polygon(0 8px,8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px));
+  background:linear-gradient(135deg,#ffd2c8,#c0332a 30%,#4a0d0c 55%,#e0483c 80%,#ffd2c8);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+.vD.R{clip-path:polygon(0 8px,8px 0,calc(100% - 8px) 0,100% 8px,100% calc(100% - 8px),calc(100% - 8px) 100%,8px 100%,0 calc(100% - 8px))}
+.vD.B{border:0;border-radius:14px;box-shadow:0 0 12px rgba(59,120,230,.7),0 4px 12px rgba(0,0,0,.6)}
+.vD.B::before{content:'';position:absolute;inset:0;z-index:4;padding:5px;border-radius:14px;pointer-events:none;
+  background:linear-gradient(135deg,#dbe8ff,#3b78e6 35%,#0a1a4a 60%,#8fb6ff);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+.vD.G{border:0;box-shadow:0 4px 12px rgba(0,0,0,.6)}
+.vD.G::before{content:'';position:absolute;inset:0;z-index:4;padding:5px;border-radius:7px;pointer-events:none;
+  background:repeating-linear-gradient(135deg,#d6ffe5 0 4px,#23a35d 4px 8px,#06301b 8px 10px);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+.vD::after{border-radius:inherit}
+
+/* ---- E 宝具カード ---- */
+.vE{--cc:var(--gold);border:0;box-shadow:0 0 18px rgba(246,227,161,.75),0 4px 12px rgba(0,0,0,.6);background:radial-gradient(ellipse at 50% 30%,#ffe9a8,#b9852a 45%,#2e1f06)}
+.vE::before{content:'';position:absolute;inset:0;z-index:4;border-radius:7px;padding:6px;pointer-events:none;
+  background:conic-gradient(from 0deg,#fff3c4,#c99a3a,#6b4e14,#f6e3a1,#c99a3a,#fff3c4);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+.vE::after{inset:6px;border-radius:3px;box-shadow:inset 0 0 0 1px var(--gold-hi),inset 0 0 0 4px rgba(0,0,0,.35),inset 0 0 14px rgba(246,227,161,.5)}
+.vE .sparkle{position:absolute;inset:6px;z-index:3;opacity:.5;mix-blend-mode:screen;
+  background:radial-gradient(2px 2px at 20% 30%,#fff,transparent),radial-gradient(2px 2px at 70% 20%,#fff,transparent),radial-gradient(1.5px 1.5px at 50% 55%,#fff,transparent),radial-gradient(2px 2px at 82% 70%,#fff,transparent),radial-gradient(1.5px 1.5px at 28% 78%,#fff,transparent)}
+.vE .ccname{color:var(--gold-hi);bottom:10px;left:10px;right:10px;border-radius:3px;background:linear-gradient(180deg,rgba(40,28,6,.9),rgba(10,6,0,.9));border:1px solid var(--gold-hi)}
+</style></head><body>
+<h1>カード枠サンプル</h1>
+<p class="n">画像なし・CSSだけの案。絵の部分は仮のシルエットです。</p>
+
+<section><h2>エゼルスタンで比較（A+B と E）</h2><p class="d">上段＝現状、下段＝提案。画像は img/units/athelstan.webp（専用カード画像なし → 顔画像を card の fit x50 y12 z100 で表示）。宝具は「統一王の覇光」(Buster色)</p>
+<div class="row" id="rX"></div></section>
+
+<section><h2>バッジ案（円形の代わり）</h2><p class="d">左から：①数字のみ（縁取り文字）／②金縁の斜めタブ／③上辺中央の小プレート／④左上の斜め帯</p>
+<div class="row" id="rBd"></div></section>
+
+<section><h2>サイズ違い（枠の太さ・文字をカード幅に連動：cqw）</h2><p class="d">幅 40 / 74 / 110 / 150px。②タブ案で確認。モードごとに大きさが変わっても同じ比率で縮む</p>
+<div class="row" id="rSz"></div></section>
+
+<section><h2>0. 現状</h2><p class="d">色つき単線＋金の外線＋下グラデーション</p>
+<div class="row">
+<div class="cell"><div class="ccard R"><div class="art"></div><span class="ccdmg">60</span><span class="ccname">Buster</span></div><div class="cap">Buster</div></div>
+<div class="cell"><div class="ccard B"><div class="art"></div><span class="ccdmg">40</span><span class="ccname">Arts</span></div><div class="cap">Arts</div></div>
+<div class="cell"><div class="ccard G"><div class="art"></div><span class="ccdmg">30</span><span class="ccname">Quick</span></div><div class="cap">Quick</div></div>
+</div></section>
+
+<section><h2>A. 二重枠＋金属ベベル＋角飾り</h2><p class="d">外側は金のグラデーション、内側に色の細線。四隅に菱形</p>
+<div class="row" id="rA"></div></section>
+
+<section><h2>A+B. ＋ネームプレート／ダメージを円形バッジに</h2><p class="d">おすすめ構成。種別名の後ろに金縁の帯</p>
+<div class="row" id="rB"></div></section>
+
+<section><h2>A+B+C. ＋光沢<button onclick="replay()">もう一度流す</button></h2><p class="d">上から斜めのハイライト。出現時に1回だけ横切る（常時ループなし）</p>
+<div class="row" id="rC"></div></section>
+
+<section><h2>D. 色別の個性</h2><p class="d">Buster＝角を落とした八角、Arts＝丸み＋発光、Quick＝斜めストライプ</p>
+<div class="row" id="rD"></div></section>
+
+<section><h2>E. 宝具カード</h2><p class="d">円錐グラデの金縁＋内側の光＋光の粒＋金のプレート</p>
+<div class="row" id="rE"></div></section>
+
+<script>
+const T=[['R','Buster',60],['B','Arts',40],['G','Quick',30]];
+const corners='<i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>';
+const card=(cls,col,name,dmg,extra='')=>`<div class="cell"><div class="ccard ${col} ${cls}"><div class="art"></div>${extra}<span class="ccdmg">${dmg}</span><span class="ccname">${name}</span></div><div class="cap">${name}</div></div>`;
+rA.innerHTML=T.map(([c,n,d])=>card('vA',c,n,d,corners)).join('');
+rB.innerHTML=T.map(([c,n,d])=>card('vA vB',c,n,d,corners)).join('');
+rC.innerHTML=T.map(([c,n,d])=>card('vA vB vC play',c,n,d,corners+'<div class="ccard-sheen"></div><div class="gloss"></div>')).join('');
+rD.innerHTML=T.map(([c,n,d])=>card('vD',c,n,d)).join('');
+rE.innerHTML=card('vE','R','宝具',150,'<div class="sparkle"></div>'+corners.replace(/corner/g,'corner'))
+ +card('vE vB','B','宝具',150,'<div class="sparkle"></div>');
+const IMG='<img class="ccimg" src="../img/units/athelstan.webp" alt="">';
+const cardI=(cls,col,name,dmg,extra='')=>`<div class="cell"><div class="ccard ${col} ${cls}">${IMG}${extra}<span class="ccdmg">${dmg}</span><span class="ccname">${name}</span></div><div class="cap">${name}</div></div>`;
+rX.innerHTML='<div class="rowlabel">現状</div>'
+ +T.map(([c,n,d])=>cardI('',c,n,d)).join('')+cardI('curULT','R','宝具',330)
+ +'<div class="rowlabel">提案（A+B ／ E）</div>'
+ +T.map(([c,n,d])=>cardI('vA vB',c,n,d,corners)).join('')+cardI('vE vB','R','宝具',330,'<div class="sparkle"></div>');
+rBd.innerHTML=['bd1','bd2','bd3','bd4'].map((b,i)=>cardI('vA vB '+b,'R','Buster',60,corners)).join('');
+const sz=(w)=>`<div class="cell"><div class="ccard B vA vB vS" style="width:${w}px">${IMG}<span class="ccdmg">40</span><span class="ccname">Arts</span></div><div class="cap">${w}px</div></div>`;
+rSz.innerHTML=[40,74,110,150].map(sz).join('');
+function replay(){document.querySelectorAll('.vC').forEach(e=>{e.classList.remove('play');void e.offsetWidth;e.classList.add('play')})}
+</script></body></html>

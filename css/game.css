@@ -402,8 +402,6 @@ body[data-screen="battle"] #app{overflow:hidden}
 /* 攻撃：コマンドカードを拡大して攻撃対象へ飛ばす */
 .atkfx{position:fixed;z-index:4;width:150px;margin:-112px 0 0 -75px;pointer-events:none}
 .atkfx .ccard{width:150px;box-shadow:0 0 0 2px var(--gold-hi),0 0 34px rgba(246,227,161,.8),0 10px 30px rgba(0,0,0,.7)}
-.atkfx .ccard .ccdmg{font-size:22px}
-.atkfx .ccard .ccname{font-size:16px}
 .af-tag{position:absolute;z-index:5;left:50%;top:-14px;translate:-50% 0;font:700 13px var(--serif);letter-spacing:.2em;color:#1a1206;padding:1px 10px;background:linear-gradient(180deg,var(--gold-hi),var(--gold))}
 .svt.lunge.up{animation:lungeUp .45s ease-out}
 .svt.lunge.down{animation:lungeDown .45s ease-out}

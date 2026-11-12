@@ -526,11 +526,11 @@ function cmdCardHTML(d,c,opt={}){
       ${L.bg?`<img class="cc-bg" src="${esc(L.bg)}" alt="">`:''}
       ${unitImg(d,'card','ccimg',d?d.name:'')}
       ${L.frame?`<img class="cc-frame" src="${esc(L.frame)}" alt="${esc(label)}">`:`<span class="ccname">${label}</span>`}
-      ${c.dmg!=null?`<span class="ccdmg">${c.dmg}</span>`:''}${ex&&!opt.small?`<span class="ccex">${ex}</span>`:''}</div>`;
+      <span class="cc-ft"></span>${c.dmg!=null?`<span class="ccdmg">${c.dmg}</span>`:''}${ex&&!opt.small?`<span class="ccex">${ex}</span>`:''}</div>`;
   }
   const label=c.c==='ASC'?TERMS.asc:(c.label||TERMS.W);
   const grail=c.c==='ASC'&&UI_IMG.grail?`<img class="cc-grail" src="${esc(UI_IMG.grail)}" alt="">`:'';
-  return `<div class="ccard ${esc(c.c)} plain${grail?' hasgrail':''}${sz}">${grail}<span class="ccname">${esc(label)}</span>${c.dmg>0?`<span class="ccdmg">${c.dmg}</span>`:''}</div>`;
+  return `<div class="ccard ${esc(c.c)} plain${grail?' hasgrail':''}${sz}">${grail}<span class="cc-ft"></span><span class="ccname">${esc(label)}</span>${c.dmg>0?`<span class="ccdmg">${c.dmg}</span>`:''}</div>`;
 }
 
 // ---------- 表示用の文字列 ----------
