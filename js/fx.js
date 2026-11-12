@@ -11,6 +11,12 @@ const FX_WAIT = { sync:130, skill:700, say:950, dmg:420, cutin:CUTIN_MS-250, pha
 const ROLL_SPIN = 520;                             // ロール演出で出目が回っている時間(ms)
 const BUBBLE_MS = 2600;                            // 吹き出しの表示時間(ms)
 let fxRunning=false;
+// 速度「最速」（G.speed<=150）：演出の長さ・待ちを縮める。宝具カットインは見せ切る
+const fxScale = ()=>G.speed<=150?0.35:1;
+const fxMs = ms=>Math.round(ms*fxScale());
+function fxSpeedUp(el){ const s=fxScale(); if(s<1&&el&&el.getAnimations) el.getAnimations({subtree:true}).forEach(a=>{ a.playbackRate=1/s; }); }
+// タイトルに戻る・新しい対戦のとき：画面に残っている演出を全部消す
+function fxClear(){ const L=document.querySelector('#fx'); if(L) L.innerHTML=''; document.querySelectorAll('.svt.lunge,.svt.hit,.svt.ko,.lane .it.fire').forEach(e=>e.classList.remove('lunge','up','down','hit','ko','fire')); }
 
 const fxBusy = ()=>fxRunning||FXQ.length>0;
 function fxKick(){ if(!fxRunning&&FXQ.length){ fxRunning=true; setTimeout(fxNext,30); } }
@@ -28,7 +34,7 @@ function fxNext(){
   let wait=0;
   try{ wait=fxPlay(ev); }catch(e){ console.error(e); if(ev.t==='roll') reveal(ev); }
   if(ev.w!=null) wait=ev.w;
-  if(ev.t!=='cutin'&&G.speed<500) wait=Math.round(wait*0.55); // 速度「速い」：演出の間も詰める（宝具カットインは見せ切る）
+  if(ev.t!=='cutin'&&G.speed<500) wait=Math.round(wait*(G.speed<=150?0.3:0.55)); // 速度「速い」「最速」：演出の間も詰める（宝具カットインは見せ切る）
   setTimeout(fxNext,wait);
 }
 const fxLayer = ()=>document.querySelector('#fx');
@@ -63,8 +69,8 @@ function showPhase(L,ev){
   el.className=`phasefx ${ev.t}${ev.big?' big':''}${ev.end?' end':''}${ev.pid!=null?` p${ev.pid}`:''}${ev.col?` c${ev.col}`:''}`;
   Object.assign(el.style,{left:`${r.left}px`,top:`${r.top}px`,width:`${r.width}px`,height:`${r.height}px`});
   el.innerHTML=`<div class="pf-band"><b>${esc(ev.title)}</b>${ev.sub?`<small>${esc(ev.sub)}</small>`:''}</div>`;
-  L.appendChild(el);
-  setTimeout(()=>el.remove(),ev.end?3200:ev.big?1500:1100);
+  L.appendChild(el); fxSpeedUp(el);
+  setTimeout(()=>el.remove(),fxMs(ev.end?3200:ev.big?1500:1100));
 }
 
 // 鉛筆ロール：肖像の上で出目がくるくる変わり、止まったら結果（行動回数・コマンド）を見せる
@@ -75,22 +81,22 @@ function showRoll(L,ev,r){
   const c=centerOf(r);
   el.style.left=`${c.x}px`; el.style.top=`${c.y}px`;
   el.innerHTML=`<div class="rf-pencil"><span>${roll()+1}</span></div><div class="rf-res"></div>`;
-  L.appendChild(el);
+  L.appendChild(el); fxSpeedUp(el);
   const num=el.querySelector('.rf-pencil span');
   let last=-1;
   const tick=setInterval(()=>{ let n; do{ n=roll()+1; }while(n===last); last=n; num.textContent=n; },55);
   setTimeout(()=>{
     clearInterval(tick);
     num.textContent=ev.f+1;
-    el.classList.add('land');
+    el.classList.add('land'); fxSpeedUp(el);
     const res=el.querySelector('.rf-res');
     if(ev.ch) res.innerHTML=`<span class="rf-acts rf-ch ${ev.ch.ok?'':'zero'}">${ev.ch.ok?'成功':'失敗'}<small>${ev.ch.need}以下で成功</small></span>`;
     else if(ev.n!=null) res.innerHTML=`<span class="rf-acts ${ev.n?'':'zero'}">行動 ×${ev.n}</span>`;
     else if(ev.cmd&&d) res.innerHTML=cmdCardHTML(d,ev.cmd);
     reveal(ev);
-  },ROLL_SPIN);
-  setTimeout(()=>el.classList.add('bye'),ROLL_SPIN+(ev.grp?900:650));
-  setTimeout(()=>el.remove(),ROLL_SPIN+(ev.grp?1200:950));
+  },fxMs(ROLL_SPIN));
+  setTimeout(()=>el.classList.add('bye'),fxMs(ROLL_SPIN+(ev.grp?900:650)));
+  setTimeout(()=>el.remove(),fxMs(ROLL_SPIN+(ev.grp?1200:950)));
 }
 // ロール結果を画面に出す（隠していた出目バッジ・コマンド列のカード）
 function reveal(ev){
@@ -110,9 +116,9 @@ function showAtk(L,ev){
   if(!st||!from) return;
   const c0=centerOf(from.getBoundingClientRect()), cs=centerOf(st.getBoundingClientRect());
   const svt=document.querySelector(`.svt[data-uid="${ev.uid}"]`);
-  if(svt){ svt.classList.remove('lunge','up','down'); void svt.offsetWidth; svt.classList.add('lunge',svt.closest('.side.top')?'down':'up'); }
+  if(svt){ svt.classList.remove('lunge','up','down'); void svt.offsetWidth; svt.classList.add('lunge',svt.closest('.side.top')?'down':'up'); fxSpeedUp(svt); }
   const lane=ev.ri!=null&&document.querySelectorAll('.lane .it')[ev.ri];
-  if(lane){ lane.classList.remove('fire'); void lane.offsetWidth; lane.classList.add('fire'); }
+  if(lane){ lane.classList.remove('fire'); void lane.offsetWidth; lane.classList.add('fire'); fxSpeedUp(lane); }
   const el=document.createElement('div');
   el.className=`atkfx${ev.extra?' extra':''}`;
   el.innerHTML=`${ev.extra?'<span class="af-tag">EXTRA</span>':''}${cmdCardHTML(d,ev.cmd)}`;
@@ -126,9 +132,9 @@ function showAtk(L,ev){
   ];
   if(to){ const c1=centerOf(to.getBoundingClientRect()); frames.push({transform:`translate(${c1.x-cs.x}px,${c1.y-cs.y}px) scale(.45) rotate(${c1.y>cs.y?'':'-'}8deg)`,opacity:.15}); }
   else frames.push({transform:'translate(0,-20px) scale(1.05)',opacity:0});
-  const a=el.animate(frames,{duration:760,easing:'cubic-bezier(.3,.7,.3,1)',fill:'forwards'});
+  const a=el.animate(frames,{duration:fxMs(760),easing:'cubic-bezier(.3,.7,.3,1)',fill:'forwards'});
   a.onfinish=()=>el.remove();
-  setTimeout(()=>el.remove(),1200);
+  setTimeout(()=>el.remove(),fxMs(1200));
 }
 // 肖像の上に文字を出す（霊基再臨など）
 function showPop(L,ev,r){
@@ -137,8 +143,8 @@ function showPop(L,ev,r){
   n.textContent=ev.text;
   const c=centerOf(r);
   n.style.left=`${c.x}px`; n.style.top=`${c.y}px`;
-  L.appendChild(n);
-  setTimeout(()=>n.remove(),1400);
+  L.appendChild(n); fxSpeedUp(n);
+  setTimeout(()=>n.remove(),fxMs(1400));
 }
 
 // 吹き出し：画面の上半分にいるサーヴァントは下向き、下半分なら上向きに出す（どちらも中央に向かう）
@@ -156,8 +162,9 @@ function showBubble(L,ev,r){
   const top = down ? r.bottom-6 : r.top-h+6; // 上の列は肖像の下、下の列は肖像の上（どちらも中央側）
   b.style.left=`${left}px`; b.style.top=`${Math.max(8,Math.min(window.innerHeight-h-8,top))}px`;
   b.style.setProperty('--tail',`${Math.max(14,Math.min(w-28,r.left+r.width*.5-left))}px`);
-  setTimeout(()=>b.classList.add('bye'),BUBBLE_MS);
-  setTimeout(()=>b.remove(),BUBBLE_MS+350);
+  fxSpeedUp(b);
+  setTimeout(()=>b.classList.add('bye'),fxMs(BUBBLE_MS));
+  setTimeout(()=>b.remove(),fxMs(BUBBLE_MS+350));
 }
 
 // ダメージ数値：肖像の中央から浮き上がって消える
@@ -191,10 +198,10 @@ function showDmg(L,ev,r){
   n.textContent=ev.text||ev.v;
   n.style.left=`${r.left+r.width/2+(Math.random()*24-12)}px`;
   n.style.top=`${r.top+r.height*.45}px`;
-  L.appendChild(n);
+  L.appendChild(n); fxSpeedUp(n);
   const svt=document.querySelector(`.svt[data-uid="${ev.uid}"]`);
-  if(svt&&!ev.text){ svt.classList.remove('hit'); void svt.offsetWidth; svt.classList.add('hit'); }
-  setTimeout(()=>n.remove(),1100);
+  if(svt&&!ev.text){ svt.classList.remove('hit'); void svt.offsetWidth; svt.classList.add('hit'); fxSpeedUp(svt); }
+  setTimeout(()=>n.remove(),fxMs(1100));
 }
 
 // サーヴァントのカード1枚だけ描き直す（画面全体の render は呼ばない）
@@ -226,11 +233,11 @@ function showSkill(L,ev){
         <div class="sf-head"><i>${esc(ev.head||`S${ev.si+1}`)}</i>${ev.name?`<b>${esc(ev.name)}</b>`:''}</div>
       </div></div>
     <ul>${ev.lines.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`;
-  L.appendChild(el);
+  L.appendChild(el); fxSpeedUp(el);
   el.style.left=`${r.left+r.width/2}px`; el.style.top=`${r.top+r.height/2}px`;
   el.style.maxWidth=`${Math.max(240,Math.min(520,r.width-16))}px`;
-  setTimeout(()=>el.classList.add('bye'),SKILL_MS);
-  setTimeout(()=>el.remove(),SKILL_MS+300);
+  setTimeout(()=>el.classList.add('bye'),fxMs(SKILL_MS));
+  setTimeout(()=>el.remove(),fxMs(SKILL_MS+300));
 }
 
 // 宝具カットイン：見た目と宝具名の配置は js/cutin.js + css/cutin.css（エディタのプレビューと共用）

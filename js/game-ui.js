@@ -335,7 +335,7 @@ function unitDetailHTML(d,u){
     </div>
     ${fx}
     ${u?`<h4>操作</h4><div class="udops">${skillBtns(u,d)}</div>`:''}
-    <h4>スキル・${TERMS.ult}</h4>${skillListHTML(d)}
+    <h4>スキル・${TERMS.ult}</h4>${skillListHTML(d,!!(u&&u.asc))}
     <h4>鉛筆の面</h4>${facesTableHTML(d)}
     ${d.link?`<div class="udlink"><button class="linkbtn" data-ui="openLink" data-url="${esc(d.link)}" title="${esc(d.link)}">キャラクター設定を見る ↗</button><small class="sub">別タブで開きます</small></div>`:''}
   </div>`;
@@ -352,13 +352,14 @@ function linkModalHTML(){
 }
 // 設定（保存される項目をすべて）。タイトル画面の設定パネルとメニューの設定ウィンドウで共有する
 function settingsBodyHTML(){
-  const sp=G.speed<500?250:700, seg=(on,items)=>`<div class="seg">${items.map(([lab,ui,v,k])=>`<button class="${on===k?'on':''}" data-ui="${ui}" data-v="${v}">${lab}</button>`).join('')}</div>`;
+  const sp=G.speed<=150?120:G.speed<500?250:700, seg=(on,items)=>`<div class="seg">${items.map(([lab,ui,v,k])=>`<button class="${on===k?'on':''}" data-ui="${ui}" data-v="${v}">${lab}</button>`).join('')}</div>`;
   const row=(name,sub,ctl)=>`<div class="setrow"><div><b>${name}</b>${sub?`<small class="sub">${sub}</small>`:''}</div>${ctl}</div>`;
   const onoff=(ui,on)=>seg(on?1:0,[['ON',ui,1,1],['OFF',ui,0,0]]);
   return `<div class="navstep setting">
-    ${row('ゲーム進行速度','CPUの手番や演出の速さ',seg(sp,[['速い','setSpeed',250,250],['普通','setSpeed',700,700]]))}
+    ${row('ゲーム進行速度','CPUの手番や演出の速さ',seg(sp,[['普通','setSpeed',700,700],['速い','setSpeed',250,250],['最速','setSpeed',120,120]]))}
     ${row('オート','選ぶ余地のない操作（ロール・決定だけのボタン）を自動で進めます',onoff('setAuto',UI.auto))}
     ${row('バトルログ','対戦画面にログを表示します',onoff('setLog',UI.log))}
+    ${row('原作キャラを含まない','ONの間、原作のサーヴァント・マスターを選択肢とタイトル画面に出しません',onoff('setNoCanon',noCanon()))}
     ${row('設定リンクの確認','キャラクター設定リンクを開く前の確認',seg(linkConfirmOn()?1:0,[['確認する','setLinkConfirm',1,1],['確認しない','setLinkConfirm',0,0]]))}
     ${row('下の余白','スマホで画面の下がブラウザのバーに隠れるときに余白を足します',seg(UI.bottom,BOTTOM_LABELS.map((l,i)=>[l,'setBottom',i,i])))}
   </div>`;
@@ -383,6 +384,7 @@ function masterDetailHTML(d,m){
       </div>
     </div>
     ${fx}
+    ${d.link?`<div class="udlink"><button class="linkbtn" data-ui="openLink" data-url="${esc(d.link)}" title="${esc(d.link)}">キャラクター設定を見る ↗</button><small class="sub">別タブで開きます</small></div>`:''}
     <h4>${MASTER_ACTS.support}（出た面の効果をこのターンだけ）</h4>
     <table class="faces"><tr><th>出目</th><th>効果</th></tr>${d.faces.map((f,i)=>`<tr><td>${i+1}</td><td>${f.eff.length?`${f.label?`<b>${esc(f.label)}</b>`:''}<div class="sub">${esc(effsText(f.eff,null,mTLabel))}</div>`:'<span class="sub">効果なし</span>'}</td></tr>`).join('')}</table>
     <h4>${MASTER_ACTS.spell}（${ruleset().mTeam?`${ruleset().spells}画・同じ効果は1回・使うと行動-1`:'1試合1回・3つから1つ'}）${P?`<small class="sub"> ${P.spell==='decl'?'宣言中':`残り${P.spellLeft}画`}</small>`:''}</h4>
@@ -653,7 +655,7 @@ function render(){
   document.body.classList.toggle('lock',cpuActing());
   const ab=document.querySelector('#autobtn'), spd=document.querySelector('#spd');
   ab.hidden=screen!=='battle'; ab.textContent=`オート：${UI.auto?'ON':'OFF'}`; ab.classList.toggle('on',UI.auto);
-  spd.hidden=screen!=='battle'; spd.textContent=`速度：${G.speed<500?'速い':'普通'}`;
+  spd.hidden=screen!=='battle'; spd.textContent=`速度：${G.speed<=150?'最速':G.speed<500?'速い':'普通'}`;
   document.body.classList.toggle('menuopen',UI.menu);
   document.querySelector('#menubtn').setAttribute('aria-expanded',UI.menu?'true':'false');
   // 画面は毎回作り直すが、読み込み済みの画像は残す（setHTML：フェイズ切り替えで画像がチカチカ消えないように）
@@ -759,12 +761,20 @@ function uiAct(a,ds){
     case 'openTutorial': UI.tut=true; break;
     case 'closeTutorial': UI.tut=false; break;
     case 'setAuto': UI.auto=ds.v==='1'; savePref('pencilduel.auto',UI.auto?'1':'0'); break;
-    case 'toggleSpeed': { const v=G.speed<500?700:250; savePref('pencilduel.speed',String(v)); window.SPEED_PREF=v; G.speed=v; break; }
+    case 'toggleSpeed': { const v=G.speed>=500?250:G.speed>150?120:700; savePref('pencilduel.speed',String(v)); window.SPEED_PREF=v; G.speed=v; break; }
     case 'setLog': UI.log=ds.v==='1'; savePref('pencilduel.logOpen',UI.log?'1':'0'); break;
     case 'setBottom': UI.bottom=Math.min(BOTTOM_STEPS.length-1,Math.max(0,Number(ds.v)||0)); savePref('pencilduel.bottom',String(UI.bottom)); applyBottom(); break;
     case 'rcost': UI.rcost=ds.v; break;
     case 'navBack': if(UI.nav.s==='quick'&&UI.nav.step==='level') UI.nav.step='rule'; else UI.nav={s:'top',step:'rule'}; break;
     case 'setSpeed': { const v=Number(ds.v)||700; savePref('pencilduel.speed',String(v)); window.SPEED_PREF=v; G.speed=v; break; }
+    case 'setNoCanon': {
+      savePref(CANON_PREF,ds.v==='0'?'0':'1'); reloadUnits(); SHOW_IDS=null; UI.setupView=null;
+      if(G.phase==='setup'){ // 編成中に外れたキャラは選択から外す
+        G.picks=G.picks.map(a=>a.filter(id=>UNITS.some(u=>u.id===id)));
+        if(G.mpicks) G.mpicks=G.mpicks.map(id=>MASTERS.some(m=>m.id===id)?id:null);
+      }
+      break;
+    }
     case 'setLinkConfirm': savePref(LINK_PREF,ds.v==='0'?'0':'1'); break;
     case 'toggleLinkConfirm': savePref(LINK_PREF,linkConfirmOn()?'0':'1'); break;
     case 'toggleLog': UI.log=!UI.log; savePref('pencilduel.logOpen',UI.log?'1':'0'); break;

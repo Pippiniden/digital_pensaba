@@ -232,6 +232,7 @@ function normalizeMaster(m){
   const ln=m.lines||{};
   return { id:String(m.id||''), name:String(m.name||''), cls:TERMS.player, traits:[], cost:num(m.cost), hp:num(m.hp,100), master:true,
     ...(m.wip?{wip:true}:{}), // 制作中：js 書き出し（masters.js）に含めない
+    ...(normLink(m.link)?{link:normLink(m.link)}:{}),
     fit:normFit(m.fit), lines:Object.fromEntries(Object.keys(MASTER_LINE_KEYS).map(k=>[k,strList(ln[k])])), faces, spells };
 }
 // ---------- 泥ペンマスシート（MSHEET）に沿った警告と目安 ----------
@@ -352,6 +353,7 @@ function mastersToJS(ms){
     '  {',
     `    "id":${j(m.id)}, "name":${j(m.name)}, "cost":${m.cost}, "hp":${m.hp},`,
     ...(fitIsDef(m.fit,'face')?[]:[`    "fit":${j({face:m.fit.face})},`]),
+    ...(m.link?[`    "link":${j(m.link)},`]:[]),
     ...(Object.keys(MASTER_LINE_KEYS).some(k=>m.lines[k].length)?[`    "lines":${j(Object.fromEntries(Object.keys(MASTER_LINE_KEYS).map(k=>[k,m.lines[k]])))},`]:[]),
     '    "faces":[',
     m.faces.map(f=>`      ${j({label:f.label,eff:f.eff,...(f.line?{line:f.line}:{})})}`).join(',\n'),
@@ -614,8 +616,8 @@ function facesTableHTML(d){
     ${d.faces.map((f,i)=>`<tr><td>${i+1}</td><td>${faceActs(d,i)}</td><td>${cell(f.pre)}</td><td>${cell(f.post)}</td></tr>`).join('')}</table>`;
 }
 // 操作できないスキル一覧（編成画面・エディタのプレビュー用）
-function skillListHTML(d){
-  const rows=d.skills.map((s,i)=>`<div class="skill"><span class="sname">S${i+1} ${i===2?'🔒':''}${skillNameHTML(s)}</span><span class="desc">${esc(effsText(s.eff,s.pick))}${i===2?`（${TERMS.asc}後に使用可）`:''}</span></div>`).join('');
+function skillListHTML(d,asc=false){
+  const rows=d.skills.map((s,i)=>{ const lk=i===2&&!asc; return `<div class="skill"><span class="sname">S${i+1} ${lk?'🔒':''}${skillNameHTML(s)}</span><span class="desc">${esc(effsText(s.eff,s.pick))}${lk?`（${TERMS.asc}後に使用可）`:''}</span></div>`; }).join('');
   const ult=`<div class="skill ult"><span class="sname">${TERMS.ult}「${ultNameHTML(d.ult)}」</span><span class="desc">[${TERMS[d.ult.c]||esc(d.ult.c)}] ${esc(effsText(d.ult.eff,d.ult.pick))}</span></div>`;
   return `<div class="skills">${rows}${ult}</div>`;
 }

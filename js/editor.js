@@ -253,6 +253,7 @@ function renderMasterForm(el){
       <label>ID<input data-p="id" value="${esc(m.id)}"><small>半角英数字・_・-（${TERMS.unit}と重ならないこと）</small></label>
       <label>コスト<input type="number" min="0" data-p="cost" data-t="num" value="${m.cost}"><small data-mprev="atk">攻撃：相手${TERMS.player}へ${m.cost*ma.master}・相手${TERMS.unit}へ${m.cost*ma.svt}（マスタールール）</small></label>
       <label>HP<input type="number" min="1" step="5" data-p="hp" data-t="num" value="${m.hp}"><small>0になると自軍${TERMS.unit}がこの値のダメージを受ける</small></label>
+      <label class="wide">キャラクター設定のリンク（任意）<input type="url" data-p="link" data-t="optstr" value="${esc(m.link||'')}" placeholder="https://…"></label>
     </div>
     <div class="row tplrow"><button class="small" data-act="applyMTpl">このコストのテンプレを適用</button>
       <small class="sub">HPと補助の6面を、コスト${m.cost}の標準値（HP＝コスト×100・4番は強め・ほかはコストと同じ数の面）に置き換えます（令呪・セリフは変えません）</small></div>

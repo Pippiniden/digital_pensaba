@@ -7,7 +7,15 @@
    ===================================================================== */
 
 let UNITS=[], MASTERS=[], UNIT_SOURCE='default', UNIT_BROKEN=false, MASTER_SOURCE='default', MASTER_BROKEN=false;
-function reloadUnits(){ const r=loadUnits(); UNITS=r.units; UNIT_SOURCE=r.source; UNIT_BROKEN=!!r.broken; const mr=loadMasters(UNITS); MASTERS=mr.masters; MASTER_SOURCE=mr.source; MASTER_BROKEN=!!mr.broken; }
+let ALL_UNITS=[], ALL_MASTERS=[]; // 原作キャラも含む全員（D() の引き当て用）。UNITS / MASTERS は設定で原作キャラを除いたもの
+// 原作キャラ（設定「原作キャラを含まない」がONの間、選択肢・タイトル画面から外す）。コスト1のアルトリア（ahotoria）は含まない
+const CANON_UNIT_IDS=['artoria','emiya','cu','medusa','kojiro','hassan','mash','heracles','medea'];
+const CANON_MASTER_IDS=['m_rin','m_kiritsugu','m_shirou','m_ritsuka','m_celenike','m_shinji','m_kariya'];
+const CANON_PREF='pencilduel.noCanon';
+// 既定ON（'0' のときだけ含める）。localStorage の無い Worker（シミュレーション）では外さない
+function noCanon(){ try{ return localStorage.getItem(CANON_PREF)!=='0'; }catch(e){ return false; } }
+function reloadUnits(){ const r=loadUnits(); ALL_UNITS=r.units; UNIT_SOURCE=r.source; UNIT_BROKEN=!!r.broken; const mr=loadMasters(ALL_UNITS); ALL_MASTERS=mr.masters; MASTER_SOURCE=mr.source; MASTER_BROKEN=!!mr.broken;
+  const nc=noCanon(); UNITS=nc?ALL_UNITS.filter(u=>!CANON_UNIT_IDS.includes(u.id)):ALL_UNITS; MASTERS=nc?ALL_MASTERS.filter(m=>!CANON_MASTER_IDS.includes(m.id)):ALL_MASTERS; }
 reloadUnits();
 
 // 実験用：マスターチームの令呪が行動回数を使わない（0=従来 / 1=使わず、使うとそのターンの補助は無し / 2=使わず、補助とも併用・続けて何度でも）
@@ -24,6 +32,7 @@ function newGame(o={}){
     // リザルト用の記録：stats＝ユニットごと（uid） / tl＝ターンごとの与ダメージ [P1,P2] / chains＝陣営ごとのチェイン回数 / starsGen＝発生スター合計
     stats:{}, tl:[], chains:[{R:0,B:0,G:0,brave:0},{R:0,B:0,G:0,brave:0}], starsGen:[0,0] };
   FXQ.length=0; for(const k in FXHOLD) delete FXHOLD[k]; FXHIDE.clear(); KO_PEND.length=0;
+  if(typeof fxClear==='function') fxClear(); // 画面に残っている演出（吹き出し・帯・カットインなど）も消す
 }
 
 // ---------- 演出イベント ----------
@@ -91,7 +100,7 @@ function phaseFx(title,sub,o={}){ fxEmit({t:'phase',title,sub,...o}); }
 function rollFx(uid,f,o={}){ (o.keys||[]).forEach(k=>FXHIDE.add(k)); fxEmit({t:'roll',uid,f,...o}); }
 
 // ---------- ヘルパー ----------
-const D = id=>UNITS.find(u=>u.id===id)||MASTERS.find(m=>m.id===id);
+const D = id=>UNITS.find(u=>u.id===id)||MASTERS.find(m=>m.id===id)||ALL_UNITS.find(u=>u.id===id)||ALL_MASTERS.find(m=>m.id===id);
 const traitsOf = u=>(D(u.def)||{}).traits||[]; // 属性（特攻・特防の判定用）
 const ruleset = ()=>RULESETS[G.rule]||RULESETS.team;
 const keepRule = ()=>({rule:G.rule, handicap:G.handicap});
@@ -923,7 +932,7 @@ const ACTIONS = {
     const cfg={mode:G.mode, level:G.level, cpu:G.cpu, speed:G.speed, names:G.players.map(p=>p.name)};
     newGame(keepRule()); applyMode(cfg);
   },
-  toggleSpeed(){ G.speed = G.speed>=500 ? 250 : 700; },
+  toggleSpeed(){ G.speed = G.speed>=500 ? 250 : G.speed>150 ? 120 : 700; },
   setupToggle({id}){
     const pid=G.setupPid, picks=G.picks[pid], d=D(id); G.setupMsg='';
     if(!d) return;
