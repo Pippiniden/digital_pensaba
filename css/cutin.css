@@ -52,6 +52,13 @@
   scale:calc(var(--ds) * 1.12);
   --in:ctInFade;--inT:.8s;--dxe:-3cqw;--dse:.92}
 
+/* 光の粒: 素材 img/ui/cutin-particles.webp（透過・横につながる 2000×667）を帯の中で右へ流し続ける。
+   .ct-fill の中・顔アップより奥なので、帯の外には出ない。1周 = 素材1枚の幅（帯の高さ×3） */
+.ct-pimg{--tile:calc(50cqh * 2000 / 667);position:absolute;top:0;bottom:0;left:calc(var(--tile) * -1);width:calc(100% + var(--tile));
+  background:var(--pimg) 0 0/auto 100% repeat-x;mix-blend-mode:screen;opacity:.2;
+  animation:ctPimg 33s linear infinite}
+@keyframes ctPimg{to{translate:var(--tile) 0}}
+
 /* 稲妻: 帯の上端・下端に中心を合わせる。揺らぎは SVG フィルタ #ct-zap（cutin.js が1回だけ差し込む） */
 .ct-edge{position:absolute;left:0;width:100%;height:3.2cqh;
   background:linear-gradient(90deg,transparent 2%,var(--bright) 12%,var(--pale) 40%,#fff 55%,var(--glow) 75%,transparent 98%);

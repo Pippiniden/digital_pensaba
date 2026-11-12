@@ -27,7 +27,7 @@ const CARD_LAYERS = {
 };
 
 // 画面の飾り
-const UI_IMG = { circleOut:'img/ui/mcircleo.webp', circleIn:'img/ui/mcirclei.webp', grail:'img/ui/grail.webp' }; // grail＝霊基再臨カードの聖杯
+const UI_IMG = { circleOut:'img/ui/mcircleo.webp', circleIn:'img/ui/mcirclei.webp', grail:'img/ui/grail.webp', cutinParticles:'img/ui/cutin-particles.webp' }; // grail＝霊基再臨カードの聖杯 / cutinParticles＝宝具カットインの帯に流す光の粒
 
 // ---------- ルール定数 ----------
 // 泥ペンサバ「チームバトルルール」（3on3・合計コスト10）準拠。クラス相性はなし

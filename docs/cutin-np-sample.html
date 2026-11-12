@@ -134,7 +134,17 @@ body.dark{background:#0a0e1a;color:#ccd}
 .np-edge::after{content:"";position:absolute;left:8%;right:6%;top:42%;height:16%;background:#fff;filter:blur(.08cqh)}
 
 /* ---- 3 光の破片 ---- */
-.np.p-off #shards{display:none}
+.np:not(.p-on) #shards{display:none}
+
+/* ---- 画像パーティクル（img/ui/cutin-particles.webp: 透過・横につながる素材） ----
+   帯の塗り .np-fill の中、顔アップ .np-ghost より奥に置くので、帯（色の濃い部分）からははみ出さない。
+   素材1枚の幅 = 帯の高さ×3（画像が 2000×667 なので）。その幅だけ右へ流して繰り返す */
+.np:not(.p-img) .np-pimg{display:none}
+.np-pimg{--tile:calc(50cqh * 2000 / 667);position:absolute;top:0;bottom:0;left:calc(var(--tile) * -1);width:calc(100% + var(--tile));
+  background:url(../img/ui/cutin-particles.webp) 0 0/auto 100% repeat-x;
+  mix-blend-mode:screen;opacity:var(--pop,.2);
+  animation:npPimg var(--pspd,33s) linear infinite}
+@keyframes npPimg{to{translate:var(--tile) 0}}
 .np-shard{position:absolute;width:var(--w);height:calc(var(--w)*.32);
   background:radial-gradient(closest-side,#fff 35%,var(--glow) 65%,transparent);
   clip-path:polygon(0 50%,35% 0,100% 50%,35% 100%);
@@ -256,11 +266,13 @@ body.dark{background:#0a0e1a;color:#ccd}
 </div>
 <div class="bar">
   <span class="seg" data-g="lab"><b>ラベル</b><button data-v="lab-top" class="on">上部「宝具発動」</button><button data-v="lab-plate">宝具プレート</button><button data-v="lab-none">なし</button></span>
-  <span class="seg" data-g="pt"><b>パーティクル</b><button data-v="p-off" class="on">なし</button><button data-v="p-on">あり</button></span>
+  <span class="seg" data-g="pt"><b>パーティクル</b><button data-v="p-off">なし</button><button data-v="p-on">CSS</button><button data-v="p-img" class="on">画像</button></span>
   <span class="seg" data-g="mv"><b>動き</b><button data-v="drift" class="on">終了まで動き続ける</button><button data-v="still">登場後に止まる</button></span>
 </div>
 <div class="bar">
   <label>長さ <input type="range" id="T" min="1.6" max="4" step=".1" value="2.6"> <span id="Tv"></span></label>
+  <label>粒の速さ <input type="range" id="pspd" min="4" max="40" step="1" value="33"> <span id="pspdv"></span></label>
+  <label>粒の濃さ <input type="range" id="pop" min="0" max="1" step=".05" value=".2"> <span id="popv"></span></label>
   <label>動きの量 <input type="range" id="amt" min="0" max="3" step=".1" value="1"> <span id="amtv"></span></label>
   <span>顔アップ:</span>
   <label>X <input type="range" id="gx" min="0" max="100" value="50"></label>
@@ -272,9 +284,9 @@ body.dark{background:#0a0e1a;color:#ccd}
 <div class="brk" id="brkWrap"><b>改行位置</b><span id="brk" style="display:contents"></span></div>
 <div class="warn" id="warn"></div>
 
-<div class="np lab-top p-off drift" id="np">
+<div class="np lab-top p-img drift" id="np">
   <div class="np-band mv">
-    <div class="np-fill"><div class="np-ghost mv"></div></div>
+    <div class="np-fill"><div class="np-pimg"></div><div class="np-ghost mv"></div></div>
     <div class="np-edge top mv"></div>
     <div id="shards"></div>
     <div class="np-strip mv">
@@ -430,6 +442,8 @@ function setGhost(){
   $('gv').textContent=`fit.np = {x:${x}, y:${y}, z:${z}}`;
 }
 function setTime(){
+  np.style.setProperty('--pspd',$('pspd').value+'s');$('pspdv').textContent=$('pspd').value+'秒/周';
+  np.style.setProperty('--pop',$('pop').value);$('popv').textContent=$('pop').value;
   np.style.setProperty('--T',$('T').value+'s');$('Tv').textContent=$('T').value+'秒';
   np.style.setProperty('--amt',$('amt').value);$('amtv').textContent='×'+$('amt').value;
 }
@@ -445,7 +459,7 @@ $('nm').oninput=()=>{BR=undefined;brUI();setText()};   // 名前が変わった�
 $('rb').oninput=setText;
 brUI();
 ['gx','gy','gz'].forEach(k=>$(k).oninput=setGhost);
-$('T').oninput=$('amt').oninput=setTime;$('T').onchange=$('amt').onchange=replay;
+$('T').oninput=$('amt').oninput=$('pspd').oninput=$('pop').oninput=setTime;$('T').onchange=$('amt').onchange=replay;
 $('replay').onclick=replay;$('hold').onchange=replay;
 $('dark').onchange=()=>document.body.classList.toggle('dark',$('dark').checked);
 /* ===== 位置調整パネル =====
