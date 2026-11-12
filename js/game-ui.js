@@ -830,4 +830,18 @@ window.addEventListener('scroll',fitViewportH,{passive:true});
 if(window.visualViewport) window.visualViewport.addEventListener('resize',fitViewportH);
 // エディタで反映したデータを、別タブから戻ってきたときに読み直す（モード選択画面にいるときだけ）
 window.addEventListener('storage',e=>{ if((e.key===STORE.units||e.key===STORE.masters) && G.phase==='mode'){ reloadUnits(); render(); } });
+// タイトル画面の夜空（#titlebg）：#app の外に1回だけ作る（render() で作り直さないので、回転・瞬きのアニメーションが途切れない）。
+// 背景画像は UI_IMG から CSS 変数へ。星は固定の乱数で散らした box-shadow（毎回同じ配置）
+function initTitleBg(){
+  const el=document.querySelector('#titlebg'); if(!el) return;
+  const url=p=>`url('${new URL(p,document.baseURI).href}')`;
+  el.style.setProperty('--tb-pc',url(UI_IMG.titleBg));
+  el.style.setProperty('--tb-sp',url(UI_IMG.titleBgSp));
+  el.style.setProperty('--tb-circle',url(UI_IMG.titleCircle));
+  let seed=7; const r=()=>(seed=(seed*16807)%2147483647)/2147483647;
+  const layer=(n,size,col)=>Array.from({length:n},()=>`${Math.round(r()*2400)}px ${Math.round(r()*1400)}px 0 ${size}px ${col}`).join(',');
+  el.innerHTML=[[140,0,'rgba(255,255,255,.75)'],[60,.5,'rgba(220,230,255,.9)']].map(([n,s,c],i)=>`<i class="tb-stars s${i+1}" style="box-shadow:${layer(n,s,c)}"></i>`).join('')
+    +'<i class="tb-circle"></i><i class="tb-mist"></i>';
+}
+initTitleBg();
 newGame(); restoreMatch(); render();

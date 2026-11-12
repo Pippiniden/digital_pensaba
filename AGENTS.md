@@ -14,7 +14,7 @@ It was written from the code (`js/*.js`). If you find a mismatch, the code is th
 
 | Path | Role |
 |---|---|
-| `index.html` | Game page shell. `#app` (render target), `#fx` (effects layer), and the header whose buttons live in `#menu` (collapsed behind `#menubtn` ☰ at ≤860px; open state is `UI.menu` → `body.menuopen`) |
+| `index.html` | Game page shell. `#titlebg` (title-screen night sky, a `position:fixed` layer outside `#app`, shown only on `body[data-screen="mode"]`; filled once by `initTitleBg` in game-ui.js with star layers, the spinning magic circle and mist, so `render()` never restarts their animations), `#app` (render target), `#fx` (effects layer), and the header whose buttons live in `#menu` (collapsed behind `#menubtn` ☰ at ≤860px; open state is `UI.menu` → `body.menuopen`) |
 | `editor.html` | Editor page shell. Three columns: `#list` `#form` `#side` |
 | `js/rules.js` | **Rule definitions**: terms `TERMS`, numbers `RULES`, effect kinds `FX`, targets `TARGETS`, line kinds `LINE_KEYS`, classes, image settings |
 | `js/units.js` | **Default character data** `DEFAULT_UNITS` (same format the editor's "export units.js" produces) |
@@ -37,7 +37,7 @@ It was written from the code (`js/*.js`). If you find a mismatch, the code is th
 | `css/base.css` | Shared styles (CSS variables, buttons, header) |
 | `css/game.css` / `css/editor.css` | Per-screen styles |
 | `img/units/` | **Character images by id**: `{id}.webp` (face), `{id}_card.webp` (command card, optional). Names/extension set by `IMG_DIR` / `IMG_EXT` / `IMG_CARD_SUFFIX` in rules.js |
-| `img/classes/` | Class icons (webp) / `img/placeholder/` placeholder images (face.webp / card.webp) / `img/ui/` magic circle and `grail.webp` (the Holy Grail on the ascension card; paths in `UI_IMG`) |
+| `img/classes/` | Class icons (webp) / `img/placeholder/` placeholder images (face.webp / card.webp) / `img/ui/` magic circle and `grail.webp` (the Holy Grail on the ascension card), `title-bg.webp` (title background for landscape screens, 16:9, ideally 2560×1440) / `title-bg-sp.webp` (portrait screens, `max-aspect-ratio:1/1`, about 1080×2340); keep the centre dark and empty because the title, showcase, menu and magic circle sit there (paths in `UI_IMG`) |
 
 ## 3. Script load order and dependencies
 

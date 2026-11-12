@@ -27,7 +27,7 @@ const CARD_LAYERS = {
 };
 
 // 画面の飾り
-const UI_IMG = { circleOut:'img/ui/mcircleo.webp', circleIn:'img/ui/mcirclei.webp', grail:'img/ui/grail.webp', cutinParticles:'img/ui/cutin-particles.webp' }; // grail＝霊基再臨カードの聖杯 / cutinParticles＝宝具カットインの帯に流す光の粒
+const UI_IMG = { circleOut:'img/ui/mcircleo.webp', circleIn:'img/ui/mcirclei.webp', grail:'img/ui/grail.webp', cutinParticles:'img/ui/cutin-particles.webp', titleBg:'img/ui/title-bg.webp', titleBgSp:'img/ui/title-bg-sp.webp', titleCircle:'img/ui/mcircle.webp' }; // grail＝霊基再臨カードの聖杯 / cutinParticles＝宝具カットインの帯に流す光の粒 / titleBg・titleBgSp＝タイトル画面の夜空（横長・縦長の画面用）/ titleCircle＝タイトルの後ろで回る魔法陣
 
 // ---------- ルール定数 ----------
 // 泥ペンサバ「チームバトルルール」（3on3・合計コスト10）準拠。クラス相性はなし
