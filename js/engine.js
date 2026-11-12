@@ -875,6 +875,39 @@ function masterTargetable(){
 // =====================================================================
 // 操作（すべてここを通る）
 // =====================================================================
+// コストを指定したおまかせ編成。want＝合計コスト（マスタールールはマスター込み）。ちょうどになる編成がなければ一番近いものを選んで知らせる
+function setupRandomCost(pid,team,only,want,rnd){
+  const mr=masterRule(), max=ruleset().partyMax, cap=costCap();
+  if(want>cap){ G.setupMsg=`コスト${want}は上限${cap}を超えています`; return; }
+  const fixedM=mr&&only==='svt'?D(G.mpicks[pid]):null;          // サーヴァントだけ選び直す：マスターはそのまま
+  const fixedS=mr&&only==='master'?G.picks[pid].slice():null;   // マスターだけ選び直す：サーヴァントはそのまま
+  if(mr&&only==='svt'&&!fixedM){ G.setupMsg=`${TERMS.player}を選んでから使ってください`; return; }
+  const mpool=!mr?[null]:fixedM?[fixedM]:MASTERS;
+  const spool=[...UNITS];
+  const cands=[]; // {ids, m, c}
+  if(fixedS){
+    const sc=sumCost(fixedS);
+    for(const m of MASTERS) cands.push({ids:fixedS,m:m.id,c:sc+m.cost});
+  }else if(!team){
+    for(const m of mpool) for(const u of spool) cands.push({ids:[u.id],m:m&&m.id,c:u.cost+(m?m.cost:0)});
+  }else{
+    for(const m of mpool){
+      const mc=m?m.cost:0, found=[];
+      for(let t=0;t<400;t++){
+        const pool=[...spool].sort(()=>Math.random()-.5), n=1+Math.floor(Math.random()*max), p=[]; let s=0;
+        for(const d of pool){ if(p.length>=n) break; if(s+d.cost+mc<=cap){ p.push(d.id); s+=d.cost; } }
+        if(p.length) found.push({ids:p,m:m&&m.id,c:s+mc});
+      }
+      cands.push(...found);
+    }
+  }
+  if(!cands.length){ G.setupMsg='選べる編成がありません'; return; }
+  const gap=Math.min(...cands.map(x=>Math.abs(x.c-want))), top=cands.filter(x=>Math.abs(x.c-want)===gap), c=rnd(top);
+  G.picks[pid]=c.ids.slice();
+  if(team) G.picks[pid].sort((a,b)=>D(b).hp-D(a).hp);
+  if(mr&&c.m) G.mpicks[pid]=c.m;
+  G.setupMsg=gap?`合計コスト${want}の編成が作れないため、いちばん近いコスト${c.c}で選びました`:'';
+}
 const ACTIONS = {
   restart(){ newGame(keepRule()); },
   useDefaultData(){ clearCustomUnits(); clearCustomMasters(); reloadUnits(); SHOW_IDS=null; newGame(keepRule()); },
@@ -905,9 +938,11 @@ const ACTIONS = {
   // 2人目（CPU）の編成から1人目の編成に戻る
   setupBack(){ if(G.phase==='setup'&&G.setupPid===1){ G.setupPid=0; G.setupMsg=''; } },
   // おまかせ。only='svt'：サーヴァントだけ（選んだマスターはそのまま） / only='master'：マスターだけ（選んだサーヴァントはそのまま）
-  setupRandom({only}={}){
+  setupRandom({only,cost}={}){
     if(G.phase!=='setup') return;
     const pid=G.setupPid, team=ruleset().partyMax>1, rnd=a=>a[Math.floor(Math.random()*a.length)];
+    const want=cost===undefined||cost===''||cost===null?null:Number(cost);
+    if(want!==null&&Number.isFinite(want)) return setupRandomCost(pid,team,only,want,rnd);
     if(only==='master'){
       if(!masterRule()||!MASTERS.length) return;
       const room=costCap()-(team?sumCost(G.picks[pid]):0), c=MASTERS.filter(m=>!team||m.cost<=room);
@@ -934,10 +969,10 @@ const ACTIONS = {
     G.mpicks[pid]=id;
   },
   // CPUのおまかせ編成。how='random'：完全ランダム（setupRandom と同じ） / how='same'：相手と同じコストになるように選ぶ
-  setupCpu({how}={}){
+  setupCpu({how,cost}={}){
     if(G.phase!=='setup') return;
     const pid=G.setupPid; G.setupMsg='';
-    if(how==='random'){ ACTIONS.setupRandom(); return; }
+    if(how==='random'){ ACTIONS.setupRandom({cost}); return; }
     const opp=G.picks[1-pid], pick=a=>a[Math.floor(Math.random()*a.length)];
     if(masterRule()&&ruleset().partyMax===1){ // マスタールール：サーヴァント＋マスターの合計コストが相手と同じ（なければ一番近い）組み合わせからランダム
       const om=G.mpicks[1-pid], combos=UNITS.flatMap(u=>MASTERS.map(m=>({u:u.id,m:m.id,c:u.cost+m.cost})));

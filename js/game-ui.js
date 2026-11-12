@@ -150,7 +150,8 @@ function masterPromptHTML(){
   const spells=(a,extra='')=>d.spells.map((s,i)=>`<button class="primary" data-a="${a}" data-i="${i}" ${extra} title="${esc(effsText(s.eff,null,mTLabel))}">${esc(s.name)}</button>`).join('');
   if(G.spellPick){ // 対象の選択待ち（令呪・補助）。補助はロール済みなのでキャンセル不可
     const sp=G.spellPick, s=sp.sup||d.spells[sp.i], who=sp.side==='enemy'?`敵の${TERMS.unit}`:sp.side==='own'?`自軍の${TERMS.unit}`:TERMS.unit;
-    return `<p class="hl">「${esc(s.name||s.label)}」の対象にする${who}を選んでください</p><p class="sub small">${esc(spellText(s))}</p>${sp.sup?'':'<button data-a="cancelPick">キャンセル</button>'}`;
+    const nmTxt=s.name||s.label;
+    return `<p class="hl">${nmTxt?`「${esc(nmTxt)}」`:'補助効果'}の対象にする${who}を選んでください</p><p class="sub small">${esc(spellText(s))}</p>${sp.sup?'':'<button data-a="cancelPick">キャンセル</button>'}`;
   }
   if(P.spell==='decl') return `<p>宣言した<b class="hl">令呪</b>を1つ選んで発動します。</p><div class="row mopts">${spells('masterSpellUse')}</div>`;
   if(rs.mTeam){ // マスターチーム：補助か令呪（3画・同じ効果は1回）
@@ -349,6 +350,27 @@ function linkModalHTML(){
       <label class="rok"><input type="checkbox" id="linkNoAsk">今後は確認しない</label>
       <div class="row"><button class="primary" data-ui="linkGo">開く</button><button data-ui="linkCancel">やめる</button></div></div></div>`;
 }
+// 設定（保存される項目をすべて）。タイトル画面の設定パネルとメニューの設定ウィンドウで共有する
+function settingsBodyHTML(){
+  const sp=G.speed<500?250:700, seg=(on,items)=>`<div class="seg">${items.map(([lab,ui,v,k])=>`<button class="${on===k?'on':''}" data-ui="${ui}" data-v="${v}">${lab}</button>`).join('')}</div>`;
+  const row=(name,sub,ctl)=>`<div class="setrow"><div><b>${name}</b>${sub?`<small class="sub">${sub}</small>`:''}</div>${ctl}</div>`;
+  const onoff=(ui,on)=>seg(on?1:0,[['ON',ui,1,1],['OFF',ui,0,0]]);
+  return `<div class="navstep setting">
+    ${row('ゲーム進行速度','CPUの手番や演出の速さ',seg(sp,[['速い','setSpeed',250,250],['普通','setSpeed',700,700]]))}
+    ${row('オート','選ぶ余地のない操作（ロール・決定だけのボタン）を自動で進めます',onoff('setAuto',UI.auto))}
+    ${row('バトルログ','対戦画面にログを表示します',onoff('setLog',UI.log))}
+    ${row('設定リンクの確認','キャラクター設定リンクを開く前の確認',seg(linkConfirmOn()?1:0,[['確認する','setLinkConfirm',1,1],['確認しない','setLinkConfirm',0,0]]))}
+    ${row('下の余白','スマホで画面の下がブラウザのバーに隠れるときに余白を足します',seg(UI.bottom,BOTTOM_LABELS.map((l,i)=>[l,'setBottom',i,i])))}
+  </div>`;
+}
+function settingsModalHTML(){
+  if(!UI.settings) return '';
+  return `<div class="modal navmodal"><div class="mback" data-ui="closeSettings"></div><div class="mbody navpanel"><div class="navbar"><button data-ui="closeSettings">✕ 閉じる</button></div><p class="navtitle">設定</p>${settingsBodyHTML()}</div></div>`;
+}
+function tutorialModalHTML(){
+  if(!UI.tut) return '';
+  return `<div class="modal navmodal"><div class="mback" data-ui="closeTutorial"></div><div class="mbody navpanel"><div class="navbar"><button data-ui="closeTutorial">✕ 閉じる</button></div><p class="navtitle">チュートリアル</p>${rulesGuideHTML(false)}${statusGuideHTML(false)}</div></div>`;
+}
 function masterDetailHTML(d,m){
   const fx=m&&m.fx.length?`<h4>効果</h4><div class="fxs open">${m.fx.map(e=>`<span class="chip fx ${FX[e.k].buff?'buff':'debuff'}">${fxText(e)}${e.tmp?'（このターン）':''}</span>`).join('')}</div>`:'';
   const P=m&&G.players[m.pid], rs=RULESETS.master;
@@ -444,7 +466,7 @@ function setupHTML(){
         <p class="sub small nm">${solo?`${rs.name}ルール：${TERMS.unit}を1騎${rs.master?`と${TERMS.player}を1人`:''}選びます。${handicapNote(pid)}`:`${rs.master?`${TERMS.player}1人と`:''}コスト合計${cap}以下${rs.master?`（${TERMS.player}込み）`:''}・最大${rs.partyMax}騎。選んだ順に 1st / 2nd / 3rd。`}</p></div>
       <div class="slots">${slots}</div>
       <div class="costm" ${solo?'hidden':''}><span>COST</span><b>${cost}</b><small>/ ${cap}</small><div class="bar"><i style="width:${pctOf(cost,cap)}%"></i></div></div>
-      <div class="setbtns ${mr?'wide':''}">${pid===0?`<button data-a="restart" data-keepnav="1" title="メニューに戻ります">← 戻る</button>`:''}${pid===1?`<button data-a="setupBack" title="${esc(G.players[0].name)}の編成に戻ります（ここまでの選択は残ります）">← 戻る</button>`:''}${isCpu(pid)
+      <div class="setbtns ${mr?'wide':''}"><select class="rcost" data-rcost title="おまかせ（ランダム）で選ぶ${solo?'':'合計'}コスト${mr?`（${TERMS.player}込み）`:''}を指定します">${['',...Array.from({length:cap+1},(_,i)=>i)].map(c=>`<option value="${c}" ${String(c)===String(UI.rcost??'')?'selected':''}>${c===''?'コスト指定なし':`コスト ${c}`}</option>`).join('')}</select>${pid===0?`<button data-a="restart" data-keepnav="1" title="メニューに戻ります">← 戻る</button>`:''}${pid===1?`<button data-a="setupBack" title="${esc(G.players[0].name)}の編成に戻ります（ここまでの選択は残ります）">← 戻る</button>`:''}${isCpu(pid)
         ?`<button data-a="setupCpu" data-how="same" title="相手と同じ${solo?'コスト':'合計コスト・人数'}になるように選びます">おまかせ（同コスト）</button><button data-a="setupCpu" data-how="random" title="コスト上限の中から完全にランダムに選びます">おまかせ（ランダム）</button>`
         :`<button data-a="setupRandom">おまかせ</button>`}${mr?`<button data-a="setupRandom" data-only="svt" title="選んだ${TERMS.player}はそのままで、${TERMS.unit}だけランダムに選びます">${TERMS.unit}だけおまかせ</button><button data-a="setupRandom" data-only="master" title="選んだ${TERMS.unit}はそのままで、${TERMS.player}だけランダムに選びます">${TERMS.player}だけおまかせ</button>`:''}<button class="primary big" data-a="setupConfirm" ${picks.length&&(!masterRule()||G.mpicks[pid])?'':'disabled'}>決定</button></div>
     </div>
@@ -600,19 +622,12 @@ function modeHTML(){
   // タイトル画面は常に表示し、選択（ルール・強さ・設定・チュートリアル）は上に浮かぶパネルで行う
   let panel='';
   if(s==='quick'&&nav.step==='level'){
-    panel=`${back()}<div class="navstep"><h3>CPUの強さ</h3><div class="levels">${Object.entries(CPU_LEVELS).map(([k,l])=>`<button class="gbtn ${k==='normal'?'p':''}" data-a="chooseMode" data-mode="cpu" data-level="${k}">${esc(l.name)}</button>`).join('')}</div></div>`;
+    const lv=CPU_LEVELS[nav.level]?nav.level:'normal';
+    panel=`${back()}<div class="navstep"><h3>CPUの強さ</h3><div class="levels">${Object.entries(CPU_LEVELS).map(([k,l])=>`<button class="gbtn ${k===lv?'p':''}" data-ui="navLevel" data-level="${k}">${esc(l.name)}</button>`).join('')}</div><div class="row mt"><button class="gbtn p" data-a="chooseMode" data-mode="cpu" data-level="${lv}">次へ</button></div></div>`;
   }else if(s==='quick') panel=`${back()}<p class="navtitle">クイックバトル</p>${rulePick('<button class="gbtn p" data-ui="navNext">次へ</button>')}`;
   else if(s==='local') panel=`${back()}<p class="navtitle">ローカル対戦</p>${rulePick('<button class="gbtn p" data-a="chooseMode" data-mode="pvp">はじめる</button>')}`;
   else if(s==='tutorial') panel=`${back()}<p class="navtitle">チュートリアル</p>${rulesGuideHTML(false)}${statusGuideHTML(false)}`;
-  else if(s==='settings'){
-    const sp=G.speed<500?250:700;
-    panel=`${back()}<p class="navtitle">設定</p><div class="navstep setting">
-      <div class="setrow"><div><b>ゲーム進行速度</b></div>
-        <div class="seg"><button class="${sp===250?'on':''}" data-ui="setSpeed" data-v="250">速い</button><button class="${sp===700?'on':''}" data-ui="setSpeed" data-v="700">普通</button></div></div>
-      <div class="setrow"><div><b>設定リンクの確認</b></div>
-        <div class="seg"><button class="${linkConfirmOn()?'on':''}" data-ui="setLinkConfirm" data-v="1">確認する</button><button class="${linkConfirmOn()?'':'on'}" data-ui="setLinkConfirm" data-v="0">確認しない</button></div></div>
-    </div>`;
-  }
+  else if(s==='settings') panel=`${back()}<p class="navtitle">設定</p>${settingsBodyHTML()}`;
   const top=`<div class="showcase">${show}</div>${src}
     <div class="topmenu">
       <button class="gbtn p" data-ui="nav" data-s="quick">クイックバトル</button>
@@ -622,10 +637,13 @@ function modeHTML(){
     </div>`;
   return `<div class="mode">${head}${top}</div>${panel?`<div class="modal navmodal"><div class="mback" data-ui="navClose"></div><div class="mbody navpanel">${panel}</div></div>`:''}`;
 }
+// 全画面で重ねて出す設定・チュートリアルのウィンドウ（ハンバーガーメニューから）
+function overlaysHTML(){ return settingsModalHTML()+tutorialModalHTML();
+}
 
 // ---------- 描画 ----------
 function render(){
-  const app=document.querySelector('#app'), hinfo=document.querySelector('#hinfo'), spd=document.querySelector('#spd'), lb=document.querySelector('#logbtn'), ab=document.querySelector('#autobtn'), botbtn=document.querySelector('#botbtn');
+  const app=document.querySelector('#app'), hinfo=document.querySelector('#hinfo');
   const screen=G.phase==='mode'?'mode':G.phase==='setup'?'setup':'battle';
   document.body.dataset.screen=screen;
   document.body.dataset.phase=G.phase;
@@ -633,22 +651,14 @@ function render(){
   if(G.phase!=='master') UI.spellPick=false;
   if(G.phase!=='setup') UI.sinfo=null;
   document.body.classList.toggle('lock',cpuActing());
-  spd.hidden=!(G.mode==='cpu'&&G.phase!=='mode');
-  spd.textContent=`CPU速度：${G.speed<500?'速い':'普通'}`;
-  lb.hidden=screen!=='battle'||UI.log;
-  ab.hidden=screen!=='battle';
-  botbtn.hidden=screen!=='battle'||!matchMedia('(max-width:860px)').matches; // スマホ幅のときだけ
-  botbtn.textContent=`下の余白：${BOTTOM_LABELS[UI.bottom]}`;
-  document.querySelector('#linkbtn').textContent=`リンク確認：${linkConfirmOn()?'ON':'OFF'}`;
-  ab.textContent=`オート：${UI.auto?'ON':'OFF'}`; ab.classList.toggle('on',UI.auto);
   document.body.classList.toggle('menuopen',UI.menu);
   document.querySelector('#menubtn').setAttribute('aria-expanded',UI.menu?'true':'false');
   // 画面は毎回作り直すが、読み込み済みの画像は残す（setHTML：フェイズ切り替えで画像がチカチカ消えないように）
-  if(screen==='mode'){ setHTML(app,modeHTML()); hinfo.textContent=''; }
-  else if(screen==='setup'){ setHTML(app,setupHTML()+(UI.sinfo?sinfoModalHTML():'')+linkModalHTML()); hinfo.textContent=ruleset().partyMax===1?`${ruleset().name}ルール ・ ${TERMS.unit}選択`:'パーティ編成'; }
+  if(screen==='mode'){ setHTML(app,modeHTML()+overlaysHTML()); hinfo.textContent=''; }
+  else if(screen==='setup'){ setHTML(app,setupHTML()+(UI.sinfo?sinfoModalHTML():'')+linkModalHTML()+overlaysHTML()); hinfo.textContent=ruleset().partyMax===1?`${ruleset().name}ルール ・ ${TERMS.unit}選択`:'パーティ編成'; }
   else {
     if(UI.detail&&!U(UI.detail)) UI.detail=null;
-    setHTML(app,`<div class="battle ${UI.log?'':'nolog'}"><main class="field">${sideHTML(1,'top')}${stageHTML()}${sideHTML(0,'bottom')}</main>${UI.log?logHTML():''}</div>${UI.detail?detailModalHTML():''}${UI.result&&G.phase==='over'?resultHTML():''}${linkModalHTML()}`);
+    setHTML(app,`<div class="battle ${UI.log?'':'nolog'}"><main class="field">${sideHTML(1,'top')}${stageHTML()}${sideHTML(0,'bottom')}</main>${UI.log?logHTML():''}</div>${UI.detail?detailModalHTML():''}${UI.result&&G.phase==='over'?resultHTML():''}${linkModalHTML()}${overlaysHTML()}`);
     hinfo.textContent=`${G.rule!=='team'?`${ruleset().name}ルール ・ `:''}ターン${G.turn}`;
     const l=document.querySelector('#log'); if(l) l.scrollTop=l.scrollHeight;
     animateLane();
@@ -700,7 +710,11 @@ function autoMove(){
       // 全員を最大まで行動させても上限以内なら、配分を選ぶ余地はない
       return Object.values(G.maxActs).reduce((a,b)=>a+b,0)<=RULES.actionsMax ? ['confirmAlloc'] : null;
     case 'skill': return hasSkillChoice()?null:['skillDone'];
-    case 'master': return null; // マスターフェイズは毎回選ぶ
+    case 'master': { // マスターフェイズは毎回選ぶ。ただし補助の対象が1体しか選べないときは選ぶ余地がない
+      const sp=G.spellPick;
+      if(sp&&sp.sup){ const c=pickCands(sp.side,G.cur); if(c.length===1) return ['masterSupportPick',{uid:c[0].uid}]; }
+      return null;
+    }
     case 'action': {
       const uid=Object.keys(G.alloc).find(id=>!U(id).out&&G.rolled.filter(r=>r.uid===id).length<G.alloc[id]);
       return uid?['rollAction',{uid}]:['toTarget'];
@@ -736,6 +750,15 @@ function uiAct(a,ds){
     case 'nav': UI.nav={s:ds.s,step:'rule'}; break;
     case 'navClose': UI.nav={s:'top',step:'rule'}; break;
     case 'navNext': UI.nav.step='level'; break;
+    case 'navLevel': UI.nav.level=ds.level; break;
+    case 'openSettings': UI.settings=true; break;
+    case 'closeSettings': UI.settings=false; break;
+    case 'openTutorial': UI.tut=true; break;
+    case 'closeTutorial': UI.tut=false; break;
+    case 'setAuto': UI.auto=ds.v==='1'; savePref('pencilduel.auto',UI.auto?'1':'0'); break;
+    case 'setLog': UI.log=ds.v==='1'; savePref('pencilduel.logOpen',UI.log?'1':'0'); break;
+    case 'setBottom': UI.bottom=Math.min(BOTTOM_STEPS.length-1,Math.max(0,Number(ds.v)||0)); savePref('pencilduel.bottom',String(UI.bottom)); applyBottom(); break;
+    case 'rcost': UI.rcost=ds.v; break;
     case 'navBack': if(UI.nav.s==='quick'&&UI.nav.step==='level') UI.nav.step='rule'; else UI.nav={s:'top',step:'rule'}; break;
     case 'setSpeed': { const v=Number(ds.v)||700; savePref('pencilduel.speed',String(v)); window.SPEED_PREF=v; G.speed=v; break; }
     case 'setLinkConfirm': savePref(LINK_PREF,ds.v==='0'?'0':'1'); break;
@@ -764,8 +787,11 @@ document.addEventListener('click',e=>{
   if(b.dataset.a==='setupMaster'&&b.classList.contains('mtile')) UI.mfold=!b.classList.contains('sel'); // 選んだら畳む／外したら開く
   if(b.dataset.a==='setupConfirm') UI.mfold=false; // 次の人の編成では、マスター一覧を開いた状態から始める
   if(cpuActing() && !FREE_ACTIONS.includes(b.dataset.a)){ if(b.dataset.view) render(); return; } // CPUの手番中は操作を受け付けない
-  act(b.dataset.a,{...b.dataset});
+  const pl={...b.dataset};
+  if(pl.a==='setupRandom'||(pl.a==='setupCpu'&&pl.how==='random')) pl.cost=UI.rcost??''; // おまかせ（ランダム）のコスト指定
+  act(b.dataset.a,pl);
 });
+document.addEventListener('change',e=>{ if(e.target.matches('select[data-rcost]')) UI.rcost=e.target.value; });
 // 編成画面：カードにマウスを乗せると右側に詳細
 document.addEventListener('mouseover',e=>{
   const t=e.target.closest('.tile[data-view]'); if(!t||UI.setupView===t.dataset.view) return;
@@ -775,6 +801,7 @@ document.addEventListener('mouseover',e=>{
   document.querySelectorAll('.tile.viewing').forEach(x=>x.classList.remove('viewing')); t.classList.add('viewing');
 });
 document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&(UI.settings||UI.tut)){ UI.settings=false; UI.tut=false; render(); return; }
   if(e.key==='Escape'&&G.phase==='mode'&&UI.nav.s!=='top'){ UI.nav={s:'top',step:'rule'}; render(); return; }
   if(e.key==='Escape'&&UI.linkAsk){ UI.linkAsk=null; render(); return; }
   if(e.key==='Escape'&&(UI.detail||UI.sinfo)){ UI.detail=null; UI.sinfo=null; render(); }
