@@ -7,7 +7,7 @@
    ===================================================================== */
 
 // 次のイベントまでの待ち時間(ms)。イベントに w があればそちらを優先
-const FX_WAIT = { sync:130, skill:700, say:950, dmg:420, cutin:2000, phase:420, phaseBig:900, banner:700, roll:780, rollGrp:110, atk:640, pop:520, ko:900 };
+const FX_WAIT = { sync:130, skill:700, say:950, dmg:420, cutin:CUTIN_MS-250, phase:420, phaseBig:900, banner:700, roll:780, rollGrp:110, atk:640, pop:520, ko:900 };
 const ROLL_SPIN = 520;                             // ロール演出で出目が回っている時間(ms)
 const BUBBLE_MS = 2600;                            // 吹き出しの表示時間(ms)
 let fxRunning=false;
@@ -232,15 +232,14 @@ function showSkill(L,ev){
   setTimeout(()=>el.remove(),SKILL_MS+300);
 }
 
-// 宝具カットイン：キャラクター画像が横切り、宝具名を大きく表示
+// 宝具カットイン：見た目と宝具名の配置は js/cutin.js + css/cutin.css（エディタのプレビューと共用）
 function showCutin(L,ev){
   const u=U(ev.uid); if(!u) return;
-  const d=D(u.def);
+  const d=D(u.def), ult={name:ev.title, ruby:ev.ruby, br:ev.br, c:ev.col};
   const c=document.createElement('div');
-  c.className=`cutin ${esc(ev.col||'R')}`;
-  c.innerHTML=`<div class="ci-band"><div class="ci-lines"></div>
-    ${unitImg(d,'face','ci-img',d.name)}
-    <div class="ci-text"><small>${TERMS.ult} ・ ${esc(TERMS[ev.col]||'')}</small><b>${ultNameHTML({name:ev.title,ruby:ev.ruby})}</b><span>${clsIconTag(d.cls,'ci-cls')}${esc(d.name)}</span></div></div>`;
+  c.className='cutin';
+  c.innerHTML=cutinStageHTML(d,ult);
   L.appendChild(c);
-  setTimeout(()=>c.remove(),FX_WAIT.cutin);
+  cutinLayoutWhenReady(c.querySelector('.ct'),ult);
+  setTimeout(()=>c.remove(),CUTIN_MS+50);
 }

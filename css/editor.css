@@ -204,3 +204,20 @@ table.simmx td.self{color:var(--sub)}
 label.mini.chk{cursor:pointer}
 
 .effref{flex-basis:100%;font-size:10.5px;color:var(--sub);opacity:.85;line-height:1.4}.effref:empty{display:none}.effref.over{color:var(--warn);opacity:1}
+
+/* 宝具カットイン（改行位置・プレビュー。見た目は css/cutin.css） */
+.ctedit{margin-top:10px}
+.ctbr{display:flex;flex-wrap:wrap;align-items:center;gap:4px;font-size:15px}
+.ctbr-lab{font-size:12px;color:var(--sub);margin-right:4px}
+.ctbr button.on{background:var(--gold);color:#1a1205;border-color:var(--gold)}
+.ctbr-chars{display:inline-flex;flex-wrap:wrap;align-items:center;margin-left:6px;font-family:"Noto Serif JP",serif}
+.ctbr-chars .ctgap{all:unset;display:inline-block;width:10px;height:26px;cursor:pointer;position:relative}
+.ctbr-chars .ctgap::after{content:"";position:absolute;left:4px;top:4px;bottom:4px;width:1px;background:var(--line)}
+.ctbr-chars .ctgap:hover::after{background:var(--sub);width:2px}
+.ctbr-chars .ctgap.on::after{background:#ff6b5a;width:3px;left:3px;top:0;bottom:0}
+.ctwarn{font-size:12px}
+.ctwarn .ok{color:#7fd39a}
+.ctwarn .iss{color:#ffc069}
+.ctprev{max-width:640px;border:1px solid var(--line);border-radius:4px;overflow:hidden;
+  background:#0a0e1a conic-gradient(#141a2a 25%,#0d1220 0 50%,#141a2a 0 75%,#0d1220 0) 0 0/20px 20px}
+.ctprev .ct{width:100%}

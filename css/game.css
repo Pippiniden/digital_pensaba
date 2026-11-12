@@ -355,24 +355,7 @@ body[data-screen="battle"] #app{overflow:hidden}
 .dmgpop.miss{font:700 18px "Noto Serif JP",serif;color:#cfe0ff;text-shadow:0 0 3px #000,0 0 10px rgba(127,166,255,.9)}
 @keyframes pop{0%{opacity:0;transform:scale(1.8)}14%{opacity:1;transform:scale(1)}70%{opacity:1;transform:translateY(-18px)}100%{opacity:0;transform:translateY(-44px)}}
 
-.cutin{position:fixed;inset:0;display:grid;place-items:center;background:rgba(2,6,20,.5);animation:cifade 2s forwards}
-.ci-band{position:relative;width:100%;height:min(48vh,360px);overflow:hidden;border-block:2px solid var(--gold);
-  background:linear-gradient(90deg,#060d22,#1b3c88 45%,#2a5ac0 60%,#060d22);box-shadow:0 0 50px rgba(246,227,161,.45);animation:ciband 2s cubic-bezier(.2,.8,.2,1) forwards}
-.cutin.R .ci-band{background:linear-gradient(90deg,#1a0508,#7a1e1a 45%,#b43a2c 60%,#1a0508)}
-.cutin.G .ci-band{background:linear-gradient(90deg,#03140b,#155e38 45%,#24915a 60%,#03140b)}
-.ci-lines{position:absolute;inset:-20%;background:repeating-linear-gradient(100deg,rgba(255,255,255,.1) 0 2px,transparent 2px 46px);animation:cilines .35s linear infinite}
-@keyframes cilines{to{transform:translateX(-46px)}}
-.ci-img{position:absolute;right:4%;top:-8%;height:116%;aspect-ratio:3/4;object-fit:cover;object-position:50% 15%;
-  -webkit-mask-image:linear-gradient(90deg,transparent,#000 30%);mask-image:linear-gradient(90deg,transparent,#000 30%);animation:cislide 2s cubic-bezier(.2,.8,.2,1) forwards}
-.ci-text{position:absolute;left:7%;top:50%;translate:0 -50%;max-width:60%;animation:citext 2s cubic-bezier(.2,.8,.2,1) forwards}
-.ci-text small{display:block;font:700 13px var(--serif);letter-spacing:.4em;color:var(--gold-hi)}
-.ci-text b{display:block;margin:4px 0 8px;font:900 clamp(30px,5.5vw,64px)/1.15 "Noto Serif JP",serif;color:#fff;text-shadow:0 0 6px #000,0 0 26px rgba(246,227,161,.9)}
-.ci-text span{display:inline-flex;align-items:center;gap:8px;font:700 15px var(--serif);color:#fff;text-shadow:0 1px 3px #000}
-.ci-cls{width:26px;height:26px;border-radius:3px}
-@keyframes cifade{0%{opacity:0}6%{opacity:1}88%{opacity:1}100%{opacity:0}}
-@keyframes ciband{0%{clip-path:inset(50% 0)}12%,86%{clip-path:inset(0)}100%{clip-path:inset(50% 0)}}
-@keyframes cislide{0%{transform:translateX(45%);opacity:0}16%{transform:translateX(0);opacity:1}86%{transform:translateX(-5%);opacity:1}100%{transform:translateX(-9%);opacity:0}}
-@keyframes citext{0%{transform:translateX(-30%);opacity:0}20%{transform:translateX(0);opacity:1}86%{opacity:1}100%{transform:translateX(4%);opacity:0}}
+/* 宝具カットインは css/cutin.css */
 
 /* フェイズ切り替えの帯（.stage の位置に重ねる） */
 .phasefx{position:fixed;display:grid;place-items:center;overflow:hidden}

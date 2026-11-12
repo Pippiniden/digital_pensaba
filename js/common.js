@@ -64,13 +64,16 @@ function normCmd(c){
 }
 function normClass(c){ c=String(c||'').trim(); return CLASS_LEGACY[c]||c; }
 // 画像の見せ方（はみ出し調整）。x,y = 表示位置(%) / z = 拡大率(%)。既定値のままなら書き出さない
-const FIT_DEF={ face:{x:50,y:18,z:100}, card:{x:50,y:12,z:100} };
+// np = 宝具カットインで帯に透ける顔アップ（x,y = 立ち絵のどこを見せるか(%) / z = 立ち絵の幅(%)。縮小もできるので 60〜）
+const FIT_DEF={ face:{x:50,y:18,z:100}, card:{x:50,y:12,z:100}, np:{x:50,y:14,z:105} };
 const FIT_RANGE={ x:[0,100], y:[0,100], z:[100,300] };
+const FIT_RANGE_K={ np:{ z:[60,300] } };
+const fitRange=(k,a)=>(FIT_RANGE_K[k]||{})[a]||FIT_RANGE[a];
 function normFit(f){
   f=f||{};
-  const one=k=>Object.fromEntries(['x','y','z'].map(a=>{ const v=Number(((f[k]||{})[a])); const [lo,hi]=FIT_RANGE[a];
+  const one=k=>Object.fromEntries(['x','y','z'].map(a=>{ const v=Number(((f[k]||{})[a])); const [lo,hi]=fitRange(k,a);
     return [a, Number.isFinite(v)?Math.min(hi,Math.max(lo,Math.round(v))):FIT_DEF[k][a]]; }));
-  return { face:one('face'), card:one('card') };
+  return { face:one('face'), card:one('card'), np:one('np') };
 }
 const fitIsDef=(f,k)=>!f||!f[k]||['x','y','z'].every(a=>f[k][a]===FIT_DEF[k][a]);
 function fitStyle(d,k){
@@ -90,7 +93,7 @@ function normalizeUnit(u){
   const lines=Object.fromEntries(Object.keys(LINE_KEYS).map(k=>[k,strList(ln[k])]));
   const condLines=(Array.isArray(u.condLines)?u.condLines:[]).map(normCondLine).filter(Boolean);
   return { id:String(u.id||''), name:String(u.name||''), cls:normClass(u.cls), traits:normTraits(u.traits), cost:num(u.cost), hp:num(u.hp,100),
-    fit:normFit(u.fit), ...(normLink(u.link)?{link:normLink(u.link)}:{}), lines, ...(condLines.length?{condLines}:{}), faces, skills, ult:Object.assign({name:String(ult.name||''), c:String(ult.c||'R'), eff:(ult.eff||[]).map(normEff)}, String(ult.ruby||'').trim()?{ruby:String(ult.ruby).trim()}:{}, PICKS[ult.pick]&&ult.pick?{pick:ult.pick}:{}) };
+    fit:normFit(u.fit), ...(normLink(u.link)?{link:normLink(u.link)}:{}), lines, ...(condLines.length?{condLines}:{}), faces, skills, ult:Object.assign({name:String(ult.name||''), c:String(ult.c||'R'), eff:(ult.eff||[]).map(normEff)}, String(ult.ruby||'').trim()?{ruby:String(ult.ruby).trim()}:{}, Number.isInteger(ult.br)&&ult.br>=0?{br:ult.br}:{}, PICKS[ult.pick]&&ult.pick?{pick:ult.pick}:{}) };
 }
 // 条件つきセリフ：{key:LINE_KEYS のキー, who:LINE_WHO のキー, cond:Cond, lines:string[]}。上にあるものから順に見て、最初に条件を満たしたものを使う。不正なら null
 function normCondLine(c){
@@ -162,6 +165,7 @@ function validateUnits(units){
     });
     if(!['R','B','G'].includes(u.ult.c)) add('error',`${TERMS.ult}：色はR/B/Gのどれかにしてください`);
     if(!u.ult.name.trim()) add('warn',`${TERMS.ult}：名前が空です`);
+    if(u.ult.br>0&&u.ult.br>=[...u.ult.name].length) add('warn',`${TERMS.ult}：カットインの改行位置が名前の長さを超えています（自動で表示します）`);
     if(!u.ult.eff.length) add('warn',`${TERMS.ult}：効果がありません`);
     const uPicked=u.ult.eff.some(e=>e.t==='picked');
     if(uPicked&&!u.ult.pick) add('error',`${TERMS.ult}：「${TARGETS.picked}」を使うには、対象の選び方を設定してください`);
@@ -392,7 +396,7 @@ function unitsToJS(units){
     '  {',
     `    "id":${j(u.id)}, "name":${j(u.name)}, "cls":${j(u.cls)}, "cost":${u.cost}, "hp":${u.hp},`,
     ...(u.traits&&u.traits.length?[`    "traits":${j(u.traits)},`]:[]),
-    ...(['face','card'].every(k=>fitIsDef(u.fit,k))?[]:[`    "fit":${j(u.fit)},`]),
+    ...(['face','card','np'].every(k=>fitIsDef(u.fit,k))?[]:[`    "fit":${j(u.fit)},`]),
     ...(u.link?[`    "link":${j(u.link)},`]:[]),
     '    "lines":{',
     Object.keys(LINE_KEYS).map(k=>`      ${j(k)}:${j(u.lines[k])}`).join(',\n'),
