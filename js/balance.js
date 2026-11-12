@@ -68,16 +68,16 @@ function mkTeam(ids,m){
   return {ids,m:m||null,cost,key:teamKey(ids,m)};
 }
 const teamName=t=>t.ids.map(id=>uOf(id).name).join('・')+(t.m?`／${mOf(t.m).name}`:'');
-const teamHTML=t=>`${esc(t.ids.map(id=>uOf(id).name).join('・'))}${t.m?` <span class="sub">／${esc(mOf(t.m).name)}</span>`:''} <span class="sub small">C${t.cost}</span>`;
+const teamHTML=t=>`${esc(t.ids.map(id=>uOf(id).name).join('・'))}${t.m?` <span class="sub">／${esc(mOf(t.m).name)}</span>${((B.res&&B.res.mcol)||{})[t.m]?` <span class="tag">${TERMS[B.res.mcol[t.m]]}特化</span>`:''}`:''} <span class="sub small">C${t.cost}</span>`;
 
 // ルールに合う編成を全部並べる（filter：full＝合計コストが上限ちょうど / maximal＝これ以上追加できない / all）
 function enumTeams(filter=B.filter){
   const U=eu(), M=hasMaster()?em():[null], max=rs().partyMax, cap=capOf(), out=[];
   for(const m of M){
-    const mc=m?m.cost:0;
+    const mc=m?m.cost:0, fc=m&&B.mcol[m.id]; // 色特化マスター：その色の面が cmin 以上の編成だけ
     if(max===1){ U.forEach(u=>out.push(mkTeam([u.id],m&&m.id))); continue; }
     const rec=(start,ids,c)=>{
-      if(ids.length) out.push(mkTeam(ids,m&&m.id));
+      if(ids.length&&(!fc||colorFaces(ids,fc)>=B.cmin)) out.push(mkTeam(ids,m&&m.id));
       if(ids.length>=max) return;
       for(let i=start;i<U.length;i++){ const c2=c+U[i].cost; if(c2+mc<=cap) rec(i+1,[...ids,U[i].id],c2); }
     };
@@ -237,7 +237,7 @@ function renderCtl(){
       </div>
       ${needTeam?`<div class="seg">${[['pool','全編成と対戦'],['duel','2つの編成の直接対決']].map(([v,l])=>`<button class="${B.vs===v?'on':''}" data-b="set" data-k="vs" data-v="${v}" ${dis}>${l}</button>`).join('')}</div>
         ${builderHTML('A',B.vs==='duel'?'チームA':'検証する編成')}${B.vs==='duel'?builderHTML('B','チームB'):''}`:''}
-      ${B.view==='master'&&team?mcolHTML():''}
+      ${m&&team?mcolHTML():''}
       ${exclHTML()}
     </section>
     <section class="card"><div class="runbar">
@@ -262,7 +262,7 @@ function builderHTML(key,label){
 function mcolHTML(){
   const dis=B.run?'disabled':'', n=em().filter(m=>B.mcol[m.id]).length;
   return `<details class="excl"><summary>色特化マスターの指定　<span class="sub small">${n?`${n}人を指定中`:'なし'}</span></summary>
-    <p class="note">色を指定したマスターが出る対戦では、サーヴァント編成（両陣営で共通）のその色の面が合計で下の数以上のものだけを使います。2人とも指定がある対戦は、どちらかのマスターの条件を満たす編成を使います。</p>
+    <p class="note">色を指定したマスターは、サーヴァント編成のその色の面が合計で下の数以上のものとだけ組み合わせます（ランキング・特定の編成の相手・マスターの強さのすべてに効きます）。「マスターの強さ」では両陣営で共通の編成を使うので、2人とも指定がある対戦はどちらかの条件を満たす編成を使います。</p>
     <div class="opts">${sel('cmin',[5,6,7,8,9,10,11,12].map(n=>[n,`${n}面以上`]),B.cmin,'色の面（編成の合計）')}</div>
     <div class="opts mt">${em().map(m=>sel('mcol:'+m.id,[['','指定なし'],...['R','B','G'].map(c=>[c,TERMS[c]+'特化'])],B.mcol[m.id]||'',`${esc(m.name)} <span class="sub small">C${m.cost}</span>`)).join('')}</div></details>`;
 }
@@ -287,7 +287,7 @@ function renderRes(){
   if(!R.items.length){ $('#res').innerHTML='<section class="card"><p class="sub small nm">集計中…</p></section>'; return; }
   const errs=R.items.reduce((s,x)=>s+x.r.errors,0), msg=(R.items.find(x=>x.r.errMsg)||{r:{}}).r.errMsg;
   const cond=[`${RULESETS[R.rule].name}`,`データ：${BSRC[R.src]}`,`1対戦${R.n}試合`,`CPU：${R.level==='hard+'?'つよい（先読みあり）':R.level==='hard'?'つよい（先読みなし）':'ふつう'}`,
-    ...(R.view==='master'&&Object.keys(R.mcol||{}).length?[`色特化マスターあり（${R.cmin}面以上）`]:[]),
+    ...(Object.keys(R.mcol||{}).length?[`色特化マスターあり（${R.cmin}面以上）`]:[]),
     ...(RULESETS[R.rule].handicapAsc&&R.view!=='master'?[`ハンデ${R.handicap?'あり':'なし'}`]:[]),...(R.excl?['除外あり']:[]),
     R.done?`${(R.ms/1000).toFixed(1)}秒`:'実行中'].join(' ／ ');
   const body=R.view==='master'?resMaster(R):R.view==='team'?resTeam(R):resRank(R);
