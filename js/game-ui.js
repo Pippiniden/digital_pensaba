@@ -362,7 +362,7 @@ function masterDetailHTML(d,m){
     </div>
     ${fx}
     <h4>${MASTER_ACTS.support}（出た面の効果をこのターンだけ）</h4>
-    <table class="faces"><tr><th>出目</th><th>効果</th></tr>${d.faces.map((f,i)=>`<tr><td>${i+1}</td><td>${f.eff.length?`<b>${esc(f.label)}</b><div class="sub">${esc(effsText(f.eff,null,mTLabel))}</div>`:'<span class="sub">無</span>'}</td></tr>`).join('')}</table>
+    <table class="faces"><tr><th>出目</th><th>効果</th></tr>${d.faces.map((f,i)=>`<tr><td>${i+1}</td><td>${f.eff.length?`${f.label?`<b>${esc(f.label)}</b>`:''}<div class="sub">${esc(effsText(f.eff,null,mTLabel))}</div>`:'<span class="sub">効果なし</span>'}</td></tr>`).join('')}</table>
     <h4>${MASTER_ACTS.spell}（${ruleset().mTeam?`${ruleset().spells}画・同じ効果は1回・使うと行動-1`:'1試合1回・3つから1つ'}）${P?`<small class="sub"> ${P.spell==='decl'?'宣言中':`残り${P.spellLeft}画`}</small>`:''}</h4>
     <div class="skills">${d.spells.map((s,i)=>`<div class="skill"><span class="sname">${esc(s.name)}${P&&P.spellUsed[i]?' <small class="sub">（使用済み）</small>':''}</span><span class="desc">${esc(spellText(s))}</span></div>`).join('')}</div>
   </div>`;

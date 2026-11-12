@@ -222,7 +222,7 @@ function showSkill(L,ev){
   el.innerHTML=`<div class="sf-main">${faceImg(d,'face sf-img')}
       <div class="sf-text">
         <div class="sf-who">${clsIconTag(d.cls,'sf-cls')}<b>${esc(d.name)}</b>${ev.picked?`<span class="sf-to">→ ${esc(ev.picked)}</span>`:''}</div>
-        <div class="sf-head"><i>${esc(ev.head||`S${ev.si+1}`)}</i><b>${esc(ev.name)}</b></div>
+        <div class="sf-head"><i>${esc(ev.head||`S${ev.si+1}`)}</i>${ev.name?`<b>${esc(ev.name)}</b>`:''}</div>
       </div></div>
     <ul>${ev.lines.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>`;
   L.appendChild(el);

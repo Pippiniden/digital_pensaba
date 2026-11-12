@@ -1020,8 +1020,8 @@ const ACTIONS = {
   masterSupport(){
     const m=masterReady(); if(!m) return;
     const d=D(m.def), f=roll(), face=d.faces[f];
-    log(`${MASTER_ACTS.support}：${nm(m)} 出目${f+1} → ${face.eff.length?`「${esc(face.label)}」（このターンのみ）`:'無'}`, face.eff.length?'good':'sub');
-    fxEmit({t:'skill',uid:m.uid,head:`${MASTER_ACTS.support}・出目${f+1}`,name:face.eff.length?face.label:'無',picked:allLabel(face.eff),
+    log(`${MASTER_ACTS.support}：${nm(m)} 出目${f+1} → ${face.eff.length?`${face.label?`「${esc(face.label)}」`:''}（このターンのみ）`:'何も起きない'}`, face.eff.length?'good':'sub');
+    fxEmit({t:'skill',uid:m.uid,head:`${MASTER_ACTS.support}・出目${f+1}`,name:face.eff.length?face.label:'',picked:allLabel(face.eff),
       lines:face.eff.length?effLines(face.eff,null,mTLabel):['何も起きない']});
     if(face.eff.length) say(m,'support',{own:face.line});
     const side=supPickSide(face.eff);
