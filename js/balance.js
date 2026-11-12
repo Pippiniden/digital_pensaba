@@ -14,12 +14,12 @@ const BMEXCL_KEY='pencilduel.simExcludeMaster';
 const BRULES=['team','mteam','simple','master'];
 const BSRC={ public:'公開データ', applied:'ブラウザに反映済み', draft:'エディタの下書き' };
 
-const B={ src:'public', rule:'team', view:'rank', n:10, k:5, level:'hard', filter:'full', opp:'same', handicap:true, sv:9,
+const B={ src:'public', rule:'team', view:'rank', n:10, k:5, level:'hard', filter:'full', opp:'same', handicap:true, sv:9, mcol:{}, cmin:7,
   vs:'pool', A:{ids:[],m:null}, B:{ids:[],m:null},
   excl:new Set(readJSON(BEXCL_KEY)||[]), mexcl:new Set(readJSON(BMEXCL_KEY)||[]),
   data:null, run:null, res:null };
-try{ const s=readJSON(BSET_KEY)||{}; for(const k of ['src','rule','view','n','k','level','filter','opp','handicap','sv','vs']) if(k in s) B[k]=s[k]; }catch(e){}
-const saveSet=()=>writeJSON(BSET_KEY,Object.fromEntries(['src','rule','view','n','k','level','filter','opp','handicap','sv','vs'].map(k=>[k,B[k]])));
+try{ const s=readJSON(BSET_KEY)||{}; for(const k of ['src','rule','view','n','k','level','filter','opp','handicap','sv','vs','mcol','cmin']) if(k in s) B[k]=s[k]; }catch(e){}
+const saveSet=()=>writeJSON(BSET_KEY,Object.fromEntries(['src','rule','view','n','k','level','filter','opp','handicap','sv','vs','mcol','cmin'].map(k=>[k,B[k]])));
 
 const $=s=>document.querySelector(s);
 const rs=()=>RULESETS[B.rule];
@@ -129,10 +129,12 @@ function planTeam(){
   if(!opps.length) return {tasks:[],err:'相手にできる編成がありません。「相手の範囲」や編成の絞り込みを変えてください'};
   return {tasks:sample(opps,B.k).map(tb=>({ta,tb})), teams:opps.length};
 }
+// 編成のサーヴァントが持つ、指定色(R/B/G)のコマンド面の合計（出目1〜6の再臨前の面。特殊行動・再臨の面は数えない）
+const colorFaces=(ids,c)=>ids.reduce((s,id)=>s+(uOf(id).faces||[]).filter(f=>f.pre&&f.pre.c===c).length,0);
 // マスターの強さ：同じサーヴァント編成の両陣営でマスターだけを変える（ハンデなし）
 function planMaster(){
   const M=em(); if(M.length<2) return {tasks:[],err:'マスターが2人以上必要です（除外を確認してください）'};
-  const U=eu(), max=rs().partyMax, tasks=[];
+  const U=eu(), max=rs().partyMax, tasks=[], skip=[];
   let combos=null;
   if(max>1){ // マスターチーム：2人のマスターのコストが両方入る範囲で、できるだけ多い人数の編成を使う
     combos=[];
@@ -145,15 +147,20 @@ function planMaster(){
     if(max===1) setups=sample(U.map(u=>[u.id]),B.sv);
     else{
       const lim=capOf()-Math.max(mi.cost,mj.cost), ok=combos.filter(x=>x.c<=lim);
-      setups=sample(ok.filter(x=>x.ids.length===max).map(x=>x.ids),B.sv); // 満員（3騎）だけ
+      setups=ok.filter(x=>x.ids.length===max).map(x=>x.ids); // 満員（3騎）だけ
+      const cs=[mi,mj].map(m=>B.mcol[m.id]).filter(Boolean); // 色特化マスターが出る対戦は、その色が cmin 面以上の編成だけ（2人とも指定ならどちらかの条件を満たせばよい）
+      if(cs.length) setups=setups.filter(ids=>cs.some(c=>colorFaces(ids,c)>=B.cmin));
+      if(!setups.length&&(B.mcol[mi.id]||B.mcol[mj.id])){ skip.push(`${mi.name}×${mj.name}`); continue; }
+      setups=sample(setups,B.sv);
     }
     for(const ids of setups){
       const a=mkTeam(ids,mi.id), b=mkTeam(ids,mj.id);
       tasks.push({ta:a,tb:b,tag:{mi:mi.id,mj:mj.id,svt:teamKey(ids)}});
     }
   }
+  if(!tasks.length&&skip.length) return {tasks:[],err:`色特化の条件（${B.cmin}面以上）を満たすサーヴァント編成がありません（除外や最小面数を確認してください）`};
   if(!tasks.length) return {tasks:[],err:'マスター2人とサーヴァント編成が両方収まる組み合わせがありません'};
-  return {tasks};
+  return {tasks,skip};
 }
 
 // ---------- 実行（Worker を並列に） ----------
@@ -165,7 +172,7 @@ function startRun(){
   const tasks=p.tasks.map((t,i)=>({...t,id:i,sw:Math.random()})).sort((a,b)=>a.sw-b.sw);
   const run={workers:[],queue:tasks.slice(),done:0,total:tasks.length,t0:Date.now(),byId:new Map(tasks.map(t=>[t.id,t]))};
   B.run=run;
-  B.res={view:B.view,rule:B.rule,src:B.src,n:B.n,k:B.k,filter:B.filter,opp:B.opp,level:B.level,handicap:useHandicap()&&B.view!=='master',vs:B.vs,
+  B.res={view:B.view,rule:B.rule,src:B.src,n:B.n,k:B.k,filter:B.filter,opp:B.opp,level:B.level,handicap:useHandicap()&&B.view!=='master',vs:B.vs,mcol:{...B.mcol},cmin:B.cmin,
     data:B.data,items:[],done:false,teams:p.teams,excl:eu().length<B.data.units.length||em().length<B.data.masters.length};
   const hcap=B.res.handicap, feed=w=>{ const t=run.queue.pop(); if(!t) return;
     w.postMessage({t:'task',id:t.id,rule:B.rule,A:{ids:t.ta.ids,m:t.ta.m},B:{ids:t.tb.ids,m:t.tb.m},n:B.n,handicap:hcap,level:B.level}); };
@@ -230,11 +237,12 @@ function renderCtl(){
       </div>
       ${needTeam?`<div class="seg">${[['pool','全編成と対戦'],['duel','2つの編成の直接対決']].map(([v,l])=>`<button class="${B.vs===v?'on':''}" data-b="set" data-k="vs" data-v="${v}" ${dis}>${l}</button>`).join('')}</div>
         ${builderHTML('A',B.vs==='duel'?'チームA':'検証する編成')}${B.vs==='duel'?builderHTML('B','チームB'):''}`:''}
+      ${B.view==='master'&&team?mcolHTML():''}
       ${exclHTML()}
     </section>
     <section class="card"><div class="runbar">
       ${B.run?`<button class="danger" data-b="stop">中止</button>`:`<button class="primary" data-b="run" ${p.err?'disabled':''}>検証を実行</button>`}
-      <span class="est">${p.err?`<span class="bad">${esc(p.err)}</span>`:`${p.tasks.length}対戦 × ${B.n}試合 ＝ <b>${games.toLocaleString()}試合</b>${p.teams&&B.view!=='master'?`（対象の編成 ${p.teams}）`:''}　目安 ${etaText(games)}`}</span></div>
+      <span class="est">${p.err?`<span class="bad">${esc(p.err)}</span>`:`${p.tasks.length}対戦 × ${B.n}試合 ＝ <b>${games.toLocaleString()}試合</b>${p.teams&&B.view!=='master'?`（対象の編成 ${p.teams}）`:''}　目安 ${etaText(games)}${p.skip&&p.skip.length?` <span class="bad small">（条件に合う編成がなく除外：${p.skip.length}組）</span>`:''}`}</span></div>
       <p class="note">同じ条件でも結果は少しぶれます（±は95%の誤差の幅）。ブラウザのタブを開いたままにしてください。</p></section>`;
 }
 function etaText(games){ const s=games/(250*Math.max(1,Math.min(6,(navigator.hardwareConcurrency||2)-1))); return s<90?`${Math.max(1,Math.round(s))}秒`:`${Math.round(s/60)}分`; }
@@ -249,6 +257,14 @@ function builderHTML(key,label){
     ${hasMaster()?`<div class="row mt"><label class="sub small">マスター <select data-s="bm" data-k="${key}" ${dis}><option value="">（選んでください）</option>${B.data.masters.map(m=>`<option value="${esc(m.id)}" ${T.m===m.id?'selected':''}>${esc(m.name)}（C${m.cost}）</option>`).join('')}</select></label></div>`:''}
     <div class="cost">${max>1?`合計コスト <b class="${cost>cap?'bad':''}">${cost}</b> / ${cap}${hasMaster()?'（マスター込み）':''}　`:`コスト ${cost}　`}<button class="small" data-b="bldClear" data-k="${key}" ${dis}>クリア</button>
       ${max>1?`<button class="small" data-b="bldRandom" data-k="${key}" ${dis}>ランダム</button>`:''}</div></div>`;
+}
+// 色特化マスター：指定したマスターが出る対戦は、その色の面が編成の合計で cmin 以上のサーヴァント編成でだけ検証する
+function mcolHTML(){
+  const dis=B.run?'disabled':'', n=em().filter(m=>B.mcol[m.id]).length;
+  return `<details class="excl"><summary>色特化マスターの指定　<span class="sub small">${n?`${n}人を指定中`:'なし'}</span></summary>
+    <p class="note">色を指定したマスターが出る対戦では、サーヴァント編成（両陣営で共通）のその色の面が合計で下の数以上のものだけを使います。2人とも指定がある対戦は、どちらかのマスターの条件を満たす編成を使います。</p>
+    <div class="opts">${sel('cmin',[5,6,7,8,9,10,11,12].map(n=>[n,`${n}面以上`]),B.cmin,'色の面（編成の合計）')}</div>
+    <div class="opts mt">${em().map(m=>sel('mcol:'+m.id,[['','指定なし'],...['R','B','G'].map(c=>[c,TERMS[c]+'特化'])],B.mcol[m.id]||'',`${esc(m.name)} <span class="sub small">C${m.cost}</span>`)).join('')}</div></details>`;
 }
 function exclHTML(){
   const n=B.data.units.filter(u=>B.excl.has(u.id)).length, nm=B.data.masters.filter(m=>B.mexcl.has(m.id)).length, dis=B.run?'disabled':'';
@@ -271,6 +287,7 @@ function renderRes(){
   if(!R.items.length){ $('#res').innerHTML='<section class="card"><p class="sub small nm">集計中…</p></section>'; return; }
   const errs=R.items.reduce((s,x)=>s+x.r.errors,0), msg=(R.items.find(x=>x.r.errMsg)||{r:{}}).r.errMsg;
   const cond=[`${RULESETS[R.rule].name}`,`データ：${BSRC[R.src]}`,`1対戦${R.n}試合`,`CPU：${R.level==='hard+'?'つよい（先読みあり）':R.level==='hard'?'つよい（先読みなし）':'ふつう'}`,
+    ...(R.view==='master'&&Object.keys(R.mcol||{}).length?[`色特化マスターあり（${R.cmin}面以上）`]:[]),
     ...(RULESETS[R.rule].handicapAsc&&R.view!=='master'?[`ハンデ${R.handicap?'あり':'なし'}`]:[]),...(R.excl?['除外あり']:[]),
     R.done?`${(R.ms/1000).toFixed(1)}秒`:'実行中'].join(' ／ ');
   const body=R.view==='master'?resMaster(R):R.view==='team'?resTeam(R):resRank(R);
@@ -353,7 +370,7 @@ function resMaster(R){
   }
   const rows=[...ms.entries()].sort((a,b)=>b[1].w/b[1].g-a[1].w/a[1].g), ids=rows.map(x=>x[0]);
   const tbl=`<div class="tbl"><table class="stats"><thead><tr><th>#</th><th>マスター</th><th>コスト</th><th>勝率</th><th></th><th>試合数</th><th>平均ターン</th></tr></thead><tbody>${rows.map(([id,s],i)=>
-    `<tr class="${rowCls(s.w,s.g)}"><td class="num">${i+1}</td><td>${esc(mOf(id).name)}</td><td class="num">${mOf(id).cost}</td><td class="num rate">${rateCell(s.w,s.g)}</td><td>${bar(s.w/s.g)}</td><td class="num">${s.g}</td><td class="num">${(s.turns/s.games/Math.max(1,R.n)).toFixed(1)}</td></tr>`).join('')}</tbody></table></div>`;
+    `<tr class="${rowCls(s.w,s.g)}"><td class="num">${i+1}</td><td>${esc(mOf(id).name)}${R.mcol&&R.mcol[id]?` <span class="tag">${TERMS[R.mcol[id]]}特化</span>`:''}</td><td class="num">${mOf(id).cost}</td><td class="num rate">${rateCell(s.w,s.g)}</td><td>${bar(s.w/s.g)}</td><td class="num">${s.g}</td><td class="num">${(s.turns/s.games/Math.max(1,R.n)).toFixed(1)}</td></tr>`).join('')}</tbody></table></div>`;
   const mx=`<div class="tbl"><table class="mx"><thead><tr><th></th>${ids.map(id=>`<th title="${esc(mOf(id).name)}"><span class="vert">${esc(mOf(id).name)}</span></th>`).join('')}</tr></thead><tbody>${ids.map(a=>`<tr><th class="rh">${esc(mOf(a).name)}</th>${ids.map(b=>{
     if(a===b) return '<td class="self">—</td>'; const c=cell.get(a+'|'+b); if(!c||!c.g) return '<td class="none"></td>'; const p=c.w/c.g;
     return `<td class="hm" style="--p:${p}" title="${esc(mOf(a).name)} vs ${esc(mOf(b).name)}：${pct(p)}">${Math.round(p*100)}</td>`; }).join('')}</tr>`).join('')}</tbody></table></div>`;
@@ -399,8 +416,9 @@ document.addEventListener('click',e=>{
 document.addEventListener('change',e=>{
   const el=e.target, k=el.dataset&&el.dataset.s; if(!k) return;
   if(k==='bm') B[el.dataset.k].m=el.value||null;
+  else if(k.startsWith('mcol:')){ const id=k.slice(5); if(el.value) B.mcol[id]=el.value; else delete B.mcol[id]; }
   else if(el.type==='checkbox') B[k]=el.checked;
-  else B[k]=['n','k','sv'].includes(k)?Number(el.value):el.value;
+  else B[k]=['n','k','sv','cmin'].includes(k)?Number(el.value):el.value;
   saveSet();
   const open=document.querySelector('details.excl')&&document.querySelector('details.excl').open;
   renderCtl(); if(open){ const x=document.querySelector('details.excl'); if(x) x.open=true; }
