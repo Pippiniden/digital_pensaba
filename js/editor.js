@@ -393,6 +393,11 @@ const cutinEdHTML=u=>`<div class="subcard ctedit">
           <input type="range" min="${fitRange('np',a)[0]}" max="${fitRange('np',a)[1]}" step="1" data-p="fit.np.${a}" data-t="num" value="${u.fit.np[a]}">
           <output data-fitout="np.${a}">${u.fit.np[a]}%</output></label>`).join('')}
         <button class="small" data-act="fitReset" data-k="np">リセット</button></div>
+      <div class="fitgrp"><b>右側の立ち絵（頭が切れるときに下げる・小さくする）</b>
+        ${[['x','左右','右へ'],['y','上下','下へ'],['z','大きさ','']].map(([a,lab])=>`<label class="fitrow"><span>${lab}</span>
+          <input type="range" min="${fitRange('cut',a)[0]}" max="${fitRange('cut',a)[1]}" step="1" data-p="fit.cut.${a}" data-t="num" value="${u.fit.cut[a]}">
+          <output data-fitout="cut.${a}">${u.fit.cut[a]}%</output></label>`).join('')}
+        <button class="small" data-act="fitReset" data-k="cut">リセット</button></div>
     </div>`;
 // 改行位置の選択: 「自動」「1行」、文字と文字の間をクリックするとそこで改行
 function ctBrHTML(ult){
@@ -410,7 +415,7 @@ function ctUpdate(force){
   if(brEl.dataset.key!==bk){ brEl.dataset.key=bk; brEl.innerHTML=ctBrHTML(u.ult); }
   const old=box.querySelector('.ct');
   if(!force&&old&&box.dataset.key===key){ // 顔アップの位置だけ: 作り直さず値だけ差し替える
-    ['x','y','z'].forEach(a=>old.style.setProperty('--g'+a,u.fit.np[a]+'%')); return; }
+    ['x','y','z'].forEach(a=>{ old.style.setProperty('--g'+a,u.fit.np[a]+'%'); old.style.setProperty('--c'+a,u.fit.cut[a]); }); return; }
   box.dataset.key=key;
   box.innerHTML=cutinStageHTML(u,u.ult,{hold:true});
   // 「再生」以外（入力中など）は最後のコマへ飛ばす（1文字打つたびに演出が始まらないように）

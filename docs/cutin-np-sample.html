@@ -221,6 +221,30 @@ body.dark{background:#0a0e1a;color:#ccd}
   --in:inRight;--inT:.55s;--inD:.08s;--dxe:-1cqw;--dse:1.03}
 
 /* 登場時の白フラッシュ */
+/* ---- 頭切れ対策 ----
+   A) 上下の枠: .lb-thin / .lb-thick。立ち絵・帯より手前に置き、画面の上下を覆う
+   B) 上端ぼかし: .cf-on。立ち絵の上端を透明にフェード（白フチごと消えるので、まっすぐな切れ目が目立たない） */
+.np{--lbh:0cqh}
+.np.lb-thin{--lbh:8cqh}
+.np.lb-thick{--lbh:13cqh}
+.np-lb{position:absolute;left:0;right:0;height:var(--lbh);pointer-events:none;
+  background:linear-gradient(180deg,#000,color-mix(in srgb,var(--deep) 70%,#000))}
+.np-lb.t{top:0;border-bottom:.25cqh solid color-mix(in srgb,var(--glow) 80%,transparent);
+  box-shadow:0 .2cqh 1.4cqh color-mix(in srgb,var(--bright) 60%,transparent);--in:inLbT}
+.np-lb.b{bottom:0;border-top:.25cqh solid color-mix(in srgb,var(--glow) 80%,transparent);
+  box-shadow:0 -.2cqh 1.4cqh color-mix(in srgb,var(--bright) 60%,transparent);
+  background:linear-gradient(0deg,#000,color-mix(in srgb,var(--deep) 70%,#000))}
+.np:not(.lb-thin):not(.lb-thick) .np-lb{display:none}
+.np-lb.t{animation:inLbT .35s cubic-bezier(.2,.9,.2,1) both}
+.np-lb.b{animation:inLbB .35s cubic-bezier(.2,.9,.2,1) both}
+@keyframes inLbT{from{translate:0 -100%}}
+@keyframes inLbB{from{translate:0 100%}}
+/* 枠があるときは「宝具発動」を上の枠の中央に置く */
+.np.lb-thin .np-top,.np.lb-thick .np-top{top:calc(var(--lbh) / 2);translate:0 -50%}
+/* 上端ぼかし */
+.np.cf-on .np-chara{-webkit-mask-image:linear-gradient(180deg,transparent 0,#000 9%,#000 80%,transparent 99%);
+  mask-image:linear-gradient(180deg,transparent 0,#000 9%,#000 80%,transparent 99%)}
+
 .np-flash{position:absolute;inset:0;background:#fff;pointer-events:none;animation:npFlash .35s .05s ease-out both}
 
 /* 登場アニメ（--ix / --iy だけ動かす） */
@@ -267,6 +291,8 @@ body.dark{background:#0a0e1a;color:#ccd}
 <div class="bar">
   <span class="seg" data-g="lab"><b>ラベル</b><button data-v="lab-top" class="on">上部「宝具発動」</button><button data-v="lab-plate">宝具プレート</button><button data-v="lab-none">なし</button></span>
   <span class="seg" data-g="pt"><b>パーティクル</b><button data-v="p-off">なし</button><button data-v="p-on">CSS</button><button data-v="p-img" class="on">画像</button></span>
+  <span class="seg" data-g="lb"><b>上下の枠</b><button data-v="lb-none">なし</button><button data-v="lb-thin" class="on">細</button><button data-v="lb-thick">太</button></span>
+  <span class="seg" data-g="cf"><b>上端ぼかし</b><button data-v="cf-off" class="on">なし</button><button data-v="cf-on">あり</button></span>
   <span class="seg" data-g="mv"><b>動き</b><button data-v="drift" class="on">終了まで動き続ける</button><button data-v="still">登場後に止まる</button></span>
 </div>
 <div class="bar">
@@ -284,7 +310,7 @@ body.dark{background:#0a0e1a;color:#ccd}
 <div class="brk" id="brkWrap"><b>改行位置</b><span id="brk" style="display:contents"></span></div>
 <div class="warn" id="warn"></div>
 
-<div class="np lab-top p-img drift" id="np">
+<div class="np lab-top p-img drift lb-thin cf-off" id="np">
   <div class="np-band mv">
     <div class="np-fill"><div class="np-pimg"></div><div class="np-ghost mv"></div></div>
     <div class="np-edge top mv"></div>
@@ -299,8 +325,10 @@ body.dark{background:#0a0e1a;color:#ccd}
     <!-- 下の稲妻は下帯より手前（後に書いた方が上に重なる） -->
     <div class="np-edge bot mv"></div>
   </div>
-  <div class="np-top"><span class="mv">宝具発動</span></div>
   <div class="np-chara mv"></div>
+  <!-- 上下の枠（映画の画面のような帯）。立ち絵より手前なので、頭が切れても枠の向こうに隠れて見える -->
+  <div class="np-lb t"></div><div class="np-lb b"></div>
+  <div class="np-top"><span class="mv">宝具発動</span></div>
   <div class="np-flash"></div>
 </div>
 

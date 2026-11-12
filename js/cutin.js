@@ -34,9 +34,9 @@ function cutinZap(){
 function cutinStageHTML(d,ult,o={}){
   cutinZap();
   // CSS 変数に入れた url() は「使った CSS ファイル」基準で解決されるので、絶対 URL にしておく
-  const f=(d.fit&&d.fit.np)||FIT_DEF.np, img=new URL(imgCandidates(d,'face')[0],document.baseURI).href;
+  const f=(d.fit&&d.fit.np)||FIT_DEF.np, ch=(d.fit&&d.fit.cut)||FIT_DEF.cut, img=new URL(imgCandidates(d,'face')[0],document.baseURI).href;
   const col=['R','B','G'].includes(ult.c)?ult.c:'R';
-  return `<div class="ct ${col}${o.hold?' hold':''}" style="--img:url('${esc(img)}');--pimg:url('${esc(new URL(UI_IMG.cutinParticles,document.baseURI).href)}');--gx:${f.x}%;--gy:${f.y}%;--gz:${f.z}%;--T:${CUTIN_MS}ms">
+  return `<div class="ct ${col}${o.hold?' hold':''}" style="--img:url('${esc(img)}');--pimg:url('${esc(new URL(UI_IMG.cutinParticles,document.baseURI).href)}');--gx:${f.x}%;--gy:${f.y}%;--gz:${f.z}%;--cx:${ch.x};--cy:${ch.y};--cz:${ch.z};--T:${CUTIN_MS}ms">
     <div class="ct-band mv">
       <div class="ct-fill"><div class="ct-pimg"></div><div class="ct-ghost mv"></div></div>
       <div class="ct-edge top"></div>
@@ -46,8 +46,9 @@ function cutinStageHTML(d,ult,o={}){
       </div></div>
       <div class="ct-edge bot"></div>
     </div>
-    <div class="ct-top"><span class="mv">${esc(TERMS.ult)}発動</span></div>
     <div class="ct-chara mv"></div>
+    <div class="ct-lb t"></div><div class="ct-lb b"></div>
+    <div class="ct-top"><span class="mv">${esc(TERMS.ult)}発動</span></div>
     <div class="ct-flash"></div>
   </div>`;
 }

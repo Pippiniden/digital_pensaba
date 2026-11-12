@@ -92,7 +92,7 @@
 .ct-title:has(.ct-ruby:empty) .ct-name{--fs:6.8cqw}
 
 /* ---- 上部中央「宝具発動」 ---- */
-.ct-top{position:absolute;left:0;right:0;top:7cqh;display:flex;justify-content:center}
+.ct-top{position:absolute;left:0;right:0;top:4cqh;translate:0 -50%;display:flex;justify-content:center} /* 上の枠(8cqh)の中央 */
 .ct-top span{display:inline-flex;align-items:center;gap:1.6cqw;
   font:700 2.6cqw/1 "Noto Serif JP",serif;letter-spacing:.6em;text-indent:.6em;color:#fff;
   text-shadow:0 0 .25cqw var(--deep),0 0 .6cqw var(--deep),0 0 1.4cqw var(--bright);
@@ -102,13 +102,26 @@
 .ct-top span::after{background:linear-gradient(90deg,#fff,transparent)}
 
 /* ---- 立ち絵 ---- */
-.ct-chara{position:absolute;right:-2.1cqw;bottom:-8cqh;height:114cqh;aspect-ratio:1086/1448;
+.ct-chara{position:absolute;aspect-ratio:1086/1448;
+  /* キャラごとの位置（エディタの fit.cut）: --cx 右へ(cqw) / --cy 下へ(cqh) / --cz 大きさ(%) */
+  right:calc(-2.1cqw - var(--cx,0) * 1cqw);bottom:calc(-8cqh - var(--cy,0) * 1cqh);height:calc(114cqh * var(--cz,100) / 100);
   background:var(--img) center/contain no-repeat;
   filter:drop-shadow(.25cqh 0 0 #fff) drop-shadow(-.25cqh 0 0 #fff) drop-shadow(0 .25cqh 0 #fff) drop-shadow(0 -.25cqh 0 #fff)
     drop-shadow(0 0 1.4cqh color-mix(in srgb,var(--deep) 60%,transparent));
   -webkit-mask-image:linear-gradient(180deg,#000 80%,transparent 99%);mask-image:linear-gradient(180deg,#000 80%,transparent 99%);
   scale:var(--ds);transform-origin:50% 70%;
   --in:ctInRight;--inT:.55s;--inD:.08s;--dxe:-1cqw;--dse:1.03}
+
+/* ---- 上下の枠（立ち絵より手前）: 立ち絵の頭が上で切れても、枠の向こうに隠れて見える ---- */
+.ct-lb{position:absolute;left:0;right:0;height:8cqh;
+  background:linear-gradient(180deg,#000,color-mix(in srgb,var(--deep) 70%,#000))}
+.ct-lb.t{top:0;border-bottom:.25cqh solid color-mix(in srgb,var(--glow) 80%,transparent);
+  box-shadow:0 .2cqh 1.4cqh color-mix(in srgb,var(--bright) 60%,transparent);animation:ctInLbT .35s cubic-bezier(.2,.9,.2,1) both}
+.ct-lb.b{bottom:0;border-top:.25cqh solid color-mix(in srgb,var(--glow) 80%,transparent);
+  box-shadow:0 -.2cqh 1.4cqh color-mix(in srgb,var(--bright) 60%,transparent);animation:ctInLbB .35s cubic-bezier(.2,.9,.2,1) both;
+  background:linear-gradient(0deg,#000,color-mix(in srgb,var(--deep) 70%,#000))}
+@keyframes ctInLbT{from{translate:0 -100%}}
+@keyframes ctInLbB{from{translate:0 100%}}
 
 .ct-flash{position:absolute;inset:0;background:#fff;animation:ctFlash .35s .05s ease-out both}
 

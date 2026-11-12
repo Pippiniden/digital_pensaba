@@ -64,16 +64,17 @@ function normCmd(c){
 }
 function normClass(c){ c=String(c||'').trim(); return CLASS_LEGACY[c]||c; }
 // 画像の見せ方（はみ出し調整）。x,y = 表示位置(%) / z = 拡大率(%)。既定値のままなら書き出さない
-// np = 宝具カットインで帯に透ける顔アップ（x,y = 立ち絵のどこを見せるか(%) / z = 立ち絵の幅(%)。縮小もできるので 60〜）
-const FIT_DEF={ face:{x:50,y:18,z:100}, card:{x:50,y:12,z:100}, np:{x:50,y:14,z:105} };
+// np  = 宝具カットインで帯に透ける顔アップ（x,y = 立ち絵のどこを見せるか(%) / z = 立ち絵の幅(%)。縮小もできるので 60〜）
+// cut = 宝具カットインの右側の立ち絵（x = 右へずらす量・画面幅の% / y = 下へずらす量・画面高さの% / z = 大きさ%）。頭が上で切れるときに使う
+const FIT_DEF={ face:{x:50,y:18,z:100}, card:{x:50,y:12,z:100}, np:{x:50,y:14,z:105}, cut:{x:0,y:0,z:100} };
 const FIT_RANGE={ x:[0,100], y:[0,100], z:[100,300] };
-const FIT_RANGE_K={ np:{ z:[60,300] } };
+const FIT_RANGE_K={ np:{ z:[60,300] }, cut:{ x:[-30,30], y:[-30,30], z:[60,160] } };
 const fitRange=(k,a)=>(FIT_RANGE_K[k]||{})[a]||FIT_RANGE[a];
 function normFit(f){
   f=f||{};
   const one=k=>Object.fromEntries(['x','y','z'].map(a=>{ const v=Number(((f[k]||{})[a])); const [lo,hi]=fitRange(k,a);
     return [a, Number.isFinite(v)?Math.min(hi,Math.max(lo,Math.round(v))):FIT_DEF[k][a]]; }));
-  return { face:one('face'), card:one('card'), np:one('np') };
+  return { face:one('face'), card:one('card'), np:one('np'), cut:one('cut') };
 }
 const fitIsDef=(f,k)=>!f||!f[k]||['x','y','z'].every(a=>f[k][a]===FIT_DEF[k][a]);
 function fitStyle(d,k){
@@ -396,7 +397,7 @@ function unitsToJS(units){
     '  {',
     `    "id":${j(u.id)}, "name":${j(u.name)}, "cls":${j(u.cls)}, "cost":${u.cost}, "hp":${u.hp},`,
     ...(u.traits&&u.traits.length?[`    "traits":${j(u.traits)},`]:[]),
-    ...(['face','card','np'].every(k=>fitIsDef(u.fit,k))?[]:[`    "fit":${j(u.fit)},`]),
+    ...(['face','card','np','cut'].every(k=>fitIsDef(u.fit,k))?[]:[`    "fit":${j(u.fit)},`]),
     ...(u.link?[`    "link":${j(u.link)},`]:[]),
     '    "lines":{',
     Object.keys(LINE_KEYS).map(k=>`      ${j(k)}:${j(u.lines[k])}`).join(',\n'),
