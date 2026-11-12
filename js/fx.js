@@ -28,6 +28,7 @@ function fxNext(){
   let wait=0;
   try{ wait=fxPlay(ev); }catch(e){ console.error(e); if(ev.t==='roll') reveal(ev); }
   if(ev.w!=null) wait=ev.w;
+  if(ev.t!=='cutin'&&G.speed<500) wait=Math.round(wait*0.55); // 速度「速い」：演出の間も詰める（宝具カットインは見せ切る）
   setTimeout(fxNext,wait);
 }
 const fxLayer = ()=>document.querySelector('#fx');

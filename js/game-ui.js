@@ -651,6 +651,9 @@ function render(){
   if(G.phase!=='master') UI.spellPick=false;
   if(G.phase!=='setup') UI.sinfo=null;
   document.body.classList.toggle('lock',cpuActing());
+  const ab=document.querySelector('#autobtn'), spd=document.querySelector('#spd');
+  ab.hidden=screen!=='battle'; ab.textContent=`オート：${UI.auto?'ON':'OFF'}`; ab.classList.toggle('on',UI.auto);
+  spd.hidden=screen!=='battle'; spd.textContent=`速度：${G.speed<500?'速い':'普通'}`;
   document.body.classList.toggle('menuopen',UI.menu);
   document.querySelector('#menubtn').setAttribute('aria-expanded',UI.menu?'true':'false');
   // 画面は毎回作り直すが、読み込み済みの画像は残す（setHTML：フェイズ切り替えで画像がチカチカ消えないように）
@@ -756,6 +759,7 @@ function uiAct(a,ds){
     case 'openTutorial': UI.tut=true; break;
     case 'closeTutorial': UI.tut=false; break;
     case 'setAuto': UI.auto=ds.v==='1'; savePref('pencilduel.auto',UI.auto?'1':'0'); break;
+    case 'toggleSpeed': { const v=G.speed<500?700:250; savePref('pencilduel.speed',String(v)); window.SPEED_PREF=v; G.speed=v; break; }
     case 'setLog': UI.log=ds.v==='1'; savePref('pencilduel.logOpen',UI.log?'1':'0'); break;
     case 'setBottom': UI.bottom=Math.min(BOTTOM_STEPS.length-1,Math.max(0,Number(ds.v)||0)); savePref('pencilduel.bottom',String(UI.bottom)); applyBottom(); break;
     case 'rcost': UI.rcost=ds.v; break;
