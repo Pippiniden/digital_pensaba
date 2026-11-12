@@ -33,7 +33,8 @@ function normCond(c){
 function condText(c,use){
   if(!c) return '';
   const s=use?'相手':'対象';
-  const b={ trait:`${s}が〔${c.v}〕属性`, cls:`${s}が${c.v}`, id:`${s}がID「${c.v}」`,
+  const who=c.k==='id'?((typeof D==='function'&&D(c.v))||{}).name||c.v:'';
+  const b={ trait:`${s}が〔${c.v}〕属性`, cls:`${s}が${c.v}`, id:`${s}が${who}`,
     fx:c.v==='*debuff'?`${s}が弱体状態`:c.v==='*buff'?`${s}が強化状態`:`${s}が${(FX[c.v]||{}).name||c.v}状態`,
     hpBelow:`${s}のHPが${c.v}%以下`, hpAbove:`${s}のHPが${c.v}%以上`, npFull:`${s}の${TERMS.gauge}が100%` }[c.k];
   return b?`${b}${c.not?'でないとき':'のとき'}`:'';
