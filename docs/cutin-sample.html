@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>スキルカットイン サンプル</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@600;900&family=Noto+Sans+JP:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --c-deep:#04163a; --c-mid:#0a3f9c; --c-bright:#2f8cff; --c-glow:#8fd0ff; --c-pale:#cfe6ff;
+  --ci-img:url(../img/units/artoria.webp);
+}
+/* 色違い(R/B/G)は変数だけ差し替える */
+.ci.R{--c-deep:#2a0608;--c-mid:#9c1f18;--c-bright:#ff5a40;--c-glow:#ffb09a;--c-pale:#ffe0d6}
+.ci.G{--c-deep:#03210f;--c-mid:#14803f;--c-bright:#3fd07a;--c-glow:#a8f0c4;--c-pale:#dcffe9}
+
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;display:grid;place-items:center;gap:16px;align-content:center;
+  background:#e9ecf2 conic-gradient(#d8dce6 25%,#f4f6fa 0 50%,#d8dce6 0 75%,#f4f6fa 0) 0 0/24px 24px;
+  font-family:"Noto Sans JP",sans-serif}
+.bar{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.bar button{font:inherit;font-size:13px;padding:6px 14px;border:1px solid #556;background:#fff;border-radius:6px;cursor:pointer}
+
+/* ===== カットイン本体 ===== 16:9のステージ。単位は cqw/cqh でステージ幅に追従 */
+.ci{position:relative;width:min(96vw,1280px);aspect-ratio:16/9;container-type:size;overflow:hidden}
+
+/* 帯: 少し右上がりに傾ける */
+.ci-band{position:absolute;left:-6cqw;width:112cqw;top:35cqh;height:36cqh;
+  transform:rotate(-6deg);transform-origin:center;
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.0) 0 58%,rgba(0,0,0,.18) 58% 100%),
+    linear-gradient(90deg,var(--c-deep) 0%,var(--c-mid) 30%,var(--c-bright) 62%,var(--c-mid) 100%);
+  box-shadow:0 0 2cqw var(--c-bright),0 0 6cqw rgba(47,140,255,.55);
+  overflow:hidden;animation:ciBand .45s cubic-bezier(.2,.8,.2,1) both}
+/* 帯の上下の光る縁 */
+.ci-band::before,.ci-band::after{content:"";position:absolute;left:0;right:0;height:.5cqh;
+  background:linear-gradient(90deg,transparent,#fff 15%,var(--c-glow) 60%,transparent);
+  filter:blur(.15cqh);box-shadow:0 0 1.2cqh var(--c-glow)}
+.ci-band::before{top:0}.ci-band::after{bottom:0}
+
+/* 帯に透ける拡大顔(青く単色化してフェード) */
+.ci-face{position:absolute;left:0;top:-40%;width:62%;height:190%;
+  background:var(--ci-img) 50% 22%/cover no-repeat;
+  filter:grayscale(1) contrast(.9) brightness(1.35);
+  mix-blend-mode:screen;opacity:.55;
+  -webkit-mask-image:linear-gradient(90deg,#000 55%,transparent);mask-image:linear-gradient(90deg,#000 55%,transparent);
+  transform:scale(1.15);animation:ciFace 1.6s ease-out both}
+.ci-tint{position:absolute;inset:0;background:linear-gradient(90deg,var(--c-mid),transparent 70%);mix-blend-mode:multiply;opacity:.7}
+
+/* 流れる光の筋 */
+.ci-streak{position:absolute;inset:0;pointer-events:none;
+  background:
+    linear-gradient(100deg,transparent 0 20%,rgba(255,255,255,.55) 21% 21.6%,transparent 23% 100%),
+    linear-gradient(100deg,transparent 0 48%,rgba(255,255,255,.35) 48.5% 49%,transparent 50% 100%),
+    linear-gradient(100deg,transparent 0 70%,rgba(255,255,255,.5) 70.5% 71.2%,transparent 73% 100%);
+  filter:blur(.12cqh);animation:ciStreak .9s ease-out both}
+
+/* 小さな光の破片(ひし形) */
+.ci-shard{position:absolute;width:2.2cqw;height:.9cqw;background:#fff;opacity:.9;
+  clip-path:polygon(0 50%,50% 0,100% 50%,50% 100%);filter:drop-shadow(0 0 .6cqw var(--c-glow));
+  animation:ciShard 1.4s ease-out both}
+
+/* 右の唐草飾り(文字記号で代用。SVGやPNGに差し替え可) */
+.ci-orn{position:absolute;right:2cqw;top:-8%;font-size:20cqh;line-height:1;color:var(--c-glow);
+  opacity:.55;font-family:serif;transform:rotate(8deg);text-shadow:0 0 1cqh var(--c-bright)}
+
+/* 「スキル発動」ラベル:六角形の金縁プレート */
+.ci-tag{position:absolute;left:5cqw;top:26%;padding:.7cqh 3.2cqw;
+  font:700 2.1cqw/1 "Noto Sans JP",sans-serif;letter-spacing:.12em;color:#fff;
+  background:linear-gradient(180deg,#0c2a6e,#061a48);
+  clip-path:polygon(7% 0,93% 0,100% 50%,93% 100%,7% 100%,0 50%);
+  filter:drop-shadow(0 0 .3cqw #e8c76a);animation:ciText .5s .25s both}
+.ci-tag::before{content:"";position:absolute;inset:.35cqh .45cqw;
+  clip-path:polygon(7% 0,93% 0,100% 50%,93% 100%,7% 100%,0 50%);
+  border:0;background:none;box-shadow:none}
+.ci-tagwrap{position:absolute;left:4cqw;top:23%;padding:2px;
+  background:linear-gradient(135deg,#f6e3a1,#b8893a 50%,#f6e3a1);
+  clip-path:polygon(7% 0,93% 0,100% 50%,93% 100%,7% 100%,0 50%);animation:ciText .5s .25s both}
+.ci-tagwrap .ci-tag{position:static;filter:none;animation:none;display:block;padding:1.1cqh 3.4cqw;
+  clip-path:polygon(7% 0,93% 0,100% 50%,93% 100%,7% 100%,0 50%)}
+.ci-tagwrap .ci-tag::before{display:none}
+
+/* スキル名 */
+.ci-name{position:absolute;left:5.5cqw;top:44%;margin:0;
+  font:900 7.2cqw/1 "Noto Serif JP",serif;letter-spacing:.06em;color:#fff;white-space:nowrap;
+  text-shadow:0 0 .5cqw var(--c-bright),0 0 1.6cqw var(--c-bright),0 .3cqw .6cqw rgba(0,10,40,.8);
+  animation:ciText .6s .35s both}
+
+/* キャラ:帯の上に重ねて上下にはみ出す。縁は白フチ */
+.ci-chara{position:absolute;right:3cqw;bottom:-6cqh;height:108cqh;aspect-ratio:3/4;
+  background:var(--ci-img) 50% 20%/cover no-repeat;
+  -webkit-mask-image:linear-gradient(180deg,#000 62%,transparent 98%);mask-image:linear-gradient(180deg,#000 62%,transparent 98%);
+  filter:drop-shadow(0 0 .25cqw #fff) drop-shadow(0 0 1.2cqw rgba(0,40,120,.5));
+  animation:ciChara .55s .1s cubic-bezier(.2,.8,.2,1) both}
+
+@keyframes ciBand{from{transform:rotate(-6deg) translateX(-110%)}to{transform:rotate(-6deg) translateX(0)}}
+@keyframes ciChara{from{opacity:0;transform:translateX(12cqw)}to{opacity:1;transform:none}}
+@keyframes ciText{from{opacity:0;transform:translateX(-4cqw)}to{opacity:1;transform:none}}
+@keyframes ciFace{from{transform:scale(1.3)}to{transform:scale(1.15)}}
+@keyframes ciStreak{from{transform:translateX(-30%);opacity:0}30%{opacity:1}to{transform:translateX(10%);opacity:.9}}
+@keyframes ciShard{from{opacity:0;transform:translate(-3cqw,2cqw) scale(.4)}40%{opacity:1}to{opacity:.8;transform:none}}
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <button data-c="">青(B)</button><button data-c="R">赤(R)</button><button data-c="G">緑(G)</button>
+  <button id="replay">▶ もう一度</button>
+</div>
+
+<div class="ci" id="ci">
+  <div class="ci-band">
+    <div class="ci-face"></div>
+    <div class="ci-tint"></div>
+    <div class="ci-streak"></div>
+    <i class="ci-shard" style="left:8%;top:62%;animation-delay:.3s"></i>
+    <i class="ci-shard" style="left:44%;top:22%;animation-delay:.5s;transform:rotate(-30deg)"></i>
+    <i class="ci-shard" style="left:60%;top:70%;animation-delay:.6s"></i>
+    <i class="ci-shard" style="left:30%;top:15%;animation-delay:.7s;width:1.4cqw"></i>
+    <span class="ci-orn">❦</span>
+  </div>
+  <div class="ci-tagwrap"><span class="ci-tag">スキル発動</span></div>
+  <h2 class="ci-name" id="ciName">至福の給仕</h2>
+  <div class="ci-chara"></div>
+</div>
+
+<script>
+const ci=document.getElementById('ci');
+function replay(){const p=ci.parentNode,n=ci.nextSibling;p.removeChild(ci);void ci.offsetWidth;p.insertBefore(ci,n)}
+document.getElementById('replay').onclick=replay;
+document.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{ci.className='ci '+b.dataset.c;replay()});
+</script>
+</body>
+</html>
