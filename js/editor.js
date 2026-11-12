@@ -169,6 +169,9 @@ function renderStatus(){
   document.querySelector('#simbtn').hidden=isM(); // バランス検証はサーヴァントだけ
 }
 
+// 制作中トグル：ONの間は js の書き出し（units.js / masters.js）に含めない。ゲームへの反映・JSON書き出しには含まれる
+const wipIn = d=>`<label class="wipin"><input type="checkbox" data-p="wip" data-t="bool" data-act="structural" ${d.wip?'checked':''}> 制作中（js書き出しに含めない）<small>ONの間は units.js / masters.js の書き出しから外れます。ゲームへの反映とJSON書き出しには含まれます</small></label>`;
+
 // ---------- 一覧 ----------
 function tabsHTML(){
   return `<div class="edtabs" role="tablist">${[['units',TERMS.unit],['masters',TERMS.player]].map(([k,l])=>
@@ -181,7 +184,7 @@ function renderList(){
     <div class="ulist">${L.map((u,i)=>{
       const e=iss.filter(x=>x.i===i&&x.level==='error').length, w=iss.filter(x=>x.i===i&&x.level==='warn').length, bg=iss.filter(x=>x.i===i&&x.level==='big').length, ln=iss.filter(x=>x.i===i&&x.level==='line').length;
       return `<button class="uitem ${i===si?'on':''}" data-act="sel" data-i="${i}">
-        ${isM()?'':clsBadge(u.cls,true)}${faceImg(u,'face xs')}<span class="uname">${esc(u.name)||'（名前なし）'}</span><span class="sub small">C${u.cost}</span>
+        ${isM()?'':clsBadge(u.cls,true)}${faceImg(u,'face xs')}<span class="uname">${esc(u.name)||'（名前なし）'}</span>${u.wip?'<span class="wipbadge" title="制作中：js書き出しに含まれません">制作中</span>':''}<span class="sub small">C${u.cost}</span>
         ${e?`<span class="dot err" title="エラー${e}件">${e}</span>`:bg?`<span class="dot big" title="大警告${bg}件${w?`・小警告${w}件`:''}">${bg}</span>`:w?`<span class="dot wrn" title="${isM()?'小警告':'注意'}${w}件">${w}</span>`:ln?`<span class="dot lin" title="セリフ${ln}件">${ln}</span>`:''}</button>`;
     }).join('')}</div>
     <div class="row">
@@ -214,6 +217,7 @@ function renderMasterForm(el){
   el.innerHTML=`
   <section class="sec"><h2>基本情報</h2>
     <p class="sub small nm">マスタールール（${TERMS.unit}1騎＋${TERMS.player}）とマスターチーム（${TERMS.unit}3騎＋${TERMS.player}）で使う${TERMS.player}です。</p>
+    ${wipIn(m)}
     <div class="fields">
       <label>名前<input data-p="name" value="${esc(m.name)}"></label>
       <label>ID<input data-p="id" value="${esc(m.id)}"><small>半角英数字・_・-（${TERMS.unit}と重ならないこと）</small></label>
@@ -295,6 +299,7 @@ function renderForm(){
   if(!u){ el.innerHTML=`<section class="sec"><p>${TERMS.unit}がありません。「＋ 追加」から作成してください。</p></section>`; return; }
   el.innerHTML=`
   <section class="sec"><h2>基本情報</h2>
+    ${wipIn(u)}
     <div class="fields">
       <label>名前<input data-p="name" value="${esc(u.name)}"></label>
       <label>ID<input data-p="id" value="${esc(u.id)}"><small>半角英数字・_・-（データの識別用）</small></label>
@@ -759,8 +764,9 @@ document.addEventListener('click',e=>{
       if(isM()){ if(confirm(`ゲームの${TERMS.player}を標準データ（js/masters.js）に戻しますか？ 編集中のデータはこのまま残ります。`)){ clearCustomMasters(); renderStatus(); toast(`ゲームの${TERMS.player}は標準データに戻りました`); } break; }
       if(confirm('ゲームを標準データ（js/units.js）に戻しますか？ 編集中のデータはこのまま残ります。')){ clearCustomUnits(); renderStatus(); toast('ゲームは標準データに戻りました'); }
       break;
-    case 'exportJS': if(isM()){ downloadText('masters.js',mastersToJS(masters),'text/javascript'); toast('js/masters.js と置き換えると、標準データとして公開できます'); break; }
-      downloadText('units.js',unitsToJS(units),'text/javascript'); toast('js/units.js と置き換えると、標準データとして公開できます'); break;
+    case 'exportJS': { const wn=list().filter(x=>x.wip).length, ex=wn?`（制作中の${wn}${isM()?'人':'体'}は除外）`:'';
+      if(isM()){ downloadText('masters.js',mastersToJS(masters),'text/javascript'); toast('js/masters.js と置き換えると、標準データとして公開できます'+ex); break; }
+      downloadText('units.js',unitsToJS(units),'text/javascript'); toast('js/units.js と置き換えると、標準データとして公開できます'+ex); break; }
     case 'exportJSON': if(isM()){ downloadText('pencil-masters.json',JSON.stringify(masters,null,2),'application/json'); break; }
       downloadText('pencil-units.json',JSON.stringify(units,null,2),'application/json'); break;
     case 'import': document.querySelector('#file').click(); break;

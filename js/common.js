@@ -94,6 +94,7 @@ function normalizeUnit(u){
   const lines=Object.fromEntries(Object.keys(LINE_KEYS).map(k=>[k,strList(ln[k])]));
   const condLines=(Array.isArray(u.condLines)?u.condLines:[]).map(normCondLine).filter(Boolean);
   return { id:String(u.id||''), name:String(u.name||''), cls:normClass(u.cls), traits:normTraits(u.traits), cost:num(u.cost), hp:num(u.hp,100),
+    ...(u.wip?{wip:true}:{}), // 制作中：js 書き出し（units.js）に含めない
     fit:normFit(u.fit), ...(normLink(u.link)?{link:normLink(u.link)}:{}), lines, ...(condLines.length?{condLines}:{}), faces, skills, ult:Object.assign({name:String(ult.name||''), c:String(ult.c||'R'), eff:(ult.eff||[]).map(normEff)}, String(ult.ruby||'').trim()?{ruby:String(ult.ruby).trim()}:{}, Number.isInteger(ult.br)&&ult.br>=0?{br:ult.br}:{}, PICKS[ult.pick]&&ult.pick?{pick:ult.pick}:{}) };
 }
 // 条件つきセリフ：{key:LINE_KEYS のキー, who:LINE_WHO のキー, cond:Cond, lines:string[]}。上にあるものから順に見て、最初に条件を満たしたものを使う。不正なら null
@@ -228,6 +229,7 @@ function normalizeMaster(m){
   const spells=Array.from({length:3},(_,i)=>{ const s=(m.spells||[])[i]||{}; return {name:String(s.name||''), eff:(s.eff||[]).map(normEff), ...own(s)}; });
   const ln=m.lines||{};
   return { id:String(m.id||''), name:String(m.name||''), cls:TERMS.player, traits:[], cost:num(m.cost), hp:num(m.hp,100), master:true,
+    ...(m.wip?{wip:true}:{}), // 制作中：js 書き出し（masters.js）に含めない
     fit:normFit(m.fit), lines:Object.fromEntries(Object.keys(MASTER_LINE_KEYS).map(k=>[k,strList(ln[k])])), faces, spells };
 }
 // ---------- 泥ペンマスシート（MSHEET）に沿った警告と目安 ----------
@@ -342,6 +344,7 @@ const saveCustomMasters = ms=>writeJSON(STORE.masters,ms);
 const clearCustomMasters = ()=>removeKey(STORE.masters);
 // masters.js 形式で書き出す（中身はJSONなので、そのまま読み込み直せる）
 function mastersToJS(ms){
+  ms=ms.filter(m=>!m.wip); // 制作中のマスターは含めない
   const j=v=>JSON.stringify(v);
   const body=ms.map(m=>[
     '  {',
@@ -392,6 +395,7 @@ const clearCustomUnits = ()=>removeKey(STORE.units);
 // ---------- 書き出し・読み込み（ファイル） ----------
 // units.js 形式：中身はJSONなので、そのまま読み込み直せる
 function unitsToJS(units){
+  units=units.filter(u=>!u.wip); // 制作中のサーヴァントは含めない
   const j=v=>JSON.stringify(v);
   const body=units.map(u=>[
     '  {',

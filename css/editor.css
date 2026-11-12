@@ -115,6 +115,9 @@ table.stats td:first-child{white-space:nowrap;color:var(--sub)}
 .pips{color:#fff;letter-spacing:1px;font-size:11px;flex:none}
 .pface.hit .pips{color:#2a1a04}
 .dot.lin{background:#4a8fd8}
+.wipbadge{flex:none;font-size:10px;padding:0 5px;border-radius:8px;background:#8a6d1f;color:#fff;white-space:nowrap}
+.wipin{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:10px;padding:6px 10px;border:1px dashed #8a6d1f;border-radius:6px}
+.wipin small{flex-basis:100%;opacity:.7}
 .issues li.line{color:#7db4ee}
 button.ack{padding:0 6px;margin-left:4px;font-size:11px;line-height:18px}
 details.ign{margin-top:8px;font-size:12px}
