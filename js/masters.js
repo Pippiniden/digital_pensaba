@@ -30,10 +30,10 @@ const DEFAULT_MASTERS = [
     "fit":{"face":{"x":50,"y":17,"z":100}},
     "faces":[
       {"label":"息を潜める","eff":[{"k":"desc","t":"svt","v":0,"text":"息を潜めて様子を見る"}]},
-      {"label":"狙撃","eff":[{"k":"dmg","t":"enemy_master","v":120}],"line":["ここで、仕留める"]},
+      {"label":"狙撃","eff":[{"k":"dmg","t":"enemy_master","v":100}],"line":["ここで、仕留める"]},
       {"label":"キャリコM950","eff":[{"k":"critDown","t":"enemy_all","v":1}],"line":["こっちだ！"]},
       {"label":"狙撃","eff":[{"k":"dmg","t":"enemy_master","v":150}],"line":["ここで、仕留める"]},
-      {"label":"狙撃","eff":[{"k":"dmg","t":"enemy_master","v":120}],"line":["ここで、仕留める"]},
+      {"label":"狙撃","eff":[{"k":"dmg","t":"enemy_master","v":100}],"line":["ここで、仕留める"]},
       {"label":"破壊工作","eff":[{"k":"defDown","t":"enemy_all","v":10}]}
     ],
     "spells":[
@@ -152,13 +152,13 @@ const DEFAULT_MASTERS = [
       {"label":"みんな、ぶっとばせ！","eff":[{"k":"atk","t":"svt","v":20,"color":"R"}],"line":["一気にぶっとばしてやれ！","サーヴァントバトル！　コマンド・オーダー！"]},
       {"label":"応援","eff":[{"k":"desc","t":"svt","v":0,"text":"コータは精一杯応援している"}],"line":["みんな、がんばってくれ！"]},
       {"label":"変幻自在の攻撃だ！","eff":[{"k":"onAtkNp","t":"svt","v":10,"color":"B"}],"line":["サーヴァントバトル！　コマンド・オーダー！"]},
-      {"label":"必殺の作戦だ！","eff":[{"k":"atk","t":"ally_svt","v":30},{"k":"onAtkNp","t":"ally_svt","v":10},{"k":"onAtkStar","t":"ally_svt","v":3}],"line":["とびっきりの作戦、いくぞ！"]},
+      {"label":"必殺の作戦だ！","eff":[{"k":"atk","t":"ally_svt","v":30,"color":"R"},{"k":"onAtkNp","t":"ally_svt","v":10,"color":"B"},{"k":"onAtkStar","t":"ally_svt","v":3,"color":"G"}],"line":["とびっきりの作戦、いくぞ！"]},
       {"label":"ひらめき","eff":[{"k":"desc","t":"svt","v":0,"text":"コータは何かひらめいたようだ"}],"line":["そうか、そうだったのか！","わかったぞ！"]},
       {"label":"スピードで撹乱しろ！","eff":[{"k":"onAtkStar","t":"enemy_master","v":3,"color":"G"}],"line":["スピードで攻めろ！","サーヴァントバトル！　コマンド・オーダー！"]}
     ],
     "spells":[
       {"name":"コマンド：リカバリー","eff":[{"k":"heal","t":"ally_svt","v":200}],"line":["みんな、大丈夫か！？"]},
-      {"name":"コマンド：オーバーパワー","eff":[{"k":"np","t":"ally_svt","v":30}],"line":["俺達の絆を見せてやろう！"]},
+      {"name":"コマンド：オーバーパワー","eff":[{"k":"np","t":"ally_svt","v":20},{"k":"npPow","t":"svt","v":70,"turns":1}],"line":["俺達の絆を見せてやろう！"]},
       {"name":"コマンド：スピーダー","eff":[{"k":"evade","t":"ally_svt","v":0,"turns":1},{"k":"actsUp","t":"ally_svt","v":1,"times":1}],"line":["かわせ、オレのサーヴァント！"]}
     ]
   },
@@ -201,11 +201,11 @@ const DEFAULT_MASTERS = [
     "id":"m_seimei", "name":"安倍晴明", "cost":5, "hp":500,
     "fit":{"face":{"x":50,"y":0,"z":119}},
     "faces":[
-      {"label":"鉄拳","eff":[{"k":"dmg","t":"enemy_master","v":120}],"line":["ふはははは！　貴様に術など不要！"]},
-      {"label":"鉄拳","eff":[{"k":"dmg","t":"enemy_master","v":120}],"line":["ふはははは！　貴様に術など不要！"]},
-      {"label":"陰陽術","eff":[{"k":"dmg","t":"enemy_svt","v":100}],"line":["どれ……小手調べをしてやろう","神秘で我に勝てると思うな！"]},
-      {"label":"蜜の援護","eff":[{"k":"heal","t":"svt","v":100}],"line":["晴明様、お手伝いいたします！"]},
-      {"label":"陰陽術","eff":[{"k":"dmg","t":"enemy_svt","v":100}],"line":["どれ……小手調べをしてやろう","神秘で我に勝てると思うな！"]},
+      {"label":"鉄拳","eff":[{"k":"dmg","t":"enemy_master","v":100}],"line":["ふはははは！　貴様に術など不要！"]},
+      {"label":"鉄拳","eff":[{"k":"dmg","t":"enemy_master","v":100}],"line":["ふはははは！　貴様に術など不要！"]},
+      {"label":"陰陽術","eff":[{"k":"dmg","t":"enemy_svt","v":80}],"line":["どれ……小手調べをしてやろう","神秘で我に勝てると思うな！"]},
+      {"label":"蜜の援護","eff":[{"k":"heal","t":"svt","v":80}],"line":["晴明様、お手伝いいたします！"]},
+      {"label":"陰陽術","eff":[{"k":"dmg","t":"enemy_svt","v":80}],"line":["どれ……小手調べをしてやろう","神秘で我に勝てると思うな！"]},
       {"label":"霊符","eff":[{"k":"atk","t":"ally_svt","v":20}],"line":["どれ……これが必要というわけか？"]}
     ],
     "spells":[
@@ -226,9 +226,9 @@ const DEFAULT_MASTERS = [
       {"label":"無","eff":[],"line":["お昼寝でもしたいのう……"]}
     ],
     "spells":[
-      {"name":"いなりぱーてぃー","eff":[{"k":"heal","t":"ally_all","v":100}],"line":["今日は大盤振る舞いじゃの！"]},
+      {"name":"いなりぱーてぃー","eff":[{"k":"heal","t":"ally_all","v":80}],"line":["今日は大盤振る舞いじゃの！"]},
       {"name":"ちちびんたみか","eff":[{"k":"stun","t":"enemy_svt","v":0,"turns":1}],"line":["ほーれほれ、これが女狐の力じゃぞい"]},
-      {"name":"狐の魔力","eff":[{"k":"np","t":"ally_svt","v":30}],"line":["たまにはちとやる気を出そうかの"]}
+      {"name":"狐の魔力","eff":[{"k":"np","t":"ally_svt","v":25}],"line":["たまにはちとやる気を出そうかの"]}
     ]
   },
   {
