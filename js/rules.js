@@ -208,7 +208,7 @@ const CMD_TYPES = ['R','B','G','W','ASC']; // W=白(特殊行動) / ASC=霊基�
 // mental: 精神異常（精神異常解除・精神異常無効の対象）
 // timesOnly: 効果時間は回数だけで指定する  perm: 効果時間なし（永続）が正常  color: 色(R/B/G)で限定できる  only: その場所(ult/special)でだけ使える
 const FX = {
-  atk:{name:'攻撃ダメージ+',buff:true,val:true,color:true}, atkDown:{name:'攻撃ダメージ-',buff:false,val:true},
+  atk:{name:'攻撃ダメージ+',buff:true,val:true,color:true}, atkDown:{name:'攻撃ダメージ-',buff:false,val:true,color:true},
   def:{name:'被ダメージ-',buff:true,val:true},   defDown:{name:'被ダメージ+',buff:false,val:true},
   critPow:{name:'クリティカル威力+',buff:true,val:true},   // クリティカル時のダメージ増加量に+x
   critMult:{name:'クリティカル倍率',buff:true,val:true},     // クリティカル時のダメージを「+30（Buster+60）・色バフ2倍」の代わりに、クリティカル前のダメージ×x%にする（複数なら最大値）。獲得NP・スターは通常どおり2倍

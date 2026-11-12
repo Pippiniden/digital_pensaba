@@ -431,7 +431,7 @@ function fixedHit(src,t,v){
 }
 // 攻撃側の補正（被ダメージ減少無視なら相手の def を見ない）。使った効果も返す
 function dmgMods(att,tgt,color){
-  const a=modsC(att,'atk',color,tgt), ad=modsC(att,'atkDown',null,tgt);
+  const a=modsC(att,'atk',color,tgt), ad=modsC(att,'atkDown',color,tgt);
   // ハンデの攻撃ダメージ+ も足す
   let sum=a.sum-ad.sum+(hasHcap(att)?G.hcap.atk:0)+(costBonus(att)?costBonus(att).atk:0); const usedA=[...a.list,...ad.list], usedT=[];
   if(tgt&&!tgt.out){

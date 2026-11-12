@@ -539,7 +539,7 @@ function fxText(e){
   let s;
   switch(e.k){
     case 'atk': s=`攻撃ダメージ+${e.v}${col}`; break;
-    case 'atkDown': s=`攻撃ダメージ-${e.v}`; break;
+    case 'atkDown': s=`攻撃ダメージ-${e.v}${col}`; break;
     case 'def': s=`被ダメージ-${e.v}`; break;
     case 'defDown': s=`被ダメージ+${e.v}`; break;
     case 'critPow': s=`クリティカル威力+${e.v}`; break;
