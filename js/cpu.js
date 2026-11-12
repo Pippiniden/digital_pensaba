@@ -349,7 +349,7 @@ function cpuEffScore(u,effs,picked,si){
     if(FX[e.k]&&FX[e.k].noTgt) continue; // 説明文・連続攻撃（スキルでは使わない）
     let ts=e.t==='master'?[]:resolveTargets(u,e.t,picked);
     if(e.cond){ // 条件つき：付与時に見る効果は条件を満たす対象だけ／使う瞬間に見る効果（攻撃・防御補正）は条件を満たす敵がいるときだけ
-      if(FX[e.k]&&FX[e.k].condUse){ if(!enemies.some(x=>condOk(e.cond,x))) continue; }
+      if(FX[e.k]&&FX[e.k].condUse&&!e.cond.self){ if(!enemies.some(x=>condOk(e.cond,x))) continue; }
       else ts=ts.filter(t=>condOk(e.cond,t));
     }
     const acting=ts.some(isActing);
@@ -402,7 +402,7 @@ function cpuEffScore(u,effs,picked,si){
       case 'star': sc+=cpuHard()?starSkillScore(e.v,u.pid):G.ult?.5:2; break;
       case 'stun': case 'charm': sc+=3; break;
       case 'poison': case 'burn': sc+=ts.some(t=>!has(t,e.k))?2:0; break;
-      case 'curse': case 'atkDown': sc+=2; break;
+      case 'curse': case 'hitNpSeal': case 'atkDown': sc+=2; break;
       case 'strip': sc+=ts.some(t=>t.fx.some(x=>e.vs?x.k===e.vs:FX[x.k].buff))?2:0; break;
       case 'defDown': sc+=ts.some(t=>t.pid===u.pid)?-1:1; break;
       case 'dmg': sc+=foes.length?2:0; break;
@@ -475,7 +475,7 @@ function cpuThreatTarget(){
     const th=cpuThreat(t), kill=d>=t.hp&&!has(t,'guts');
     let sc=Math.min(d,t.hp)/maxHp(t)*th + th*.5;
     if(kill){ if(t.np>=70) sc+=ultPower(t)*.5; } // 宝具が近い相手を倒せるなら止める
-    else if(t.np<RULES.ultCost && !has(t,'curse') && t.np+hits*RULES.gaugeOnHit>=RULES.ultCost) sc-=ultPower(t)*.3;
+    else if(t.np<RULES.ultCost && !has(t,'curse') && !has(t,'hitNpSeal') && t.np+hits*RULES.gaugeOnHit>=RULES.ultCost) sc-=ultPower(t)*.3;
     if(sc>bs){ bs=sc; best=t; }
   }
   return best;

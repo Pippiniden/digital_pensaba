@@ -169,6 +169,8 @@ function consume(u,list){
   list.forEach(e=>{ if(e.times!=null) e.times--; });
   u.fx=u.fx.filter(e=>e.times==null||e.times>0);
 }
+// 被弾時にNPが増えなくなる弱体（呪い・被弾NP上昇封印）。回数があるものを先に使う
+const npSealFx = u=>u.fx.find(e=>e.k==='curse')||u.fx.find(e=>e.k==='hitNpSeal'&&e.times!=null)||u.fx.find(e=>e.k==='hitNpSeal');
 const dotVal = e=>e.v||RULES.dot; // 毒・やけどの値（0は旧データなので RULES.dot）
 function addNp(u,v){ if(!u.out) u.np=Math.max(0,Math.min(RULES.gaugeMax,u.np+v)); }
 // 最大HP（定義のHP＋最大HP+の合計）。最大HP+が切れたら HP を最大値まで下げる（1未満にはしない）
@@ -312,7 +314,7 @@ function settleGuts(){
 function applyOne(src,t,e,o={}){ applyOne0(src,t,e,o); syncU(t); }
 function applyOne0(src,t,e,o={}){
   if(t.master&&mTeam()&&FX[e.k].buff===false){ log(`${nm(t)}は${TERMS.unit}に守られていて弱体を受けない`,'sub'); return; } // マスターチーム：マスターは弱体を受けない
-  if(immuneTo(t,e.k)) return;
+  if(!e.sure&&immuneTo(t,e.k)) return; // sure＝強化無効・弱体無効で防がれない
   { // 即時効果への無効（強化解除・即死・NP減少・スター消失）。NP減少・スター消失は敵からのものだけ防ぐ
     const hostile=src&&src.pid!==t.pid;
     const gk=e.k==='strip'?'stripImmune':e.k==='instantDeath'?'deathImmune':e.k==='np'&&e.v<0&&hostile?'npDownImmune':e.k==='starLoss'&&hostile?'starLossImmune':null;
@@ -327,12 +329,12 @@ function applyOne0(src,t,e,o={}){
     case 'starLoss': changeStars(t.pid,-e.v); return;
     case 'cleanse': { // vs 指定ならその弱体だけ解除
       const nmv=e.vs&&FX[e.vs]?`「${FX[e.vs].name}」`:'弱体';
-      t.fx=t.fx.filter(x=>FX[x.k].buff!==false||(e.vs&&x.k!==e.vs)); log(`${nm(t)}の${nmv}を解除`,'good'); return;
+      t.fx=t.fx.filter(x=>x.sure||FX[x.k].buff!==false||(e.vs&&x.k!==e.vs)); log(`${nm(t)}の${nmv}を解除`,'good'); return;
     }
-    case 'cleanseMental': t.fx=t.fx.filter(x=>!FX[x.k].mental); log(`${nm(t)}の精神異常を解除`,'good'); return;
+    case 'cleanseMental': t.fx=t.fx.filter(x=>x.sure||!FX[x.k].mental); log(`${nm(t)}の精神異常を解除`,'good'); return;
     case 'strip': {
       const nmv=e.vs&&FX[e.vs]?`「${FX[e.vs].name}」`:'強化';
-      t.fx=t.fx.filter(x=>FX[x.k].buff!==true||(e.vs&&x.k!==e.vs)); clampHp(t); log(`${nm(t)}の${nmv}を解除`,'bad'); return;
+      t.fx=t.fx.filter(x=>x.sure||FX[x.k].buff!==true||(e.vs&&x.k!==e.vs)); clampHp(t); log(`${nm(t)}の${nmv}を解除`,'bad'); return;
     }
     case 'buffExtend': {
       const bs=t.fx.filter(x=>FX[x.k].buff===true&&x.turns!=null); bs.forEach(x=>x.turns+=e.v);
@@ -357,11 +359,14 @@ function applyOne0(src,t,e,o={}){
   if(e.k==='curse'){ // 呪いは回数のみ。重ねると回数が増える
     const n=e.times||1, c=t.fx.find(x=>x.k==='curse');
     if(c){ c.times+=n; log(`${nm(t)}の呪いが${c.times}回に`,'bad'); return; }
+    if(c&&e.sure) c.sure=true;
     const inst={k:'curse',v:0,color:null,turns:null,times:n,owner:src.pid};
+    if(e.sure) inst.sure=true;
     t.fx.push(inst); log(`${nm(t)}に ${fxText(inst)}`,'bad'); return;
   }
   const inst={k:e.k,v:e.v,color:e.color||null,turns:e.turns??null,times:e.times??null,owner:src.pid};
   if(e.vs) inst.vs=e.vs;
+  if(e.sure) inst.sure=true; // 解除・無効の影響を受けない（ターン・回数では切れる）
   if(e.trait) inst.trait=e.trait;
   if(e.cond&&!e.cond.self) inst.cond=e.cond; // 条件つき（使う瞬間に見る効果はダメージ計算で判定）
   if(o.tmp){ inst.tmp=true; inst.turns=null; } // 補助：このターンの終了フェイズまで
@@ -394,8 +399,8 @@ function dealDamage(u,dmg,isHit,o={}){
   if(ko){ if(!gutsHold(u)){ retreat(u); return; } } // ガッツ：一連の攻撃が終わるまでHP0で踏みとどまる
   if(isHit){
     // 被ダメージ時○○ はここではなく、攻撃対象になったターンの終了フェイズ（hitEffects）で発動する
-    const c=u.fx.find(e=>e.k==='curse');
-    if(c){ consume(u,[c]); log(`${nm(u)}は呪いで${TERMS.gauge}が増えない`,'sub'); }
+    const c=npSealFx(u);
+    if(c){ consume(u,[c]); log(`${nm(u)}は${FX[c.k].name}で${TERMS.gauge}が増えない`,'sub'); }
     else addNp(u,npRate(u,RULES.gaugeOnHit));
     // 反撃：攻撃側へ固定ダメージ（補正・無敵・回避・クリティカルの影響なし、NPは増えない）
     const ct=mods(u,'counter'), a=o.att;
@@ -732,8 +737,8 @@ function hitEffects(){
     if(u.out) return;
     const hn=mods(u,'onHitNp'), hs=mods(u,'onHitStar');
     if(hn.sum){
-      const c=u.fx.find(e=>e.k==='curse');
-      if(c){ consume(u,[c]); log(`${nm(u)}は呪いで被ダメージ時の${TERMS.gauge}が増えない`,'sub'); }
+      const c=npSealFx(u);
+      if(c){ consume(u,[c]); log(`${nm(u)}は${FX[c.k].name}で被ダメージ時の${TERMS.gauge}が増えない`,'sub'); }
       else { addNp(u,hn.sum); log(`${nm(u)} 被ダメージ時：${TERMS.gauge}+${hn.sum}%`,'good'); }
       consume(u,hn.list);
     }

@@ -249,6 +249,7 @@ const FX = {
   poison:{name:'毒',buff:false,val:true}, burn:{name:'やけど',buff:false,val:true}, // ターン終了時に値ぶんの弱体ダメージ
   spread:{name:'延焼',buff:false},                           // やけどのダメージ2倍
   curse:{name:'呪い',buff:false,timesOnly:true},             // 被弾時にNPが増えない。重ねると回数が増える
+  hitNpSeal:{name:'被弾NP上昇封印',buff:false},               // 被弾時にNPが増えない（呪いと違い、ターン・回数どちらでも指定できる。回数を指定すると防ぐたびに減る）
   stun:{name:'スタン',buff:false}, charm:{name:'魅了',buff:false,mental:true},
   fear:{name:'恐怖',buff:false,mental:true},                             // 行動回数-1
   actsDown:{name:'最大行動回数-',buff:false,val:true},                   // 次の行動回数決定で最大行動回数から値ぶん減らす（0未満にはならない・重ねると合計・精神異常ではない）
@@ -295,7 +296,7 @@ const FX_GROUPS = [
   ['攻撃強化', ['atk','npPow','atkVs','atkTrait','ignoreDef','sureHit','pierce','critPow','critMult','critRoll','debuffUp','cardConv','onAtkStar','onAtkNp']],
   ['防御・耐性', ['def','defTrait','evade','invul','guts','taunt','nullUnder','counter','maxHp','debuffImmune','mentalImmune','deathImmune','stripImmune','npDownImmune','starLossImmune']],
   ['継続・ターン', ['actsUp','regenHp','regenNp','regenStar','onHitNp','onHitStar']],
-  ['弱体', ['atkDown','npPowDown','defDown','critDown','starDown','debuffDown','poison','burn','spread','drain','curse','stun','charm','fear','actsDown','sealSkill','sealUlt','healBlock','buffImmune']],
+  ['弱体', ['atkDown','npPowDown','defDown','critDown','starDown','debuffDown','poison','burn','spread','drain','curse','hitNpSeal','stun','charm','fear','actsDown','sealSkill','sealUlt','healBlock','buffImmune']],
   ['回復・即時', ['heal','np','star','starLoss','cleanse','cleanseMental','strip','buffExtend','skillCharge']],
   ['攻撃・特殊', ['dmg','multiHit','selfDmg','instantDeath','copyRoll']],
   ['表示', ['desc']],

@@ -51,6 +51,7 @@ function normEff(e){
   const cd=normCond(e.cond); if(cd&&!(FX[o.k]&&FX[o.k].noTgt)) o.cond=cd; // 条件つき効果
   if(EFF_AT[e.at]) o.at=e.at; // 攻撃の前/後（未指定なら既定のタイミング。rules.js の EFF_AT）
   if(e.max&&FX[o.k]&&FX[o.k].maxOk) o.max=true; // 値＝対象の最大HP（軽減不可）
+  if(e.sure&&FX[o.k]&&!FX[o.k].inst&&!FX[o.k].noTgt) o.sure=true; // 持続効果のみ：強化無効・弱体無効・解除の影響を受けない（ターン・回数では切れる）
   const tx=String(e.text??'').trim(); if(tx&&o.k==='desc') o.text=tx; // 説明文
   return o;
 }
@@ -585,7 +586,7 @@ function fxText(e){
     default: s=FX[e.k]?FX[e.k].name:e.k;
   }
   const dur=[e.times!=null?`${e.times}回`:'', e.turns!=null?`${e.turns}T`:''].filter(Boolean).join('・');
-  return s+(dur?`(${dur})`:'')+(e.cond?`［${condText(e.cond,FX[e.k]&&FX[e.k].condUse)}］`:'')+(e.chance?`［ロール${e.chance}以下］`:'')+(EFF_AT[e.at]&&e.k!=='dmg'?`［${EFF_AT[e.at]}］`:'');
+  return s+(dur?`(${dur})`:'')+(e.cond?`［${condText(e.cond,FX[e.k]&&FX[e.k].condUse)}］`:'')+(e.chance?`［ロール${e.chance}以下］`:'')+(e.sure?'［解除・無効不可］':'')+(EFF_AT[e.at]&&e.k!=='dmg'?`［${EFF_AT[e.at]}］`:'');
 }
 function tLabel(t,pick){
   if(t==='picked') return PICKS[pick]&&pick ? PICKS[pick] : TARGETS.picked;

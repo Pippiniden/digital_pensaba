@@ -144,6 +144,7 @@ function fixEff(e){
   if(e.k==='dmg'||e.k==='copyRoll') delete e.at;
   if(e.k==='star'&&e.t==='self') e.t='master';
   if(!f.maxOk) delete e.max;
+  if(f.inst||f.noTgt||!e.sure) delete e.sure;
   if(e.k!=='desc') delete e.text;
   else if(e.text==null) e.text='';
   if(f.noTgt){ e.t=e.t==='svt'?'svt':'self'; delete e.chance; delete e.at; delete e.cond; } // 対象・確率・タイミングを使わない効果
@@ -551,6 +552,7 @@ function effRow(path,j,e,ctx,n,atKind){
     ${e.k in VS_KINDS?(()=>{ const bf=VS_KINDS[e.k]; return `<label class="mini"><span>${bf?'強化':'弱体'}</span><select data-p="${p}.vs" data-t="optstr">${opt('',e.k==='atkVs'?'どれでも':'すべて',e.vs||'')}${Object.keys(FX).filter(k=>FX[k].buff===bf).map(k=>opt(k,FX[k].name,e.vs)).join('')}</select></label>`; })():''}
     ${f.noTgt?'':`<label class="mini"><span>確率</span><select data-p="${p}.chance" data-t="optnum">${opt('','必ず',e.chance??'')}${[1,2,3,4,5].map(k=>opt(k,`ロール${k}以下`,e.chance)).join('')}</select></label>`}
     ${f.noTgt?'':condIn(p,e,f)}
+    ${f.inst||f.noTgt?'':`<label class="mini chk" title="強化無効・弱体無効で付与を防がれず、強化解除・弱体解除でも消えません。ターンや回数が尽きれば切れます"><input type="checkbox" data-p="${p}.sure" data-t="bool" ${e.sure?'checked':''}><span>解除・無効不可</span></label>`}
     ${f.noTgt?'':effAtSel(p,e,atKind)}
     <span class="effops">
       <button data-act="effMove" data-path="${path}" data-i="${j}" data-d="-1" ${j?'':'disabled'} title="上へ">↑</button>
