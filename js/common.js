@@ -542,7 +542,7 @@ function fxText(e){
     case 'atkDown': s=`攻撃ダメージ-${e.v}${col}`; break;
     case 'def': s=`被ダメージ-${e.v}`; break;
     case 'defDown': s=`被ダメージ+${e.v}`; break;
-    case 'critPow': s=`クリティカル威力+${e.v}`; break;
+    case 'critPow': s=`クリティカル威力+${e.v}${col}`; break;
     case 'critMult': s=`クリティカル時ダメージ×${e.v}%`; break;
     case 'guts': s=`ガッツ(HP${e.v})`; break;
     case 'critRoll': s=`クリティカル率アップ(Lv+${e.v})`; break;

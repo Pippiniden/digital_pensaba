@@ -520,7 +520,7 @@ function attackHit(att,cmd,tgt,o,lab){
     }
     if(crit){
       sa.crits++;
-      const cp=mods(att,'critPow'), cm=att.fx.filter(e=>e.k==='critMult');
+      const cp=mods(att,'critPow',cmd.c), cm=att.fx.filter(e=>e.k==='critMult');
       if(cm.length){ // クリティカル倍率：+30/+60・色バフ2倍の代わりに、ここまでのダメージ×x%（威力+は最後に加算）
         const pct=Math.max(...cm.map(e=>e.v)), add=Math.round(dmg*pct/100)-dmg+cp.sum;
         dmg+=add; note.push(`クリ×${pct}%${cp.sum?`+${cp.sum}`:''}`); consume(att,cm);
