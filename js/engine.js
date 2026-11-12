@@ -210,7 +210,7 @@ function condOk(c,s){
   return c.not?!r:r;
 }
 // 条件を付与時に見る効果か（ダメージ計算で相手を見る condUse 以外）
-const condAtApply = e=>!!e.cond&&!(FX[e.k]&&FX[e.k].condUse);
+const condAtApply = e=>!!e.cond&&(!!e.cond.self||!(FX[e.k]&&FX[e.k].condUse)); // cond.self＝付与先自身を見る
 function resolveTargets(src,t,picked){
   let ts=[];
   const m=masterOf(src.pid), em=masterOf(1-src.pid);
@@ -363,7 +363,7 @@ function applyOne0(src,t,e,o={}){
   const inst={k:e.k,v:e.v,color:e.color||null,turns:e.turns??null,times:e.times??null,owner:src.pid};
   if(e.vs) inst.vs=e.vs;
   if(e.trait) inst.trait=e.trait;
-  if(e.cond) inst.cond=e.cond; // 条件つき（使う瞬間に見る効果はダメージ計算で判定）
+  if(e.cond&&!e.cond.self) inst.cond=e.cond; // 条件つき（使う瞬間に見る効果はダメージ計算で判定）
   if(o.tmp){ inst.tmp=true; inst.turns=null; } // 補助：このターンの終了フェイズまで
   t.fx.push(inst);
   if(e.k==='maxHp') t.hp+=e.v; // 最大HPが増えたぶん HP も増える
@@ -448,9 +448,12 @@ function dmgMods(att,tgt,color){
   const colorBuff=a.list.filter(e=>e.color).reduce((s,e)=>s+e.v,0);
   return {sum, usedA, usedT, colorBuff};
 }
+// スター発生数ダウン(starDown)：1回の攻撃で発生するスターの合計から x 個引く（0未満にはしない）。返り値＝まだ引き切れていない分
 function gainNpStar(att,cmd,mult){
   if(cmd.np) addNp(att,npRate(att,cmd.np*mult));
-  if(cmd.star) G.gen+=cmd.star*mult;
+  let cut=mods(att,'starDown').sum;
+  if(cmd.star){ const v=cmd.star*mult, g=Math.max(0,v-cut); cut=Math.max(0,cut-v); G.gen+=g; }
+  return cut;
 }
 // ---------- 他のサーヴァントをロール（copyRoll） ----------
 const isCopyCmd = c=>!!c&&c.c==='W'&&(c.eff||[]).some(e=>e.k==='copyRoll');
@@ -535,12 +538,12 @@ function attackHit(att,cmd,tgt,o,lab){
     else if(nullified(tgt,dmg)){ st(tgt).blocked++; log(`${n} ${cmdChip(cmd)} → ${nm(tgt)}：${fmt(dmg)}ダメージは${nullified(tgt,dmg)}以下なので無効 <span class="sub">(${note.join(' / ')})</span>`); fxEmit({t:'dmg',uid:tgt.uid,text:'無効'}); consume(tgt,usedT); }
     else { log(`${n} ${cmdChip(cmd)} → ${nm(tgt)}：<b>${fmt(dmg)}</b>ダメージ <span class="sub">(${note.join(' / ')})</span>`); consume(tgt,usedT); dealDamage(tgt,dmg,true,{crit,att}); }
   }
-  gainNpStar(att,cmd,mult);
+  const starCut=gainNpStar(att,cmd,mult);
   consume(att,usedA);
   // 攻撃時○○（エクストラアタックでは発動しない）
   if(!o.extra){
     const s=mods(att,'onAtkStar',cmd.c), p=mods(att,'onAtkNp',cmd.c);
-    if(s.sum){ G.gen+=s.sum; log(`${n} 攻撃時効果：${TERMS.star}${s.sum}個発生`,'sub'); }
+    if(s.sum){ const g=Math.max(0,s.sum-starCut); G.gen+=g; log(`${n} 攻撃時効果：${TERMS.star}${g}個発生`,'sub'); }
     if(p.sum){ addNp(att,npRate(att,p.sum)); log(`${n} 攻撃時効果：${TERMS.gauge}+${p.sum}%`,'sub'); }
     consume(att,[...s.list,...p.list]);
   }

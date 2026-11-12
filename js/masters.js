@@ -170,13 +170,13 @@ const DEFAULT_MASTERS = [
       {"label":"","eff":[{"k":"star","t":"master","v":6},{"k":"atk","t":"svt","v":10}]},
       {"label":"","eff":[{"k":"atk","t":"ally_svt","v":30,"color":"R"},{"k":"critRoll","t":"svt","v":1,"cond":{"k":"trait","v":"女性"}}]},
       {"label":"","eff":[{"k":"charm","t":"enemy_svt","v":0,"chance":4,"cond":{"k":"trait","v":"女性"}}]},
-      {"label":"","eff":[{"k":"onAtkNp","t":"ally_svt","v":15,"color":"B"},{"k":"atk","t":"svt","v":10,"cond":{"k":"trait","v":"女性"}}]},
+      {"label":"","eff":[{"k":"onAtkNp","t":"ally_svt","v":15,"color":"B"},{"k":"atk","t":"svt","v":10,"cond":{"k":"trait","v":"女性","self":true}}]},
       {"label":"","eff":[]}
     ],
     "spells":[
       {"name":"緊急回避","eff":[{"k":"evade","t":"ally_svt","v":0,"turns":1},{"k":"actsUp","t":"ally_svt","v":1,"times":1},{"k":"np","t":"svt","v":20,"cond":{"k":"trait","v":"女性"}}]},
       {"name":"流脈利用式治癒","eff":[{"k":"cleanse","t":"ally_svt","v":0},{"k":"heal","t":"ally_svt","v":150}]},
-      {"name":"火炎放出","eff":[{"k":"actsDown","t":"enemy_svt","v":1,"turns":1},{"k":"critDown","t":"enemy_svt","v":1,"turns":1},{"k":"dmg","t":"enemy_svt","v":80},{"k":"atkDown","t":"enemy_svt","v":10,"turns":1,"cond":{"k":"trait","v":"男性"}}]}
+      {"name":"火炎放出","eff":[{"k":"actsDown","t":"enemy_svt","v":1,"turns":1},{"k":"critDown","t":"enemy_svt","v":1,"turns":1},{"k":"dmg","t":"enemy_svt","v":80},{"k":"atkDown","t":"enemy_svt","v":10,"turns":1,"cond":{"k":"trait","v":"男性","self":true}}]}
     ]
   },
   {

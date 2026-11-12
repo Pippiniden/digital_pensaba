@@ -98,7 +98,7 @@ function newEff(ctx,path){
 }
 // ---------- 効果の種類を変えたときの自動設定（値・対象・ターン） ----------
 // 値の目安（なければ20）。FX_VAL_MASTER＝マスターの補助・令呪で別の値を使うもの
-const FX_VAL = { atk:20, atkDown:10, def:10, defDown:10, critPow:30, critMult:200, guts:100, critRoll:1, debuffUp:1, debuffDown:1, critDown:1, nullUnder:30,
+const FX_VAL = { atk:20, atkDown:10, def:10, defDown:10, critPow:30, critMult:200, guts:100, critRoll:1, debuffUp:1, debuffDown:1, critDown:1, starDown:2, nullUnder:30,
   onAtkStar:3, onAtkNp:10, actsUp:1, actsDown:1, regenHp:20, regenNp:5, regenStar:2, atkVs:50, atkTrait:50, defTrait:50, counter:20, onHitNp:10, onHitStar:3,
   maxHp:100, poison:20, burn:20, drain:20, heal:100, np:20, star:5, starLoss:5, buffExtend:1, skillCharge:1, dmg:200, selfDmg:20, npPow:80, npPowDown:50, multiHit:2 };
 const FX_VAL_MASTER = { heal:30, dmg:50, star:5 };
@@ -517,7 +517,8 @@ function condIn(p,e,f,lab){
     hpBelow:`<input type="number" min="1" max="100" data-p="${p}.cond.v" data-t="num" value="${c.v}"><span class="sub">%</span>`,
     hpAbove:`<input type="number" min="1" max="100" data-p="${p}.cond.v" data-t="num" value="${c.v}"><span class="sub">%</span>`,
   }[c.k]||'';
-  return kind+(val?`<label class="mini">${val}</label>`:'')+`<label class="mini chk"><input type="checkbox" data-p="${p}.cond.not" data-t="bool" ${c.not?'checked':''}><span>でないとき</span></label>`;
+  const self=f.condUse?`<label class="mini chk" title="攻撃・防御の相手ではなく、この効果が付く本人（例：自分が女性のとき）を条件にします"><input type="checkbox" data-p="${p}.cond.self" data-t="bool" ${c.self?'checked':''}><span>付与先を見る</span></label>`:'';
+  return kind+(val?`<label class="mini">${val}</label>`:'')+`<label class="mini chk"><input type="checkbox" data-p="${p}.cond.not" data-t="bool" ${c.not?'checked':''}><span>でないとき</span></label>`+self;
 }
 function effRow(path,j,e,ctx,n,atKind){
   const p=`${path}.${j}`, f=FX[e.k]||{};

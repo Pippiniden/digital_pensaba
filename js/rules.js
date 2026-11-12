@@ -255,6 +255,7 @@ const FX = {
   drain:{name:'HP減少',buff:false,val:true,perm:true},      // ターン終了時に値ぶんの弱体ダメージ。重複する（合計）。永続でよい
   sealSkill:{name:'スキル封印',buff:false}, sealUlt:{name:'宝具封印',buff:false},
   critDown:{name:'クリティカル率ダウン',buff:false,val:true},
+  starDown:{name:'スター発生数ダウン',buff:false,val:true},          // 攻撃1回で発生するスターが x 個減る
   debuffDown:{name:'弱体成功率ダウン',buff:false,val:true},   // 自分が敵に付ける弱体の判定ロールをN-xにする。「必ず」の弱体もロール6以下の判定になる
   healBlock:{name:'回復無効',buff:false},                   // HP回復・毎ターンHP回復を受けない // 攻撃時のクリティカルレベル-x（シンプルは出目+x）
   // 即時
@@ -294,7 +295,7 @@ const FX_GROUPS = [
   ['攻撃強化', ['atk','npPow','atkVs','atkTrait','ignoreDef','sureHit','pierce','critPow','critMult','critRoll','debuffUp','cardConv','onAtkStar','onAtkNp']],
   ['防御・耐性', ['def','defTrait','evade','invul','guts','taunt','nullUnder','counter','maxHp','debuffImmune','mentalImmune','deathImmune','stripImmune','npDownImmune','starLossImmune']],
   ['継続・ターン', ['actsUp','regenHp','regenNp','regenStar','onHitNp','onHitStar']],
-  ['弱体', ['atkDown','npPowDown','defDown','critDown','debuffDown','poison','burn','spread','drain','curse','stun','charm','fear','actsDown','sealSkill','sealUlt','healBlock','buffImmune']],
+  ['弱体', ['atkDown','npPowDown','defDown','critDown','starDown','debuffDown','poison','burn','spread','drain','curse','stun','charm','fear','actsDown','sealSkill','sealUlt','healBlock','buffImmune']],
   ['回復・即時', ['heal','np','star','starLoss','cleanse','cleanseMental','strip','buffExtend','skillCharge']],
   ['攻撃・特殊', ['dmg','multiHit','selfDmg','instantDeath','copyRoll']],
   ['表示', ['desc']],

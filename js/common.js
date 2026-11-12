@@ -27,12 +27,13 @@ function normCond(c){
   else if(c.k==='id'){ const v=String(c.v??'').trim(); if(!v) return null; o.v=v; }
   else if(c.k==='hpBelow'||c.k==='hpAbove') o.v=Math.min(100,Math.max(1,Math.round(num(c.v,50))||50));
   if(c.not) o.not=true;
+  if(c.self) o.self=true; // 攻撃・防御補正(condUse)でも、相手ではなく付与先自身を見る
   return o;
 }
 // 条件の説明文。use＝使う瞬間に見る効果（相手＝攻撃・防御の相手）／それ以外は「対象」
 function condText(c,use){
   if(!c) return '';
-  const s=use?'相手':'対象';
+  const s=use&&!c.self?'相手':'対象';
   const who=c.k==='id'?((typeof D==='function'&&D(c.v))||{}).name||c.v:'';
   const b={ trait:`${s}が〔${c.v}〕属性`, cls:`${s}が${c.v}`, id:`${s}が${who}`,
     fx:c.v==='*debuff'?`${s}が弱体状態`:c.v==='*buff'?`${s}が強化状態`:`${s}が${(FX[c.v]||{}).name||c.v}状態`,
@@ -569,6 +570,7 @@ function fxText(e){
     case 'onHitStar': s=`被ダメージ時${TERMS.star}${e.v}個獲得`; break;
     case 'maxHp': s=`最大HP+${e.v}`; break;
     case 'critDown': s=`クリティカル率ダウン(Lv-${e.v})`; break;
+    case 'starDown': s=`${TERMS.star}発生数ダウン(-${e.v})`; break;
     case 'cardConv': s=`カード変換→${e.color?TERMS[e.color]:'(色未指定)'}`; break;
     case 'buffExtend': s=`強化の効果時間+${e.v}T`; break;
     case 'skillCharge': s=`使用済みスキル${e.v}個を再使用可能に`; break;
