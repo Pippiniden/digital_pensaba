@@ -23,6 +23,8 @@
 /* 色（宝具のカード色 R/B/G）。B が基本 */
 .ct{--deep:#03123a;--mid:#0b3c9e;--bright:#2a86ff;--glow:#9ad6ff;--pale:#dff0ff;--tilt:-7deg;--T:2.6s;
   position:relative;aspect-ratio:16/9;container-type:size;overflow:hidden;pointer-events:none;
+  /* 背景: 夜明け（上は深色 → 中央に明るい帯 → 下は深色）。色は R/B/G の変数に追従 */
+  background:linear-gradient(180deg,var(--deep) 0%,var(--mid) 45%,color-mix(in srgb,var(--bright) 80%,#fff) 62%,var(--mid) 78%,var(--deep) 100%);
   animation:ctOut .35s calc(var(--T) - .35s) ease-in forwards}
 .ct.R{--deep:#2a0508;--mid:#8f1a14;--bright:#ff4f36;--glow:#ffb39f;--pale:#ffe6de}
 .ct.G{--deep:#03200f;--mid:#127a3b;--bright:#35d276;--glow:#a9f3c7;--pale:#e0fff0}

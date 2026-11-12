@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><base href="../">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>宝具カットイン 背景グラデ案</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@700;900&family=Noto+Sans+JP:wght@700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/cutin.css">
+<style>
+body{margin:0;background:#111;color:#eee;font:14px "Noto Sans JP",sans-serif;padding:16px}
+h1{font-size:18px;margin:0 0 4px}
+p.n{margin:0 0 16px;color:#aaa}
+.row{margin:0 0 28px}
+.row h2{font-size:15px;margin:0 0 6px}
+.row h2 small{color:#999;font-weight:400;margin-left:8px}
+.cols{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.cell .ct{width:100%}
+/* 試作用に実カットインの背景(ゲーム画面)を想定した市松 → 透過だと市松が見える */
+.cell{background:repeating-conic-gradient(#2a2a2a 0 25%,#3a3a3a 0 50%) 0 0/20px 20px}
+
+/* ===== 背景案。.ct の背景として敷く（帯・立ち絵より奥） ===== */
+/* 1 スポットグロー: 立ち絵の後ろから光が広がる */
+.bg1{background:
+  radial-gradient(55% 90% at 78% 55%,color-mix(in srgb,var(--bright) 70%,transparent),transparent 70%),
+  linear-gradient(180deg,color-mix(in srgb,var(--deep) 92%,#000),var(--deep))}
+/* 2 斜めグラデ: 左上が暗く右下へ明るく */
+.bg2{background:linear-gradient(125deg,var(--deep) 10%,var(--mid) 55%,var(--bright) 120%)}
+/* 3 立ち上る光: 下が明るく上が暗い */
+.bg3{background:
+  radial-gradient(120% 60% at 50% 108%,var(--bright),transparent 70%),
+  linear-gradient(0deg,var(--mid),var(--deep) 75%,#000)}
+/* 4 ビネット: 中心が明るく、四隅が黒に落ちる */
+.bg4{background:radial-gradient(85% 95% at 55% 50%,var(--mid),var(--deep) 60%,#000 125%)}
+/* 5 2色ブレンド: 色にもう1色（暖色/寒色）を混ぜる */
+.bg5{background:
+  linear-gradient(115deg,var(--deep) 5%,var(--mid) 45%,color-mix(in srgb,var(--bright) 55%,#ffd35a) 100%)}
+.bg5.B{background:linear-gradient(115deg,var(--deep) 5%,var(--mid) 45%,color-mix(in srgb,var(--bright) 60%,#7be8ff) 100%)}
+.bg5.R{background:linear-gradient(115deg,var(--deep) 5%,var(--mid) 45%,color-mix(in srgb,var(--bright) 55%,#ffb347) 100%)}
+.bg5.G{background:linear-gradient(115deg,var(--deep) 5%,var(--mid) 45%,color-mix(in srgb,var(--bright) 55%,#e6ff7a) 100%)}
+/* 6 ツートン夜明け: 上は深色、地平線に明るい帯、下は少し暗く戻る */
+.bg6{background:linear-gradient(180deg,var(--deep) 0%,var(--mid) 45%,color-mix(in srgb,var(--bright) 80%,#fff) 62%,var(--mid) 78%,var(--deep) 100%)}
+</style>
+</head>
+<body>
+<h1>宝具カットイン 背景グラデ案</h1>
+<p class="n">左から R(バスター) / B(アーツ) / G(クイック)。市松は「いまの透過」の目安。</p>
+<div id="out"></div>
+
+<script src="js/rules.js"></script>
+<script src="js/units.js"></script>
+<script src="js/masters.js"></script>
+<script src="js/common.js"></script>
+<script src="js/cutin.js"></script>
+<script>
+const BG=[
+  ['bg0','現状（透過）','背景なし。ゲーム画面が透けて見える'],
+  ['bg1','1 スポットグロー','立ち絵の後ろから光が広がる。一番「宝具感」が出る'],
+  ['bg2','2 斜めグラデ','左上が暗く右下へ明るく。シンプルで帯と喧嘩しにくい'],
+  ['bg3','3 立ち上る光','足元から光が昇る。立ち絵が映える'],
+  ['bg4','4 ビネット','中心が明るく四隅が黒。帯・文字に目が行く'],
+  ['bg5','5 2色ブレンド','色に近い別色を混ぜる（赤→橙、青→水色、緑→黄緑）'],
+  ['bg6','6 夜明け','地平線のように中央に明るい帯。横の動きと合う'],
+];
+const UL=normalizeUnits?normalizeUnits(DEFAULT_UNITS):DEFAULT_UNITS;
+const d=UL.find(u=>u.id==='artoria')||UL[0];
+const out=document.getElementById('out');
+for(const [cls,t,desc] of BG){
+  const row=document.createElement('div'); row.className='row';
+  row.innerHTML=`<h2>${t}<small>${desc}</small></h2><div class="cols"></div>`;
+  out.appendChild(row);
+  for(const c of ['R','B','G']){
+    const cell=document.createElement('div'); cell.className='cell';
+    cell.innerHTML=cutinStageHTML(d,{...d.ult,c},{hold:true});
+    const st=cell.querySelector('.ct'); st.classList.add(cls);
+    row.querySelector('.cols').appendChild(cell);
+    cutinLayout(st,{...d.ult,c});
+  }
+}
+if(document.fonts) document.fonts.ready.then(()=>document.querySelectorAll('.ct').forEach(s=>{try{cutinLayout(s,d.ult)}catch(e){}}));
+</script>
+</body>
+</html>

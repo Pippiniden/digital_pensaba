@@ -169,14 +169,83 @@ const DEFAULT_MASTERS = [
       {"label":"","eff":[{"k":"onAtkStar","t":"ally_svt","v":3},{"k":"onAtkNp","t":"svt","v":5,"cond":{"k":"trait","v":"女性"}}]},
       {"label":"","eff":[{"k":"star","t":"master","v":6},{"k":"atk","t":"svt","v":10}]},
       {"label":"","eff":[{"k":"atk","t":"ally_svt","v":30,"color":"R"},{"k":"critRoll","t":"svt","v":1,"cond":{"k":"trait","v":"女性"}}]},
-      {"label":"","eff":[{"k":"charm","t":"enemy_svt","v":0,"cond":{"k":"trait","v":"女性"}}]},
-      {"label":"","eff":[{"k":"onAtkNp","t":"ally_svt","v":15,"color":"B"},{"k":"def","t":"svt","v":10,"cond":{"k":"trait","v":"女性"}}]},
+      {"label":"","eff":[{"k":"charm","t":"enemy_svt","v":0,"chance":4,"cond":{"k":"trait","v":"女性"}}]},
+      {"label":"","eff":[{"k":"onAtkNp","t":"ally_svt","v":15,"color":"B"},{"k":"atk","t":"svt","v":10,"cond":{"k":"trait","v":"女性"}}]},
       {"label":"","eff":[]}
     ],
     "spells":[
-      {"name":"緊急回避","eff":[{"k":"evade","t":"ally_svt","v":0,"turns":1},{"k":"actsUp","t":"ally_svt","v":1,"times":1}]},
+      {"name":"緊急回避","eff":[{"k":"evade","t":"ally_svt","v":0,"turns":1},{"k":"actsUp","t":"ally_svt","v":1,"times":1},{"k":"np","t":"svt","v":20,"cond":{"k":"trait","v":"女性"}}]},
       {"name":"流脈利用式治癒","eff":[{"k":"cleanse","t":"ally_svt","v":0},{"k":"heal","t":"ally_svt","v":150}]},
       {"name":"火炎放出","eff":[{"k":"actsDown","t":"enemy_svt","v":1,"turns":1},{"k":"critDown","t":"enemy_svt","v":1,"turns":1},{"k":"dmg","t":"enemy_svt","v":80},{"k":"atkDown","t":"enemy_svt","v":10,"turns":1,"cond":{"k":"trait","v":"男性"}}]}
+    ]
+  },
+  {
+    "id":"m_jubiro", "name":"石鷹授比郎", "cost":1, "hp":100,
+    "fit":{"face":{"x":50,"y":0,"z":100}},
+    "lines":{"support":["こいつぁスゲェ！！なんて入り組んだストーリーと謎だ！！","この聖杯戦争に！！俺達の骨を埋めてやろうじゃねぇかぁ！！","この戦争に勝てないと心が折れたら、逃げ時だぜ？"],"attack":[],"spell":["先の詠める漫画なんざつまらないにもほどがあるだろうがァァアアア！！！","この聖杯戦争ッ！！”俺に描かせろ”ッッッ！！！！"]},
+    "faces":[
+      {"label":"","eff":[{"k":"atk","t":"ally_svt","v":30,"color":"R"},{"k":"onAtkNp","t":"ally_svt","v":5}]},
+      {"label":"","eff":[]},
+      {"label":"","eff":[]},
+      {"label":"","eff":[{"k":"critRoll","t":"ally_svt","v":2},{"k":"critPow","t":"svt","v":30}]},
+      {"label":"","eff":[]},
+      {"label":"","eff":[]}
+    ],
+    "spells":[
+      {"name":"しおさいと銅鑼","eff":[{"k":"actsUp","t":"ally_svt","v":3,"turns":1},{"k":"critRoll","t":"ally_svt","v":2,"turns":1},{"k":"np","t":"ally_svt","v":20}]},
+      {"name":"倶利伽羅サーフィス","eff":[{"k":"evade","t":"ally_svt","v":0,"turns":1},{"k":"heal","t":"ally_svt","v":250},{"k":"cleanse","t":"ally_svt","v":0},{"k":"np","t":"ally_svt","v":10}]},
+      {"name":"日光条約","eff":[{"k":"sealUlt","t":"enemy_svt","v":0,"turns":1,"chance":4},{"k":"sealSkill","t":"enemy_svt","v":0,"turns":1,"chance":4},{"k":"fear","t":"enemy_svt","v":0,"turns":1,"chance":4},{"k":"stun","t":"svt","v":0,"turns":1,"chance":4}]}
+    ]
+  },
+  {
+    "id":"m_seimei", "name":"安倍晴明", "cost":5, "hp":500,
+    "fit":{"face":{"x":50,"y":0,"z":119}},
+    "faces":[
+      {"label":"鉄拳","eff":[{"k":"dmg","t":"enemy_master","v":120}],"line":["ふはははは！　貴様に術など不要！"]},
+      {"label":"鉄拳","eff":[{"k":"dmg","t":"enemy_master","v":120}],"line":["ふはははは！　貴様に術など不要！"]},
+      {"label":"陰陽術","eff":[{"k":"dmg","t":"enemy_svt","v":100}],"line":["どれ……小手調べをしてやろう","神秘で我に勝てると思うな！"]},
+      {"label":"蜜の援護","eff":[{"k":"heal","t":"svt","v":100}],"line":["晴明様、お手伝いいたします！"]},
+      {"label":"陰陽術","eff":[{"k":"dmg","t":"enemy_svt","v":100}],"line":["どれ……小手調べをしてやろう","神秘で我に勝てると思うな！"]},
+      {"label":"霊符","eff":[{"k":"atk","t":"ally_svt","v":20}],"line":["どれ……これが必要というわけか？"]}
+    ],
+    "spells":[
+      {"name":"脳天締め","eff":[{"k":"dmg","t":"enemy_svt","v":150}],"line":["ふはははははは！　まだ我に歯向かうか！"]},
+      {"name":"脊椎砕き","eff":[{"k":"dmg","t":"enemy_master","v":200},{"k":"stun","t":"enemy_master","v":0,"turns":1}],"line":["ふはははははは！　砕けよ！"]},
+      {"name":"結界術","eff":[{"k":"invul","t":"ally_svt","v":0,"turns":1}],"line":["どれ……我の結界を見せるとしよう"]}
+    ]
+  },
+  {
+    "id":"m_kuzunoha", "name":"葛の葉", "cost":1, "hp":100,
+    "fit":{"face":{"x":50,"y":0,"z":100}},
+    "faces":[
+      {"label":"無","eff":[],"line":["わはは、このマンガは面白いのう！"]},
+      {"label":"狸丼","eff":[{"k":"heal","t":"ally_svt","v":30}],"line":["狸丼さんや、おやつを持ってきてたもれ"]},
+      {"label":"無","eff":[],"line":["うーむ、乳が邪魔で動けんのじゃ"]},
+      {"label":"狸豆","eff":[{"k":"onAtkNp","t":"ally_svt","v":10}],"line":["狸豆さんや、あの子を手伝っといで"]},
+      {"label":"無","eff":[],"line":["いなりは壺屋に限るのう！"]},
+      {"label":"無","eff":[],"line":["お昼寝でもしたいのう……"]}
+    ],
+    "spells":[
+      {"name":"いなりぱーてぃー","eff":[{"k":"heal","t":"ally_all","v":100}],"line":["今日は大盤振る舞いじゃの！"]},
+      {"name":"ちちびんたみか","eff":[{"k":"stun","t":"enemy_svt","v":0,"turns":1}],"line":["ほーれほれ、これが女狐の力じゃぞい"]},
+      {"name":"狐の魔力","eff":[{"k":"np","t":"ally_svt","v":30}],"line":["たまにはちとやる気を出そうかの"]}
+    ]
+  },
+  {
+    "id":"m_kiri", "name":"ドクトル・キリ", "cost":3, "hp":300,
+    "fit":{"face":{"x":50,"y":0,"z":100}},
+    "faces":[
+      {"label":"無","eff":[],"line":["ん？　まちがったかな……"]},
+      {"label":"治療手術","eff":[{"k":"heal","t":"ally_svt","v":30}],"line":["ま、この程度ならねー"]},
+      {"label":"怪しい薬","eff":[{"k":"onAtkNp","t":"ally_svt","v":5}],"line":["これを飲めば君の力は百人力！"]},
+      {"label":"パピリオ・マギア","eff":[{"k":"atk","t":"svt","v":30},{"k":"heal","t":"svt","v":80}],"line":["さぁさぁ、楽しい改造手術の時間だよ！"]},
+      {"label":"メス","eff":[{"k":"dmg","t":"enemy_master","v":100}],"line":["おっと、隙ありー！"]},
+      {"label":"無","eff":[],"line":["ん？　まちがったかな……"]}
+    ],
+    "spells":[
+      {"name":"ケミカルブースト","eff":[{"k":"actsUp","t":"ally_svt","v":3,"times":1}],"line":["悪に障害は無いのさぁ！"]},
+      {"name":"違法改造","eff":[{"k":"skillCharge","t":"ally_svt","v":1}],"line":["さあ、キリキリ働きなよ！"]},
+      {"name":"巨大メス","eff":[{"k":"dmg","t":"enemy_master","v":300}],"line":["さーて、解剖のお時間だよ！"]}
     ]
   }
 ];
