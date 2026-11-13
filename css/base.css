@@ -14,6 +14,8 @@
   --wood:#d9b27a; --lead:#22263a;
   --frame:0 0 0 1px var(--gold-lo), inset 0 0 0 1px rgba(214,178,94,.25), inset 0 0 0 3px var(--panel2), inset 0 0 0 4px var(--line);
   --shadow:0 6px 22px rgba(0,0,0,.45);
+  /* 青いパネルの地に薄い斜め格子（FGO風）。パネルの background の先頭に重ねて使う */
+  --lattice:repeating-linear-gradient(45deg,rgba(150,185,255,.05) 0 1px,transparent 1px 15px),repeating-linear-gradient(-45deg,rgba(150,185,255,.05) 0 1px,transparent 1px 15px);
   --serif:"Cinzel","Noto Serif JP","Hiragino Mincho ProN","Yu Mincho",serif;
 }
 *{box-sizing:border-box}
@@ -28,8 +30,8 @@ body{
     radial-gradient(ellipse 75% 70% at 50% 45%,rgba(70,110,200,.16),transparent 70%),
     radial-gradient(1200px 600px at 50% -10%,rgba(61,111,214,.35),transparent 70%),
     radial-gradient(800px 500px at 100% 100%,rgba(214,178,94,.08),transparent 70%),
-    repeating-linear-gradient(45deg,rgba(127,166,255,.03) 0 1px,transparent 1px 22px),
-    repeating-linear-gradient(-45deg,rgba(127,166,255,.03) 0 1px,transparent 1px 22px),
+    repeating-linear-gradient(90deg,rgba(127,166,255,.06) 0 1px,transparent 1px 34px),
+
     linear-gradient(180deg,var(--bg2),var(--bg));
   background-attachment:fixed;
 }
@@ -44,18 +46,7 @@ header h1{font-family:var(--serif);font-size:19px;font-weight:700;margin:0;lette
   text-shadow:0 0 18px rgba(214,178,94,.25)}
 #hinfo{color:var(--sub);font-size:13px;font-family:var(--serif);letter-spacing:.05em}
 
-/* ボタン：青地に金縁／主ボタンは金 */
-button,a.btn{font:inherit;font-size:13.5px;color:var(--ink);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:4px;
-  padding:5px 14px;border-radius:4px;border:1px solid var(--gold-lo);
-  background:linear-gradient(180deg,#2550a8,#163474 55%,#11295c);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.15),inset 0 0 0 1px rgba(127,166,255,.25);
-  transition:border-color .12s,box-shadow .12s,filter .12s}
-button:hover:not(:disabled),a.btn:hover{border-color:var(--gold-hi);box-shadow:inset 0 1px 0 rgba(255,255,255,.2),inset 0 0 0 1px rgba(127,166,255,.35),0 0 10px rgba(214,178,94,.35)}
-button:disabled{opacity:.4;cursor:default;filter:grayscale(.5)}
-button.primary{color:#1a1206;font-weight:700;border-color:var(--gold-hi);
-  background:linear-gradient(180deg,var(--gold-hi),var(--gold) 50%,#a8812f);
-  box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 0 0 1px var(--gold-lo)}
-button.primary:hover:not(:disabled){filter:brightness(1.08);box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 0 0 1px var(--gold-lo),0 0 14px rgba(246,227,161,.45)}
+/* ボタンの見た目は css/buttons.css にまとめてある（docs/ui-design.md） */
 input,select{font:inherit;color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:4px 6px;min-width:0}
 input:focus,select:focus{outline:1px solid var(--gold);outline-offset:0;border-color:var(--gold)}
 input::placeholder{color:#5f74a6}
@@ -73,7 +64,7 @@ h2,h3{font-family:var(--serif);letter-spacing:.04em}
 
 /* カード：金の外枠＋青の内枠 */
 .card{position:relative;border-radius:6px;padding:12px 14px;margin-bottom:10px;border:1px solid var(--gold);
-  background:linear-gradient(160deg,#16295a,var(--panel) 40%,var(--panel2));
+  background:var(--lattice),linear-gradient(160deg,#16295a,var(--panel) 40%,var(--panel2));
   box-shadow:var(--frame),var(--shadow)}
 .card .top{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .cls{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:1px 8px 1px 1px;border:1px solid var(--gold-lo);border-radius:3px;color:var(--gold-hi);background:rgba(214,178,94,.08);font-family:var(--serif);white-space:nowrap;line-height:20px}
@@ -115,7 +106,7 @@ table.faces th{color:var(--sub)}
    大きさは全部カード幅の割合（cqw）。カードの幅はどこで変えても比率が崩れない（角丸だけは % 指定）。
    明暗の調整値は下の --ccv-*（docs/card-frame-v2.html のスライダーで決めた値） */
 :root{--ccv-all:0;--ccv-black:0;--ccv-edge:.15;--ccv-cdark:80%;--ccv-start:35%;--ccv-band:1;--ccv-bandh:40%}
-.ccard{--cc:var(--w);--cd:#141a30;position:relative;flex:none;width:74px;aspect-ratio:2/3;container-type:inline-size;
+.ccard{--cc:var(--w);--cd:#141a30;position:relative;isolation:isolate;flex:none;width:74px;aspect-ratio:2/3;container-type:inline-size;
   border-radius:3.2%/2.13%;overflow:hidden;background:radial-gradient(ellipse at 50% 40%,#3a4466,#141a30);
   box-shadow:0 3px 10px rgba(0,0,0,.55)}
 .ccard.R{--cc:var(--r);--cd:#3a0808;background:radial-gradient(ellipse at 50% 35%,#ff5a3a,#e8201c 50%,#7a0a0e)}
@@ -194,3 +185,21 @@ ruby rt{font-size:.5em;letter-spacing:.05em}
 /* 属性（特攻・特防の判定用） */
 .traits{display:inline-flex;flex-wrap:wrap;gap:3px;vertical-align:middle;margin-left:4px}
 .trait{font-size:10px;line-height:16px;padding:0 6px;border:1px solid var(--line);border-radius:8px;color:var(--sub);white-space:nowrap}
+
+/* 詳細画面のスキル・宝具・令呪：1つずつ枠で区切る。見出し（番号＋名前＋補足）の下に効果を1行ずつ、左揃えで並べる */
+.skl{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+.sklb{padding:6px 10px 7px 12px;border:1px solid var(--line);border-left:3px solid var(--gold-lo);border-radius:3px;background:rgba(6,13,34,.55)}
+.sklh{display:flex;align-items:center;gap:8px;min-width:0}
+.sklno{flex:none;min-width:30px;text-align:center;padding:0 6px;font:700 11px/18px var(--serif);color:var(--gold-hi);border:1px solid var(--gold-lo);border-radius:2px;background:rgba(214,178,94,.08)}
+.skln{min-width:0;font-size:13.5px;line-height:1.4;color:#fff}
+.skln .srank{color:var(--sub);font-weight:400}
+.sklnote{margin-left:auto;flex:none;font-size:11px;color:var(--sub)}
+.skle{margin:5px 0 0;padding:0 0 0 18px;font-size:12.5px;line-height:1.6;color:#d6def5}
+.skle li::marker{color:var(--gold)}
+.skle li+li{margin-top:1px}
+.sklb.locked{opacity:.72;border-left-color:var(--line)}
+/* 宝具：左の線と番号をカードの色に。名前は金 */
+.sklb.ult{border-left-color:var(--np)}
+.sklb.ult.R{border-left-color:var(--r)}.sklb.ult.B{border-left-color:var(--b)}.sklb.ult.G{border-left-color:var(--g)}
+.sklb.ult .skln{color:var(--gold-hi)}
+.sklb.ult .sklno{color:#1a1206;border-color:var(--gold-hi);background:linear-gradient(180deg,var(--gold-hi),var(--gold))}

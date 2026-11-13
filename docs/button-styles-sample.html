@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ボタン装飾サンプル</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Noto+Serif+JP:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#060d22;--panel:#0f1e45;--panel2:#0a1533;--ink:#eef2ff;--sub:#9db0dc;--line:#2a4785;--blue:#3d6fd6;--blue-hi:#7fa6ff;--gold:#d6b25e;--gold-hi:#f6e3a1;--gold-lo:#8a6a26;--r:#e2483c;--b:#3a78f0;--g:#2fb56b}
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:radial-gradient(ellipse at top,#0b1838,#060d22 70%);color:var(--ink);font:14px/1.5 "Noto Serif JP",serif}
+h1{font-size:18px;margin:0 0 4px;color:var(--gold-hi)}
+p.lead{margin:0 0 16px;color:var(--sub);font-size:12.5px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.card{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:12px}
+.card h2{font-size:13px;margin:0 0 2px;color:var(--gold)}
+.card small{display:block;color:var(--sub);font-size:11.5px;margin-bottom:10px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.row button{font:inherit;font-size:13.5px;color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;gap:4px;padding:6px 16px;position:relative}
+.row button:disabled{opacity:.4;cursor:default;filter:grayscale(.5)}
+button:active:not(:disabled){transform:translateY(1px)}
+
+/* 0 現行 */
+.s0 button{border-radius:4px;border:1px solid var(--gold-lo);background:linear-gradient(180deg,#2550a8,#163474 55%,#11295c);box-shadow:inset 0 1px 0 rgba(255,255,255,.15),inset 0 0 0 1px rgba(127,166,255,.25);transition:.12s}
+.s0 button:hover:not(:disabled){border-color:var(--gold-hi);box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 0 10px rgba(214,178,94,.35)}
+.s0 button.primary{color:#1a1206;font-weight:700;border-color:var(--gold-hi);background:linear-gradient(180deg,var(--gold-hi),var(--gold) 50%,#a8812f)}
+
+/* 1 二重金縁（額縁） */
+.s1 button{border:0;border-radius:3px;background:linear-gradient(180deg,#1d438f,#102a60);color:var(--gold-hi);letter-spacing:.08em;
+ box-shadow:0 0 0 1px var(--gold-lo),0 0 0 3px #0a1533,0 0 0 4px var(--gold);transition:.15s;margin:4px}
+.s1 button:hover:not(:disabled){box-shadow:0 0 0 1px var(--gold-hi),0 0 0 3px #0a1533,0 0 0 4px var(--gold-hi),0 0 14px rgba(246,227,161,.5)}
+.s1 button.primary{background:linear-gradient(180deg,var(--gold-hi),#c9a24d);color:#2a1c05;font-weight:700}
+
+/* 2 切り欠き角（クリップ） */
+.s2 button{border:0;color:var(--ink);padding:7px 22px;background:linear-gradient(180deg,#2f63c8,#173a80);
+ clip-path:polygon(10px 0,calc(100% - 10px) 0,100% 50%,calc(100% - 10px) 100%,10px 100%,0 50%);transition:.15s}
+.s2 button:hover:not(:disabled){filter:brightness(1.25)}
+.s2 button.primary{background:linear-gradient(180deg,var(--gold-hi),var(--gold) 55%,#a8812f);color:#1a1206;font-weight:700}
+
+/* 3 ゴールドの輝きが走る */
+.s3 button{border:1px solid var(--gold-lo);border-radius:4px;overflow:hidden;background:linear-gradient(180deg,#2550a8,#11295c)}
+.s3 button::after{content:"";position:absolute;top:0;left:-60%;width:40%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.45),transparent);transform:skewX(-20deg);transition:left .5s}
+.s3 button:hover:not(:disabled)::after{left:130%}
+.s3 button.primary{background:linear-gradient(180deg,var(--gold-hi),var(--gold) 50%,#a8812f);color:#1a1206;font-weight:700;border-color:var(--gold-hi)}
+.s3 button.primary::after{animation:shine 3s infinite}
+@keyframes shine{0%,60%{left:-60%}100%{left:130%}}
+
+/* 4 ネオン枠 */
+.s4 button{background:rgba(61,111,214,.08);border:1px solid var(--blue-hi);color:#cfe0ff;border-radius:4px;text-shadow:0 0 6px var(--blue-hi);
+ box-shadow:0 0 6px rgba(127,166,255,.5),inset 0 0 8px rgba(127,166,255,.25);transition:.2s}
+.s4 button:hover:not(:disabled){background:rgba(127,166,255,.25);box-shadow:0 0 14px var(--blue-hi),inset 0 0 12px rgba(127,166,255,.5)}
+.s4 button.primary{border-color:var(--gold-hi);color:var(--gold-hi);text-shadow:0 0 6px var(--gold);background:rgba(214,178,94,.1);box-shadow:0 0 8px rgba(214,178,94,.6),inset 0 0 8px rgba(214,178,94,.3);animation:pulse 2s infinite}
+@keyframes pulse{50%{box-shadow:0 0 16px var(--gold-hi),inset 0 0 12px rgba(214,178,94,.5)}}
+
+/* 5 羊皮紙・木 */
+.s5 button{color:#3a2410;font-weight:700;border:1px solid #6b4a22;border-radius:3px;background:linear-gradient(180deg,#ecd29c,#d9b27a 55%,#bf9657);
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.5),inset 0 -2px 0 rgba(0,0,0,.18),0 2px 0 #5a3d1a;transition:.1s}
+.s5 button:hover:not(:disabled){filter:brightness(1.08)}
+.s5 button:active:not(:disabled){box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 0 0 #5a3d1a;transform:translateY(2px)}
+.s5 button.primary{background:linear-gradient(180deg,#e9635a,#c23a30 55%,#98271f);color:#fff;border-color:#5b1511;text-shadow:0 1px 0 #5b1511;box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 2px 0 #5b1511}
+
+/* 6 立体ベベル（押し込み） */
+.s6 button{border:0;border-radius:6px;background:#2a5bbd;color:#fff;box-shadow:0 4px 0 #14306b,0 6px 8px rgba(0,0,0,.5);transition:.08s;margin-bottom:4px}
+.s6 button:hover:not(:disabled){background:#3a6ed6}
+.s6 button:active:not(:disabled){transform:translateY(4px);box-shadow:0 0 0 #14306b}
+.s6 button.primary{background:var(--gold);color:#2a1c05;font-weight:700;box-shadow:0 4px 0 var(--gold-lo),0 6px 8px rgba(0,0,0,.5)}
+.s6 button.primary:active{box-shadow:0 0 0 var(--gold-lo)}
+
+/* 7 ガラス（すりガラス） */
+.s7 .card-in{padding:14px;border-radius:6px;background:linear-gradient(135deg,#3d6fd6,#7a3fd1 60%,#d65f9a)}
+.s7 button{color:#fff;border:1px solid rgba(255,255,255,.45);border-radius:999px;background:rgba(255,255,255,.14);backdrop-filter:blur(6px);
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.5),0 2px 8px rgba(0,0,0,.25);transition:.15s}
+.s7 button:hover:not(:disabled){background:rgba(255,255,255,.3)}
+.s7 button.primary{background:rgba(255,255,255,.85);color:#3a1a6a;font-weight:700}
+
+/* 8 下線スライド（ミニマル） */
+.s8 button{background:none;border:0;color:var(--ink);letter-spacing:.12em;padding:6px 10px;border-bottom:1px solid var(--line);transition:.2s}
+.s8 button::after{content:"";position:absolute;left:0;bottom:-1px;height:2px;width:0;background:linear-gradient(90deg,var(--gold-hi),var(--gold));transition:width .25s}
+.s8 button:hover:not(:disabled)::after{width:100%}
+.s8 button:hover:not(:disabled){color:var(--gold-hi)}
+.s8 button.primary{border-bottom-color:var(--gold);color:var(--gold-hi);font-weight:700}
+.s8 button.primary::after{width:100%}
+
+/* 9 角ブラケット（照準風） */
+.s9 button{background:rgba(127,166,255,.07);border:0;color:var(--ink);padding:7px 20px;letter-spacing:.1em;transition:.2s;
+ background-image:linear-gradient(var(--gold),var(--gold)),linear-gradient(var(--gold),var(--gold)),linear-gradient(var(--gold),var(--gold)),linear-gradient(var(--gold),var(--gold)),linear-gradient(var(--gold),var(--gold)),linear-gradient(var(--gold),var(--gold)),linear-gradient(var(--gold),var(--gold)),linear-gradient(var(--gold),var(--gold));
+ background-size:10px 2px,2px 10px,10px 2px,2px 10px,10px 2px,2px 10px,10px 2px,2px 10px;
+ background-position:left top,left top,right top,right top,left bottom,left bottom,right bottom,right bottom;background-repeat:no-repeat}
+.s9 button:hover:not(:disabled){background-color:rgba(214,178,94,.18);color:var(--gold-hi);letter-spacing:.16em}
+.s9 button.primary{background-color:rgba(214,178,94,.22);color:var(--gold-hi);font-weight:700}
+
+/* 10 令呪風（赤＋金のグロー） */
+.s10 button{color:#ffe9e6;border:1px solid #ff8f84;border-radius:3px;background:linear-gradient(180deg,#8a1a14,#4a0c09);
+ box-shadow:inset 0 0 10px rgba(255,90,70,.45),0 0 8px rgba(226,72,60,.5);text-shadow:0 0 5px #ff6b5e;transition:.2s}
+.s10 button:hover:not(:disabled){box-shadow:inset 0 0 14px rgba(255,120,100,.7),0 0 18px #ff6b5e}
+.s10 button.primary{border-color:var(--gold-hi);background:linear-gradient(180deg,#b52a20,#5f100b);color:var(--gold-hi);text-shadow:0 0 6px var(--gold)}
+
+/* 11 コマンドカード風（色別） */
+.s11 button{color:#fff;font-weight:700;border:2px solid var(--gold);border-radius:8px 8px 3px 3px;padding:7px 18px;text-shadow:0 1px 2px rgba(0,0,0,.6);
+ box-shadow:inset 0 0 0 1px rgba(255,255,255,.3),0 2px 6px rgba(0,0,0,.5);transition:.15s}
+.s11 button.cr{background:linear-gradient(180deg,#f0685c,#a2261d)}
+.s11 button.cb{background:linear-gradient(180deg,#5b96ff,#1f4fb5)}
+.s11 button.cg{background:linear-gradient(180deg,#4fd48b,#1c7a46)}
+.s11 button:hover:not(:disabled){transform:translateY(-2px);box-shadow:inset 0 0 0 1px rgba(255,255,255,.5),0 6px 10px rgba(0,0,0,.5)}
+
+/* 12 ゴースト（透過＋金枠・ホバーで塗り） */
+.s12 button{background:transparent;border:1px solid var(--gold);color:var(--gold-hi);border-radius:2px;letter-spacing:.1em;transition:.25s;overflow:hidden;z-index:0}
+.s12 button::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,var(--gold-hi),var(--gold));transform:translateY(100%);transition:transform .25s;z-index:-1}
+.s12 button:hover:not(:disabled){color:#1a1206}
+.s12 button:hover:not(:disabled)::before{transform:translateY(0)}
+.s12 button.primary{background:rgba(214,178,94,.2);font-weight:700}
+
+/* 13 魔法陣ホバー（回転する光縁） */
+.s13 button{border:0;border-radius:4px;color:var(--ink);background:linear-gradient(180deg,#1c428f,#102a60);z-index:0;overflow:hidden}
+.s13 button::before{content:"";position:absolute;inset:-60%;background:conic-gradient(from 0deg,transparent 0 70%,var(--gold-hi) 85%,transparent);animation:spin 2.4s linear infinite;z-index:-2;opacity:.0;transition:opacity .2s}
+.s13 button::after{content:"";position:absolute;inset:2px;border-radius:2px;background:linear-gradient(180deg,#1c428f,#102a60);z-index:-1}
+.s13 button:hover:not(:disabled)::before,.s13 button.primary::before{opacity:1}
+.s13 button.primary{color:var(--gold-hi);font-weight:700}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style></head><body>
+<h1>ボタン装飾サンプル（13案）</h1>
+<p class="lead">各案：通常／主ボタン（primary）／無効。ホバー・クリックで動きも確認できます。0 は現行デザイン。</p>
+<div class="grid">
+<div class="card s0"><h2>0 現行（青地＋金縁）</h2><small>比較用。</small><div class="row"><button>通常</button><button class="primary">主ボタン</button><button disabled>無効</button></div></div>
+<div class="card s1"><h2>1 二重金縁（額縁）</h2><small>金の二重線で格調高く。文字は金。</small><div class="row"><button>通常</button><button class="primary">主ボタン</button><button disabled>無効</button></div></div>
+<div class="card s2"><h2>2 切り欠き（六角形）</h2><small>左右を尖らせたFGO風の形。</small><div class="row"><button>通常</button><button class="primary">主ボタン</button><button disabled>無効</button></div></div>
+<div class="card s3"><h2>3 光が走る</h2><small>ホバーで光沢が横切る。主ボタンは常時きらめく。</small><div class="row"><button>通常</button><button class="primary">主ボタン</button><button disabled>無効</button></div></div>
+<div class="card s4"><h2>4 ネオン枠</h2><small>発光する縁。主ボタンは脈動。</small><div class="row"><button>通常</button><button class="primary">主ボタン</button><button disabled>無効</button></div></div>
+<div class="card s5"><h2>5 木・羊皮紙（鉛筆らしさ）</h2><small>木色。押すと沈む。主は赤。</small><div class="row"><button>通常</button><button class="primary">主ボタン</button><button disabled>無効</button></div></div>
+<div class="card s6"><h2>6 立体ベベル</h2><small>厚みがあり、押すとへこむ。</small><div class="row"><button>通常</button><button class="primary">主ボタン</button><button disabled>無効</button></div></div>
+<div class="card s7"><h2>7 ガラス</h2><small>半透明の丸型。背景が透ける。</small><div class="card-in"><div class="row"><button>通常</button><button class="primary">主ボタン</button><button disabled>無効</button></div></div></div>
+<div class="card s8"><h2>8 下線スライド（ミニマル）</h2><small>枠なし。ホバーで金の下線が伸びる。</small><div class="row"><button>通常</button><button class="primary">主ボタン</button><button disabled>無効</button></div></div>
+<div class="card s9"><h2>9 角ブラケット</h2><small>四隅だけ金のカギ括弧。ホバーで字間が広がる。</small><div class="row"><button>通常</button><button class="primary">主ボタン</button><button disabled>無効</button></div></div>
+<div class="card s10"><h2>10 令呪風（赤＋金）</h2><small>赤い発光。攻撃・決定系に。</small><div class="row"><button>通常</button><button class="primary">主ボタン</button><button disabled>無効</button></div></div>
+<div class="card s11"><h2>11 コマンドカード風</h2><small>Buster / Arts / Quick の色別。</small><div class="row"><button class="cr">Buster</button><button class="cb">Arts</button><button class="cg">Quick</button><button class="cr" disabled>無効</button></div></div>
+<div class="card s12"><h2>12 ゴースト＋塗りつぶし</h2><small>透過＋金枠。ホバーで下から金が満ちる。</small><div class="row"><button>通常</button><button class="primary">主ボタン</button><button disabled>無効</button></div></div>
+<div class="card s13"><h2>13 回転する光縁</h2><small>ホバーで金の光が縁を周回。主は常時。</small><div class="row"><button>通常</button><button class="primary">主ボタン</button><button disabled>無効</button></div></div>
+</div>
+</body></html>

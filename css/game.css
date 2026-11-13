@@ -53,7 +53,7 @@ body[data-screen="battle"] #app{overflow:hidden}
 /* サーヴァントのカード：自分の大きさ（コンテナ）に合わせて中身を切り替える
    横長 → 肖像の右に情報 / 縦長（スマホ縦など）→ 肖像の下にHP・NP / 低い → 効果やスキル欄を隠して ⓘ で見る */
 .svt{container:svt/size;position:relative;min-height:0;min-width:0;padding:6px;border-radius:6px;border:1px solid var(--gold);
-  background:linear-gradient(160deg,#16295a,var(--panel) 45%,var(--panel2));box-shadow:var(--frame),var(--shadow);transition:box-shadow .15s,transform .15s}
+  background:var(--lattice),linear-gradient(160deg,#16295a,var(--panel) 45%,var(--panel2));box-shadow:var(--frame),var(--shadow);transition:box-shadow .15s,transform .15s}
 .side.turn .svt.acting{box-shadow:var(--frame),0 0 0 1px var(--gold-hi),0 0 16px rgba(246,227,161,.35)}
 .svt.out{filter:grayscale(1) brightness(.55)}
 .svt.pickable{cursor:pointer;outline:2px dashed var(--gold-hi);outline-offset:2px}
@@ -122,8 +122,6 @@ body[data-screen="battle"] #app{overflow:hidden}
 .sk.np.ready i{color:#fff}
 @keyframes npbtn{from{box-shadow:0 0 4px rgba(246,227,161,.4)}to{box-shadow:0 0 14px rgba(246,227,161,.9)}}
 .ctl{flex:none;display:flex;align-items:center;gap:6px;font-size:12px}
-.ctl button{padding:1px 10px}
-.ctl .primary{padding:2px 14px}
 
 /* 中央 */
 .stage{position:relative;overflow:hidden;padding:8px 14px 10px;border-radius:6px;border:1px solid var(--gold);
@@ -194,7 +192,7 @@ body[data-screen="battle"] #app{overflow:hidden}
 .linkurl{word-break:break-all}
 .mback{position:absolute;inset:0;background:rgba(2,6,20,.72);backdrop-filter:blur(2px)}
 .mbody{position:relative;width:min(600px,100%);max-height:calc(100vh - 32px);overflow:auto;padding:18px;border-radius:6px;border:1px solid var(--gold);
-  background:linear-gradient(160deg,#16295a,var(--panel) 40%,var(--panel2));box-shadow:var(--frame),0 10px 40px rgba(0,0,0,.6)}
+  background:var(--lattice),linear-gradient(160deg,#16295a,var(--panel) 40%,var(--panel2));box-shadow:var(--frame),0 10px 40px rgba(0,0,0,.6)}
 /* リザルト */
 .result .mbody{width:min(560px,100%);text-align:center}
 .rtitle{margin:0;font:700 34px var(--serif);letter-spacing:.2em;color:var(--gold-hi);text-shadow:0 0 18px rgba(246,227,161,.6)}
@@ -243,7 +241,6 @@ body[data-screen="battle"] #app{overflow:hidden}
 .rcls{display:flex;flex-wrap:wrap;gap:4px}
 .rchip{width:34px;height:34px;padding:0;justify-content:center;font:700 12px var(--serif)}
 .rchip img{width:24px;height:24px}
-.rchip.on{border-color:var(--gold-hi);background:linear-gradient(180deg,var(--gold-hi),var(--gold));color:#1a1206;box-shadow:0 0 8px rgba(246,227,161,.5)}
 .rrow2{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .rfilter input[type=search],.rfilter select{font:inherit;font-size:13px;color:var(--ink);padding:4px 8px;border-radius:4px;border:1px solid var(--gold-lo);background:#0d1a40}
 .rfilter .rq{flex:1 1 140px;min-width:0}
@@ -260,7 +257,7 @@ body[data-screen="battle"] #app{overflow:hidden}
 .tile.sel .tcost{display:none}
 .tname{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:22px 8px 6px;font-size:12.5px;font-weight:700;color:#fff;background:linear-gradient(transparent,rgba(6,13,34,.96) 45%);line-height:1.3}
 .tname small{display:block;font-size:10.5px;font-weight:400;color:var(--sub)}
-.sdetail{min-height:0;overflow:auto;padding:14px 16px;border-radius:6px;border:1px solid var(--gold);background:linear-gradient(160deg,#16295a,var(--panel) 40%,var(--panel2));box-shadow:var(--frame),var(--shadow)}
+.sdetail{min-height:0;overflow:auto;padding:14px 16px;border-radius:6px;border:1px solid var(--gold);background:var(--lattice),linear-gradient(160deg,#16295a,var(--panel) 40%,var(--panel2));box-shadow:var(--frame),var(--shadow)}
 
 /* ---------- モード選択 ---------- */
 /* 夜空の背景（index.html の #titlebg、中身は initTitleBg）。タイトル画面のときだけ出す。
@@ -302,7 +299,6 @@ body[data-screen="mode"] #app{position:relative} /* 背景（position:fixed）�
 .datainfo{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 12px;border:1px dashed var(--gold-lo);border-radius:4px;font-size:13px;background:rgba(10,21,51,.6)}
 .rules{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:16px}
 .rules .rlabel{font:700 12px var(--serif);color:var(--gold-hi);letter-spacing:.1em}
-.rules button.on{color:#1a1206;font-weight:700;border-color:var(--gold-hi);background:linear-gradient(180deg,var(--gold-hi),var(--gold))}
 .rules .hcap{margin-left:auto}
 .rules p{flex-basis:100%;margin:0}
 /* メインメニュー（階層）：トップの4つ・戻る・各段階 */
@@ -345,7 +341,6 @@ body[data-screen="mode"] #app{position:relative} /* 背景（position:fixed）�
 .setrow{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 14px;border:1px solid var(--gold-lo);border-radius:6px;background:rgba(6,13,34,.6)}
 .setrow small{display:block}
 .seg{display:flex;gap:6px}
-.seg button.on{color:#1a1206;font-weight:700;border-color:var(--gold-hi);background:linear-gradient(180deg,var(--gold-hi),var(--gold))}
 /* ルール説明・状態異常の説明（階層化した折り畳み） */
 .guides{margin-top:28px;display:flex;flex-direction:column;gap:10px}
 .gtop{border:1px solid var(--gold-lo);border-radius:6px;background:rgba(6,13,34,.6)}
@@ -675,15 +670,13 @@ body[data-screen="mode"] #app{position:relative} /* 背景（position:fixed）�
 
 /* ---------- キャラクター選択の ⓘ ---------- */
 .tile .tinfo{position:absolute;right:6px;bottom:8px;z-index:3;display:grid;place-items:center;color:var(--ink);cursor:pointer;
-  border:1px solid var(--gold-lo);background:linear-gradient(180deg,#2550a8,#163474 55%,#11295c)}
+  border:1px solid var(--gold-lo);background:var(--btn-bg)}
 .tile .tinfo:hover,.tile .tinfo:focus-visible{border-color:var(--gold-hi);box-shadow:0 0 8px rgba(214,178,94,.5)}
 .tile .tname{padding-right:32px}
 
 /* ---------- リザルトの詳細（タブ） ---------- */
 .result .mbody{width:min(680px,100%)}
 .rtabs{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;margin:0 0 10px}
-.rtabs button{padding:3px 12px;font-size:12.5px}
-.rtabs button.on{color:#1a1206;font-weight:700;border-color:var(--gold-hi);background:linear-gradient(180deg,var(--gold-hi),var(--gold))}
 .rbody{margin-bottom:14px;text-align:left}
 .rbody .rsides{margin-bottom:0}
 .mvp{font:700 10px var(--serif);font-style:normal;color:#1a1206;background:var(--gold-hi);border-radius:2px;padding:0 4px;letter-spacing:.08em}
@@ -710,3 +703,23 @@ body[data-screen="mode"] #app{position:relative} /* 背景（position:fixed）�
 .rlog{max-height:46vh;border:1px solid var(--line);border-radius:4px;background:rgba(6,13,34,.6)}
 @media (max-width:640px){ .rsides{grid-template-columns:1fr} }
 .rkv .wide{grid-column:1/-1}
+
+/* ---------- 図鑑（タイトルの「図鑑」）：編成画面と同じ「一覧｜詳細」の並び ---------- */
+body[data-screen="zukan"] #app{overflow:hidden}
+.zhead{flex:none;display:flex;align-items:center;gap:18px;padding:10px 16px;border-radius:6px;border:1px solid var(--gold);
+  background:var(--lattice),linear-gradient(160deg,#16295a,var(--panel) 40%,var(--panel2));box-shadow:var(--frame),var(--shadow)}
+.ztitle h2{margin:0;font-size:20px;letter-spacing:.2em;color:var(--gold-hi)}
+.zhead .rtabs{margin:0 0 0 auto;border-bottom:0}
+.zukan .mtile .tname small{display:block}
+.zlines{display:flex;flex-direction:column;gap:4px}
+.zlines details{margin:0;border:1px solid var(--line);border-radius:3px;background:rgba(6,13,34,.45)}
+.zlines summary{display:flex;align-items:center;gap:8px;padding:5px 10px;font:700 12.5px var(--serif);color:var(--gold-hi)}
+.zlines summary small{margin-left:auto;font-weight:400}
+.zlines ul{margin:0;padding:2px 12px 8px 26px;font-size:12.5px;line-height:1.7;color:var(--ink)}
+.zlines li::marker{color:var(--gold-lo)}
+@media (max-width:860px){
+  .zhead{flex-wrap:wrap;gap:8px 12px;padding:8px 10px}
+  .zhead .rtabs{margin:0;flex-basis:100%;justify-content:flex-start}
+  .zukan .sdetail{display:none} /* 狭い画面ではタップで詳細ウィンドウを開く */
+}
+.zlines li.zcond small{display:block;font-size:11px;color:var(--gold);line-height:1.4;margin-top:4px}

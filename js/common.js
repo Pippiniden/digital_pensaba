@@ -40,6 +40,32 @@ function condText(c,use){
     hpBelow:`${s}のHPが${c.v}%以下`, hpAbove:`${s}のHPが${c.v}%以上`, npFull:`${s}の${TERMS.gauge}が100%` }[c.k];
   return b?`${b}${c.not?'でないとき':'のとき'}`:'';
 }
+// 条件つきセリフの条件を、場面に合わせた自然な文にする（図鑑・エディタの表示用）
+//   相手・対象（other）：場面ごとの相手を主語に「対象がランスロットの場合」「相手の先頭が〜の場合」
+//   自分（self）：「自分のHPが50%以下の場合」
+//   味方・敵（ally / enemy）：「味方に黒咲恵梨佳がいる場合」「〔竜〕属性の相手がいる場合」
+const CL_OTHER = { start:'相手の先頭', attack:'対象', extra:'対象', np:'対象', skill:'対象', damage:'攻撃してきた相手', npDamage:'攻撃してきた相手', defeat:'相手', win:'相手' };
+function condLineText(cl,nameOf){
+  const c=cl&&cl.cond; if(!c) return '';
+  const nmOf=nameOf||(v=>((typeof D==='function'&&D(v))||{}).name||v), not=!!c.not, v=c.v;
+  const X={ id:nmOf(v), cls:v, trait:`〔${v}〕属性`,
+    fx:v==='*debuff'?'弱体状態':v==='*buff'?'強化状態':`${(FX[v]||{}).name||v}状態` }[c.k];
+  const hp={ hpBelow:`HPが${v}%${not?'より多い':'以下の'}`, hpAbove:`HPが${v}%${not?'未満の':'以上の'}`, npFull:`${TERMS.gauge}が100%${not?'未満の':'の'}` }[c.k];
+  // 主語が1人：「〇〇が××の場合」「〇〇のHPが50%以下の場合」
+  const one=s=>X!=null?`${s}が${X}${not?'でない':'の'}場合`:hp?`${s}の${hp}場合`:'';
+  // 味方・相手のだれか：「味方に××がいる場合」「××の味方がいる場合」
+  const any=side=>{
+    if(c.k==='id'||c.k==='cls') return not?`${X}以外の${side}がいる場合`:`${side}に${X}がいる場合`;
+    if(X!=null) return `${X}${not?'でない':'の'}${side}がいる場合`;
+    return hp?`${hp}${side}がいる場合`:'';
+  };
+  switch(cl.who){
+    case 'self': return one('自分');
+    case 'ally': return any('味方');
+    case 'enemy': return any('相手');
+    default: return one(CL_OTHER[cl.key]||'相手');
+  }
+}
 function normEff(e){
   e=e||{};
   const o={k:String(e.k||'atk'), t:String(e.t||'self'), v:num(e.v)};
@@ -618,8 +644,14 @@ function facesTableHTML(d){
     ${d.faces.map((f,i)=>`<tr><td>${i+1}</td><td>${faceActs(d,i)}</td><td>${cell(f.pre)}</td><td>${cell(f.post)}</td></tr>`).join('')}</table>`;
 }
 // 操作できないスキル一覧（編成画面・エディタのプレビュー用）
+// 詳細画面のスキル・宝具：1つずつ枠で区切り、見出し（番号＋名前）の下に効果を1行ずつ並べる
+function sklBlockHTML(no,name,lines,o={}){
+  return `<div class="sklb ${o.cls||''}"><div class="sklh"><span class="sklno">${no}</span><b class="skln">${name}</b>${o.note?`<span class="sklnote">${o.note}</span>`:''}</div>
+    <ul class="skle">${(lines.length?lines:['効果なし']).map(t=>`<li>${esc(t)}</li>`).join('')}</ul></div>`;
+}
 function skillListHTML(d,asc=false){
-  const rows=d.skills.map((s,i)=>{ const lk=i===2&&!asc; return `<div class="skill"><span class="sname">S${i+1} ${lk?'🔒':''}${skillNameHTML(s)}</span><span class="desc">${esc(effsText(s.eff,s.pick))}${lk?`（${TERMS.asc}後に使用可）`:''}</span></div>`; }).join('');
-  const ult=`<div class="skill ult"><span class="sname">${TERMS.ult}「${ultNameHTML(d.ult)}」</span><span class="desc">[${TERMS[d.ult.c]||esc(d.ult.c)}] ${esc(effsText(d.ult.eff,d.ult.pick))}</span></div>`;
-  return `<div class="skills">${rows}${ult}</div>`;
+  const rows=d.skills.map((s,i)=>{ const lk=i===2&&!asc;
+    return sklBlockHTML(`S${i+1}`,skillNameHTML(s),s.eff.length?effLines(s.eff,s.pick):[],{cls:lk?'locked':'',note:lk?`🔒 ${TERMS.asc}後に使用可`:''}); }).join('');
+  const ult=sklBlockHTML(TERMS.ult,ultNameHTML(d.ult),d.ult.eff.length?effLines(d.ult.eff,d.ult.pick):[],{cls:`ult ${esc(d.ult.c)}`,note:`<span class="cmd ${esc(d.ult.c)}">${TERMS[d.ult.c]||esc(d.ult.c)}</span>`});
+  return `<div class="skl">${rows}${ult}</div>`;
 }

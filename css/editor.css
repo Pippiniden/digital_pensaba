@@ -6,8 +6,6 @@
 @media (max-width:1200px){.ed{grid-template-columns:210px minmax(0,1fr)} #side{grid-column:1/-1}}
 @media (max-width:760px){.ed{grid-template-columns:1fr} header{position:static}}
 @media (min-width:761px){#list{position:sticky;top:72px}}
-button.small{font-size:12px;padding:3px 10px}
-button.danger{color:var(--r)}
 
 /* 一覧 */
 .ulist{display:flex;flex-direction:column;gap:4px;margin:8px 0;max-height:60vh;overflow:auto}
@@ -51,7 +49,7 @@ textarea:focus{outline:1px solid var(--gold);border-color:var(--gold)}
 .uitem .face.xs{margin-right:2px}
 
 /* フォーム */
-.sec,.sidecard{border-radius:6px;border:1px solid var(--gold);background:linear-gradient(160deg,#16295a,var(--panel) 40%,var(--panel2));box-shadow:var(--frame),var(--shadow)}
+.sec,.sidecard{border-radius:6px;border:1px solid var(--gold);background:var(--lattice),linear-gradient(160deg,#16295a,var(--panel) 40%,var(--panel2));box-shadow:var(--frame),var(--shadow)}
 .sec{padding:16px 18px;margin-bottom:14px}
 .sec h2{font-size:16px;margin:0 0 10px;color:var(--gold-hi);padding-bottom:4px;border-bottom:1px solid var(--gold-lo)}
 .fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
@@ -131,7 +129,7 @@ details.ign summary{cursor:pointer;color:var(--sub)}
 
 /* バランス検証 */
 #simdlg{width:min(1100px,calc(100% - 32px));max-height:calc(100vh - 48px);padding:16px 20px;color:var(--ink);border:1px solid var(--gold);border-radius:6px;
-  background:linear-gradient(160deg,#16295a,var(--panel) 40%,var(--panel2));box-shadow:var(--frame),var(--shadow)}
+  background:var(--lattice),linear-gradient(160deg,#16295a,var(--panel) 40%,var(--panel2));box-shadow:var(--frame),var(--shadow)}
 #simdlg::backdrop{background:rgba(3,7,20,.7)}
 .simhead{display:flex;align-items:center;gap:8px}
 .simhead h2{font-size:17px;margin:0;color:var(--gold-hi);font-family:var(--serif)}
@@ -174,7 +172,6 @@ table.simmx td.self{color:var(--sub)}
 .xbody{display:flex;flex-direction:column;gap:8px;padding:4px 10px 10px;border-top:1px solid var(--line)}
 .xrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding-top:6px}
 .xlab{font-size:12px;color:var(--sub);margin-right:4px}
-.xrow button.on,.xclsbtn.on{border-color:var(--gold-hi);color:var(--gold-hi)}
 .xcls{display:flex;gap:8px;align-items:flex-start}
 .xclsbtn{flex:none;min-width:130px;justify-content:flex-start;gap:6px;background:var(--panel2);box-shadow:none}
 .xclsbtn img{width:18px;height:18px}
@@ -187,8 +184,7 @@ table.simmx td.self{color:var(--sub)}
 
 /* タブ（サーヴァント／マスター） */
 .edtabs{display:flex;gap:4px;margin-bottom:10px}
-.edtabs button{flex:1;justify-content:center;font-family:var(--serif);background:var(--panel2);border-color:var(--line);box-shadow:none;color:var(--sub)}
-.edtabs button.on{color:var(--gold-hi);border-color:var(--gold-hi);background:linear-gradient(180deg,rgba(214,178,94,.28),var(--panel2));box-shadow:0 0 8px rgba(214,178,94,.3)}
+.edtabs button{flex:1}
 
 /* マスター：補助の6面 */
 .mfaceed{display:grid;gap:6px;margin-top:10px}
@@ -212,7 +208,6 @@ label.mini.chk{cursor:pointer}
 .ctedit{margin-top:10px}
 .ctbr{display:flex;flex-wrap:wrap;align-items:center;gap:4px;font-size:15px}
 .ctbr-lab{font-size:12px;color:var(--sub);margin-right:4px}
-.ctbr button.on{background:var(--gold);color:#1a1205;border-color:var(--gold)}
 .ctbr-chars{display:inline-flex;flex-wrap:wrap;align-items:center;margin-left:6px;font-family:"Noto Serif JP",serif}
 .ctbr-chars .ctgap{all:unset;display:inline-block;width:10px;height:26px;cursor:pointer;position:relative}
 .ctbr-chars .ctgap::after{content:"";position:absolute;left:4px;top:4px;bottom:4px;width:1px;background:var(--line)}
@@ -225,7 +220,7 @@ label.mini.chk{cursor:pointer}
   background:#0a0e1a conic-gradient(#141a2a 25%,#0d1220 0 50%,#141a2a 0 75%,#0d1220 0) 0 0/20px 20px}
 .ctprev .ct{width:100%}
 
-#impdlg{width:min(560px,calc(100% - 32px));padding:16px 20px;color:var(--ink);border:1px solid var(--gold);border-radius:6px;background:linear-gradient(160deg,#16295a,var(--panel) 40%,var(--panel2));box-shadow:var(--frame),var(--shadow)}
+#impdlg{width:min(560px,calc(100% - 32px));padding:16px 20px;color:var(--ink);border:1px solid var(--gold);border-radius:6px;background:var(--lattice),linear-gradient(160deg,#16295a,var(--panel) 40%,var(--panel2));box-shadow:var(--frame),var(--shadow)}
 #impdlg::backdrop{background:rgba(3,7,20,.7)}
 #impdlg h3{margin:0 0 8px} #impdlg .sub{font-size:12px;opacity:.8;margin:4px 0}
 #impdlg .impbtns{display:flex;flex-direction:column;gap:8px;margin-top:12px}
