@@ -383,6 +383,7 @@ function cpuEffScore(u,effs,picked,si){
       case 'regenHp': case 'maxHp': sc+=ts.some(t=>hpR(t)<.8)?2:1; break;
       case 'regenNp': sc+=ts.some(t=>t.np<RULES.ultCost)?2:.5; break;
       case 'regenStar': case 'onHitStar': sc+=1.5; break;
+      case 'hitNpUp': sc+=ts.some(t=>t.np<RULES.ultCost)?1.5:.5; break;
       case 'onHitNp': sc+=ts.some(t=>t.np<RULES.ultCost)?1.5:.5; break;
       case 'counter': sc+=ts.some(t=>t.pid===u.pid)?2:-1; break;
       case 'atkVs': sc+=acting&&enemies.some(x=>x.fx.some(f=>e.vs?f.k===e.vs:FX[f.k].buff===false))?3:.5; break;

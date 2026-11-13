@@ -410,7 +410,7 @@ function dealDamage(u,dmg,isHit,o={}){
     // 被ダメージ時○○ はここではなく、攻撃対象になったターンの終了フェイズ（hitEffects）で発動する
     const c=npSealFx(u);
     if(c){ consume(u,[c]); log(`${nm(u)}は${FX[c.k].name}で${TERMS.gauge}が増えない`,'sub'); }
-    else addNp(u,npRate(u,RULES.gaugeOnHit));
+    else{ const hu=mods(u,'hitNpUp'); addNp(u,npRate(u,RULES.gaugeOnHit+hu.sum)); if(hu.list.length) consume(u,hu.list); } // 被弾時NP獲得量アップ（回避・無敵で防いだ攻撃はここに来ない）
     // 反撃：攻撃側へ固定ダメージ（補正・無敵・回避・クリティカルの影響なし、NPは増えない）
     const ct=mods(u,'counter'), a=o.att;
     if(ct.sum&&a&&!a.out){

@@ -570,6 +570,7 @@ function fxText(e){
     case 'atkVs': s=`${e.vs&&FX[e.vs]?`〔${FX[e.vs].name}〕状態`:'弱体状態'}特攻+${e.v}`; break;
     case 'counter': s=`反撃(${e.v}ダメージ)`; break;
     case 'onHitNp': s=`被ダメージ時${TERMS.gauge}+${e.v}%`; break;
+    case 'hitNpUp': s=`被弾時の${TERMS.gauge}獲得量+${e.v}%`; break;
     case 'onHitStar': s=`被ダメージ時${TERMS.star}${e.v}個獲得`; break;
     case 'maxHp': s=`最大HP+${e.v}`; break;
     case 'critDown': s=`クリティカル率ダウン(Lv-${e.v})`; break;

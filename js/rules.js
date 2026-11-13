@@ -236,6 +236,7 @@ const FX = {
   counter:{name:'反撃',buff:true,val:true},                  // 攻撃（コマンド・宝具）を受けるたびに攻撃側へxダメージ（補正・無敵・回避の影響なし）
   // 被ダメージ時○○：攻撃対象になったターンの終了フェイズに1回発動（回避・無敵で防いでも発動）
   onHitNp:{name:'被ダメージ時NP獲得',buff:true,val:true},      // NP+x%（呪いで止まる）
+  hitNpUp:{name:'被弾時NP獲得量アップ',buff:true,val:true},     // 攻撃を受けて実際にダメージを受けるたびのNP獲得が+x%（回避・無敵では増えない。呪いで止まる）
   onHitStar:{name:'被ダメージ時スター獲得',buff:true,val:true}, // 自分のマスターがスターx個獲得
   maxHp:{name:'最大HP+',buff:true,val:true},                 // 最大HP+x（付与時にHPもx増える。切れたら最大HPまで下がる）
   cardConv:{name:'カード変換',buff:true,color:true},          // 行動決定で出たコマンド(R/B/G)を color の色に変える（1回変えるごとに回数を1消費）
@@ -295,7 +296,7 @@ const LINE_WHO = { other:'相手・対象', self:'自分', ally:'味方のだれ
 const FX_GROUPS = [
   ['攻撃強化', ['atk','npPow','atkVs','atkTrait','ignoreDef','sureHit','pierce','critPow','critMult','critRoll','debuffUp','cardConv','onAtkStar','onAtkNp']],
   ['防御・耐性', ['def','defTrait','evade','invul','guts','taunt','nullUnder','counter','maxHp','debuffImmune','mentalImmune','deathImmune','stripImmune','npDownImmune','starLossImmune']],
-  ['継続・ターン', ['actsUp','regenHp','regenNp','regenStar','onHitNp','onHitStar']],
+  ['継続・ターン', ['actsUp','regenHp','regenNp','regenStar','onHitNp','hitNpUp','onHitStar']],
   ['弱体', ['atkDown','npPowDown','defDown','critDown','starDown','debuffDown','poison','burn','spread','drain','curse','hitNpSeal','stun','charm','fear','actsDown','sealSkill','sealUlt','healBlock','buffImmune']],
   ['回復・即時', ['heal','np','star','starLoss','cleanse','cleanseMental','strip','buffExtend','skillCharge']],
   ['攻撃・特殊', ['dmg','multiHit','selfDmg','instantDeath','copyRoll']],
