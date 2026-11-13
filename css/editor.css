@@ -49,7 +49,7 @@ textarea:focus{outline:1px solid var(--gold);border-color:var(--gold)}
 .uitem .face.xs{margin-right:2px}
 
 /* フォーム */
-.sec,.sidecard{border-radius:6px;border:1px solid var(--gold);background:linear-gradient(160deg,#16295a,var(--panel) 40%,var(--panel2));box-shadow:var(--frame),var(--shadow)}
+.sec,.sidecard{border-radius:6px;border:1px solid var(--gold);background:var(--lattice),linear-gradient(160deg,#16295a,var(--panel) 40%,var(--panel2));box-shadow:var(--frame),var(--shadow)}
 .sec{padding:16px 18px;margin-bottom:14px}
 .sec h2{font-size:16px;margin:0 0 10px;color:var(--gold-hi);padding-bottom:4px;border-bottom:1px solid var(--gold-lo)}
 .fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
@@ -129,7 +129,7 @@ details.ign summary{cursor:pointer;color:var(--sub)}
 
 /* バランス検証 */
 #simdlg{width:min(1100px,calc(100% - 32px));max-height:calc(100vh - 48px);padding:16px 20px;color:var(--ink);border:1px solid var(--gold);border-radius:6px;
-  background:linear-gradient(160deg,#16295a,var(--panel) 40%,var(--panel2));box-shadow:var(--frame),var(--shadow)}
+  background:var(--lattice),linear-gradient(160deg,#16295a,var(--panel) 40%,var(--panel2));box-shadow:var(--frame),var(--shadow)}
 #simdlg::backdrop{background:rgba(3,7,20,.7)}
 .simhead{display:flex;align-items:center;gap:8px}
 .simhead h2{font-size:17px;margin:0;color:var(--gold-hi);font-family:var(--serif)}
@@ -220,7 +220,7 @@ label.mini.chk{cursor:pointer}
   background:#0a0e1a conic-gradient(#141a2a 25%,#0d1220 0 50%,#141a2a 0 75%,#0d1220 0) 0 0/20px 20px}
 .ctprev .ct{width:100%}
 
-#impdlg{width:min(560px,calc(100% - 32px));padding:16px 20px;color:var(--ink);border:1px solid var(--gold);border-radius:6px;background:linear-gradient(160deg,#16295a,var(--panel) 40%,var(--panel2));box-shadow:var(--frame),var(--shadow)}
+#impdlg{width:min(560px,calc(100% - 32px));padding:16px 20px;color:var(--ink);border:1px solid var(--gold);border-radius:6px;background:var(--lattice),linear-gradient(160deg,#16295a,var(--panel) 40%,var(--panel2));box-shadow:var(--frame),var(--shadow)}
 #impdlg::backdrop{background:rgba(3,7,20,.7)}
 #impdlg h3{margin:0 0 8px} #impdlg .sub{font-size:12px;opacity:.8;margin:4px 0}
 #impdlg .impbtns{display:flex;flex-direction:column;gap:8px;margin-top:12px}

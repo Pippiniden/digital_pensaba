@@ -386,9 +386,9 @@ function masterDetailHTML(d,m){
     ${fx}
     ${d.link?`<div class="udlink"><button class="linkbtn" data-ui="openLink" data-url="${esc(d.link)}" title="${esc(d.link)}">キャラクター設定を見る ↗</button><small class="sub">別タブで開きます</small></div>`:''}
     <h4>${MASTER_ACTS.support}（出た面の効果をこのターンだけ）</h4>
-    <table class="faces"><tr><th>出目</th><th>効果</th></tr>${d.faces.map((f,i)=>`<tr><td>${i+1}</td><td>${f.eff.length?`${f.label?`<b>${esc(f.label)}</b>`:''}<div class="sub">${esc(effsText(f.eff,null,mTLabel))}</div>`:'<span class="sub">効果なし</span>'}</td></tr>`).join('')}</table>
+    <div class="skl">${d.faces.map((f,i)=>sklBlockHTML(`出目${i+1}`,f.label?esc(f.label):(f.eff.length?'':'<span class="sub">―</span>'),f.eff.length?effLines(f.eff,null,mTLabel):[],{cls:f.eff.length?'':'locked'})).join('')}</div>
     <h4>${MASTER_ACTS.spell}（${ruleset().mTeam?`${ruleset().spells}画・同じ効果は1回・使うと行動-1`:'1試合1回・3つから1つ'}）${P?`<small class="sub"> ${P.spell==='decl'?'宣言中':`残り${P.spellLeft}画`}</small>`:''}</h4>
-    <div class="skills">${d.spells.map((s,i)=>`<div class="skill"><span class="sname">${esc(s.name)}${P&&P.spellUsed[i]?' <small class="sub">（使用済み）</small>':''}</span><span class="desc">${esc(spellText(s))}</span></div>`).join('')}</div>
+    <div class="skl">${d.spells.map((s,i)=>sklBlockHTML(`${i+1}画`,esc(s.name),s.eff.length?effLines(s.eff,null,spellTgt):[],{cls:P&&P.spellUsed[i]?'locked':'',note:P&&P.spellUsed[i]?'使用済み':''})).join('')}</div>
   </div>`;
 }
 function detailModalHTML(){
@@ -500,8 +500,52 @@ const tinfoHTML = d=>`<span class="info tinfo" role="button" tabindex="0" data-u
 function sinfoModalHTML(){
   const d=D(UI.sinfo); if(!d) return '';
   return `<div class="modal"><div class="mback" data-ui="closeSinfo"></div>
-    <div class="mbody"><button class="mclose" data-ui="closeSinfo" title="閉じる">×</button>${unitDetailHTML(d)}</div></div>`;
+    <div class="mbody"><button class="mclose" data-ui="closeSinfo" title="閉じる">×</button>${viewDetailHTML(d)}</div></div>`;
 }
+// ---------- 図鑑（タイトルの「図鑑」）：試合の状態は使わず UI だけで表示する ----------
+// UI.ztab = 'svt' | 'master'、見ているキャラは UI.setupView（編成画面と共用）。狭い画面ではタップで詳細ウィンドウ（UI.sinfo）
+const ZTABS = { svt:TERMS.unit, master:TERMS.player };
+function zukanView(){
+  const list=UI.ztab==='master'?MASTERS:UNITS, d=D(UI.setupView);
+  return d&&list.includes(d)?d:(UI.ztab==='master'?list[0]:rosterList()[0]||list[0]);
+}
+function zukanTilesHTML(view){
+  const list=UI.ztab==='master'?[...MASTERS].sort((a,b)=>b.cost-a.cost||MASTERS.indexOf(a)-MASTERS.indexOf(b)):rosterList();
+  if(!list.length) return `<p class="sub rempty">条件に合う${TERMS.unit}がいません。<button data-ui="rosterReset">絞り込みを解除</button></p>`;
+  return list.map(d=>`<button class="tile ${d.master?'mtile':''} ${view&&view.id===d.id?'viewing':''}" data-ui="zview" data-id="${esc(d.id)}" data-view="${esc(d.id)}">
+      ${unitImg(d,'face','pimg',d.name)}${d.master?'':clsIconTag(d.cls,'pcls')}
+      <span class="tcost">C${d.cost}</span>
+      <span class="tname">${esc(d.name)}<small>${d.master?'':`${esc(d.cls)} ・ `}HP${d.hp}</small></span></button>`).join('');
+}
+// 図鑑の詳細：試合中と同じ詳細＋セリフ（場面ごとに折り畳み）
+function zukanLinesHTML(d){
+  const keys=d.master?MASTER_LINE_KEYS:LINE_KEYS;
+  // 条件つきセリフは、その場面の中に条件を添えて並べる（「味方のだれか」が〇〇のとき など）
+  const cond=k=>(d.condLines||[]).filter(c=>c.key===k&&c.lines.length);
+  const rows=Object.entries(keys).map(([k,label])=>[k,label,(d.lines&&d.lines[k])||[],cond(k)]).filter(([,,l,c])=>l.length||c.length);
+  if(!rows.length) return '';
+  const cl=c=>condLineText(c); // 例：味方に黒咲恵梨佳がいる場合
+  return `<h4>セリフ</h4><div class="zlines">${rows.map(([k,label,l,c])=>`<details><summary>${esc(label)}<small class="sub">${l.length+c.reduce((n,x)=>n+x.lines.length,0)}件</small></summary>
+    <ul>${l.map(t=>`<li>${esc(t)}</li>`).join('')}${c.map(x=>x.lines.map(t=>`<li class="zcond"><small>${esc(cl(x))}</small>${esc(t)}</li>`).join('')).join('')}</ul></details>`).join('')}</div>`;
+}
+const zukanDetailHTML = d=>unitDetailHTML(d).replace(/<\/div>\s*$/,'')+zukanLinesHTML(d)+'</div>';
+// 編成画面・図鑑のどちらでも、右の詳細欄と ⓘ のウィンドウに出す中身
+const viewDetailHTML = d=>G.phase==='mode'?zukanDetailHTML(d):unitDetailHTML(d);
+function zukanHTML(){
+  const tab=UI.ztab==='master'?'master':'svt', view=zukanView();
+  return `<div class="setup zukan">
+    <div class="zhead">
+      <button class="back" data-ui="navBack">戻る</button>
+      <div class="ztitle"><h2>図鑑</h2><p class="sub small nm">${TERMS.unit} ${UNITS.length}騎 ・ ${TERMS.player} ${MASTERS.length}人</p></div>
+      <div class="rtabs" role="tablist">${Object.entries(ZTABS).map(([k,v])=>`<button role="tab" aria-selected="${tab===k}" class="${tab===k?'on':''}" data-ui="ztab" data-v="${k}">${v}</button>`).join('')}</div>
+    </div>
+    <div class="setbody">
+      <div class="rosterwrap">${tab==='svt'?rosterFilterHTML():''}<div class="roster">${zukanTilesHTML(view)}</div></div>
+      <div class="sdetail">${view?zukanDetailHTML(view):''}</div>
+    </div>
+  </div>`;
+}
+
 // ---------- キャラクター選択：並べ替え・絞り込み ----------
 const ROSTER_SORTS = { default:'標準', costDesc:'コストが高い順', costAsc:'コストが低い順', hpDesc:'HPが高い順', hpAsc:'HPが低い順', name:'名前順', cls:'クラス順' };
 // 編成に加えられない（選択済みでなく、上限やコストを超える）
@@ -512,7 +556,7 @@ function rosterOver(d){
 function rosterList(){
   const f=UI.roster, q=f.q.trim().toLowerCase();
   const list=UNITS.filter(d=>(!f.cls||d.cls===f.cls)&&(f.cost===''||d.cost===Number(f.cost))
-    &&(!q||d.name.toLowerCase().includes(q)||d.cls.toLowerCase().includes(q))&&(!f.ok||!rosterOver(d)));
+    &&(!q||d.name.toLowerCase().includes(q)||d.cls.toLowerCase().includes(q))&&(!f.ok||G.phase!=='setup'||!rosterOver(d)));
   const ci=c=>{ const i=CLASSES.indexOf(c); return i<0?CLASSES.length:i; };
   const by={ costDesc:(a,b)=>b.cost-a.cost, costAsc:(a,b)=>a.cost-b.cost, hpDesc:(a,b)=>b.hp-a.hp, hpAsc:(a,b)=>a.hp-b.hp,
     name:(a,b)=>a.name.localeCompare(b.name,'ja'), cls:(a,b)=>ci(a.cls)-ci(b.cls)||b.cost-a.cost }[f.sort];
@@ -541,7 +585,7 @@ function rosterFilterHTML(){
       <input type="search" class="rq" data-uif="q" placeholder="名前・クラスで検索" value="${esc(f.q)}">
       <select data-uif="cost" title="コストで絞り込み"><option value="">コスト：すべて</option>${costs.map(c=>`<option value="${c}" ${String(c)===f.cost?'selected':''}>コスト ${c}</option>`).join('')}</select>
       <select data-uif="sort" title="並べ替え">${Object.entries(ROSTER_SORTS).map(([k,v])=>`<option value="${k}" ${f.sort===k?'selected':''}>${v}</option>`).join('')}</select>
-      ${ruleset().partyMax>1?`<label class="rok"><input type="checkbox" data-uif="ok" ${f.ok?'checked':''}>編成できるものだけ</label>`:''}
+      ${G.phase==='setup'&&ruleset().partyMax>1?`<label class="rok"><input type="checkbox" data-uif="ok" ${f.ok?'checked':''}>編成できるものだけ</label>`:''}
       <span class="sub small rcount">${n} / ${UNITS.length}騎</span>
     </div>
   </div>`;
@@ -549,6 +593,7 @@ function rosterFilterHTML(){
 // 絞り込みを変えたら一覧だけ描き直す（検索欄の入力中にフォーカスを失わないように）
 function redrawRoster(){
   const r=document.querySelector('.roster'); if(!r){ render(); return; }
+  if(G.phase!=='setup'){ setHTML(r,zukanTilesHTML(zukanView())); const c=document.querySelector('.rcount'); if(c) c.textContent=`${rosterList().length} / ${UNITS.length}騎`; return; }
   const picks=G.picks[G.setupPid];
   setHTML(r,rosterTilesHTML(D(UI.setupView)||D(picks[picks.length-1])||UNITS[0]));
   const c=document.querySelector('.rcount'); if(c) c.textContent=`${rosterList().length} / ${UNITS.length}騎`;
@@ -634,6 +679,7 @@ function modeHTML(){
     <div class="topmenu">
       <button class="gbtn p" data-ui="nav" data-s="quick">クイックバトル</button>
       <button class="gbtn" data-ui="nav" data-s="local">ローカル対戦</button>
+      <button class="gbtn" data-ui="nav" data-s="zukan">図鑑</button>
       <button class="gbtn" data-ui="nav" data-s="tutorial">チュートリアル</button>
       <button class="gbtn" data-ui="nav" data-s="settings">設定</button>
       <a class="gbtn editorlink" href="editor.html">ペンシルエディタ</a>
@@ -647,12 +693,12 @@ function overlaysHTML(){ return settingsModalHTML()+tutorialModalHTML();
 // ---------- 描画 ----------
 function render(){
   const app=document.querySelector('#app'), hinfo=document.querySelector('#hinfo');
-  const screen=G.phase==='mode'?'mode':G.phase==='setup'?'setup':'battle';
+  const screen=G.phase==='mode'?(UI.nav.s==='zukan'?'zukan':'mode'):G.phase==='setup'?'setup':'battle';
   document.body.dataset.screen=screen;
   document.body.dataset.phase=G.phase;
   if(G.phase!=='over'){ UI.result=false; UI.resultShown=false; UI.endReady=false; }
   if(G.phase!=='master') UI.spellPick=false;
-  if(G.phase!=='setup') UI.sinfo=null;
+  if(screen!=='setup'&&screen!=='zukan') UI.sinfo=null;
   document.body.classList.toggle('lock',cpuActing());
   const ab=document.querySelector('#autobtn'), spd=document.querySelector('#spd');
   ab.hidden=screen!=='battle'; ab.textContent=`オート：${UI.auto?'ON':'OFF'}`; ab.classList.toggle('on',UI.auto);
@@ -661,6 +707,7 @@ function render(){
   document.querySelector('#menubtn').setAttribute('aria-expanded',UI.menu?'true':'false');
   // 画面は毎回作り直すが、読み込み済みの画像は残す（setHTML：フェイズ切り替えで画像がチカチカ消えないように）
   if(screen==='mode'){ setHTML(app,modeHTML()+overlaysHTML()); hinfo.textContent=''; }
+  else if(screen==='zukan'){ setHTML(app,zukanHTML()+(UI.sinfo?sinfoModalHTML():'')+linkModalHTML()+overlaysHTML()); hinfo.textContent='図鑑'; }
   else if(screen==='setup'){ setHTML(app,setupHTML()+(UI.sinfo?sinfoModalHTML():'')+linkModalHTML()+overlaysHTML()); hinfo.textContent=ruleset().partyMax===1?`${ruleset().name}ルール ・ ${TERMS.unit}選択`:'パーティ編成'; }
   else {
     if(UI.detail&&!U(UI.detail)) UI.detail=null;
@@ -749,6 +796,8 @@ function uiAct(a,ds){
     case 'closeResult': UI.result=false; break;
     case 'rtab': UI.rtab=ds.v; break;
     case 'sinfo': UI.sinfo=ds.id; break;
+    case 'ztab': UI.ztab=ds.v; break;
+    case 'zview': UI.setupView=ds.id; if(matchMedia('(max-width:860px)').matches) UI.sinfo=ds.id; break;
     case 'closeSinfo': UI.sinfo=null; break;
     case 'openLink': if(linkConfirmOn()) UI.linkAsk=ds.url; else window.open(ds.url,'_blank','noopener'); break;
     case 'linkGo': { const cb=document.querySelector('#linkNoAsk'); if(cb&&cb.checked) savePref(LINK_PREF,'0'); window.open(UI.linkAsk,'_blank','noopener'); UI.linkAsk=null; break; }
@@ -812,14 +861,14 @@ document.addEventListener('mouseover',e=>{
   const t=e.target.closest('.tile[data-view]'); if(!t||UI.setupView===t.dataset.view) return;
   UI.setupView=t.dataset.view;
   const box=document.querySelector('.sdetail'), d=D(UI.setupView);
-  if(box&&d) setHTML(box,unitDetailHTML(d));
+  if(box&&d) setHTML(box,viewDetailHTML(d));
   document.querySelectorAll('.tile.viewing').forEach(x=>x.classList.remove('viewing')); t.classList.add('viewing');
 });
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'&&(UI.settings||UI.tut)){ UI.settings=false; UI.tut=false; render(); return; }
-  if(e.key==='Escape'&&G.phase==='mode'&&UI.nav.s!=='top'){ UI.nav={s:'top',step:'rule'}; render(); return; }
   if(e.key==='Escape'&&UI.linkAsk){ UI.linkAsk=null; render(); return; }
-  if(e.key==='Escape'&&(UI.detail||UI.sinfo)){ UI.detail=null; UI.sinfo=null; render(); }
+  if(e.key==='Escape'&&(UI.detail||UI.sinfo)){ UI.detail=null; UI.sinfo=null; render(); return; }
+  if(e.key==='Escape'&&G.phase==='mode'&&UI.nav.s!=='top'){ UI.nav={s:'top',step:'rule'}; render(); return; }
   if((e.key==='Enter'||e.key===' ')&&e.target.matches&&e.target.matches('.tinfo')){ e.preventDefault(); e.stopPropagation(); e.target.click(); } // キーボードでも ⓘ を開ける
 });
 

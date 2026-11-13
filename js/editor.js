@@ -382,6 +382,7 @@ function renderForm(){
         ${condIn(`condLines.${i}`,c,{},LINE_WHO[c.who||'other'])}
         <span class="effbtns"><button data-act="clMove" data-i="${i}" data-d="-1" title="上へ">↑</button><button data-act="clMove" data-i="${i}" data-d="1" title="下へ">↓</button><button data-act="clDel" data-i="${i}" title="削除">×</button></span>
       </div>
+      <p class="sub small nm clprev">${esc(clPrevText(c))}</p>
       <textarea data-p="condLines.${i}.lines" data-t="lines" rows="${Math.max(2,(c.lines||[]).length)}" placeholder="この条件のときのセリフ。1行に1つ">${esc((c.lines||[]).join(String.fromCharCode(10)))}</textarea>
     </div>`).join('')}
     <button class="small add" data-act="clAdd">＋ 条件つきセリフ</button>
@@ -845,3 +846,14 @@ document.addEventListener('click',e=>{
 window.addEventListener('storage',e=>{ if(e.key===STORE.units||e.key===STORE.masters) renderStatus(); });
 
 boot();
+
+// 条件つきセリフの「どんなときに出るか」の文（例：戦闘開始：味方に黒咲恵梨佳がいる場合）。
+// 場面・条件を変えたら全体を描き直さずにこの行だけ更新する（値の反映は先に走る change の処理に任せる）
+function clPrevText(c){ return `${LINE_KEYS[c.key]||''}：${condLineText(c,v=>([...units,...masters].find(x=>x.id===v)||{}).name||v)}`; }
+function syncClPrev(e){
+  if(!e.target.closest||!e.target.closest('.condline')) return;
+  setTimeout(()=>{ const u=cur(); if(!u||!u.condLines) return;
+    document.querySelectorAll('.condline .clprev').forEach((el,i)=>{ const c=u.condLines[i]; if(c) el.textContent=clPrevText(c); }); });
+}
+document.addEventListener('input',syncClPrev);
+document.addEventListener('change',syncClPrev);

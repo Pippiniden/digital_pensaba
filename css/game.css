@@ -53,7 +53,7 @@ body[data-screen="battle"] #app{overflow:hidden}
 /* サーヴァントのカード：自分の大きさ（コンテナ）に合わせて中身を切り替える
    横長 → 肖像の右に情報 / 縦長（スマホ縦など）→ 肖像の下にHP・NP / 低い → 効果やスキル欄を隠して ⓘ で見る */
 .svt{container:svt/size;position:relative;min-height:0;min-width:0;padding:6px;border-radius:6px;border:1px solid var(--gold);
-  background:linear-gradient(160deg,#16295a,var(--panel) 45%,var(--panel2));box-shadow:var(--frame),var(--shadow);transition:box-shadow .15s,transform .15s}
+  background:var(--lattice),linear-gradient(160deg,#16295a,var(--panel) 45%,var(--panel2));box-shadow:var(--frame),var(--shadow);transition:box-shadow .15s,transform .15s}
 .side.turn .svt.acting{box-shadow:var(--frame),0 0 0 1px var(--gold-hi),0 0 16px rgba(246,227,161,.35)}
 .svt.out{filter:grayscale(1) brightness(.55)}
 .svt.pickable{cursor:pointer;outline:2px dashed var(--gold-hi);outline-offset:2px}
@@ -192,7 +192,7 @@ body[data-screen="battle"] #app{overflow:hidden}
 .linkurl{word-break:break-all}
 .mback{position:absolute;inset:0;background:rgba(2,6,20,.72);backdrop-filter:blur(2px)}
 .mbody{position:relative;width:min(600px,100%);max-height:calc(100vh - 32px);overflow:auto;padding:18px;border-radius:6px;border:1px solid var(--gold);
-  background:linear-gradient(160deg,#16295a,var(--panel) 40%,var(--panel2));box-shadow:var(--frame),0 10px 40px rgba(0,0,0,.6)}
+  background:var(--lattice),linear-gradient(160deg,#16295a,var(--panel) 40%,var(--panel2));box-shadow:var(--frame),0 10px 40px rgba(0,0,0,.6)}
 /* リザルト */
 .result .mbody{width:min(560px,100%);text-align:center}
 .rtitle{margin:0;font:700 34px var(--serif);letter-spacing:.2em;color:var(--gold-hi);text-shadow:0 0 18px rgba(246,227,161,.6)}
@@ -257,7 +257,7 @@ body[data-screen="battle"] #app{overflow:hidden}
 .tile.sel .tcost{display:none}
 .tname{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:22px 8px 6px;font-size:12.5px;font-weight:700;color:#fff;background:linear-gradient(transparent,rgba(6,13,34,.96) 45%);line-height:1.3}
 .tname small{display:block;font-size:10.5px;font-weight:400;color:var(--sub)}
-.sdetail{min-height:0;overflow:auto;padding:14px 16px;border-radius:6px;border:1px solid var(--gold);background:linear-gradient(160deg,#16295a,var(--panel) 40%,var(--panel2));box-shadow:var(--frame),var(--shadow)}
+.sdetail{min-height:0;overflow:auto;padding:14px 16px;border-radius:6px;border:1px solid var(--gold);background:var(--lattice),linear-gradient(160deg,#16295a,var(--panel) 40%,var(--panel2));box-shadow:var(--frame),var(--shadow)}
 
 /* ---------- モード選択 ---------- */
 /* 夜空の背景（index.html の #titlebg、中身は initTitleBg）。タイトル画面のときだけ出す。
@@ -703,3 +703,23 @@ body[data-screen="mode"] #app{position:relative} /* 背景（position:fixed）�
 .rlog{max-height:46vh;border:1px solid var(--line);border-radius:4px;background:rgba(6,13,34,.6)}
 @media (max-width:640px){ .rsides{grid-template-columns:1fr} }
 .rkv .wide{grid-column:1/-1}
+
+/* ---------- 図鑑（タイトルの「図鑑」）：編成画面と同じ「一覧｜詳細」の並び ---------- */
+body[data-screen="zukan"] #app{overflow:hidden}
+.zhead{flex:none;display:flex;align-items:center;gap:18px;padding:10px 16px;border-radius:6px;border:1px solid var(--gold);
+  background:var(--lattice),linear-gradient(160deg,#16295a,var(--panel) 40%,var(--panel2));box-shadow:var(--frame),var(--shadow)}
+.ztitle h2{margin:0;font-size:20px;letter-spacing:.2em;color:var(--gold-hi)}
+.zhead .rtabs{margin:0 0 0 auto;border-bottom:0}
+.zukan .mtile .tname small{display:block}
+.zlines{display:flex;flex-direction:column;gap:4px}
+.zlines details{margin:0;border:1px solid var(--line);border-radius:3px;background:rgba(6,13,34,.45)}
+.zlines summary{display:flex;align-items:center;gap:8px;padding:5px 10px;font:700 12.5px var(--serif);color:var(--gold-hi)}
+.zlines summary small{margin-left:auto;font-weight:400}
+.zlines ul{margin:0;padding:2px 12px 8px 26px;font-size:12.5px;line-height:1.7;color:var(--ink)}
+.zlines li::marker{color:var(--gold-lo)}
+@media (max-width:860px){
+  .zhead{flex-wrap:wrap;gap:8px 12px;padding:8px 10px}
+  .zhead .rtabs{margin:0;flex-basis:100%;justify-content:flex-start}
+  .zukan .sdetail{display:none} /* 狭い画面ではタップで詳細ウィンドウを開く */
+}
+.zlines li.zcond small{display:block;font-size:11px;color:var(--gold);line-height:1.4;margin-top:4px}

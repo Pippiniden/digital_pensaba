@@ -86,8 +86,9 @@ function condLineFor(u,key,other){
     if(c.key!==key) return false;
     switch(c.who){
       case 'self': return condOk(c.cond,u);
-      case 'ally': return alive(u.pid).some(a=>a!==u&&condOk(c.cond,a));
-      case 'enemy': { const al=alive(1-u.pid); return (al.length?al:G.players[1-u.pid].party).some(a=>condOk(c.cond,a)); } // 決着後（敵が全滅）は敵の編成全体で見る
+      // 味方・敵には マスター も含める（マスタールールで「味方に〇〇（マスター）がいるとき」を書けるように）
+      case 'ally': { const m=masterOf(u.pid); return [...alive(u.pid),...(m&&!m.out?[m]:[])].some(a=>a!==u&&condOk(c.cond,a)); }
+      case 'enemy': { const al=alive(1-u.pid), m=masterOf(1-u.pid); return [...(al.length?al:G.players[1-u.pid].party),...(m?[m]:[])].some(a=>condOk(c.cond,a)); } // 決着後（敵が全滅）は敵の編成全体で見る
       default: return !!other&&condOk(c.cond,other);
     }
   })||null;
