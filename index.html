@@ -3,8 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Pencil Duel</title>
-<link rel="icon" href="data:,">
+<title>Pensaba Duel</title>
+<link rel="icon" href="img/pwa/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="img/pwa/icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0b1630">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Pensaba Duel">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Noto+Serif+JP:wght@600;700;900&display=swap">
@@ -17,7 +23,7 @@
 <body class="game">
 <div id="titlebg" aria-hidden="true"></div>
 <header>
-  <h1>PENCIL DUEL</h1><span id="hinfo"></span>
+  <h1>PENSABA DUEL</h1><span id="hinfo"></span>
   <span class="grow"></span>
   <button id="menubtn" data-ui="toggleMenu" title="メニュー" aria-label="メニュー" aria-controls="menu" aria-expanded="false"><i></i><i></i><i></i></button>
   <nav id="menu">
@@ -43,5 +49,6 @@
 <script src="js/guide.js"></script>
 <script src="js/game-ui.js"></script>
 <script src="js/tapfx.js"></script>
+<script>if("serviceWorker" in navigator&&(location.protocol==="https:"||location.hostname==="localhost"))addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));</script>
 </body>
 </html>

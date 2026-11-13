@@ -659,7 +659,7 @@ function modeHTML(){
     ? `<p class="datainfo">ペンシルエディタで作ったデータ（${[cu?`${TERMS.unit}${UNITS.length}騎`:'',cm?`${TERMS.player}${MASTERS.length}人`:''].filter(Boolean).join('・')}）を使っています。<button data-a="useDefaultData">標準データに戻す</button></p>` : '')
     + (UNIT_BROKEN||MASTER_BROKEN ? `<p class="datainfo warn">エディタの${UNIT_BROKEN?TERMS.unit:TERMS.player}データにエラーがあったため、標準データを使っています。</p>` : '');
   const show=showcaseHTML(), nav=UI.nav, s=nav.s;
-  const head=`<div class="title"><small>Fate fan-made pencil battle</small><h2>PENCIL DUEL</h2></div>`;
+  const head=`<div class="title"><small>Fate fan-made pencil battle</small><h2>PENSABA DUEL</h2></div>`;
   const back=(label='戻る')=>`<div class="navbar"><button class="back" data-ui="navBack">${label}</button></div>`;
   // ルール選択（クイックバトル・ローカル対戦の最初の段階）
   const rulePick=(nextBtn)=>`<div class="navstep"><h3>ルールを選ぶ</h3><div class="rules">

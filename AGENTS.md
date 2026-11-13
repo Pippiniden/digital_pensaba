@@ -1,11 +1,11 @@
-# AGENTS.md — Pencil Duel: Spec and Structure Guide (for AI agents)
+# AGENTS.md — Pensaba Duel: Spec and Structure Guide (for AI agents)
 
 Read this file before touching the code, then use the "I want to… → where to edit" table (§7) to pick your entry point.
 It was written from the code (`js/*.js`). If you find a mismatch, the code is the source of truth — fix this file too.
 
 ## 1. What this is
 
-- A browser game, **PENCIL DUEL**: a 1v1 party battle played with six-sided pencils as dice (Fate fan-made style, Japanese UI), plus the **Pencil Editor** for editing character data.
+- A browser game, **PENSABA DUEL**: a 1v1 party battle played with six-sided pencils as dice (Fate fan-made style, Japanese UI), plus the **Pencil Editor** for editing character data.
 - Static HTML + plain JavaScript. **No build, no npm, no framework, no tests.** No ES Modules either: files share globals through `<script>` load order.
 - Run: `python -m http.server 8765`, then open `http://localhost:8765/index.html` (same config in `.claude/launch.json`).
 - The only external dependency is Web fonts (Google Fonts). There is no server or DB; persistence is the browser's `localStorage`.
@@ -17,6 +17,7 @@ It was written from the code (`js/*.js`). If you find a mismatch, the code is th
 | `index.html` | Game page shell. `#titlebg` (title-screen night sky, a `position:fixed` layer outside `#app`, shown only on `body[data-screen="mode"]`; filled once by `initTitleBg` in game-ui.js with star layers, the spinning magic circle and mist, so `render()` never restarts their animations), `#app` (render target), `#fx` (effects layer), and the header whose buttons live in `#menu` (collapsed behind `#menubtn` ☰ at ≤860px; open state is `UI.menu` → `body.menuopen`) |
 | `editor.html` | Editor page shell. Three columns: `#list` `#form` `#side` |
 | `js/rules.js` | **Rule definitions**: terms `TERMS`, numbers `RULES`, effect kinds `FX`, targets `TARGETS`, line kinds `LINE_KEYS`, classes, image settings |
+| `manifest.webmanifest` + `sw.js` + `img/pwa/` | **PWA**. index.html links the manifest and registers `sw.js` (https or localhost only). The service worker is stale-while-revalidate for same-origin GETs (cache `pensaba-duel-v1`; a change shows on the 2nd load), cross-origin (Web fonts) is not cached. Icons: 192 / 512 / maskable 512 |
 | `js/units.js` | **Default character data** `DEFAULT_UNITS` (same format the editor's "export units.js" produces) |
 | `presets/original/` | **Not loaded by the game.** A frozen copy of the canon data (9 servants, 7 masters, their images) in the same export format, for people who copy this engine and want to drop the canon data in (see its README.md). `js/` data stays as the live data |
 | `js/masters.js` | **Master data** `DEFAULT_MASTERS` for the master rules (§5.4, §5.5). Currently 7 **test-only** canon masters (遠坂凛 C5 … 間桐雁夜 C0), expected to be replaced/removed. Same format the editor's "masters.js を書き出し" produces (`mastersToJS`) |

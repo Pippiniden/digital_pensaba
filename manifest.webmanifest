@@ -1,0 +1,17 @@
+{
+  "name": "Pensaba Duel",
+  "short_name": "Pensaba Duel",
+  "description": "Fate fan-made pencil battle",
+  "lang": "ja",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0b1630",
+  "theme_color": "#0b1630",
+  "icons": [
+    {"src": "img/pwa/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "img/pwa/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "img/pwa/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"}
+  ]
+}
