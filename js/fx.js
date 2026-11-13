@@ -11,9 +11,11 @@ const FX_WAIT = { sync:130, skill:700, say:950, dmg:420, cutin:CUTIN_MS-250, pha
 const ROLL_SPIN = 520;                             // ロール演出で出目が回っている時間(ms)
 const BUBBLE_MS = 2600;                            // 吹き出しの表示時間(ms)
 let fxRunning=false;
-// 速度「最速」（G.speed<=150）：演出の長さ・待ちを縮める。宝具カットインは見せ切る
+// 速度「最速」（G.speed<=150）：演出の長さ・待ちを縮める
 const fxScale = ()=>G.speed<=150?0.35:1;
 const fxMs = ms=>Math.round(ms*fxScale());
+// カットイン（宝具・令呪）は読めるように縮め方を控えめにする：速い 0.7倍 / 最速 0.5倍の長さ
+const cutinScale = ()=>G.speed<=150?0.5:G.speed<500?0.7:1;
 function fxSpeedUp(el){ const s=fxScale(); if(s<1&&el&&el.getAnimations) el.getAnimations({subtree:true}).forEach(a=>{ a.playbackRate=1/s; }); }
 // タイトルに戻る・新しい対戦のとき：画面に残っている演出を全部消す
 function fxClear(){ const L=document.querySelector('#fx'); if(L) L.innerHTML=''; document.querySelectorAll('.svt.lunge,.svt.hit,.svt.ko,.lane .it.fire').forEach(e=>e.classList.remove('lunge','up','down','hit','ko','fire')); }
@@ -34,7 +36,7 @@ function fxNext(){
   let wait=0;
   try{ wait=fxPlay(ev); }catch(e){ console.error(e); if(ev.t==='roll') reveal(ev); }
   if(ev.w!=null) wait=ev.w;
-  if(ev.t!=='cutin'&&G.speed<500) wait=Math.round(wait*(G.speed<=150?0.3:0.55)); // 速度「速い」「最速」：演出の間も詰める（宝具カットインは見せ切る）
+  if(ev.t!=='cutin'&&G.speed<500) wait=Math.round(wait*(G.speed<=150?0.3:0.55)); // 速度「速い」「最速」：演出の間も詰める（カットインは showCutin 側の cutinScale で縮める）
   setTimeout(fxNext,wait);
 }
 const fxLayer = ()=>document.querySelector('#fx');
@@ -44,7 +46,7 @@ function fxPlay(ev){
   if(ev.t==='sync'){ stepHold(ev); return FX_WAIT.sync; } // NP・効果の表示を、この順番で更新
   const L=fxLayer(); if(!L){ if(ev.t==='dmg') stepHold(ev); if(ev.t==='roll') reveal(ev); if(ev.t==='ko') ev.uids.forEach(uid=>{ delete FXHOLD[uid]; redrawSvt(uid); }); return 0; }
   if(ev.t==='ko'){ showKo(L,ev); return FX_WAIT.ko; }
-  if(ev.t==='cutin'){ showCutin(L,ev); return FX_WAIT.cutin; }
+  if(ev.t==='cutin'){ showCutin(L,ev); return Math.round(FX_WAIT.cutin*cutinScale()); }
   if(ev.t==='phase'||ev.t==='banner'){ showPhase(L,ev); return ev.t==='banner'?FX_WAIT.banner:ev.big?FX_WAIT.phaseBig:FX_WAIT.phase; }
   if(ev.t==='atk'){ showAtk(L,ev); return FX_WAIT.atk; }
   if(ev.t==='skill'){ showSkill(L,ev); return FX_WAIT.skill; }
@@ -246,8 +248,10 @@ function showCutin(L,ev){
   const d=D(u.def), ult={name:ev.title, ruby:ev.ruby, br:ev.br, c:ev.col};
   const c=document.createElement('div');
   c.className='cutin';
-  c.innerHTML=cutinStageHTML(d,ult);
+  c.innerHTML=cutinStageHTML(d,ult,{top:ev.top});
   L.appendChild(c);
   cutinLayoutWhenReady(c.querySelector('.ct'),ult);
-  setTimeout(()=>c.remove(),CUTIN_MS+50);
+  const k=cutinScale(); // 速度設定：アニメーション（遅延・ドリフト込み）をまとめて早回しする
+  if(k<1&&c.getAnimations) c.getAnimations({subtree:true}).forEach(a=>{ if(a.effect&&a.effect.getTiming().iterations!==Infinity) a.playbackRate=1/k; });
+  setTimeout(()=>c.remove(),Math.round(CUTIN_MS*k)+50);
 }
