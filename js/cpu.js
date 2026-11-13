@@ -240,7 +240,7 @@ function cmdValue(u,c,stars,tgt){
     const p=ruleset().crit==='d6'?Math.min(1,critNeedD6(stars)/6):critChance(critLevel(stars))/100;
     d+=p*((c.c==='R'?RULES.critDmgR:RULES.critDmg)+m.colorBuff);
   }
-  return d*hitsOf(c.eff);
+  return d*hitsOf(c.eff)*(isAoe(c.eff)?Math.max(1,alive(tgt.pid).length):1);
 }
 function allocEV(alloc,noChain){
   const tgt=[...alive(1-G.cur)].sort((a,b)=>maxHp(b)-maxHp(a))[0], stars=G.players[G.cur].stars;
@@ -443,7 +443,7 @@ function estDamage(t){
   return G.rolled.reduce((s,r)=>{
     const c=r.cmd; if(!c.dmg) return s;
     const a=U(r.uid), d=Math.max(0,c.dmg+dmgMods(a,t,c.c).sum)+(chainR?RULES.chainR:0);
-    return s+d*hitsOf(c.eff);
+    return s+d*hitsOf(c.eff)*(isAoe(c.eff)?Math.max(1,alive(t.pid).length):1);
   },0);
 }
 function cpuBestTarget(easy){

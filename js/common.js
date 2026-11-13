@@ -582,6 +582,7 @@ function fxText(e){
     case 'star': s=`${TERMS.star}${e.v}個獲得`; break;
     case 'dmg': s=e.max?'最大HPぶんのダメージ(軽減不可)':`${e.v}ダメージ`; break;
     case 'selfDmg': s=e.max?'最大HPぶんの自傷ダメージ(軽減不可)':`自傷ダメージ${e.v}`; break;
+    case 'aoe': s='攻撃の全体化（敵全体に攻撃）'; break;
     case 'multiHit': s=`${e.v}回連続攻撃`; break;
     case 'npPow': s=`${TERMS.ult}威力+${e.v}`; break;
     case 'npPowDown': s=`${TERMS.ult}威力-${e.v}`; break;

@@ -157,6 +157,7 @@ function skillUsable(u,si){
   return !!s&&canSkill(u)&&!u.used[si]&&(si<2||u.asc)&&(!s.pick||skillCands(u,s).length>0);
 }
 // 連続攻撃の回数（コマンド・宝具の効果の multiHit。なければ1、最大10）
+const isAoe = effs=>(effs||[]).some(e=>e.k==='aoe'); // 攻撃の全体化
 const hitsOf = effs=>Math.min(10,Math.max(1,...(effs||[]).filter(e=>e.k==='multiHit').map(e=>Math.floor(e.v)||1)));
 // 効果の値（max なら対象の最大HP）
 const effVal = (e,t)=>e.max&&t?maxHp(t):e.v;
@@ -362,7 +363,7 @@ function applyOne0(src,t,e,o={}){
       t.hp=0; if(!gutsHold(t)) retreat(t); return;
     }
     case 'selfDmg': { const v=effVal(e,t); log(`${nm(t)} ${FX.selfDmg.name} <b>${fmt(v)}</b>${e.max?'（最大HP・軽減不可）':''}`,'bad'); dealDamage(t,v,false,{src:t}); return; }
-    case 'dmg': case 'multiHit': case 'desc': return; // 宝具側で処理 / 効果なし
+    case 'dmg': case 'multiHit': case 'aoe': case 'desc': return; // 宝具側で処理 / 効果なし
   }
   if(e.k==='guts') t.fx=t.fx.filter(x=>x.k!=='guts'); // ガッツは重複不可
   if(e.k==='curse'){ // 呪いは回数のみ。重ねると回数が増える
@@ -500,6 +501,7 @@ function ultEffOrder(effs){
 }
 // 攻撃1回ぶん（補正 → Busterチェイン → クリティカル → 最終ダメージ → NP・スター → 攻撃時○○）。lab はログの「（2/3）」など
 function attackHit(att,cmd,tgt,o,lab){
+  const cons=(u,l)=>o.pend?o.pend.push([u,l]):consume(u,l); // 全体攻撃：攻撃側の効果の消費は全対象に当て終わってから
   const n=nm(att)+lab, sa=st(att);
   let dmg=cmd.dmg; const note=[`基本${dmg}`]; let usedA=[], usedT=[], colorBuff=0;
   sa.attacks++;
@@ -525,19 +527,19 @@ function attackHit(att,cmd,tgt,o,lab){
         crit=r<=p;
         note.push(`クリ判定 Lv${lv}(${p}%) 出目${r} ${crit?'成功':'失敗'}`);
       }
-      consume(att,[...cr.list,...cd.list]);
+      cons(att,[...cr.list,...cd.list]);
     }
     if(crit){
       sa.crits++;
       const cp=mods(att,'critPow',cmd.c), cm=att.fx.filter(e=>e.k==='critMult');
       if(cm.length){ // クリティカル倍率：+30/+60・色バフ2倍の代わりに、ここまでのダメージ×x%（威力+は最後に加算）
         const pct=Math.max(...cm.map(e=>e.v)), add=Math.round(dmg*pct/100)-dmg+cp.sum;
-        dmg+=add; note.push(`クリ×${pct}%${cp.sum?`+${cp.sum}`:''}`); consume(att,cm);
+        dmg+=add; note.push(`クリ×${pct}%${cp.sum?`+${cp.sum}`:''}`); cons(att,cm);
       } else {
         const add=(cmd.c==='R'?RULES.critDmgR:RULES.critDmg)+cp.sum+colorBuff;
         dmg+=add; note.push(`クリ+${add}${colorBuff?`(色バフ+${colorBuff}含む)`:''}`);
       }
-      consume(att,cp.list);
+      cons(att,cp.list);
     }
   }
   // 6. 最終ダメージ（クリティカルとオーバーキルは重複：獲得NP・発生スターがそれぞれ2倍）
@@ -552,10 +554,10 @@ function attackHit(att,cmd,tgt,o,lab){
     else if(nullified(tgt,dmg)){ st(tgt).blocked++; log(`${n} ${cmdChip(cmd)} → ${nm(tgt)}：${fmt(dmg)}ダメージは${nullified(tgt,dmg)}以下なので無効 <span class="sub">(${note.join(' / ')})</span>`); fxEmit({t:'dmg',uid:tgt.uid,text:'無効'}); consume(tgt,usedT); }
     else { log(`${n} ${cmdChip(cmd)} → ${nm(tgt)}：<b>${fmt(dmg)}</b>ダメージ <span class="sub">(${note.join(' / ')})</span>`); consume(tgt,usedT); dealDamage(tgt,dmg,true,{crit,att}); }
   }
-  const starCut=gainNpStar(att,cmd,mult);
-  consume(att,usedA);
+  const starCut=o.noGain?0:gainNpStar(att,cmd,mult);
+  cons(att,usedA);
   // 攻撃時○○（エクストラアタックでは発動しない）
-  if(!o.extra){
+  if(!o.extra&&!o.noGain){
     const s=mods(att,'onAtkStar',cmd.c), p=mods(att,'onAtkNp',cmd.c);
     if(s.sum){ const g=Math.max(0,s.sum-starCut); G.gen+=g; log(`${n} 攻撃時効果：${TERMS.star}${g}個発生`,'sub'); }
     if(p.sum){ addNp(att,npRate(att,p.sum)); log(`${n} 攻撃時効果：${TERMS.gauge}+${p.sum}%`,'sub'); }
@@ -586,12 +588,23 @@ function resolveCommand(att,cmd,tgt,o={}){
   // 連続攻撃：同じ攻撃を hits 回。1回ごとに補正・クリティカル・NP・スター・回避/無敵・回数制の効果を処理する
   const hits=hitsOf(cmd.eff);
   if(hits>1) log(`${n} ${cmdChip(cmd)}：${hits}回連続攻撃`,'sub');
+  // 攻撃の全体化：選んだ対象のあと、残りの生存する敵にも同じ攻撃を当てる（NP・スター・攻撃時効果は最初の1回だけ。マスターには当たらない）
+  const aoe=isAoe(cmd.eff)&&cmd.dmg>0;
+  const tl=aoe?[tgt,...alive(1-att.pid).filter(x=>x!==tgt)]:[tgt];
+  if(aoe) log(`${n} ${cmdChip(cmd)}：攻撃の全体化（敵全体に攻撃）`,'sub');
   for(let h=0;h<hits;h++){
-    if(att.out) break; // 反撃で倒れたら残りの攻撃はしない
-    atkFx(tgt.uid,h?{w:260}:{}); // 戦闘不能の相手にも（オーバーキル）カードを飛ばす
-    attackHit(att,cmd,tgt,o,hits>1?`（${h+1}/${hits}）`:'');
+    const pend=aoe?[]:null;
+    for(let i=0;i<tl.length;i++){
+      if(att.out) break; // 反撃で倒れたら残りの攻撃はしない
+      const t=tl[i];
+      if(i&&t.out) continue;
+      t.tgtd=true;
+      atkFx(t.uid,h||i?{w:260}:{}); // 戦闘不能の相手にも（オーバーキル）カードを飛ばす
+      attackHit(att,cmd,t,aoe?{...o,pend,noGain:i>0}:o,hits>1?`（${h+1}/${hits}）`:'');
+    }
+    if(pend) pend.forEach(([u,l])=>consume(u,l));
   }
-  syncU(tgt); syncU(att); // 獲得したNP・使い切った効果は、ダメージ演出のあとで画面に反映
+  tl.forEach(syncU); syncU(att); // 獲得したNP・使い切った効果は、ダメージ演出のあとで画面に反映
 
   // 攻撃後の効果（例：自身の弱体解除）
   applyEffects(att,postE,null);

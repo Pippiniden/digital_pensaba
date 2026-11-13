@@ -279,6 +279,7 @@ const FX = {
   npPow:{name:'宝具威力アップ',buff:true,val:true},        // 宝具のダメージ+x（ダメージ効果1つ・1ヒットごと）
   npPowDown:{name:'宝具威力ダウン',buff:false,val:true},   // 宝具のダメージ-x
   // 説明文：効果は持たない。これがあるスキル・宝具・特殊行動・補助・令呪の説明は、この文章に置き換わる（text）
+  aoe:{name:'攻撃の全体化',inst:true,noTgt:true,only:'special'},   // ダメージつき特殊行動を敵全体に当てる（NP・スター・攻撃時効果は1回だけ。クリティカル・回避・無敵は対象ごと。敵マスターには当たらない）
   desc:{name:'説明文（表示のみ）',inst:true,noTgt:true},
 };
 
@@ -299,7 +300,7 @@ const FX_GROUPS = [
   ['継続・ターン', ['actsUp','regenHp','regenNp','regenStar','onHitNp','hitNpUp','onHitStar']],
   ['弱体', ['atkDown','npPowDown','defDown','critDown','starDown','debuffDown','poison','burn','spread','drain','curse','hitNpSeal','stun','charm','fear','actsDown','sealSkill','sealUlt','healBlock','buffImmune']],
   ['回復・即時', ['heal','np','star','starLoss','cleanse','cleanseMental','strip','buffExtend','skillCharge']],
-  ['攻撃・特殊', ['dmg','multiHit','selfDmg','instantDeath','copyRoll']],
+  ['攻撃・特殊', ['dmg','multiHit','aoe','selfDmg','instantDeath','copyRoll']],
   ['表示', ['desc']],
 ];
 function fxGroupOf(k){ const g=FX_GROUPS.find(([,ks])=>ks.includes(k)); return g?g[0]:'その他'; }
