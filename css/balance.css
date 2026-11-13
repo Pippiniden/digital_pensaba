@@ -8,8 +8,6 @@
 .opts label.chk{flex-direction:row;align-items:center;gap:6px;align-self:center}
 .opts label.dim{opacity:.45}
 .seg{display:flex;flex-wrap:wrap;gap:4px}
-.seg button{background:var(--panel2);box-shadow:none;border-color:var(--line)}
-.seg button.on{border-color:var(--gold-hi);color:var(--gold-hi);background:linear-gradient(180deg,#25407e,#16295a)}
 .srcs{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px}
 .src{display:flex;flex-direction:column;gap:2px;text-align:left;padding:8px 12px;background:var(--panel2);box-shadow:none;border-color:var(--line);align-items:flex-start}
 .src.on{border-color:var(--gold-hi);background:linear-gradient(180deg,#25407e,#16295a)}

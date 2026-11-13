@@ -122,8 +122,6 @@ body[data-screen="battle"] #app{overflow:hidden}
 .sk.np.ready i{color:#fff}
 @keyframes npbtn{from{box-shadow:0 0 4px rgba(246,227,161,.4)}to{box-shadow:0 0 14px rgba(246,227,161,.9)}}
 .ctl{flex:none;display:flex;align-items:center;gap:6px;font-size:12px}
-.ctl button{padding:1px 10px}
-.ctl .primary{padding:2px 14px}
 
 /* 中央 */
 .stage{position:relative;overflow:hidden;padding:8px 14px 10px;border-radius:6px;border:1px solid var(--gold);
@@ -243,7 +241,6 @@ body[data-screen="battle"] #app{overflow:hidden}
 .rcls{display:flex;flex-wrap:wrap;gap:4px}
 .rchip{width:34px;height:34px;padding:0;justify-content:center;font:700 12px var(--serif)}
 .rchip img{width:24px;height:24px}
-.rchip.on{border-color:var(--gold-hi);background:linear-gradient(180deg,var(--gold-hi),var(--gold));color:#1a1206;box-shadow:0 0 8px rgba(246,227,161,.5)}
 .rrow2{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .rfilter input[type=search],.rfilter select{font:inherit;font-size:13px;color:var(--ink);padding:4px 8px;border-radius:4px;border:1px solid var(--gold-lo);background:#0d1a40}
 .rfilter .rq{flex:1 1 140px;min-width:0}
@@ -302,7 +299,6 @@ body[data-screen="mode"] #app{position:relative} /* 背景（position:fixed）�
 .datainfo{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 12px;border:1px dashed var(--gold-lo);border-radius:4px;font-size:13px;background:rgba(10,21,51,.6)}
 .rules{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:16px}
 .rules .rlabel{font:700 12px var(--serif);color:var(--gold-hi);letter-spacing:.1em}
-.rules button.on{color:#1a1206;font-weight:700;border-color:var(--gold-hi);background:linear-gradient(180deg,var(--gold-hi),var(--gold))}
 .rules .hcap{margin-left:auto}
 .rules p{flex-basis:100%;margin:0}
 /* メインメニュー（階層）：トップの4つ・戻る・各段階 */
@@ -345,7 +341,6 @@ body[data-screen="mode"] #app{position:relative} /* 背景（position:fixed）�
 .setrow{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 14px;border:1px solid var(--gold-lo);border-radius:6px;background:rgba(6,13,34,.6)}
 .setrow small{display:block}
 .seg{display:flex;gap:6px}
-.seg button.on{color:#1a1206;font-weight:700;border-color:var(--gold-hi);background:linear-gradient(180deg,var(--gold-hi),var(--gold))}
 /* ルール説明・状態異常の説明（階層化した折り畳み） */
 .guides{margin-top:28px;display:flex;flex-direction:column;gap:10px}
 .gtop{border:1px solid var(--gold-lo);border-radius:6px;background:rgba(6,13,34,.6)}
@@ -675,15 +670,13 @@ body[data-screen="mode"] #app{position:relative} /* 背景（position:fixed）�
 
 /* ---------- キャラクター選択の ⓘ ---------- */
 .tile .tinfo{position:absolute;right:6px;bottom:8px;z-index:3;display:grid;place-items:center;color:var(--ink);cursor:pointer;
-  border:1px solid var(--gold-lo);background:linear-gradient(180deg,#2550a8,#163474 55%,#11295c)}
+  border:1px solid var(--gold-lo);background:var(--btn-bg)}
 .tile .tinfo:hover,.tile .tinfo:focus-visible{border-color:var(--gold-hi);box-shadow:0 0 8px rgba(214,178,94,.5)}
 .tile .tname{padding-right:32px}
 
 /* ---------- リザルトの詳細（タブ） ---------- */
 .result .mbody{width:min(680px,100%)}
 .rtabs{display:flex;flex-wrap:wrap;justify-content:center;gap:4px;margin:0 0 10px}
-.rtabs button{padding:3px 12px;font-size:12.5px}
-.rtabs button.on{color:#1a1206;font-weight:700;border-color:var(--gold-hi);background:linear-gradient(180deg,var(--gold-hi),var(--gold))}
 .rbody{margin-bottom:14px;text-align:left}
 .rbody .rsides{margin-bottom:0}
 .mvp{font:700 10px var(--serif);font-style:normal;color:#1a1206;background:var(--gold-hi);border-radius:2px;padding:0 4px;letter-spacing:.08em}

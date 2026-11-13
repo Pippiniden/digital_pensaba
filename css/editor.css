@@ -6,8 +6,6 @@
 @media (max-width:1200px){.ed{grid-template-columns:210px minmax(0,1fr)} #side{grid-column:1/-1}}
 @media (max-width:760px){.ed{grid-template-columns:1fr} header{position:static}}
 @media (min-width:761px){#list{position:sticky;top:72px}}
-button.small{font-size:12px;padding:3px 10px}
-button.danger{color:var(--r)}
 
 /* 一覧 */
 .ulist{display:flex;flex-direction:column;gap:4px;margin:8px 0;max-height:60vh;overflow:auto}
@@ -174,7 +172,6 @@ table.simmx td.self{color:var(--sub)}
 .xbody{display:flex;flex-direction:column;gap:8px;padding:4px 10px 10px;border-top:1px solid var(--line)}
 .xrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding-top:6px}
 .xlab{font-size:12px;color:var(--sub);margin-right:4px}
-.xrow button.on,.xclsbtn.on{border-color:var(--gold-hi);color:var(--gold-hi)}
 .xcls{display:flex;gap:8px;align-items:flex-start}
 .xclsbtn{flex:none;min-width:130px;justify-content:flex-start;gap:6px;background:var(--panel2);box-shadow:none}
 .xclsbtn img{width:18px;height:18px}
@@ -187,8 +184,7 @@ table.simmx td.self{color:var(--sub)}
 
 /* タブ（サーヴァント／マスター） */
 .edtabs{display:flex;gap:4px;margin-bottom:10px}
-.edtabs button{flex:1;justify-content:center;font-family:var(--serif);background:var(--panel2);border-color:var(--line);box-shadow:none;color:var(--sub)}
-.edtabs button.on{color:var(--gold-hi);border-color:var(--gold-hi);background:linear-gradient(180deg,rgba(214,178,94,.28),var(--panel2));box-shadow:0 0 8px rgba(214,178,94,.3)}
+.edtabs button{flex:1}
 
 /* マスター：補助の6面 */
 .mfaceed{display:grid;gap:6px;margin-top:10px}
@@ -212,7 +208,6 @@ label.mini.chk{cursor:pointer}
 .ctedit{margin-top:10px}
 .ctbr{display:flex;flex-wrap:wrap;align-items:center;gap:4px;font-size:15px}
 .ctbr-lab{font-size:12px;color:var(--sub);margin-right:4px}
-.ctbr button.on{background:var(--gold);color:#1a1205;border-color:var(--gold)}
 .ctbr-chars{display:inline-flex;flex-wrap:wrap;align-items:center;margin-left:6px;font-family:"Noto Serif JP",serif}
 .ctbr-chars .ctgap{all:unset;display:inline-block;width:10px;height:26px;cursor:pointer;position:relative}
 .ctbr-chars .ctgap::after{content:"";position:absolute;left:4px;top:4px;bottom:4px;width:1px;background:var(--line)}

@@ -147,11 +147,11 @@ function masterChipHTML(m){
 // マスターフェイズの選択肢
 function masterPromptHTML(){
   const m=masterOf(G.cur), d=D(m.def), P=G.players[G.cur], em=masterOf(1-G.cur), es=alive(1-G.cur)[0], rs=ruleset();
-  const spells=(a,extra='')=>d.spells.map((s,i)=>`<button class="primary" data-a="${a}" data-i="${i}" ${extra} title="${esc(effsText(s.eff,null,mTLabel))}">${esc(s.name)}</button>`).join('');
+  const spells=(a,extra='')=>d.spells.map((s,i)=>`<button data-a="${a}" data-i="${i}" ${extra} title="${esc(effsText(s.eff,null,mTLabel))}">${esc(s.name)}</button>`).join('');
   if(G.spellPick){ // 対象の選択待ち（令呪・補助）。補助はロール済みなのでキャンセル不可
     const sp=G.spellPick, s=sp.sup||d.spells[sp.i], who=sp.side==='enemy'?`敵の${TERMS.unit}`:sp.side==='own'?`自軍の${TERMS.unit}`:TERMS.unit;
     const nmTxt=s.name||s.label;
-    return `<p class="hl">${nmTxt?`「${esc(nmTxt)}」`:'補助効果'}の対象にする${who}を選んでください</p><p class="sub small">${esc(spellText(s))}</p>${sp.sup?'':'<button data-a="cancelPick">キャンセル</button>'}`;
+    return `<p class="hl">${nmTxt?`「${esc(nmTxt)}」`:'補助効果'}の対象にする${who}を選んでください</p><p class="sub small">${esc(spellText(s))}</p>${sp.sup?'':'<button class="ghost" data-a="cancelPick">キャンセル</button>'}`;
   }
   if(P.spell==='decl') return `<p>宣言した<b class="hl">令呪</b>を1つ選んで発動します。</p><div class="row mopts">${spells('masterSpellUse')}</div>`;
   if(rs.mTeam){ // マスターチーム：補助か令呪（3画・同じ効果は1回）
@@ -161,7 +161,7 @@ function masterPromptHTML(){
       ${d.spells.map((s,i)=>`<button data-a="masterSpell" data-i="${i}" ${can&&!P.spellUsed[i]?'':'disabled'} title="${esc(spellText(s))}（行動回数-1）">${esc(s.name)}${P.spellUsed[i]?'（使用済み）':''}</button>`).join('')}</div>
       <p class="sub small">令呪は残り${P.spellLeft}画。使うと行動回数が1回減ります${can||!P.spellLeft?'':`（${TERMS.unit}が1騎でも行動0回のターンは使えません）`}。</p>`;
   }
-  if(UI.spellPick) return `<p>★${rs.spellNowStars}（クリティカルLv4）を消費して、令呪をすぐに使います。</p><div class="row mopts">${spells('masterSpell','data-now="1"')}<button data-ui="spellPick">戻る</button></div>`;
+  if(UI.spellPick) return `<p>★${rs.spellNowStars}（クリティカルLv4）を消費して、令呪をすぐに使います。</p><div class="row mopts"><button class="back" data-ui="spellPick">戻る</button>${spells('masterSpell','data-now="1"')}</div>`;
   const atkM=em&&!em.out, evac=atkM&&G.players[em.pid].evac, canSp=canDeclareSpell();
   return `<p>${TERMS.player}の行動を1つ選びます。</p><div class="row mopts">
     <button class="primary" data-a="masterSupport" title="${TERMS.player}の鉛筆を振り、出た面の効果をこのターンだけ適用">🎲 ${MASTER_ACTS.support}</button>
@@ -178,9 +178,9 @@ const spellText = s=>effsText(s.eff,null,spellTgt);
 function guardPromptHTML(){
   const g=G.guard, dp=1-G.cur, em=masterOf(dp), who=`<b class="p${dp}">${esc(G.players[dp].name)}</b>`;
   if(g.kind==='spell') return `<p class="hl">${who}：${nm(em)}への攻撃（${g.dmg}ダメージ）を、令呪1画を使って${TERMS.unit}に守らせますか？</p>
-    <div class="row"><button class="primary" data-a="guard" data-to="block">令呪で守る</button><button data-a="guard" data-to="take">受ける</button></div>`;
+    <div class="row"><button data-a="guard" data-to="take">受ける</button><button class="primary" data-a="guard" data-to="block">令呪で守る</button></div>`;
   return `<p class="hl">${who}：${TERMS.player}への攻撃を、どちらで受けますか？</p>
-    <div class="row"><button class="primary" data-a="guard" data-to="svt">${TERMS.unit}で受ける</button><button data-a="guard" data-to="master">${TERMS.player}で受ける</button></div>`;
+    <div class="row"><button data-a="guard" data-to="master">${TERMS.player}で受ける</button><button class="primary" data-a="guard" data-to="svt">${TERMS.unit}で受ける</button></div>`;
 }
 
 // ---------- 対戦画面：中央 ----------
@@ -196,8 +196,8 @@ function promptHTML(){
     case 'guard': return guardPromptHTML();
     case 'skill':
       return G.pending
-        ? `<p class="hl">「${esc(pendingSkill().name)}」の対象を選んでください</p><button data-a="cancelPick">キャンセル</button>`
-        : `<p>スキル・${TERMS.ult}を使えます。${TERMS.ult}は${TERMS.gauge}${RULES.ultCost}%以上・1ターン1回。</p>${G.ult?`<p class="hl">${nm(U(G.ult))}が${TERMS.ult}を使用予定 <button class="small" data-a="cancelUlt" title="${TERMS.gauge}を戻して取り消します（このフェイズの間だけ）">取り消す</button></p>`:''}<button class="primary big" data-a="skillDone">${G.ult?'攻撃対象の選択へ':'行動決定へ'}</button>`;
+        ? `<p class="hl">「${esc(pendingSkill().name)}」の対象を選んでください</p><button class="ghost" data-a="cancelPick">キャンセル</button>`
+        : `<p>スキル・${TERMS.ult}を使えます。${TERMS.ult}は${TERMS.gauge}${RULES.ultCost}%以上・1ターン1回。</p>${G.ult?`<p class="hl">${nm(U(G.ult))}が${TERMS.ult}を使用予定 <button class="small ghost" data-a="cancelUlt" title="${TERMS.gauge}を戻して取り消します（このフェイズの間だけ）">取り消す</button></p>`:''}<button class="primary big" data-a="skillDone">${G.ult?'攻撃対象の選択へ':'行動決定へ'}</button>`;
     case 'action': {
       const left=remainingRolls();
       if(G.copy) return `<p class="hl">${nm(U(G.copy.uid))}：ロールする${TERMS.unit}を選んでください（敵味方どちらでも・${TERMS.asc}後コマンドを使用）</p>`;
@@ -211,7 +211,7 @@ function promptHTML(){
       return `<p>ダメージフェイズが終わりました。</p><button class="primary big" data-a="endTurn">ターン終了</button>`;
     case 'over':
       if(!UI.endReady) return ''; // 決着の演出（VICTORY の帯）が終わってから出す
-      return `<p class="win">${G.mode==='cpu'?(G.winner===0?'勝利！':'敗北…'):`${esc(G.players[G.winner].name)} の勝利！`}</p><div class="row"><button class="primary" data-a="rematch">もう一度</button><button data-ui="openResult">リザルト</button><button data-a="restart">タイトルに戻る</button></div>`;
+      return `<p class="win">${G.mode==='cpu'?(G.winner===0?'勝利！':'敗北…'):`${esc(G.players[G.winner].name)} の勝利！`}</p><div class="row"><button class="ghost" data-a="restart">タイトルに戻る</button><button data-ui="openResult">リザルト</button><button class="primary" data-a="rematch">もう一度</button></div>`;
   }
   return '';
 }
@@ -314,7 +314,7 @@ function critInfo(stars){
   const lv=critLevel(stars); return lv?`Lv${lv}・${critChance(lv)}%`:'判定なし';
 }
 function logHTML(){
-  return `<aside class="logpane"><div class="loghead"><b>バトルログ</b><button class="small" data-ui="toggleLog">閉じる</button></div>
+  return `<aside class="logpane"><div class="loghead"><b>バトルログ</b><button class="small ghost" data-ui="toggleLog">閉じる</button></div>
     <div id="log" class="log">${G.log.slice(-200).map(l=>`<div class="${l.cls}">${l.msg}</div>`).join('')}</div></aside>`;
 }
 
@@ -348,7 +348,7 @@ function linkModalHTML(){
   return `<div class="modal linkask"><div class="mback" data-ui="linkCancel"></div>
     <div class="mbody"><p>外部サイトを別タブで開きます。</p><p class="sub small linkurl">${esc(UI.linkAsk)}</p>
       <label class="rok"><input type="checkbox" id="linkNoAsk">今後は確認しない</label>
-      <div class="row"><button class="primary" data-ui="linkGo">開く</button><button data-ui="linkCancel">やめる</button></div></div></div>`;
+      <div class="row"><button class="ghost" data-ui="linkCancel">やめる</button><button class="primary" data-ui="linkGo">開く</button></div></div></div>`;
 }
 // 設定（保存される項目をすべて）。タイトル画面の設定パネルとメニューの設定ウィンドウで共有する
 function settingsBodyHTML(){
@@ -366,11 +366,11 @@ function settingsBodyHTML(){
 }
 function settingsModalHTML(){
   if(!UI.settings) return '';
-  return `<div class="modal navmodal"><div class="mback" data-ui="closeSettings"></div><div class="mbody navpanel"><div class="navbar"><button data-ui="closeSettings">✕ 閉じる</button></div><p class="navtitle">設定</p>${settingsBodyHTML()}</div></div>`;
+  return `<div class="modal navmodal"><div class="mback" data-ui="closeSettings"></div><div class="mbody navpanel"><div class="navbar"><button class="back" data-ui="closeSettings">閉じる</button></div><p class="navtitle">設定</p>${settingsBodyHTML()}</div></div>`;
 }
 function tutorialModalHTML(){
   if(!UI.tut) return '';
-  return `<div class="modal navmodal"><div class="mback" data-ui="closeTutorial"></div><div class="mbody navpanel"><div class="navbar"><button data-ui="closeTutorial">✕ 閉じる</button></div><p class="navtitle">チュートリアル</p>${rulesGuideHTML(false)}${statusGuideHTML(false)}</div></div>`;
+  return `<div class="modal navmodal"><div class="mback" data-ui="closeTutorial"></div><div class="mbody navpanel"><div class="navbar"><button class="back" data-ui="closeTutorial">閉じる</button></div><p class="navtitle">チュートリアル</p>${rulesGuideHTML(false)}${statusGuideHTML(false)}</div></div>`;
 }
 function masterDetailHTML(d,m){
   const fx=m&&m.fx.length?`<h4>効果</h4><div class="fxs open">${m.fx.map(e=>`<span class="chip fx ${FX[e.k].buff?'buff':'debuff'}">${fxText(e)}${e.tmp?'（このターン）':''}</span>`).join('')}</div>`:'';
@@ -412,7 +412,7 @@ function resultHTML(){
       <p class="sub small rturn">${esc(ruleset().name)}ルール ・ 経過ターン <b>${G.turn}</b></p>
       <div class="rtabs" role="tablist">${Object.entries(RTABS).map(([k,v])=>`<button role="tab" aria-selected="${tab===k}" class="${tab===k?'on':''}" data-ui="rtab" data-v="${k}">${v}</button>`).join('')}</div>
       <div class="rbody">${body}</div>
-      <div class="row"><button class="primary" data-a="rematch">もう一度</button><button data-a="restart">タイトルに戻る</button><button data-ui="closeResult">盤面を見る</button></div>
+      <div class="row"><button class="ghost" data-a="restart">タイトルに戻る</button><button data-ui="closeResult">盤面を見る</button><button class="primary" data-a="rematch">もう一度</button></div>
     </div></div>`;
 }
 function resultSumHTML(){
@@ -468,7 +468,7 @@ function setupHTML(){
         <p class="sub small nm">${solo?`${rs.name}ルール：${TERMS.unit}を1騎${rs.master?`と${TERMS.player}を1人`:''}選びます。${handicapNote(pid)}`:`${rs.master?`${TERMS.player}1人と`:''}コスト合計${cap}以下${rs.master?`（${TERMS.player}込み）`:''}・最大${rs.partyMax}騎。選んだ順に 1st / 2nd / 3rd。`}</p></div>
       <div class="slots">${slots}</div>
       <div class="costm" ${solo?'hidden':''}><span>COST</span><b>${cost}</b><small>/ ${cap}</small><div class="bar"><i style="width:${pctOf(cost,cap)}%"></i></div></div>
-      <div class="setbtns ${mr?'wide':''}"><select class="rcost" data-rcost title="おまかせ（ランダム）で選ぶ${solo?'':'合計'}コスト${mr?`（${TERMS.player}込み）`:''}を指定します">${['',...Array.from({length:cap+1},(_,i)=>i)].map(c=>`<option value="${c}" ${String(c)===String(UI.rcost??'')?'selected':''}>${c===''?'コスト指定なし':`コスト ${c}`}</option>`).join('')}</select>${pid===0?`<button data-a="restart" data-keepnav="1" title="メニューに戻ります">← 戻る</button>`:''}${pid===1?`<button data-a="setupBack" title="${esc(G.players[0].name)}の編成に戻ります（ここまでの選択は残ります）">← 戻る</button>`:''}${isCpu(pid)
+      <div class="setbtns ${mr?'wide':''}">${pid===0?`<button class="back" data-a="restart" data-keepnav="1" title="メニューに戻ります">戻る</button>`:''}${pid===1?`<button class="back" data-a="setupBack" title="${esc(G.players[0].name)}の編成に戻ります（ここまでの選択は残ります）">戻る</button>`:''}<select class="rcost" data-rcost title="おまかせ（ランダム）で選ぶ${solo?'':'合計'}コスト${mr?`（${TERMS.player}込み）`:''}を指定します">${['',...Array.from({length:cap+1},(_,i)=>i)].map(c=>`<option value="${c}" ${String(c)===String(UI.rcost??'')?'selected':''}>${c===''?'コスト指定なし':`コスト ${c}`}</option>`).join('')}</select>${isCpu(pid)
         ?`<button data-a="setupCpu" data-how="same" title="相手と同じ${solo?'コスト':'合計コスト・人数'}になるように選びます">おまかせ（同コスト）</button><button data-a="setupCpu" data-how="random" title="コスト上限の中から完全にランダムに選びます">おまかせ（ランダム）</button>`
         :`<button data-a="setupRandom">おまかせ</button>`}${mr?`<button data-a="setupRandom" data-only="svt" title="選んだ${TERMS.player}はそのままで、${TERMS.unit}だけランダムに選びます">${TERMS.unit}だけおまかせ</button><button data-a="setupRandom" data-only="master" title="選んだ${TERMS.unit}はそのままで、${TERMS.player}だけランダムに選びます">${TERMS.player}だけおまかせ</button>`:''}<button class="primary big" data-a="setupConfirm" ${picks.length&&(!masterRule()||G.mpicks[pid])?'':'disabled'}>決定</button></div>
     </div>
@@ -615,7 +615,7 @@ function modeHTML(){
     + (UNIT_BROKEN||MASTER_BROKEN ? `<p class="datainfo warn">エディタの${UNIT_BROKEN?TERMS.unit:TERMS.player}データにエラーがあったため、標準データを使っています。</p>` : '');
   const show=showcaseHTML(), nav=UI.nav, s=nav.s;
   const head=`<div class="title"><small>Fate fan-made pencil battle</small><h2>PENCIL DUEL</h2></div>`;
-  const back=(label='← 戻る')=>`<div class="navbar"><button data-ui="navBack">${label}</button></div>`;
+  const back=(label='戻る')=>`<div class="navbar"><button class="back" data-ui="navBack">${label}</button></div>`;
   // ルール選択（クイックバトル・ローカル対戦の最初の段階）
   const rulePick=(nextBtn)=>`<div class="navstep"><h3>ルールを選ぶ</h3><div class="rules">
       ${Object.entries(RULESETS).map(([k,r])=>`<button class="gbtn ${G.rule===k?'p':''}" data-a="setRule" data-rule="${k}">${esc(r.name)}</button>`).join('')}
@@ -625,9 +625,9 @@ function modeHTML(){
   let panel='';
   if(s==='quick'&&nav.step==='level'){
     const lv=CPU_LEVELS[nav.level]?nav.level:'normal';
-    panel=`${back()}<div class="navstep"><h3>CPUの強さ</h3><div class="levels">${Object.entries(CPU_LEVELS).map(([k,l])=>`<button class="gbtn ${k===lv?'p':''}" data-ui="navLevel" data-level="${k}">${esc(l.name)}</button>`).join('')}</div><div class="row mt"><button class="gbtn p" data-a="chooseMode" data-mode="cpu" data-level="${lv}">次へ</button></div></div>`;
-  }else if(s==='quick') panel=`${back()}<p class="navtitle">クイックバトル</p>${rulePick('<button class="gbtn p" data-ui="navNext">次へ</button>')}`;
-  else if(s==='local') panel=`${back()}<p class="navtitle">ローカル対戦</p>${rulePick('<button class="gbtn p" data-a="chooseMode" data-mode="pvp">はじめる</button>')}`;
+    panel=`${back()}<div class="navstep"><h3>CPUの強さ</h3><div class="levels">${Object.entries(CPU_LEVELS).map(([k,l])=>`<button class="gbtn ${k===lv?'p':''}" data-ui="navLevel" data-level="${k}">${esc(l.name)}</button>`).join('')}</div><div class="row mt"><button class="gbtn go" data-a="chooseMode" data-mode="cpu" data-level="${lv}">次へ</button></div></div>`;
+  }else if(s==='quick') panel=`${back()}<p class="navtitle">クイックバトル</p>${rulePick('<button class="gbtn go" data-ui="navNext">次へ</button>')}`;
+  else if(s==='local') panel=`${back()}<p class="navtitle">ローカル対戦</p>${rulePick('<button class="gbtn go" data-a="chooseMode" data-mode="pvp">はじめる</button>')}`;
   else if(s==='tutorial') panel=`${back()}<p class="navtitle">チュートリアル</p>${rulesGuideHTML(false)}${statusGuideHTML(false)}`;
   else if(s==='settings') panel=`${back()}<p class="navtitle">設定</p>${settingsBodyHTML()}`;
   const top=`<div class="showcase">${show}</div>${src}
@@ -636,6 +636,7 @@ function modeHTML(){
       <button class="gbtn" data-ui="nav" data-s="local">ローカル対戦</button>
       <button class="gbtn" data-ui="nav" data-s="tutorial">チュートリアル</button>
       <button class="gbtn" data-ui="nav" data-s="settings">設定</button>
+      <a class="gbtn editorlink" href="editor.html">ペンシルエディタ</a>
     </div>`;
   return `<div class="mode">${head}${top}</div>${panel?`<div class="modal navmodal"><div class="mback" data-ui="navClose"></div><div class="mbody navpanel">${panel}</div></div>`:''}`;
 }

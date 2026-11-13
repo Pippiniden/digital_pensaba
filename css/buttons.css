@@ -1,0 +1,139 @@
+/* ボタンの見た目はこのファイルだけで決める（base.css・game.css・editor.css の後に読み込む）。
+   考え方は docs/ui-design.md：
+   ・形は1つ（角丸3pxの長方形＋金の細枠。パネルと同じ二重枠）
+   ・金で塗るのは「進む」ボタンだけ（.primary / .gbtn.go）
+   ・選択中は塗らずに「金の枠＋金の文字」（.on / .p / aria-selected）
+   ・戻る・閉じる・ヘッダーは控えめ（.back / .ghost）
+   ・大きさは 小(.small) / 中(既定) / 大(.big・メニューパネル) の3段階
+   キャラタイル・スキルボタン・ⓘ など「部品」は game.css 側で独自に描くので、ここでは触らない */
+
+:root{
+  --btn-r:3px;
+  --btn-ink:#e6ecff;
+  --btn-bg:linear-gradient(180deg,#1b3270 0%,#132656 55%,#0e1d45 100%);
+  --btn-ring:inset 0 0 0 1px rgba(6,13,34,.85),inset 0 0 0 2px rgba(214,178,94,.16),inset 0 1px 0 rgba(255,255,255,.07);
+  --btn-glow:0 0 10px rgba(214,178,94,.3);
+  --gold-fill:linear-gradient(180deg,#fbeec0 0%,#ecd085 45%,#d6ae55 55%,#b48b3a 100%);
+  --gold-ring:0 0 0 1px #5e4719,0 2px 8px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.7),inset 0 -1px 0 rgba(90,60,10,.45);
+  --pick-bg:linear-gradient(180deg,rgba(214,178,94,.22),rgba(214,178,94,.05));
+}
+
+/* ---------- 中（通常）：濃紺＋金の細枠 ---------- */
+button,a.btn{font:inherit;font-size:13.5px;letter-spacing:.04em;color:var(--btn-ink);cursor:pointer;text-decoration:none;
+  display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:6px 16px;
+  border:1px solid var(--gold-lo);border-radius:var(--btn-r);background:var(--btn-bg);box-shadow:var(--btn-ring);
+  transition:border-color .12s,box-shadow .12s,color .12s,filter .12s,transform .05s}
+button:hover:not(:disabled),a.btn:hover{border-color:var(--gold);color:#fff;box-shadow:var(--btn-ring),var(--btn-glow)}
+button:active:not(:disabled),a.btn:active{transform:translateY(1px)}
+button:disabled{opacity:.4;cursor:default;filter:grayscale(.5)}
+button:focus-visible,a.btn:focus-visible{outline:1px solid var(--gold-hi);outline-offset:2px}
+
+/* ---------- 決定（主役）：金の塗り。1つのまとまりに1つだけ ---------- */
+button.primary,.navpanel .gbtn.go{color:#24180a;font-family:var(--serif);font-weight:700;letter-spacing:.08em;
+  border:1px solid #fff0c0;background:var(--gold-fill);box-shadow:var(--gold-ring);text-shadow:0 1px 0 rgba(255,255,255,.35)}
+button.primary:hover:not(:disabled),.navpanel .gbtn.go:hover{color:#24180a;border-color:#fff6d6;filter:brightness(1.06);
+  box-shadow:var(--gold-ring),0 0 16px rgba(246,227,161,.55)}
+button.primary:disabled{opacity:.45;filter:grayscale(.85)}
+
+/* ---------- 控えめ：戻る・閉じる・キャンセル・ヘッダー ---------- */
+button.back,button.ghost,.mclose,header button,header a.btn{color:var(--sub);background:rgba(6,13,34,.45);
+  border:1px solid rgba(157,176,220,.3);box-shadow:none;text-shadow:none;font-family:inherit;font-weight:500}
+button.back:hover:not(:disabled),button.ghost:hover:not(:disabled),.mclose:hover,header button:hover:not(:disabled),header a.btn:hover{
+  color:var(--ink);border-color:var(--gold);background:rgba(20,38,86,.6);box-shadow:var(--btn-glow)}
+/* 戻る：左向きの山形を付ける（文字は「戻る」「閉じる」だけでよい） */
+button.back{padding-left:12px}
+button.back::before{content:"";width:6px;height:6px;margin-right:2px;border:solid currentColor;border-width:0 0 1.5px 1.5px;transform:rotate(45deg)}
+
+/* ---------- 大きさ ---------- */
+button.small,.ctl button,.prompt button.small{padding:3px 10px;font-size:12px}
+button.big{padding:8px 24px;font-size:15px;white-space:nowrap}
+@media (max-width:860px){
+  button.big{padding:6px 14px;font-size:13.5px;letter-spacing:.04em}
+}
+.ctl button.primary{padding:3px 14px;font-size:12.5px}
+
+/* ---------- ヘッダー：小さく静かに。オートONなど「入っている」ものは金の文字 ---------- */
+header button,header a.btn{padding:4px 12px;font-size:12.5px}
+header button.on{color:var(--gold-hi);border-color:var(--gold)}
+#menubtn{padding:0}
+@media (max-width:860px){
+  #menu button,#menu a.btn{padding:8px 12px;font-size:13.5px}
+}
+
+/* ---------- 選択肢：未選択は沈んだ濃紺、選択中は金の枠＋金の文字（塗らない） ---------- */
+.seg button,.rchip,.xrow button,.xclsbtn,.ctbr button,.navpanel .gbtn:not(.go){color:var(--sub);background:rgba(6,13,34,.55);
+  border:1px solid var(--line);box-shadow:none;font-weight:500}
+.seg button:hover:not(:disabled),.rchip:hover,.xrow button:hover:not(:disabled),.xclsbtn:hover,.ctbr button:hover:not(:disabled),.navpanel .gbtn:not(.go):hover{
+  color:var(--ink);border-color:#5677bd;background:rgba(20,38,86,.6);box-shadow:none}
+.seg button.on,.rchip.on,.xrow button.on,.xclsbtn.on,.ctbr button.on,.navpanel .gbtn.p:not(.go),
+.seg button.on:hover,.rchip.on:hover,.navpanel .gbtn.p:not(.go):hover{
+  color:var(--gold-hi);font-weight:700;border-color:var(--gold);background:var(--pick-bg);
+  box-shadow:inset 0 0 0 1px rgba(246,227,161,.2),0 0 10px rgba(214,178,94,.25)}
+/* .seg は1本につなげる */
+.seg{gap:0}
+.seg button{border-radius:0;padding:5px 16px}
+.seg button+button{margin-left:-1px}
+.seg button:first-child{border-radius:var(--btn-r) 0 0 var(--btn-r)}
+.seg button:last-child{border-radius:0 var(--btn-r) var(--btn-r) 0}
+.seg button.on{position:relative;z-index:1}
+
+/* ---------- メニューパネルの大きいボタン（ルール・強さ・次へ） ---------- */
+.navpanel .gbtn{display:flex;width:280px;max-width:100%;margin:0 auto;padding:11px 12px;outline:0;border-radius:var(--btn-r);
+  font:500 16px var(--serif);letter-spacing:.16em}
+.navpanel .gbtn::before,.navpanel .gbtn::after{display:none}
+/* 選択中は左右に金の菱形（FGO風の飾り）。決定の .go には付けない */
+.navpanel .gbtn.p:not(.go)::before,.navpanel .gbtn.p:not(.go)::after{display:block;content:"";position:absolute;top:50%;width:7px;height:7px;margin-top:-4px;
+  background:var(--gold-hi);transform:rotate(45deg);box-shadow:0 0 6px rgba(246,227,161,.8)}
+.navpanel .gbtn.p:not(.go)::before{left:14px}.navpanel .gbtn.p:not(.go)::after{right:14px}
+.navpanel .gbtn.go{font-weight:700;letter-spacing:.2em}
+.navpanel .rules,.navpanel .levels{display:flex;flex-direction:column;align-items:center;gap:10px}
+.navpanel .row.mt{margin-top:20px}
+@media (max-width:860px){.navpanel .gbtn{width:240px;padding:10px;font-size:15px}}
+
+/* ---------- タブ：文字だけ。選択中は金の文字＋下線 ---------- */
+.rtabs,.edtabs{border-bottom:1px solid var(--line)}
+.rtabs{gap:2px}
+.rtabs button,.edtabs button,button[role=tab]{color:var(--sub);background:none;border:0;border-bottom:2px solid transparent;border-radius:0;
+  margin-bottom:-1px;padding:6px 14px;box-shadow:none;font-family:var(--serif);font-size:13px;letter-spacing:.06em;white-space:nowrap}
+.edtabs button{padding:6px 8px}
+@media (max-width:860px){.rtabs{flex-wrap:nowrap}.rtabs button{padding:6px 7px;font-size:12px;letter-spacing:0}}
+.rtabs button:hover:not(:disabled),.edtabs button:hover:not(:disabled),button[role=tab]:hover:not(:disabled){color:var(--ink);background:none;box-shadow:none}
+.rtabs button.on,.edtabs button.on,button[role=tab][aria-selected=true]{color:var(--gold-hi);font-weight:700;border-bottom-color:var(--gold);
+  background:linear-gradient(0deg,rgba(214,178,94,.14),transparent 70%);text-shadow:0 0 10px rgba(246,227,161,.4)}
+
+/* ---------- 並べ方：主役は右端。間隔は同じグループ 8px ---------- */
+.setbtns{gap:8px}
+.prompt .row,.modal .row{gap:8px}
+.modal.result .row,.linkask .row{justify-content:flex-end}
+
+/* ---------- タイトル画面：エディタへの入口は小さく一番下に ---------- */
+.topmenu a.editorlink{display:block;text-decoration:none;margin-top:10px;padding:10px 12px;font-size:14px;opacity:.75}
+.topmenu a.editorlink:hover{opacity:1}
+
+/* ---------- 部品（スキル・ⓘ・×・リンク）も同じ「濃紺＋金の細枠」に揃える ---------- */
+/* スキル：使えるものは金の細枠＋明るい文字、使えないものは沈める。宝具だけはコマンド色（カードの色と同じ意味なので例外） */
+.sk{border-color:rgba(138,106,38,.75);font-weight:500;letter-spacing:.02em}
+.sk:disabled{opacity:.35;filter:none;border-color:var(--line);background:rgba(6,13,34,.5)}
+.sk.used{opacity:.22;text-decoration:line-through}
+.sk.np:disabled{opacity:.45}
+.sk.np.ready{color:#fff}
+/* ⓘ・× ：丸／四角の小さな控えめボタン。押せる合図（.canskill）だけ金で光らせる */
+.info,.tile .tinfo{color:var(--gold-hi);border:1px solid var(--gold-lo);background:var(--btn-bg);box-shadow:none}
+.info:hover:not(:disabled),.tile .tinfo:hover{color:#fff;border-color:var(--gold-hi);box-shadow:var(--btn-glow)}
+.mclose{font-size:15px;line-height:1}
+/* 外部リンク：通常ボタンと同じ形で、文字だけ金 */
+.linkbtn{display:inline-flex;align-items:center;gap:4px;padding:6px 16px;font:700 13px var(--serif);letter-spacing:.06em;color:var(--gold-hi);
+  border:1px solid var(--gold-lo);border-radius:var(--btn-r);background:var(--btn-bg);box-shadow:var(--btn-ring)}
+.linkbtn:hover{border-color:var(--gold);color:#fff;box-shadow:var(--btn-ring),var(--btn-glow)}
+/* マスターの折り畳み見出し・編成枠 */
+.mhead{border-radius:var(--btn-r);background:rgba(6,13,34,.6);box-shadow:none}
+.mhead:hover{border-color:var(--gold);box-shadow:none}
+.slot{border-radius:var(--btn-r)}
+/* 戦闘中の案内：狭い枠なので、2つ以上並ぶボタンは少し詰める（決着後の3つが1行に収まる） */
+.prompt .row button:not(.big){padding:5px 11px;font-size:12.5px}
+.prompt .row{flex-wrap:wrap}
+.prompt .row.mopts{justify-content:flex-start}
+
+/* ---------- 編集用の危険ボタン ---------- */
+button.danger{color:#ff9a8f}
+button.danger:hover:not(:disabled){border-color:var(--r);box-shadow:var(--btn-ring),0 0 10px rgba(226,72,60,.35)}
