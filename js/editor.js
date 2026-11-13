@@ -707,6 +707,35 @@ document.addEventListener('input',e=>{
   if(el.dataset.act==='structural') return full();
   light();
 });
+// JSON読み込みの方法を選ぶ：IDで同じキャラかどうかを判断する
+function askImport(inc,fname){
+  const L=list(), un=isM()?'人':'体', ids=new Set(L.map(x=>x.id));
+  const dup=inc.filter(x=>ids.has(x.id)), fresh=inc.filter(x=>!ids.has(x.id));
+  const dlg=document.querySelector('#impdlg'), nm=x=>esc(x.name||x.id);
+  dlg.innerHTML=`<h3>${esc(fname)} の読み込み方法</h3>
+    <p>${inc.length}${un}を読み込みます。IDが同じ（既存）：<b>${dup.length}</b>${un}／IDが新しい：<b>${fresh.length}</b>${un}</p>
+    ${dup.length?`<p class="sub">既存と同じID：${dup.map(nm).join('、')}</p>`:''}
+    ${fresh.length?`<p class="sub">新しいID：${fresh.map(nm).join('、')}</p>`:''}
+    <div class="impbtns">
+      <button data-imp="over">既存を書き換えて、新しいキャラも追加</button>
+      <button data-imp="new">いないキャラだけ追加（既存は変えない）</button>
+      <button data-imp="all" class="danger">一覧をすべて置き換える</button>
+      <button data-imp="cancel">キャンセル</button>
+    </div>`;
+  dlg.onclick=ev=>{
+    const m=ev.target.closest('[data-imp]'); if(!m) return;
+    const k=m.dataset.imp; dlg.close(); if(k==='cancel') return;
+    if(k==='all'){ if(isM()){ masters=inc; msel=0; } else { units=inc; sel=0; } rollIdx=null; full(); toast(`${fname} から${inc.length}${un}を読み込みました（全置き換え）`); return; }
+    const cl=list(); let ow=0, ad=0;
+    inc.forEach(x=>{
+      const i=cl.findIndex(y=>y.id===x.id);
+      if(i>=0){ if(k==='over'){ cl[i]=x; ow++; } }
+      else { const all=new Set([...units,...masters].map(y=>y.id)); if(all.has(x.id)) x.id=uniqueId(x.id); cl.push(x); ad++; }
+    });
+    rollIdx=null; full(); toast(`${fname}：${ow}${un}を書き換え、${ad}${un}を追加しました`);
+  };
+  dlg.showModal();
+}
 document.addEventListener('change',e=>{
   const el=e.target;
   if(el.id==='tplsel') tplKey=el.value;
@@ -740,8 +769,8 @@ document.addEventListener('change',e=>{
     const f=el.files[0], rd=new FileReader();
     rd.onload=()=>{
       try{
-        if(isM()){ masters=parseMastersFile(String(rd.result)); msel=0; rollIdx=null; full(); toast(`${f.name} から${TERMS.player}${masters.length}人を読み込みました`); }
-        else { units=parseUnitsFile(String(rd.result)); sel=0; rollIdx=null; full(); toast(`${f.name} から${units.length}体を読み込みました`); }
+        const inc=isM()?parseMastersFile(String(rd.result)):parseUnitsFile(String(rd.result));
+        askImport(inc,f.name);
       }
       catch(err){ toast(`読み込めませんでした：${err.message}`,true); }
       el.value='';

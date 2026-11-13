@@ -224,3 +224,8 @@ label.mini.chk{cursor:pointer}
 .ctprev{max-width:640px;border:1px solid var(--line);border-radius:4px;overflow:hidden;
   background:#0a0e1a conic-gradient(#141a2a 25%,#0d1220 0 50%,#141a2a 0 75%,#0d1220 0) 0 0/20px 20px}
 .ctprev .ct{width:100%}
+
+#impdlg{width:min(560px,calc(100% - 32px));padding:16px 20px;color:var(--ink);border:1px solid var(--gold);border-radius:6px;background:linear-gradient(160deg,#16295a,var(--panel) 40%,var(--panel2));box-shadow:var(--frame),var(--shadow)}
+#impdlg::backdrop{background:rgba(3,7,20,.7)}
+#impdlg h3{margin:0 0 8px} #impdlg .sub{font-size:12px;opacity:.8;margin:4px 0}
+#impdlg .impbtns{display:flex;flex-direction:column;gap:8px;margin-top:12px}
