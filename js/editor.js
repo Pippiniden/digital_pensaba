@@ -24,6 +24,7 @@ function boot(){
   const md=readJSON(STORE.mdraft);
   try{ masters = Array.isArray(md) ? md.map(normalizeMaster) : clone(loadMasters(units).masters); }
   catch(e){ masters=clone(loadMasters(units).masters); }
+  snapReset(); checkFile('units'); checkFile('masters');
   renderAll();
 }
 
@@ -158,7 +159,7 @@ const traitDatalist = ()=>`<datalist id="traitlist">${allTraits().map(t=>`<optio
 const ownLineIn=(p,arr,fallback)=>`<label class="ownline"><span>専用セリフ（任意）</span><textarea data-p="${p}" data-t="optlines" rows="${Math.max(1,(arr||[]).length)}" placeholder="空なら「${esc(fallback)}」のセリフ。1行に1つ">${esc((arr||[]).join(String.fromCharCode(10)))}</textarea></label>`;
 
 // ---------- 保存と再描画 ----------
-function saveDraft(){ writeJSON(STORE.draft,units); writeJSON(STORE.mdraft,masters); }
+function saveDraft(){ writeJSON(STORE.draft,units); writeJSON(STORE.mdraft,masters); stampEdits(); }
 // 再描画してもスクロール位置を保つ（フォームを丸ごと作り直すと、高さが一瞬縮んでページの先頭に戻されるため）
 function keepScroll(fn){
   const y=window.scrollY, form=document.querySelector('#form'), ul=document.querySelector('.ulist'), lt=ul?ul.scrollTop:0;
@@ -190,13 +191,158 @@ function issBoxHTML(i){
 function renderStatus(){
   const applied=isM()?loadMasters(units):loadUnits(), iss=issuesNow();
   const e=iss.filter(x=>x.level==='error').length, w=iss.filter(x=>x.level==='warn').length, bg=iss.filter(x=>x.level==='big').length, ln=iss.filter(x=>x.level==='line').length;
-  const dirty=JSON.stringify(list())!==JSON.stringify(isM()?applied.masters:applied.units);
+  const d=diffLists(list(),isM()?applied.masters:applied.units), dirty=d.rows.length||d.order;
+  const cnt=['chg','add','del'].map(k=>[k,d.rows.filter(r=>r.kind===k).length]).filter(([,n])=>n).map(([k,n])=>`${DIFF_KIND[k]}${n}`).join('・')||'並び順';
   document.querySelector('#status').innerHTML=
-    `<b class="sub">${isM()?TERMS.player:TERMS.unit}：</b><span class="${dirty?'dirty':'clean'}">${dirty?'● ゲームに未反映の変更があります':`✓ ゲームと同じ内容（${applied.source==='custom'?'反映済みデータ':'標準データ'}）`}</span>`+
+    `<b class="sub">${isM()?TERMS.player:TERMS.unit}：</b>`+(dirty
+      ?`<span class="dirty">● ゲームに未反映の変更（${cnt}）</span> <button class="small" data-act="diffOpen" title="どこが違うか・どちらが新しいかを表示">内容を見る</button>`
+      :`<span class="clean">✓ ゲームと同じ内容（${applied.source==='custom'?'反映済みデータ':'標準データ'}）</span>`)+
     ` <span class="sub">エラー${e}・${isM()?`大警告${bg}・小警告${w}`:`注意${w}`}${ln?`・セリフ${ln}`:''}</span>`;
   document.querySelector('#unapply').hidden = applied.source!=='custom';
   document.querySelector('#exportJS').textContent=`${isM()?'masters.js':'units.js'} を書き出し`;
   document.querySelector('#simbtn').hidden=isM(); // バランス検証はサーヴァントだけ
+  const dlg=document.querySelector('#diffdlg'); if(dlg&&dlg.open) renderDiff();
+}
+
+// ---------- 未反映の変更：どこが違うか・どちらが新しいか ----------
+// 下書きの編集時刻はキャラごとに記録する（saveDraft のたびに中身が変わったIDへ今の時刻）。
+// ゲーム側の時刻は「ゲームに反映」した時刻、または js/units.js・js/masters.js のファイル更新日時（サーバーの Last-Modified）
+const EDIT_KEY='pencilduel.editorEdits', APPLIED_AT={units:'pencilduel.unitsAt',masters:'pencilduel.mastersAt'};
+const DATA_FILE={units:'js/units.js',masters:'js/masters.js'};
+const DIFF_KIND={chg:'変更',add:'下書きだけ',del:'ゲームだけ'};
+let edits={units:{},masters:{}};
+try{ const o=JSON.parse(localStorage.getItem(EDIT_KEY)||'null'); if(o) edits={units:o.units||{},masters:o.masters||{}}; }catch(e){}
+const savedSnap={units:new Map(),masters:new Map()};
+const snapOf=L=>new Map(L.map(x=>[x.id,JSON.stringify(x)]));
+function snapReset(){ savedSnap.units=snapOf(units); savedSnap.masters=snapOf(masters); }
+function stampEdits(){
+  const now=Date.now(); let ch=false;
+  [['units',units],['masters',masters]].forEach(([k,L])=>{
+    const prev=savedSnap[k], next=snapOf(L);
+    next.forEach((s,id)=>{ if(prev.get(id)!==s){ edits[k][id]=now; ch=true; } });
+    prev.forEach((s,id)=>{ if(!next.has(id)){ edits[k][id]=now; ch=true; } });
+    savedSnap[k]=next;
+  });
+  if(ch) try{ localStorage.setItem(EDIT_KEY,JSON.stringify(edits)); }catch(e){}
+}
+const appliedAt=k=>{ try{ const v=+localStorage.getItem(APPLIED_AT[k]); return v>0?v:null; }catch(e){ return null; } };
+function setAppliedAt(k,on){ try{ if(on) localStorage.setItem(APPLIED_AT[k],String(Date.now())); else localStorage.removeItem(APPLIED_AT[k]); }catch(e){} }
+// js/units.js・js/masters.js を取り直して、更新日時と「ページを開いた後に書き換わったか」を調べる
+const FILE_INFO={}; // k → {at:ms|null, stale:bool, data:配列|null} / 'pending'
+function checkFile(k,force){
+  if(FILE_INFO[k]&&(!force||FILE_INFO[k]==='pending')) return;
+  FILE_INFO[k]='pending';
+  fetch(DATA_FILE[k],{cache:'no-store'}).then(async r=>{
+    if(!r.ok) throw 0;
+    const lm=r.headers.get('Last-Modified'), txt=await r.text();
+    let data=null; try{ data=k==='masters'?parseMastersFile(txt):parseUnitsFile(txt); }catch(e){}
+    const mem=k==='masters'?(typeof DEFAULT_MASTERS!=='undefined'?DEFAULT_MASTERS:[]).map(normalizeMaster):normalizeUnits(DEFAULT_UNITS);
+    FILE_INFO[k]={at:lm?Date.parse(lm):null, data, stale:!!data&&!deepEq(data,mem)};
+  }).catch(()=>{ FILE_INFO[k]={at:null,data:null,stale:false}; }).then(()=>renderStatus());
+}
+const fmtAt=t=>{ if(!t) return '不明'; const d=new Date(t), p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}/${p(d.getMonth()+1)}/${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`; };
+
+// 比較（キーの順番・undefined の項目は無視）
+const isObj=v=>v!==null&&typeof v==='object';
+const strArr=v=>Array.isArray(v)&&v.every(x=>typeof x==='string');
+function deepEq(a,b){
+  if(a===b) return true;
+  if(!isObj(a)||!isObj(b)||Array.isArray(a)!==Array.isArray(b)) return false;
+  const ka=Object.keys(a).filter(k=>a[k]!==undefined), kb=Object.keys(b).filter(k=>b[k]!==undefined);
+  return ka.length===kb.length&&ka.every(k=>deepEq(a[k],b[k]));
+}
+// 違う項目の一覧 [{p:[キー…], a:ゲーム側, b:下書き側, lines?:true}]。セリフ・属性のような文字列の配列はまとめて1項目
+function diffPaths(a,b,p=[],out=[]){
+  if(deepEq(a,b)) return out;
+  if((strArr(a)||strArr(b))&&(a==null||strArr(a))&&(b==null||strArr(b))){ out.push({p,a:a||[],b:b||[],lines:true}); return out; }
+  if(isObj(a)&&isObj(b)&&Array.isArray(a)===Array.isArray(b)){
+    [...new Set([...Object.keys(a),...Object.keys(b)])].forEach(k=>diffPaths(a[k],b[k],p.concat(k),out));
+    return out;
+  }
+  out.push({p,a,b}); return out;
+}
+// draft＝下書き、game＝比較先。rows: [{id, kind:'chg'|'add'|'del', d:下書き, g:比較先, diffs}]、order＝並び順だけ違う
+function diffLists(draft,game){
+  const gm=new Map(game.map(x=>[x.id,x])), dm=new Map(draft.map(x=>[x.id,x])), rows=[];
+  draft.forEach(d=>{ const g=gm.get(d.id);
+    if(!g) rows.push({id:d.id,kind:'add',d});
+    else if(!deepEq(d,g)) rows.push({id:d.id,kind:'chg',d,g,diffs:diffPaths(g,d)}); });
+  game.forEach(g=>{ if(!dm.has(g.id)) rows.push({id:g.id,kind:'del',g}); });
+  const order=!rows.length&&draft.map(x=>x.id).join('\n')!==game.map(x=>x.id).join('\n');
+  return {rows,order};
+}
+// 項目名（例：スキル2 › 効果1 › 値）
+const SEG={name:'名前',ruby:'ルビ',cls:'クラス',cost:'コスト',hp:'HP',traits:'属性',link:'リンク',wip:'制作中',fit:'画像の位置',lines:'セリフ',ult:TERMS.ult,
+  pre:'再臨前',post:'再臨後',acts:'行動数',c:'色',dmg:'ダメージ',np:'NP',star:'スター',label:'名前',line:'専用セリフ',pick:'対象の選び方',br:'改行位置',
+  k:'種類',t:'対象',v:'値',turns:'ターン',times:'回数',chance:'確率',color:'色指定',trait:'属性指定',at:'タイミング',max:'最大HP',text:'説明文',cond:'条件',sure:'解除・無効不可',vs:'対象の状態',
+  key:'場面',who:'誰',face:'顔',card:'カード',cut:'カットインの立ち絵',x:'横',y:'縦',z:'拡大',master:'マスター'};
+function pathLabel(p,m){
+  const out=[];
+  for(let i=0;i<p.length;i++){
+    const s=p[i], n=p[i+1];
+    const idx={faces:m?'補助':'鉛筆',skills:'スキル',spells:'令呪',eff:'効果',condLines:'条件つきセリフ'}[s];
+    if(idx&&/^\d+$/.test(n)){ out.push(`${idx}${+n+1}${s==='faces'?'面':''}`); i++; continue; }
+    if(p[i-1]==='lines'){ out.push((m?MASTER_LINE_KEYS:LINE_KEYS)[s]||s); continue; }
+    if(p[i-1]==='fit'&&s==='np'){ out.push('カットインの顔'); continue; }
+    out.push(SEG[s]??s);
+  }
+  return out.join(' › ')||'全体';
+}
+function valText(v,p,m){
+  const last=p[p.length-1];
+  if(v===undefined||v===null) return '（なし）';
+  if(p[p.length-2]==='eff'&&isObj(v)){ try{ return effLines([v],undefined,m?mTLabel:undefined)[0]; }catch(e){} }
+  if(last==='k'&&FX[v]) return FX[v].name;
+  if(last==='t'&&TARGETS[v]) return m?mTLabel(v):TARGETS[v];
+  if(last==='c'&&TERMS[v]) return TERMS[v];
+  if(last==='c'&&v==='ASC') return TERMS.ascFull;
+  if(typeof v==='boolean') return v?'あり':'なし';
+  const s=typeof v==='string'?`「${v}」`:JSON.stringify(v);
+  return s.length>80?s.slice(0,80)+'…':s;
+}
+function diffItemHTML(x,m){
+  const lab=`<span class="dlab">${esc(pathLabel(x.p,m))}</span>`;
+  if(x.lines){
+    const rm=x.a.filter(s=>!x.b.includes(s)), ad=x.b.filter(s=>!x.a.includes(s));
+    const ls=[...rm.map(s=>`<li class="drm">− ${esc(s)}</li>`),...ad.map(s=>`<li class="dad">＋ ${esc(s)}</li>`)];
+    return `<li>${lab}${ls.length?`<ul class="dlines">${ls.join('')}</ul>`:' <span class="sub">並び順の変更</span>'}</li>`;
+  }
+  return `<li>${lab} <span class="dold">${esc(valText(x.a,x.p,m))}</span> → <span class="dnew">${esc(valText(x.b,x.p,m))}</span></li>`;
+}
+let diffVs='game'; // 比較先：game＝ゲームで使っているデータ / file＝js/units.js（反映済みデータを使っているときだけ選べる）
+function renderDiff(){
+  const dlg=document.querySelector('#diffdlg'), k=isM()?'masters':'units', m=isM(), un=m?'人':'体';
+  const applied=m?loadMasters(units):loadUnits(), custom=applied.source==='custom', fi=FILE_INFO[k]&&FILE_INFO[k]!=='pending'?FILE_INFO[k]:null;
+  const vsFile=!custom||diffVs==='file';
+  const game=vsFile?(m?(typeof DEFAULT_MASTERS!=='undefined'?DEFAULT_MASTERS:[]).map(normalizeMaster):normalizeUnits(DEFAULT_UNITS)):(m?applied.masters:applied.units);
+  const d=diffLists(list(),game), file=DATA_FILE[k];
+  const gName=vsFile?file:'反映済みデータ', gAt=vsFile?(fi?fi.at:null):appliedAt(k);
+  const gAtText=vsFile?(FILE_INFO[k]==='pending'?'確認中…':fi&&fi.at?`ファイル更新 ${fmtAt(fi.at)}`:'ファイル更新日時 不明'):(gAt?`反映 ${fmtAt(gAt)}`:'反映日時 不明（記録前に反映）');
+  const ed=edits[k]||{}, lastEd=Math.max(0,...list().map(x=>ed[x.id]||0),...d.rows.map(r=>ed[r.id]||0))||null;
+  // キャラごとの新旧
+  const newer=r=>{
+    const t=ed[r.id];
+    if(r.kind==='add'&&r.d.wip&&vsFile) return {c:'nwip',t:'制作中（js書き出しに含めないので、ずっとここに出ます）'};
+    if(!t) return {c:'nunk',t:`下書きでの編集記録なし → ${gName}側が変わった可能性`};
+    if(!gAt) return {c:'nunk',t:`下書き編集 ${fmtAt(t)}（${gName}の日時が不明）`};
+    return t>gAt?{c:'ndraft',t:`下書きのほうが新しい（編集 ${fmtAt(t)}）`}:{c:'ngame',t:`${gName}のほうが新しい（下書き編集 ${fmtAt(t)}）`};
+  };
+  const nmOf=r=>esc((r.d||r.g).name||r.id);
+  const rows=d.rows.map(r=>{
+    const n=newer(r), take=r.kind==='add'?'':`<button class="small" data-act="diffTake" data-id="${esc(r.id)}" data-vs="${vsFile?'file':'game'}" title="この${un}を${esc(gName)}の内容で置き換えます">${r.kind==='del'?'下書きに戻す':`${esc(gName)}の内容にする`}</button>`;
+    const body=r.kind==='chg'?`<ul class="ditems">${r.diffs.slice(0,40).map(x=>diffItemHTML(x,m)).join('')}${r.diffs.length>40?`<li class="sub">…ほか${r.diffs.length-40}項目</li>`:''}</ul>`
+      :`<p class="sub nm">${r.kind==='add'?`${esc(gName)}にはいない${un}です（下書きで追加）`:`下書きにはいない${un}です（下書きで削除）`}</p>`;
+    return `<div class="drow"><div class="dhead"><b>${nmOf(r)}</b><span class="sub small">${esc(r.id)}</span><span class="dkind ${r.kind}">${DIFF_KIND[r.kind]}</span><span class="dnewer ${n.c}">${esc(n.t)}</span><span class="grow"></span>${take}</div>${body}</div>`;
+  }).join('');
+  dlg.innerHTML=`<h3>未反映の変更（${m?TERMS.player:TERMS.unit}）</h3>
+    ${custom?`<div class="row dvs"><span class="sub">比較先：</span>${[['game','ゲームで使用中（反映済みデータ）'],['file',file]].map(([v,l])=>`<button class="small ${diffVs===v?'on':''}" data-act="diffVs" data-v="${v}">${esc(l)}</button>`).join('')}</div>`:''}
+    <table class="dtimes"><tr><th>編集中の下書き</th><td>最終編集 ${fmtAt(lastEd)}</td></tr>
+      <tr><th>${esc(gName)}</th><td>${gAtText}${vsFile?'':`<br><span class="sub small">ゲームはこのデータを使っています（${file} は使われていません）</span>`}</td></tr></table>
+    ${lastEd&&gAt?`<p class="dverdict ${lastEd>gAt?'ndraft':'ngame'}">${lastEd>gAt?`全体では<b>編集中の下書き</b>のほうが新しい`:`全体では<b>${esc(gName)}</b>のほうが新しい（下書きを最後に編集した後で更新されています）`}</p>`:''}
+    ${vsFile&&fi&&fi.stale?`<p class="dstale">⚠ ${file} はこのページを開いた後に書き換わっています。この比較は開いた時点の内容です。<button class="small" data-act="reloadPage">再読み込み</button></p>`:''}
+    <p class="sub small nm">日時はキャラごとの「下書きを最後に編集した時刻」と、${vsFile?`${file} のファイル更新日時（ファイル全体で1つ）`:'「ゲームに反映」した時刻'}を比べています。編集記録はこの機能を入れた後の編集からです。</p>
+    ${rows||(d.order?`<p>並び順だけが違います。</p>`:`<p class="ok">違いはありません。</p>`)}
+    <div class="row dfoot"><span class="grow"></span><button data-act="diffClose">閉じる</button></div>`;
 }
 
 // 制作中トグル：ONの間は js の書き出し（units.js / masters.js）に含めない。ゲームへの反映・JSON書き出しには含まれる
@@ -812,20 +958,32 @@ document.addEventListener('click',e=>{
       const t=masterTpl(u.cost); u.hp=t.hp; u.faces=t.faces.map((f,i)=>({...f,...(u.faces[i]&&u.faces[i].line?{line:u.faces[i].line}:{})}));
       full(); toast(`コスト${u.cost}のテンプレを適用しました`); break; }
     case 'roll': doRoll(); break;
+    case 'diffOpen': { checkFile(isM()?'masters':'units',true); renderDiff(); const dl=document.querySelector('#diffdlg'); if(!dl.open) dl.showModal(); break; }
+    case 'diffClose': document.querySelector('#diffdlg').close(); break;
+    case 'diffVs': diffVs=b.dataset.v==='file'?'file':'game'; renderDiff(); break;
+    case 'reloadPage': location.reload(); break;
+    case 'diffTake': { // 比較先の内容で、この1体を置き換える（いなければ比較先と同じ位置に戻す）
+      const m=isM(), vf=b.dataset.vs==='file', id=b.dataset.id;
+      const src=vf?(m?(typeof DEFAULT_MASTERS!=='undefined'?DEFAULT_MASTERS:[]).map(normalizeMaster):normalizeUnits(DEFAULT_UNITS)):(m?loadMasters(units).masters:loadUnits().units);
+      const gi=src.findIndex(x=>x.id===id), g=src[gi]; if(!g) break;
+      const L=list(), i=L.findIndex(x=>x.id===id), nm=g.name||id;
+      if(!confirm(i>=0?`「${nm}」の下書きを${vf?(m?'js/masters.js':'js/units.js'):'反映済みデータ'}の内容で置き換えますか？ この${m?'人':'体'}の編集内容は消えます。`:`「${nm}」を下書きに戻しますか？`)) break;
+      if(i>=0) L[i]=clone(g); else L.splice(Math.min(gi,L.length),0,clone(g));
+      rollIdx=null; full(); toast(`「${nm}」を${i>=0?'置き換えました':'下書きに戻しました'}`); break; }
     case 'apply':
       if(isM()){
         if(mastersHaveErrors(masters,units)){ toast('エラーがあるため反映できません。一覧の赤い数字と右の「検証」を確認してください',true); break; }
-        if(saveCustomMasters(masters)){ renderStatus(); toast(`${TERMS.player}をゲームに反映しました。マスタールール・マスターチームで使えます`); }
+        if(saveCustomMasters(masters)){ setAppliedAt('masters',true); renderStatus(); toast(`${TERMS.player}をゲームに反映しました。マスタールール・マスターチームで使えます`); }
         else toast('ブラウザに保存できませんでした',true);
         break;
       }
       if(hasErrors(units)){ toast('エラーがあるため反映できません。一覧の赤い数字と右の「検証」を確認してください',true); break; }
-      if(saveCustomUnits(units)){ renderStatus(); toast('ゲームに反映しました。ゲーム画面のモード選択から使えます'); }
+      if(saveCustomUnits(units)){ setAppliedAt('units',true); renderStatus(); toast('ゲームに反映しました。ゲーム画面のモード選択から使えます'); }
       else toast('ブラウザに保存できませんでした',true);
       break;
     case 'unapply':
-      if(isM()){ if(confirm(`ゲームの${TERMS.player}を標準データ（js/masters.js）に戻しますか？ 編集中のデータはこのまま残ります。`)){ clearCustomMasters(); renderStatus(); toast(`ゲームの${TERMS.player}は標準データに戻りました`); } break; }
-      if(confirm('ゲームを標準データ（js/units.js）に戻しますか？ 編集中のデータはこのまま残ります。')){ clearCustomUnits(); renderStatus(); toast('ゲームは標準データに戻りました'); }
+      if(isM()){ if(confirm(`ゲームの${TERMS.player}を標準データ（js/masters.js）に戻しますか？ 編集中のデータはこのまま残ります。`)){ clearCustomMasters(); setAppliedAt('masters',false); renderStatus(); toast(`ゲームの${TERMS.player}は標準データに戻りました`); } break; }
+      if(confirm('ゲームを標準データ（js/units.js）に戻しますか？ 編集中のデータはこのまま残ります。')){ clearCustomUnits(); setAppliedAt('units',false); renderStatus(); toast('ゲームは標準データに戻りました'); }
       break;
     case 'exportJS': { const wn=list().filter(x=>x.wip).length, ex=wn?`（制作中の${wn}${isM()?'人':'体'}は除外）`:'';
       if(isM()){ downloadText('masters.js',mastersToJS(masters),'text/javascript'); toast('js/masters.js と置き換えると、標準データとして公開できます'+ex); break; }
