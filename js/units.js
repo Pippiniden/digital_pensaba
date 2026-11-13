@@ -905,7 +905,7 @@ const DEFAULT_UNITS = [
       {"name":"道具作成","eff":[{"k":"cleanse","t":"ally_other","v":0},{"k":"stripImmune","t":"ally_other","v":0,"times":1}],"rank":"A"},
       {"name":"自己保存","eff":[{"k":"invul","t":"self","v":0,"turns":1},{"k":"np","t":"self","v":50}],"rank":"C"}
     ],
-    "ult":{"name":"全ての騎士たちの歌","c":"B","eff":[{"k":"np","t":"ally_all","v":60},{"k":"npPow","t":"target","v":100,"turns":2}],"ruby":"ヴィーダ"}
+    "ult":{"name":"全ての騎士たちの歌","c":"B","eff":[{"k":"np","t":"ally_all","v":60},{"k":"npPow","t":"picked","v":100,"turns":2}],"ruby":"ヴィーダ","pick":"other"}
   },
   {
     "id":"vercingetorix", "name":"ウェルキンゲトリクス", "cls":"セイバー", "cost":4, "hp":880,
