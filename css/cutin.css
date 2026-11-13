@@ -28,6 +28,7 @@
   animation:ctOut .35s calc(var(--T) - .35s) ease-in forwards}
 .ct.R{--deep:#2a0508;--mid:#8f1a14;--bright:#ff4f36;--glow:#ffb39f;--pale:#ffe6de}
 .ct.G{--deep:#03200f;--mid:#127a3b;--bright:#35d276;--glow:#a9f3c7;--pale:#e0fff0}
+.ct.Y{--deep:#2a1a02;--mid:#9a6a0e;--bright:#ffc531;--glow:#ffe49a;--pale:#fff6d8} /* 金：令呪（暫定） */
 .ct.hold{animation:none} /* エディタのプレビュー: 最後のコマで止める */
 
 /* 動く要素の共通ルール: --in = 登場アニメ名 / --inT 長さ / --inD 遅れ / --dxe,--dye,--dse = ドリフトの終点 */

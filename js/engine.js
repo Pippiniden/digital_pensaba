@@ -862,6 +862,7 @@ const canGuardSpell = pid=>G.players[pid].spellLeft>0&&G.players[pid].spell!=='d
 function useSpell(m,i,picked){
   const s=D(m.def).spells[i], P=G.players[m.pid];
   log(`${nm(m)}：「${esc(s.name)}」${picked?` → ${nm(picked)}`:''}`,'good');
+  fxEmit({t:'cutin',uid:m.uid,title:s.name,col:'Y',top:'令呪発動'}); // 宝具と同じカットイン（金背景は暫定）
   fxEmit({t:'skill',uid:m.uid,head:'令呪',name:s.name,picked:picked?D(picked.def).name:allLabel(s.eff),lines:effLines(s.eff,null,spellTgt)});
   say(m,'spell',{own:s.line});
   P.spellUsed[i]=true; P.spellLeft--; P.spell=null;

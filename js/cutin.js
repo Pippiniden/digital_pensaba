@@ -4,7 +4,9 @@
    - cutinStageHTML(d, ult, {hold}) … 16:9 ステージの HTML（見た目は css/cutin.css）
    - cutinLayout(stage, ult)        … ルビ・宝具名を入れて、幅に収まるよう配置する（DOM に入れてから呼ぶ）
    - cutinIssues(r, ult)            … cutinLayout の結果から、エディタに出す注意文
-   ult = {name, ruby?, br?, c}。br = カットインでの改行位置（エディタで指定）
+   ult = {name, ruby?, br?, c}。c = 'R'|'B'|'G'（宝具のカード色）/ 'Y'（金：令呪。暫定）
+   o.top = 上の帯の文字（省略時「宝具発動」。令呪は「令呪発動」）
+   br = カットインでの改行位置（エディタで指定）
      undefined … 自動（1行で縮める / 2行に折り返す のうち文字が大きく見える方。区切り文字か真ん中で改行）
      0         … 1行固定
      n (>0)    … n文字目の後ろで改行（2行固定）
@@ -35,7 +37,7 @@ function cutinStageHTML(d,ult,o={}){
   cutinZap();
   // CSS 変数に入れた url() は「使った CSS ファイル」基準で解決されるので、絶対 URL にしておく
   const f=(d.fit&&d.fit.np)||FIT_DEF.np, ch=(d.fit&&d.fit.cut)||FIT_DEF.cut, img=new URL(imgCandidates(d,'face')[0],document.baseURI).href;
-  const col=['R','B','G'].includes(ult.c)?ult.c:'R';
+  const col=['R','B','G','Y'].includes(ult.c)?ult.c:'R';
   return `<div class="ct ${col}${o.hold?' hold':''}" style="--img:url('${esc(img)}');--pimg:url('${esc(new URL(UI_IMG.cutinParticles,document.baseURI).href)}');--gx:${f.x}%;--gy:${f.y}%;--gz:${f.z}%;--cx:${ch.x};--cy:${ch.y};--cz:${ch.z};--T:${CUTIN_MS}ms">
     <div class="ct-band mv">
       <div class="ct-fill"><div class="ct-pimg"></div><div class="ct-ghost mv"></div></div>
@@ -48,7 +50,7 @@ function cutinStageHTML(d,ult,o={}){
     </div>
     <div class="ct-chara mv"></div>
     <div class="ct-lb t"></div><div class="ct-lb b"></div>
-    <div class="ct-top"><span class="mv">${esc(TERMS.ult)}発動</span></div>
+    <div class="ct-top"><span class="mv">${esc(o.top||TERMS.ult+'発動')}</span></div>
     <div class="ct-flash"></div>
   </div>`;
 }
