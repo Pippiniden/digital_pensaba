@@ -454,6 +454,13 @@ const DEFAULT_UNITS = [
       "defeat":["ふ、不敬よ……こんなの……！","許せないわ……いつか思い知らせてあげる……"],
       "win":["はい、マスターちゃんよくできました～。後でい～っぱい、ご褒美をあげるわね～"]
     },
+    "condLines":[
+      {"key":"start","who":"other","cond":{"k":"id","v":"adonis"},"lines":["そんな……運命ってこんなに残酷なのね、アドニス！","だ、ダメよアドニス！　今の私はあなたとは……！"]},
+      {"key":"defeat","who":"other","cond":{"k":"id","v":"adonis"},"lines":["あなたなら……いいわ、アドニス……"]},
+      {"key":"start","who":"ally","cond":{"k":"id","v":"adonis"},"lines":["期待してるわよ、私の可愛いアドニス"]},
+      {"key":"win","who":"ally","cond":{"k":"id","v":"adonis"},"lines":["よく頑張ったわねえ、アドニス。たくさんご褒美あげるわね","当然よ。こっちには愛しい騎士さんがいるんだから"]},
+      {"key":"defeat","who":"ally","cond":{"k":"id","v":"adonis"},"lines":["私の可愛い子……ごめんね……"]}
+    ],
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
@@ -868,7 +875,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"guillaume", "name":"ギヨーム9世", "cls":"キャスター", "cost":3, "hp":550,
-    "traits":["男性","混沌","善","人","人型"],
+    "traits":["男性","混沌","善","人","人型","フランス"],
     "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":0,"z":105},"cut":{"x":0,"y":12,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%c5%a5%a5%da%a5%f3%a5%b5%a5%d0%a5%b7%a1%bc%a5%c8%a1%f9%a3%b3",
     "lines":{
@@ -958,5 +965,97 @@ const DEFAULT_UNITS = [
       {"name":"乱戦の心得","eff":[{"k":"critRoll","t":"self","v":1,"turns":3},{"k":"onAtkStar","t":"ally_all","v":4,"turns":3}],"rank":"B"}
     ],
     "ult":{"name":"鳥坂城・百花繚乱","c":"G","eff":[{"k":"atk","t":"self","v":30,"turns":3},{"k":"critPow","t":"self","v":30,"turns":3},{"k":"dmg","t":"enemy_all","v":370},{"k":"def","t":"self","v":30,"turns":3}],"ruby":"とっさかじょう・ひゃっかりょうらん"}
+  },
+  {
+    "id":"adonis", "name":"アドニス", "cls":"アーチャー", "cost":3, "hp":550,
+    "lines":{
+      "start":["戦闘か……狩りの要領で殺れるといいんだけど"],
+      "attack":["ふっ","はっ！","隙だらけだ！"],
+      "extra":["牽制、幻惑、そして────とどめ！"],
+      "damage":["くっ"],
+      "skill":["実りは我が身に、死は遠ざかる","獲物を射止められるなら、喜んで顔を晒すとも"],
+      "np":["我が血に咲いた紅き花……風に乗って世を伝い、我らが愛を永久に示せ────『風散る血華、愛没す紅香』"],
+      "npDamage":["そんな、油断した────！？"],
+      "defeat":["まったく情けない……彼女の隣に立てるのは、いったい何時になるのかな"],
+      "win":["せめて、君の死後に安らぎが訪れることをペルセポネに祈っておくよ"]
+    },
+    "condLines":[
+      {"key":"start","who":"ally","cond":{"k":"id","v":"mnesarete"},"lines":["アフロディーテ……どうか僕を導いてくれ"]},
+      {"key":"defeat","who":"other","cond":{"k":"id","v":"mnesarete"},"lines":["アフロ、ディー、テ……この花の、香りだけでも、君のところ、に────"]}
+    ],
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"B","dmg":60,"np":15,"star":0},"post":{"c":"B","dmg":70,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":50,"np":10,"star":0},"post":{"c":"B","dmg":60,"np":15,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"G","dmg":60,"np":0,"star":6,"eff":[{"k":"charm","t":"target","v":0,"turns":1,"chance":4}]}},
+      {"acts":3,"pre":{"c":"G","dmg":40,"np":0,"star":4},"post":{"c":"G","dmg":50,"np":0,"star":6}},
+      {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":3},"post":{"c":"G","dmg":50,"np":0,"star":5}}
+    ],
+    "skills":[
+      {"name":"是、星を暗む晦冥","eff":[{"k":"evade","t":"self","v":0,"turns":3,"times":3},{"k":"critPow","t":"self","v":30,"turns":3},{"k":"debuffDown","t":"self","v":2,"turns":3}],"rank":"C"},
+      {"name":"女神の寵愛","eff":[{"k":"def","t":"self","v":20,"turns":1},{"k":"atk","t":"self","v":10,"turns":3},{"k":"debuffImmune","t":"self","v":0,"turns":3}],"rank":"A"},
+      {"name":"紅顔の美少年","eff":[{"k":"charm","t":"picked","v":0,"turns":1,"chance":4}],"rank":"A++","pick":"enemy"}
+    ],
+    "ult":{"name":"風散る血花、愛没す紅香","c":"G","eff":[{"k":"dmg","t":"target","v":400},{"k":"charm","t":"target","v":0,"turns":1,"chance":5},{"k":"selfDmg","t":"self","v":50},{"k":"regenHp","t":"ally_all","v":50,"turns":3}],"ruby":"アネモス・ミロディア"}
+  },
+  {
+    "id":"ceryneia", "name":"ケリュネイアの鹿", "cls":"アーチャー", "cost":4, "hp":660,
+    "traits":["女性","ギリシャ","混沌","善","地","人型","獣"],
+    "link":"https://seesaawiki.jp/kagemiya/d/%a5%b1%a5%ea%a5%e5%a5%cd%a5%a4%a5%a2%a4%ce%bc%af",
+    "lines":{
+      "start":[],
+      "attack":[],
+      "extra":[],
+      "damage":[],
+      "skill":[],
+      "np":[],
+      "npDamage":[],
+      "defeat":[],
+      "win":[]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"B","dmg":60,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":50,"np":10,"star":0},"post":{"c":"B","dmg":60,"np":15,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"G","dmg":5,"np":0,"star":2,"eff":[{"k":"atk","t":"self","v":15,"turns":3,"color":"G","at":"pre"},{"k":"onAtkNp","t":"self","v":5,"turns":3,"color":"G"},{"k":"multiHit","t":"self","v":3}]}},
+      {"acts":3,"pre":{"c":"G","dmg":40,"np":0,"star":4},"post":{"c":"G","dmg":50,"np":0,"star":6}},
+      {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":3},"post":{"c":"G","dmg":50,"np":0,"star":5}}
+    ],
+    "skills":[
+      {"name":"スキル1","eff":[{"k":"def","t":"self","v":20,"turns":1},{"k":"atk","t":"self","v":10,"turns":3},{"k":"debuffImmune","t":"self","v":0,"turns":3}]},
+      {"name":"心眼(偽)","eff":[{"k":"evade","t":"self","v":0,"turns":1},{"k":"critPow","t":"self","v":30,"turns":3}]},
+      {"name":"スキル3","eff":[{"k":"taunt","t":"self","v":0,"turns":1},{"k":"debuffImmune","t":"self","v":0,"turns":5,"times":3},{"k":"regenNp","t":"self","v":5,"turns":5},{"k":"npPow","t":"self","v":60,"turns":5,"chance":3}]}
+    ],
+    "ult":{"name":"宝具","c":"G","eff":[{"k":"evade","t":"self","v":0,"turns":3,"times":3},{"k":"atk","t":"self","v":40,"turns":3,"color":"G"},{"k":"onAtkNp","t":"self","v":10,"turns":3,"color":"G"},{"k":"critPow","t":"self","v":30,"turns":3,"color":"G"},{"k":"onAtkStar","t":"self","v":3,"turns":3,"color":"G"},{"k":"dmg","t":"enemy_all","v":300}]}
+  },
+  {
+    "id":"hughes", "name":"ユーグ・ド・パイヤン", "cls":"セイバー", "cost":5, "hp":850,
+    "traits":["男性","フランス","秩序","善","人","人型","騎士","キリスト教"],
+    "link":"https://seesaawiki.jp/kagemiya/d/%a5%e6%a1%bc%a5%b0%a1%a6%a5%c9%a1%a6%a5%d1%a5%a4%a5%e4%a5%f3",
+    "lines":{
+      "start":["騎士として、守るために剣を執ろう……いざ！","巡礼を阻むのならば容赦はしない────行くぞ！"],
+      "attack":["Pauvreté！","Chasteté！","Obéissance！","切り拓く！","私に続け！","ふッ、ぜぇいッ！"],
+      "extra":["全軍突撃！　我らが信仰を此処に示さん！","ここから先は、一歩たりとも通しはしない！"],
+      "damage":["むっ","まだだ！"],
+      "skill":[],
+      "np":["騎士たちよ、今ひと時その力を我が剣に。これは守るための聖戦である！　奇蹟を示せ、『聖堂に集え、守護の剣』！","此処に掲げるは始まりの剣。此処に立てるは三つの誓い。主の御名において号令を下す───『聖堂に集え、守護の剣』！"],
+      "npDamage":["耐え抜いてみせる……！","苦難に屈してなるものか……！"],
+      "defeat":["私が、此処で倒れる訳には……くっ","皆様、マスターを頼みます……"],
+      "win":["無事に切り抜けられました。では、巡礼を続けましょう","命までは取りません。その余生で己の過ちを悔い改めなさい"]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":90,"np":0,"star":0},"post":{"c":"R","dmg":120,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"R","dmg":90,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":70,"np":15,"star":0},"post":{"c":"B","dmg":80,"np":20,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"B","dmg":70,"np":15,"star":0,"eff":[{"k":"taunt","t":"self","v":0,"turns":1},{"k":"def","t":"self","v":20,"turns":1},{"k":"hitNpUp","t":"self","v":5,"turns":1}]}},
+      {"acts":3,"pre":{"c":"B","dmg":60,"np":10,"star":0},"post":{"c":"B","dmg":70,"np":15,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":50,"np":0,"star":4},"post":{"c":"G","dmg":60,"np":0,"star":6}}
+    ],
+    "skills":[
+      {"name":"聖堂騎士","eff":[{"k":"taunt","t":"self","v":0,"turns":3},{"k":"def","t":"self","v":20,"turns":3},{"k":"atk","t":"ally_all","v":10,"turns":3}],"rank":"A+","line":["守り抜きます","総員、構えなさい"]},
+      {"name":"聖堂に誓え、騎士の忠","eff":[{"k":"regenNp","t":"self","v":5,"turns":3},{"k":"debuffImmune","t":"self","v":0,"turns":3},{"k":"atk","t":"self","v":40,"turns":3,"color":"B"},{"k":"onAtkNp","t":"self","v":5,"turns":3,"color":"B"},{"k":"heal","t":"self","v":120}],"rank":"A","line":["主よ、我らを導きたまえ","我が信仰に曇りなく","降伏よりは死を選ばん","誓いを、此処に"]},
+      {"name":"魔力防御(光)","eff":[{"k":"def","t":"ally_all","v":20,"turns":3},{"k":"defTrait","t":"ally_all","v":30,"turns":3,"trait":"悪"},{"k":"debuffImmune","t":"ally_all","v":0,"turns":3}],"rank":"A","line":["守り抜きます"]}
+    ],
+    "ult":{"name":"聖堂に集え、守護の剣","c":"B","eff":[{"k":"dmg","t":"target","v":300},{"k":"def","t":"ally_all","v":30,"turns":3}],"ruby":"オルドル・デュ・テンプル"}
   }
 ];
