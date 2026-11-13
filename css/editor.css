@@ -223,4 +223,30 @@ label.mini.chk{cursor:pointer}
 #impdlg{width:min(560px,calc(100% - 32px));padding:16px 20px;color:var(--ink);border:1px solid var(--gold);border-radius:6px;background:var(--lattice),linear-gradient(160deg,#16295a,var(--panel) 40%,var(--panel2));box-shadow:var(--frame),var(--shadow)}
 #impdlg::backdrop{background:rgba(3,7,20,.7)}
 #impdlg h3{margin:0 0 8px} #impdlg .sub{font-size:12px;opacity:.8;margin:4px 0}
+/* 未反映の変更（差分） */
+#diffdlg{width:min(860px,calc(100% - 32px));max-height:calc(100vh - 48px);padding:16px 20px;color:var(--ink);border:1px solid var(--gold);border-radius:6px;background:var(--lattice),linear-gradient(160deg,#16295a,var(--panel) 40%,var(--panel2));box-shadow:var(--frame),var(--shadow)}
+#diffdlg::backdrop{background:rgba(3,7,20,.7)}
+#diffdlg h3{margin:0 0 10px}
+#diffdlg .dvs{gap:6px;margin-bottom:8px}
+#diffdlg .dtimes{border-collapse:collapse;font-size:13px;margin:4px 0 8px}
+#diffdlg .dtimes th{text-align:left;padding:3px 12px 3px 0;color:var(--gold);font-weight:600;white-space:nowrap;vertical-align:top}
+#diffdlg .dtimes td{padding:3px 0}
+#diffdlg .dverdict{margin:6px 0;padding:6px 10px;border-radius:4px;font-size:13px}
+#diffdlg .dstale{margin:6px 0;padding:6px 10px;border:1px solid var(--warn);border-radius:4px;color:var(--warn);font-size:13px}
+#diffdlg .drow{border-top:1px solid rgba(255,255,255,.12);padding:8px 0}
+#diffdlg .dhead{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+#diffdlg .grow{flex:1}
+#diffdlg .dkind{font-size:11px;padding:1px 6px;border-radius:3px;border:1px solid currentColor}
+#diffdlg .dkind.chg{color:var(--warn)} #diffdlg .dkind.add{color:var(--g)} #diffdlg .dkind.del{color:#ff9a8f}
+#diffdlg .dnewer,#diffdlg .dverdict{font-size:12px}
+.dnewer.ndraft,.dverdict.ndraft{color:#8fd0ff} .dverdict.ndraft{background:rgba(80,160,255,.12)}
+.dnewer.ngame,.dverdict.ngame{color:#ffc46b} .dverdict.ngame{background:rgba(255,180,60,.12)}
+.dnewer.nunk,.dnewer.nwip{opacity:.75}
+#diffdlg .ditems{margin:6px 0 0;padding-left:18px;font-size:12.5px;line-height:1.6}
+#diffdlg .dlab{color:var(--gold)}
+#diffdlg .dold{opacity:.7;text-decoration:line-through}
+#diffdlg .dnew{color:#bff0c0}
+#diffdlg .dlines{margin:2px 0;padding-left:14px;list-style:none}
+#diffdlg .drm{opacity:.7} #diffdlg .dad{color:#bff0c0}
+#diffdlg .dfoot{margin-top:10px}
 #impdlg .impbtns{display:flex;flex-direction:column;gap:8px;margin-top:12px}

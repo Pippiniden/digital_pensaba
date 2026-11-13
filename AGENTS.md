@@ -110,6 +110,7 @@ Balance page (balance.html): rules → units → masters → common → balance 
 | `pencilduel.masters` | Masters applied from the editor's master tab. If present and valid (`validateMasters(ms, units)`, incl. no id clash with servants), `loadMasters(units)` prefers it over `DEFAULT_MASTERS`; otherwise falls back with `broken:true` |
 | `pencilduel.masterDraft` | The editor's master draft (auto-saved) |
 | `pencilduel.editorTab` | The editor's open tab |
+| `pencilduel.editorEdits` | `{units:{id:ms}, masters:{id:ms}}`: last draft edit time per character, stamped by `stampEdits()` in `saveDraft` (editor.js). Used by the "未反映の変更" dialog (`#diffdlg`, `renderDiff` / `diffLists` / `diffPaths`), which lists per-character field diffs between the draft and the game data (or `js/units.js` / `js/masters.js`) and says which side is newer by comparing these times with `pencilduel.unitsAt` / `pencilduel.mastersAt` (set on "ゲームに反映") or the file's `Last-Modified` (`checkFile`, also detects the file changing after the page was opened; needs http, unknown on `file://`) |
 | `pencilduel.noCanon` | 「原作キャラを含まない」設定（既定ON、`'0'`でOFF）。ONの間、`reloadUnits()`（engine.js）が `CANON_UNIT_IDS` / `CANON_MASTER_IDS` のキャラを `UNITS` / `MASTERS` から外す（`ALL_UNITS` / `ALL_MASTERS` は全員。`D()` は両方から引く）。Worker（localStorageなし）では外さない |
 | `pencilduel.logOpen` | Whether the battle log is open |
 | `pencilduel.auto` | Whether auto-advance is on (`'1'`) |
