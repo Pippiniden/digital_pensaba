@@ -324,7 +324,9 @@ const DEFAULT_UNITS = [
     "condLines":[
       {"key":"start","who":"ally","cond":{"k":"id","v":"m_erika"},"lines":["さ、見ててよボクのエリカ！"]},
       {"key":"defeat","who":"ally","cond":{"k":"id","v":"m_erika"},"lines":["エリカ……ごめん……"]},
-      {"key":"win","who":"ally","cond":{"k":"id","v":"m_erika"},"lines":["これがボクとエリカの愛の力ってね！"]}
+      {"key":"win","who":"ally","cond":{"k":"id","v":"m_erika"},"lines":["これがボクとエリカの愛の力ってね！"]},
+      {"key":"start","who":"other","cond":{"k":"id","v":"lancelot"},"lines":["ったく、キミと正面衝突とはね"]},
+      {"key":"start","who":"ally","cond":{"k":"id","v":"lancelot"},"lines":["さ、前線は任せたよセイバー！"]}
     ],
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
@@ -418,6 +420,9 @@ const DEFAULT_UNITS = [
       "defeat":["ここまで……ですか……申し訳……","これが……挫折……"],
       "win":["敵は全滅しましたね。では、先に進みましょう","あら、このアイテムはなんでしょうか？　マスター、どうぞお使いになってください"]
     },
+    "condLines":[
+      {"key":"start","who":"other","cond":{"k":"id","v":"ahotoria"},"lines":["アーサー王があんなに愉快な方だなんて……"]}
+    ],
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
@@ -609,6 +614,11 @@ const DEFAULT_UNITS = [
       "defeat":["申し訳……御座いません……","「また、最後まで……"],
       "win":["戦いにも抜かりはありません。それがメイドというものです","お疲れとお見受けします。すぐにお紅茶のご用意をいたしますね、マスター"]
     },
+    "condLines":[
+      {"key":"start","who":"other","cond":{"k":"id","v":"lamorak"},"lines":["フフ……お仕置きが必要だねラモラック"]},
+      {"key":"win","who":"other","cond":{"k":"id","v":"lamorak"},"lines":["二度と！！　私をババアと呼ばないこと！！"]},
+      {"key":"start","who":"other","cond":{"k":"id","v":"ahotoria"},"lines":["……私の仕えた偉大なる王と一緒にしたくありません"]}
+    ],
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":30,"np":0,"star":0},"post":{"c":"R","dmg":40,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"B","dmg":20,"np":15,"star":0},"post":{"c":"B","dmg":30,"np":20,"star":0}},
@@ -701,6 +711,10 @@ const DEFAULT_UNITS = [
       "defeat":["心臓発作が……","引き分けにしてあげても良いのですよ！？","Aaaaarrrrrrggghhh！"],
       "win":["お色気シーンはいりません。話を続けてください！","疲れましたね。スウェーデンで休暇でも取りましょうか"]
     },
+    "condLines":[
+      {"key":"start","who":"other","cond":{"k":"trait","v":"フランス"},"lines":["フランス人がいるようですね……おのれ！"]},
+      {"key":"defeat","who":"other","cond":{"k":"trait","v":"フランス"},"lines":["フランス人に負けるわけには……"]}
+    ],
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":50,"np":0,"star":0,"eff":[{"k":"atkDown","t":"ally_all","v":20,"turns":3}]},"post":{"c":"R","dmg":70,"np":0,"star":0,"eff":[{"k":"atkDown","t":"ally_all","v":10,"turns":3}]}},
       {"acts":2,"pre":{"c":"R","dmg":50,"np":0,"star":0,"eff":[{"k":"strip","t":"ally_all","v":0}]},"post":{"c":"R","dmg":70,"np":0,"star":0,"eff":[{"k":"strip","t":"ally_all","v":0}]}},
@@ -763,6 +777,11 @@ const DEFAULT_UNITS = [
       "defeat":["そんなぁ……私だって頑張ったのに……","うぅ……こんな目に遭うなんて……"],
       "win":["はぁ、死ぬかと思ったわ……。逃げる間も無かったわね","ご苦労さま。生き延びただけ儲けものね……"]
     },
+    "condLines":[
+      {"key":"start","who":"other","cond":{"k":"cls","v":"アーチャー"},"lines":["ひっ、アーチャーがいるの！？"]},
+      {"key":"defeat","who":"other","cond":{"k":"cls","v":"アーチャー"},"lines":["狩られるのはいやーっ！"]},
+      {"key":"win","who":"other","cond":{"k":"cls","v":"アーチャー"},"lines":["弓使いの相手なんてもう懲り懲りよ……"]}
+    ],
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":40,"np":0,"star":0},"post":{"c":"R","dmg":60,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"B","dmg":30,"np":20,"star":0},"post":{"c":"B","dmg":40,"np":25,"star":0}},
@@ -825,6 +844,13 @@ const DEFAULT_UNITS = [
       "defeat":["ワシはまだやれるで！　やるったらやるんやアアアア！","ごっついわ……いつかタマ獲ったる……！"],
       "win":["くだらんわ！　ワシが殴るまでもなかったのう！","円卓最強はこのワシじゃあああああっ！！"]
     },
+    "condLines":[
+      {"key":"start","who":"other","cond":{"k":"trait","v":"アーサー"},"lines":["な、なんや！？　王様がいるんかいな！"]},
+      {"key":"start","who":"other","cond":{"k":"id","v":"lancelot"},"lines":["ここで会ったが百年目じゃランスロットォォォォ！！！"]},
+      {"key":"start","who":"other","cond":{"k":"id","v":"lucan"},"lines":["ルーカンのババア、久しぶりじゃのう！"]},
+      {"key":"defeat","who":"other","cond":{"k":"id","v":"ahotoria"},"lines":["あれを王様とは認めんでええええ！！！！"]},
+      {"key":"win","who":"other","cond":{"k":"id","v":"lancelot"},"lines":["円卓最強はこのわしじゃあああああ！！！！！"]}
+    ],
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":60,"np":0,"star":0},"post":{"c":"R","dmg":90,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"R","dmg":60,"np":0,"star":0},"post":{"c":"R","dmg":80,"np":0,"star":0}},
