@@ -15,7 +15,7 @@
   --frame:0 0 0 1px var(--gold-lo), inset 0 0 0 1px rgba(214,178,94,.25), inset 0 0 0 3px var(--panel2), inset 0 0 0 4px var(--line);
   --shadow:0 6px 22px rgba(0,0,0,.45);
   /* 青いパネルの地に薄い斜め格子（FGO風）。パネルの background の先頭に重ねて使う */
-  --lattice:repeating-linear-gradient(45deg,rgba(150,185,255,.05) 0 1px,transparent 1px 15px),repeating-linear-gradient(-45deg,rgba(150,185,255,.05) 0 1px,transparent 1px 15px);
+  --lattice:repeating-linear-gradient(45deg,rgba(150,185,255,.05) 0 1px,transparent 1px 36px),repeating-linear-gradient(-45deg,rgba(150,185,255,.05) 0 1px,transparent 1px 36px);
   --serif:"Cinzel","Noto Serif JP","Hiragino Mincho ProN","Yu Mincho",serif;
 }
 *{box-sizing:border-box}

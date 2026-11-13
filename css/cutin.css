@@ -31,6 +31,11 @@
 .ct.Y{--deep:#2a1a02;--mid:#9a6a0e;--bright:#ffc531;--glow:#ffe49a;--pale:#fff6d8} /* 金：令呪（暫定） */
 .ct.hold{animation:none} /* エディタのプレビュー: 最後のコマで止める */
 
+/* 帯の外の背景にも斜め格子（base.css の --lattice と同じ見た目。間隔はステージ幅に比例） */
+.ct::before{content:"";position:absolute;inset:0;
+  --lc:rgba(150,185,255,.05);
+  background:repeating-linear-gradient(45deg,var(--lc) 0 1px,transparent 1px 2.8cqw),repeating-linear-gradient(-45deg,var(--lc) 0 1px,transparent 1px 2.8cqw)}
+
 /* 動く要素の共通ルール: --in = 登場アニメ名 / --inT 長さ / --inD 遅れ / --dxe,--dye,--dse = ドリフトの終点 */
 .ct .mv{translate:calc(var(--ix) + var(--dx)) calc(var(--iy) + var(--dy));
   animation:var(--in) var(--inT,.45s) cubic-bezier(.2,.9,.2,1) var(--inD,0s) both,

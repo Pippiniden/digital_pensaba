@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>格子の間隔サンプル</title>
+<style>
+:root{--panel:#12204a;--panel2:#0c1634;--gold:#d6b25e}
+body{margin:0;padding:16px;background:#070d20;color:#e8ecf7;font:14px/1.5 "Noto Sans JP",system-ui,sans-serif}
+h1{font-size:16px;margin:0 0 4px}
+p.n{margin:0 0 14px;color:#9fb0d8;font-size:12px}
+.ctl{display:flex;flex-wrap:wrap;gap:18px;align-items:center;padding:10px 12px;margin-bottom:16px;border:1px solid #2a3a70;border-radius:6px;background:#0c1634}
+.ctl label{display:flex;gap:8px;align-items:center;font-size:12px}
+.ctl output{min-width:3.5em;color:var(--gold)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.card{position:relative;border-radius:6px;padding:12px 14px;border:1px solid var(--gold);min-height:140px;
+  background:var(--lat),linear-gradient(160deg,#16295a,var(--panel) 40%,var(--panel2));
+  box-shadow:0 0 0 1px #8a7336,0 6px 22px rgba(0,0,0,.45)}
+.card b{display:block;color:#f3dc9b;font-size:13px;margin-bottom:4px}
+.card small{color:#9fb0d8}
+.card.cur{outline:2px dashed #ff8a8a;outline-offset:3px}
+</style></head><body>
+<h1>背景格子の間隔サンプル</h1>
+<p class="n">現在値＝赤い点線（間隔15px・濃さ.05）。気に入った番号を教えてください。下のスライダーで自由に調整もできます。</p>
+<div class="ctl">
+  <label>間隔 <input id="p" type="range" min="10" max="80" value="30"><output id="po"></output></label>
+  <label>濃さ <input id="a" type="range" min="2" max="20" value="6"><output id="ao"></output></label>
+  <label>線の太さ <input id="w" type="range" min="1" max="3" value="1"><output id="wo"></output></label>
+  <span style="font-size:12px;color:#9fb0d8">→ 一番右下の「カスタム」に反映</span>
+</div>
+<div class="grid" id="g"></div>
+<script>
+function lat(p,a,w){const c=`rgba(150,185,255,${a})`;
+  return `repeating-linear-gradient(45deg,${c} 0 ${w}px,transparent ${w}px ${p}px),repeating-linear-gradient(-45deg,${c} 0 ${w}px,transparent ${w}px ${p}px)`}
+const V=[
+ ['現在',15,.05,1,1],['A',22,.05,1],['B',28,.05,1],['C',36,.05,1],['D',48,.05,1],
+ ['E',28,.07,1],['F',36,.07,1],['G',48,.08,1],['H',64,.08,1]
+];
+const g=document.getElementById('g');
+function card(n,p,a,w,cur){const d=document.createElement('div');d.className='card'+(cur?' cur':'');
+ d.style.setProperty('--lat',lat(p,a,w));
+ d.innerHTML=`<b>${n}</b><small>間隔 ${p}px / 濃さ ${a} / 太さ ${w}px</small><p style="margin:10px 0 0;font-size:12px">アルトリア　HP 1000<br>宝具：エクスカリバー</p>`;return d}
+V.forEach(v=>g.append(card(v[0],v[1],v[2],v[3],v[4])));
+const cu=card('カスタム',30,.06,1);g.append(cu);
+const P=p,A=a,W=w;
+function up(){po.textContent=P.value+'px';ao.textContent=(A.value/100).toFixed(2);wo.textContent=W.value+'px';
+ cu.style.setProperty('--lat',lat(+P.value,A.value/100,+W.value));
+ cu.querySelector('small').textContent=`間隔 ${P.value}px / 濃さ ${(A.value/100).toFixed(2)} / 太さ ${W.value}px`}
+[P,A,W].forEach(e=>e.oninput=up);up();
+</script></body></html>
