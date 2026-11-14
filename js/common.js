@@ -75,6 +75,7 @@ function normEff(e){
   if(e.vs&&vsOk(String(e.k),e.vs)) o.vs=String(e.vs);
   const tr=String(e.trait??'').trim(); if(tr) o.trait=tr; // 属性特攻・特防の対象の属性
   if(FX[o.k]&&FX[o.k].copy) o.from=e.from in FROM_TARGETS?String(e.from):'self'; // 状態コピーのコピー元（自身／選んだ1体／攻撃対象）
+  if(e.noExtra&&o.k==='copyRoll') o.noExtra=true; // 宝具で3回ロールしたあとのエクストラアタックを行わない
   const cd=normCond(e.cond); if(cd&&!(FX[o.k]&&FX[o.k].noTgt)) o.cond=cd; // 条件つき効果
   if(EFF_AT[e.at]) o.at=e.at; // 攻撃の前/後（未指定なら既定のタイミング。rules.js の EFF_AT）
   if(e.max&&FX[o.k]&&FX[o.k].maxOk) o.max=true; // 値＝対象の最大HP（軽減不可）
@@ -627,6 +628,7 @@ function fxText(e){
     case 'npPow': s=`${TERMS.ult}威力+${e.v}`; break;
     case 'npPowDown': s=`${TERMS.ult}威力-${e.v}`; break;
     case 'desc': return e.text||'（説明文なし）';
+    case 'copyRoll': s=FX.copyRoll.name+(e.noExtra?'（エクストラアタックなし）':''); break;
     default: s=FX[e.k]?FX[e.k].name:e.k;
   }
   const dur=[e.times!=null?`${e.times}回`:'', e.turns!=null?`${e.turns}T`:''].filter(Boolean).join('・');

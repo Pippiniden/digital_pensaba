@@ -642,16 +642,33 @@ function resolveCommand(att,cmd,tgt,o={}){
   // 攻撃後の効果（例：自身の弱体解除）
   applyEffects(att,postE,null);
 }
-// 宝具の「他のサーヴァントをロール」：選んだ1体（picked）の鉛筆を、選ばなければランダムな1体のを、ロールして
-// 出た再臨後コマンドを攻撃対象に使う（NP・スターは増えない。宝具が選んだ相手＝コピー元は敵味方どちらでもよい）
-function ultCopyRoll(u,tgt,picked){
-  const cs=copyCands(u); if(!cs.length) return;
-  const src=picked&&cs.includes(picked)?picked:cs[Math.floor(Math.random()*cs.length)];
-  const r=copyRollFrom(src);
-  log(`${nm(u)}：${nm(src)}の鉛筆をロール 出目${r.f+1} → ${cmdChip(r.cmd)}`);
-  rollFx(src.uid,r.f,{cmd:r.cmd,def:src.def});
-  const t=tgt||alive(1-u.pid)[0]; if(!t) return;
-  resolveCommand(u,r.cmd,t,{noGain:true});
+// 宝具の「他のサーヴァントをロール」（n個ぶんまとめて）：選んだ1体（picked）の鉛筆を、選ばなければランダムな1体のを、ロールして
+// 出た再臨後コマンドを攻撃対象に使う。出たコマンドは通常のコマンドと同じく NP・スターを増やす。
+// ちょうど3回ロールするときは「攻撃3回」とみなす：3つとも同じ色ならチェイン、そのあと宝具の持ち主のエクストラアタック（ブレイブチェイン）
+function ultCopyRolls(u,tgt,picked,n,noExtra){
+  const t=tgt||alive(1-u.pid)[0], cs=copyCands(u); if(!t||!cs.length) return;
+  const cmds=[];
+  for(let i=0;i<n;i++){ // 先に全部ロールする（チェインは3枚そろってから決まる）
+    const src=picked&&cs.includes(picked)?picked:cs[Math.floor(Math.random()*cs.length)], r=copyRollFrom(src);
+    log(`${nm(u)}：${nm(src)}の鉛筆をロール 出目${r.f+1} → ${cmdChip(r.cmd)}`);
+    rollFx(src.uid,r.f,{cmd:r.cmd,def:src.def});
+    cmds.push(r.cmd);
+  }
+  const three=n===3, c0=cmds[0].c;
+  const chain=three&&['R','B','G'].includes(c0)&&cmds.every(c=>c.c===c0)?c0:null;
+  if(chain){ log(`${TERMS[chain]}チェイン発生！`,'good'); fxEmit({t:'banner',title:`${TERMS[chain]} Chain`,col:chain}); chainsOf(u.pid)[chain]++; }
+  cmds.forEach((cmd,ri)=>{ if(!u.out) resolveCommand(u,cmd,t,{chain,ri}); });
+  if(u.out) return;
+  if(chain==='B'){ addNp(u,npRate(u,RULES.chainB)); syncU(u); log(`チェインボーナス：${nm(u)}の${TERMS.gauge}+${RULES.chainB}%`); }
+  if(chain==='G'){ gainStars(u.pid,RULES.chainG); log(`チェインボーナス：${TERMS.star}${RULES.chainG}個発生`); }
+  if(three&&!noExtra){ // ブレイブチェイン（copyRoll に「エクストラなし」があれば行わない）：宝具の持ち主のカードでエクストラアタック
+    const f=roll(), face=D(u.def).faces[f];
+    log(`ブレイブチェイン！ ${nm(u)}のエクストラアタック（出目${f+1}）`,'good'); chainsOf(u.pid).brave++;
+    fxEmit({t:'banner',title:'Brave Chain',sub:'エクストラアタック'});
+    const cmd=!u.asc&&face.pre.c==='ASC'?face.pre:u.asc?face.post:face.pre;
+    rollFx(u.uid,f,{cmd,keys:[`f:${u.uid}`]}); u.face={i:f,kind:'cmd',cmd};
+    if(cmd.c==='ASC') ascend(u); else resolveCommand(u,cmd,t,{extra:true});
+  }
 }
 function resolveUlt(u,tgt,picked){
   const ud=D(u.def).ult;
@@ -662,9 +679,10 @@ function resolveUlt(u,tgt,picked){
   st(u).ults++;
   const hits=hitsOf(ud.eff); // 連続攻撃：ダメージ効果それぞれを hits 回
   if(hits>1) log(`${hits}回連続攻撃`,'sub');
+  let copyDone=false;
   for(const e of ultEffOrder(ud.eff)){
     if(u.out) break; // 反撃で倒れたら残りの効果は出ない
-    if(e.k==='copyRoll'){ ultCopyRoll(u,tgt,picked); flushKo(); continue; }
+    if(e.k==='copyRoll'){ if(!copyDone){ copyDone=true; ultCopyRolls(u,tgt,picked,ud.eff.filter(x=>x.k==='copyRoll').length,ud.eff.some(x=>x.k==='copyRoll'&&x.noExtra)); flushKo(); } continue; } // ロールは最初の1つのところでまとめて行う
     if(e.k!=='dmg'){ applyEffects(u,[e],picked); continue; }
     for(let h=0;h<hits;h++){
       if(u.out) break;

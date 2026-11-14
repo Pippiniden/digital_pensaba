@@ -141,6 +141,7 @@ function fixEff(e){
   if(!f.color) delete e.color;
   if(!(e.k in VS_KINDS)) delete e.vs;
   else if(e.vs&&!vsOk(e.k,e.vs)) delete e.vs; // 種類を変えたら、合わない指定は外す
+  if(e.k!=='copyRoll') delete e.noExtra;
   if(!f.copy) delete e.from;
   else if(!(e.from in FROM_TARGETS)) e.from='self';
   if(!f.trait) delete e.trait;
@@ -279,7 +280,7 @@ function diffLists(draft,game){
 // 項目名（例：スキル2 › 効果1 › 値）
 const SEG={name:'名前',ruby:'ルビ',cls:'クラス',cost:'コスト',hp:'HP',traits:'属性',link:'リンク',wip:'制作中',fit:'画像の位置',lines:'セリフ',ult:TERMS.ult,
   pre:'再臨前',post:'再臨後',acts:'行動数',c:'色',dmg:'ダメージ',np:'NP',star:'スター',label:'名前',line:'専用セリフ',pick:'対象の選び方',br:'改行位置',
-  k:'種類',t:'対象',v:'値',turns:'ターン',times:'回数',chance:'確率',color:'色指定',trait:'属性指定',at:'タイミング',max:'最大HP',text:'説明文',cond:'条件',sure:'解除・無効不可',vs:'対象の状態',from:'コピー元',
+  k:'種類',t:'対象',v:'値',turns:'ターン',times:'回数',chance:'確率',color:'色指定',trait:'属性指定',at:'タイミング',max:'最大HP',text:'説明文',cond:'条件',sure:'解除・無効不可',vs:'対象の状態',from:'コピー元',noExtra:'エクストラなし',
   key:'場面',who:'誰',face:'顔',card:'カード',cut:'カットインの立ち絵',x:'横',y:'縦',z:'拡大',master:'マスター'};
 function pathLabel(p,m){
   const out=[];
@@ -704,6 +705,7 @@ function effRow(path,j,e,ctx,n,atKind){
     <select class="effgrp" data-act="effGrp" data-ep="${p}" data-ctx="${ctx}" aria-label="効果の分類">${groups.map(([g,ks])=>opt(g,`${g}（${ks.length}）`,grp)).join('')}</select>
     <select data-p="${p}.k" data-act="effKind" data-ctx="${ctx}" aria-label="効果の種類">${kinds.map(k=>opt(k,FX[k].name,e.k)).join('')}${kinds.includes(e.k)?'':opt(e.k,(FX[e.k]||{}).name||e.k,e.k)}</select>
     ${f.copy?`<label class="mini" title="どこから強化・弱体をコピーするか"><span>コピー元</span><select data-p="${p}.from">${[...(FROM_BY_CTX[ctx]||['self']),...((FROM_BY_CTX[ctx]||[]).includes(e.from)?[]:[e.from||'self'])].map(t=>opt(t,FROM_TARGETS[t]||t,e.from||'self')).join('')}</select></label><span class="sub">→ コピー先</span>`:''}
+    ${e.k==='copyRoll'&&ctx==='ult'?`<label class="mini chk" title="ちょうど3回ロールしたあとに行う、宝具の持ち主のエクストラアタック（ブレイブチェイン）をしません"><input type="checkbox" data-p="${p}.noExtra" data-t="bool" ${e.noExtra?'checked':''}><span>エクストラなし</span></label>`:''}
     ${f.noTgt?'':`<select data-p="${p}.t" aria-label="対象">${tg.map(t=>opt(t,(ctx==='master'?mTLabel(t):TARGETS[t])||t,e.t)).join('')}</select>`}
     ${val}
     ${f.inst?'':(f.timesOnly||(ctx==='master'&&/^faces./.test(path))?'':optNum(p+'.turns',e.turns,'ターン'))+optNum(p+'.times',e.times,'回数')}

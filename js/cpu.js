@@ -268,8 +268,24 @@ function cpuAllocEV(us){
 function ultPower(u){
   const ud=D(u.def).ult, h=hitsOf(ud.eff), up=mods(u,'npPow').sum-mods(u,'npPowDown').sum;
   const one=e=>e.max?Math.max(0,...alive(1-u.pid).map(maxHp)):Math.max(0,e.v+up);
-  return ud.eff.filter(e=>e.k==='dmg').reduce((s,e)=>s+one(e)*h*(e.t==='enemy_all'?alive(1-u.pid).length:1),0)
-    +(ud.eff.some(e=>e.k==='copyRoll')?80:0); // コマンドのロールは平均的な攻撃1回ぶんと見る
+  return ud.eff.filter(e=>e.k==='dmg').reduce((s,e)=>s+one(e)*h*(e.t==='enemy_all'?alive(1-u.pid).length:1),0)+ultRollPower(u,ud);
+}
+// 宝具の「他のサーヴァントをロール」の見込みダメージ：ロール回数 ×（ロールで出るコマンドの平均ダメージ ＋ 攻撃ダメージ+ ＋ クリティカルの期待値）。
+// ちょうど3回なら宝具の持ち主のエクストラアタック（自分の再臨後カードの平均ダメージ。補正・クリティカルなし）も足す。選ぶ宝具は平均ダメージが高い相手の鉛筆を選ぶ（cpuPickTarget）
+function ultRollPower(u,ud){
+  const n=ud.eff.filter(e=>e.k==='copyRoll').length; if(!n) return 0;
+  const cs=copyCands(u); if(!cs.length) return 0;
+  const avgPost=x=>D(x.def).faces.reduce((s,f)=>s+(isCopyCmd(f.post)?0:(f.post.dmg||0)*hitsOf(f.post.eff)),0)/6;
+  const avg=ud.pick?Math.max(...cs.map(avgPost)):cs.reduce((s,x)=>s+avgPost(x),0)/cs.length;
+  const own=k=>ud.eff.filter(e=>e.k===k&&e.t==='self').reduce((s,e)=>s+e.v,0)+mods(u,k).sum;
+  const atk=own('atk')-mods(u,'atkDown').sum, stars=G.players[u.pid].stars;
+  let crit=0;
+  if(stars>0){ // クリティカル：率（クリティカル率アップ込み）×（追加ダメージ＋威力+。Buster/Quick混在なので平均を使う）
+    const cr=own('critRoll'), p=ruleset().crit==='d6'?Math.min(1,(critNeedD6(stars)+cr)/6):critChance(Math.min(CRIT_TABLE.length,critLevel(stars)+cr))/100;
+    crit=p*((RULES.critDmg+RULES.critDmgR)/2+own('critPow'));
+  }
+  const extra=n===3&&!ud.eff.some(e=>e.k==='copyRoll'&&e.noExtra)?avgDmg(u):0;
+  return n*(avg+Math.max(0,atk)+crit)+extra;
 }
 function cpuUltUser(){
   const c=alive(G.cur).filter(u=>canUlt(u)&&u.np>=RULES.ultCost);
@@ -330,6 +346,27 @@ function atkBuffScore(e,ts){
   return n===1&&(e.turns||0)>1 ? 2 : n===1 ? 1.5 : 0;
 }
 // スター付与：次のクリティカルレベル（シンプルルールは出目の上限）に届いて、その分の期待ダメージ（攻撃回数×上昇した確率×クリティカル追加ダメージ）が見込めるときに使う
+// 攻撃時NP・攻撃時スター（onAtkNp / onAtkStar）：効果が続く間に見込める攻撃の回数で価値が決まる。
+// 攻撃回数＝このターンに割り振られた行動（宝具ならその1回）＋効果が残る次以降のターン（1ターンあたり1.5回、シンプルルールは2回）。回数制（times）は回数が上限
+function onAtkScore(e,ts){
+  const mine=ts.filter(t=>t.pid===G.cur&&!t.master); if(!mine.length) return 0;
+  const now=attackCount(mine), turns=e.turns||1;
+  let atks=now+(turns>1?(turns-1)*(ruleset().partyMax===1?2:1.5):0);
+  if(e.times) atks=Math.min(atks,e.times);
+  if(atks<=0) return 0;
+  if(e.k==='onAtkNp'){ // 全体で貯まるNP：宝具が撃てない味方がいなければ価値は低い
+    if(!mine.some(t=>t.np<RULES.ultCost)) return .3;
+    return Math.min(4,atks*e.v/RULES.ultCost*4);
+  }
+  // 攻撃時スター：増えたスターは次のターンのクリティカルになる。1ターンぶんの価値＝スターが増える前後のクリティカル率の差×次のターンの攻撃回数（starSkillScore と同じ見方）。
+  // このターンはその割り振りで、残りのターンは1ターンの見込み攻撃回数で、2ターン目以降は先の不確かさで6割に割り引く
+  const d6=ruleset().crit==='d6', st=G.gen, solo=ruleset().partyMax===1, next=solo?2:3, per=solo?2:1.5;
+  const p=x=>x<=0?0:d6?Math.min(1,critNeedD6(x)/6):critChance(critLevel(x))/100;
+  const turn=g=>next*(p(st+g)-p(st))*RULES.critDmg/4.5;
+  let v=turn(now*e.v)+(turns>1?(turns-1)*.6*turn(per*e.v):0);
+  if(e.times) v*=Math.min(1,e.times/Math.max(1,atks));
+  return Math.min(4,v);
+}
 function starSkillScore(v,pid){
   if(G.ult) return .5;
   const st=G.players[pid].stars, d6=ruleset().crit==='d6';
@@ -400,6 +437,7 @@ function cpuEffScore(u,effs,picked,si){
         const n=fu?fu.fx.filter(x=>FX[x.k].buff===want&&!x.tmp&&!x.sure).length:0;
         const good=want?ts.some(t=>t.pid===u.pid&&t!==fu):foes.some(t=>t!==fu);
         sc+=n&&good?Math.min(4,1+n):want?0:-1; break; }
+      case 'onAtkNp': case 'onAtkStar': sc+=onAtkScore(e,ts); break;
       case 'buffUp': sc+=acting?.5:0; break;
       case 'debuffResDown': sc+=foes.length?1:-1; break;
       case 'debuffDown': sc+=foes.length?1.5:-1; break;
