@@ -228,6 +228,7 @@ const FX = {
   critRoll:{name:'クリティカル率アップ',buff:true,val:true}, // クリティカルレベル+x
   debuffUp:{name:'弱体成功率アップ',buff:true,val:true},     // 自分が敵に付ける弱体の判定ロール（ロールN以下）をN+xにする（成功率ダウンと相殺）
   ignoreDef:{name:'被ダメージ減少無視',buff:true},           // 相手の[被ダメージ-x]を受けずに攻撃
+  buffUp:{name:'強化成功率アップ',buff:true,val:true},       // 自分が味方（自分含む）に付ける確率つきの強化の判定ロールをN+xにする（強化成功率ダウンと相殺）
   debuffImmune:{name:'弱体無効',buff:true},                  // 弱体効果・弱体ダメージを受けない
   mentalImmune:{name:'精神異常無効',buff:true},              // 精神異常(mental)の弱体を受けない
   nullUnder:{name:'ダメージ無効(x以下)',buff:true,val:true},  // 攻撃1回ごとの最終ダメージがx以下なら0にする（弱体ダメージには効かない）
@@ -310,7 +311,7 @@ const COND_KINDS = { trait:'属性', fx:'状態', hpBelow:'HP○%以下', hpAbov
 const LINE_WHO = { other:'相手・対象', self:'自分', ally:'味方のだれか', enemy:'敵のだれか' };
 ['atk','atkDown','atkPct','atkPctDown','def','defDown'].forEach(k=>{ if(FX[k]) FX[k].condUse=true; });
 const FX_GROUPS = [
-  ['攻撃強化', ['atk','atkPct','npPow','atkVs','atkTrait','ignoreDef','sureHit','pierce','critPow','critMult','critRoll','debuffUp','cardConv','onAtkStar','onAtkNp','aoeNormal']],
+  ['攻撃強化', ['atk','atkPct','npPow','atkVs','atkTrait','ignoreDef','sureHit','pierce','critPow','critMult','critRoll','debuffUp','buffUp','cardConv','onAtkStar','onAtkNp','aoeNormal']],
   ['防御・耐性', ['def','defTrait','evade','invul','guts','taunt','nullUnder','counter','maxHp','debuffImmune','mentalImmune','deathImmune','stripImmune','npDownImmune','starLossImmune']],
   ['継続・ターン', ['actsUp','regenHp','regenNp','regenStar','onHitNp','hitNpUp','onHitStar']],
   ['弱体', ['atkDown','atkPctDown','npPowDown','defDown','critDown','starDown','debuffDown','debuffResDown','buffDown','poison','burn','spread','drain','curse','hitNpSeal','stun','charm','fear','actsDown','sealSkill','sealUlt','healBlock','buffImmune']],

@@ -252,8 +252,8 @@ function debuffRate(src,e){
     return (up.list.length||dn.list.length)?{up:up.sum,dn:dn.sum,list:[...up.list,...dn.list],used:false,foe:true}:null;
   }
   if(b===true){
-    const dn=mods(src,'buffDown');
-    return dn.list.length?{up:0,dn:dn.sum,list:dn.list,used:false,foe:false}:null;
+    const up=mods(src,'buffUp'), dn=mods(src,'buffDown');
+    return (up.list.length||dn.list.length)?{up:up.sum,dn:dn.sum,list:[...up.list,...dn.list],used:false,foe:false}:null;
   }
   return null;
 }
