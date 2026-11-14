@@ -568,6 +568,8 @@ function fxText(e){
   switch(e.k){
     case 'atk': s=`攻撃ダメージ+${e.v}${col}`; break;
     case 'atkDown': s=`攻撃ダメージ-${e.v}${col}`; break;
+    case 'atkPct': s=`攻撃ダメージ+${e.v}%${col}`; break;
+    case 'atkPctDown': s=`攻撃ダメージ-${e.v}%${col}`; break;
     case 'def': s=`被ダメージ-${e.v}`; break;
     case 'defDown': s=`被ダメージ+${e.v}`; break;
     case 'critPow': s=`クリティカル威力+${e.v}${col}`; break;
@@ -609,6 +611,7 @@ function fxText(e){
     case 'dmg': s=e.max?'最大HPぶんのダメージ(軽減不可)':`${e.v}ダメージ`; break;
     case 'selfDmg': s=e.max?'最大HPぶんの自傷ダメージ(軽減不可)':`自傷ダメージ${e.v}`; break;
     case 'aoe': s='攻撃の全体化（敵全体に攻撃）'; break;
+    case 'aoeNormal': s='通常攻撃の全体化（敵全体に攻撃）'; break;
     case 'multiHit': s=`${e.v}回連続攻撃`; break;
     case 'npPow': s=`${TERMS.ult}威力+${e.v}`; break;
     case 'npPowDown': s=`${TERMS.ult}威力-${e.v}`; break;
@@ -654,4 +657,14 @@ function skillListHTML(d,asc=false){
     return sklBlockHTML(`S${i+1}`,skillNameHTML(s),s.eff.length?effLines(s.eff,s.pick):[],{cls:lk?'locked':'',note:lk?`🔒 ${TERMS.asc}後に使用可`:''}); }).join('');
   const ult=sklBlockHTML(TERMS.ult,ultNameHTML(d.ult),d.ult.eff.length?effLines(d.ult.eff,d.ult.pick):[],{cls:`ult ${esc(d.ult.c)}`,note:`<span class="cmd ${esc(d.ult.c)}">${TERMS[d.ult.c]||esc(d.ult.c)}</span>`});
   return `<div class="skl">${rows}${ult}</div>`;
+}
+
+// ---------- ハンデ戦の説明文（ゲーム・エディタ・バランス検証で共通） ----------
+// 段階ボーナスの説明（例：「、差2：攻撃+20・NP+10%、差3：…、差4以上：…」）
+function hcapTierText(rs){
+  const t=rs.hcapBonus||[]; if(!t.length) return '';
+  return '、'+t.map((b,i)=>`差${b.gap}${i===t.length-1&&t.length>1?'以上':''}：攻撃+${b.atk}・${TERMS.gauge}+${b.np}%${b.hp?`・最大HP+${b.hp}`:''}`).join('、')+'をさらに付与';
+}
+function hcapRuleText(rs){
+  return `コスト差${rs.handicapAsc}以上なら低い方が${TERMS.ascFull}済みで開始${hcapTierText(rs)}。`;
 }

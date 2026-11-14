@@ -233,7 +233,7 @@ function renderCtl(){
         ${B.view==='master'?sel('sv',[[3,'3'],[6,'6'],[9,'9'],[20,'20'],[0,'すべて']],B.sv,'マスターの組ごとのサーヴァント編成数'):''}
         ${sel('n',[[10,'10試合'],[20,'20試合'],[50,'50試合'],[100,'100試合'],[300,'300試合']],B.n,'1対戦あたり')}
         ${sel('level',[['normal','ふつう'],['hard','つよい（先読みなし・速い）'],['hard+','つよい（先読みあり・遅い）']],B.level,'CPUの強さ')}
-        ${rs().handicapAsc&&B.view!=='master'?`<label class="chk"><input type="checkbox" data-s="handicap" ${B.handicap?'checked':''} ${dis}>ハンデ戦（コスト差${rs().handicapAsc}以上で低コスト側が${TERMS.ascFull}済み、${rs().hcapBonus.gap}以上でさらに攻撃+${rs().hcapBonus.atk}・獲得NP+${rs().hcapBonus.np}%）</label>`:''}
+        ${rs().handicapAsc&&B.view!=='master'?`<label class="chk"><input type="checkbox" data-s="handicap" ${B.handicap?'checked':''} ${dis}>ハンデ戦（${hcapRuleText(rs()).replace(/。$/,'')}）</label>`:''}
       </div>
       ${needTeam?`<div class="seg">${[['pool','全編成と対戦'],['duel','2つの編成の直接対決']].map(([v,l])=>`<button class="${B.vs===v?'on':''}" data-b="set" data-k="vs" data-v="${v}" ${dis}>${l}</button>`).join('')}</div>
         ${builderHTML('A',B.vs==='duel'?'チームA':'検証する編成')}${B.vs==='duel'?builderHTML('B','チームB'):''}`:''}

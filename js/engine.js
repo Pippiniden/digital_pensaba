@@ -185,7 +185,7 @@ const npSealFx = u=>u.fx.find(e=>e.k==='curse')||u.fx.find(e=>e.k==='hitNpSeal'&
 const dotVal = e=>e.v||RULES.dot; // 毒・やけどの値（0は旧データなので RULES.dot）
 function addNp(u,v){ if(!u.out) u.np=Math.max(0,Math.min(RULES.gaugeMax,u.np+v)); }
 // 最大HP（定義のHP＋最大HP+の合計）。最大HP+が切れたら HP を最大値まで下げる（1未満にはしない）
-const maxHp = u=>D(u.def).hp+mods(u,'maxHp').sum+(costBonus(u)?costBonus(u).hp:0);
+const maxHp = u=>D(u.def).hp+mods(u,'maxHp').sum+(costBonus(u)?costBonus(u).hp:0)+(hasHcap(u)?(G.hcap.hp||0):0);
 function clampHp(u){ if(!u.out&&u.hp>maxHp(u)) u.hp=Math.max(1,maxHp(u)); }
 // スターの獲得：手番側はこのターンの発生スター（G.gen）、相手側は手持ちに直接加える
 function gainStars(pid,v){ if(pid===G.cur) G.gen+=v; else G.players[pid].stars+=v; }
@@ -432,7 +432,7 @@ function masterHit(m,dmg,o={}){
   m.out=true; m.fx=[];
   const full=D(m.def).hp;
   log(`${nm(m)} 瀕死！ ${TERMS.unit}が${TERMS.player}の最大HP分（${full}）のダメージを受ける`,'bad');
-  fxEmit({t:'pop',uid:m.uid,text:'瀕死',cls:'ko'});
+  KO_PEND.push(m.uid); // 暗くする・「瀕死」の文字は、ダメージ演出が終わってから（flushKo）
   alive(m.pid).forEach(u=>dealDamage(u,full,false));
 }
 // マスターの補助・令呪・攻撃による固定ダメージ（補正・無敵・回避・NP獲得なし）
@@ -441,10 +441,12 @@ function fixedHit(src,t,v){
   dealDamage(t,v,false,{src});
 }
 // 攻撃側の補正（被ダメージ減少無視なら相手の def を見ない）。使った効果も返す
+// 攻撃ダメージ±%（atkPct / atkPctDown）を d に掛ける（pct が 0 なら何もしない）
+const applyPct = (d,pct)=>pct?Math.max(0,Math.round(d*(100+pct)/100)):d;
 function dmgMods(att,tgt,color){
-  const a=modsC(att,'atk',color,tgt), ad=modsC(att,'atkDown',color,tgt);
+  const a=modsC(att,'atk',color,tgt), ad=modsC(att,'atkDown',color,tgt), pa=modsC(att,'atkPct',color,tgt), pd=modsC(att,'atkPctDown',color,tgt);
   // ハンデの攻撃ダメージ+ も足す
-  let sum=a.sum-ad.sum+(hasHcap(att)?G.hcap.atk:0)+(costBonus(att)?costBonus(att).atk:0); const usedA=[...a.list,...ad.list], usedT=[];
+  let sum=a.sum-ad.sum+(hasHcap(att)?G.hcap.atk:0)+(costBonus(att)?costBonus(att).atk:0); const usedA=[...a.list,...ad.list,...pa.list,...pd.list], usedT=[];
   if(tgt&&!tgt.out){
     // 弱体状態特攻：対象が指定の弱体（vs 未指定なら何か1つ）を受けていれば加算
     const vs=att.fx.filter(e=>e.k==='atkVs'&&tgt.fx.some(x=>e.vs?x.k===e.vs:FX[x.k].buff===false));
@@ -462,7 +464,7 @@ function dmgMods(att,tgt,color){
   }
   // 色指定のある攻撃ダメージ+（色バフ）の合計：クリティカルで2倍
   const colorBuff=a.list.filter(e=>e.color).reduce((s,e)=>s+e.v,0);
-  return {sum, usedA, usedT, colorBuff};
+  return {sum, pct:pa.sum-pd.sum, usedA, usedT, colorBuff};
 }
 // スター発生数ダウン(starDown)：1回の攻撃で発生するスターの合計から x 個引く（0未満にはしない）。返り値＝まだ引き切れていない分
 function gainNpStar(att,cmd,mult){
@@ -511,6 +513,7 @@ function attackHit(att,cmd,tgt,o,lab){
     const m=dmgMods(att,tgt,cmd.c); usedA=m.usedA; usedT=m.usedT; colorBuff=m.colorBuff;
     if(m.sum){ dmg=Math.max(0,dmg+m.sum); note.push(`補正${m.sum>0?'+':''}${m.sum}`); }
     if(o.chain==='R'){ dmg+=RULES.chainR; note.push(`チェイン+${RULES.chainR}`); }
+    if(m.pct){ dmg=applyPct(dmg,m.pct); note.push(`攻撃${m.pct>0?'+':''}${m.pct}%`); }
   } else note.push('エクストラ：補正なし');
   // 4. クリティカル（クラス相性はなし）：スターがあれば1d100で判定。成功でダメージ+30（Buster+60）、色バフ2倍
   let crit=false;
@@ -590,9 +593,9 @@ function resolveCommand(att,cmd,tgt,o={}){
   const hits=hitsOf(cmd.eff);
   if(hits>1) log(`${n} ${cmdChip(cmd)}：${hits}回連続攻撃`,'sub');
   // 攻撃の全体化：選んだ対象のあと、残りの生存する敵にも同じ攻撃を当てる（NP・スター・攻撃時効果は最初の1回だけ。マスターには当たらない）
-  const aoe=isAoe(cmd.eff)&&cmd.dmg>0;
+  const aoe=(isAoe(cmd.eff)||has(att,'aoeNormal'))&&cmd.dmg>0; // 面の効果の全体化、または自分に付いている「通常攻撃の全体化」
   const tl=aoe?[tgt,...alive(1-att.pid).filter(x=>x!==tgt)]:[tgt];
-  if(aoe) log(`${n} ${cmdChip(cmd)}：攻撃の全体化（敵全体に攻撃）`,'sub');
+  if(aoe) log(`${n} ${cmdChip(cmd)}：${isAoe(cmd.eff)?'攻撃の全体化':'通常攻撃の全体化'}（敵全体に攻撃）`,'sub');
   for(let h=0;h<hits;h++){
     const pend=aoe?[]:null;
     for(let i=0;i<tl.length;i++){
@@ -638,7 +641,7 @@ function resolveUlt(u,tgt,picked){
         else {
           const m=dmgMods(u,t,ud.c), up=mods(u,'npPow'), dn=mods(u,'npPowDown');
           [...m.usedA,...up.list,...dn.list].forEach(x=>usedA.add(x)); usedT=m.usedT;
-          dmg=Math.max(0,e.v+m.sum+up.sum-dn.sum);
+          dmg=applyPct(Math.max(0,e.v+m.sum+up.sum-dn.sum),m.pct);
         }
         if(t.master&&e.t==='enemy_all'){ log(`→ ${nm(t)}${lab}：<b>${fmt(dmg)}</b>ダメージ`); dealDamage(t,dmg,false,{np:true,src:u}); continue; }
         const b=blocked(u,t);
@@ -717,15 +720,16 @@ function applyHandicap(){
   const low=c[0]<c[1]?0:1;
   log(`ハンデ戦：コスト差${diff}のため ${esc(G.players[low].name)} は${TERMS.ascFull}済みで開始`,'h');
   G.players[low].party.forEach(ascend);
-  const hb=rs.hcapBonus;
-  if(hb&&diff>=hb.gap){
-    G.hcap={pid:low, np:hb.np, atk:hb.atk};
+  const hb=(rs.hcapBonus||[]).filter(b=>diff>=b.gap).sort((a,b)=>b.gap-a.gap)[0]; // コスト差以下で最大の gap の行
+  if(hb){
+    G.hcap={pid:low, np:hb.np||0, atk:hb.atk||0, hp:hb.hp||0};
+    if(G.hcap.hp) G.players[low].party.forEach(u=>{ u.hp=maxHp(u); }); // 最大HPが増えたぶん開始時のHPも増やす
     log(`ハンデ戦：コスト差${diff}のため ${esc(G.players[low].name)} の${TERMS.unit}は ${hcapText()}`,'h');
   }
 }
-// ハンデ（コスト差 hcapBonus.gap 以上）：低コスト側のサーヴァントの攻撃ダメージ+atk・獲得NP+np%（解除できない）
+// ハンデ（コスト差が大きいほど段階的に強化。HCAP_BONUS）：低コスト側のサーヴァントの攻撃ダメージ+atk・獲得NP+np%・最大HP+hp（解除できない）
 const hasHcap = u=>!!G.hcap&&G.hcap.pid===u.pid&&!u.master;
-const hcapText = ()=>G.hcap?`攻撃ダメージ+${G.hcap.atk}・獲得${TERMS.gauge}+${G.hcap.np}%`:'';
+const hcapText = ()=>G.hcap?`攻撃ダメージ+${G.hcap.atk}・獲得${TERMS.gauge}+${G.hcap.np}%${G.hcap.hp?`・最大HP+${G.hcap.hp}`:''}`:'';
 // 攻撃・被弾・チェインで得るNPに、ハンデのNP獲得量アップを掛ける（スキルなどで直接増えるNPには掛けない）
 const npRate = (u,v)=>hasHcap(u)&&G.hcap.np?Math.round(v*(100+G.hcap.np)/100):v;
 function beginTurn(){
@@ -844,9 +848,9 @@ const PN = n=>'①②③④⑤⑥⑦⑧⑨'[n-1+(masterRule()&&n>=3?1:0)];
 function toSkillPhase(){ G.phase='skill'; log(`${PN(3)} スキル・${TERMS.ult}使用`,'h'); phaseFx('SKILL',`スキル・${TERMS.ult}`); }
 // ---------- マスタールール ----------
 // マスターフェイズで行動できるマスター（なければ null）
-function masterReady(){ const m=masterOf(G.cur); return G.phase==='master'&&!G.mastered&&m&&!m.out&&!(G.spellPick&&G.spellPick.sup)?m:null; } // 補助の対象選択中は他の行動を受け付けない
+function masterReady(){ const m=masterOf(G.cur); return G.phase==='master'&&!G.mastered&&m&&!m.out&&!disabled(m)&&!(G.spellPick&&G.spellPick.sup)?m:null; } // スタン・魅了（disabled）のマスターは補助・攻撃・令呪・退避のすべて不可 // 補助の対象選択中は他の行動を受け付けない
 function masterDone(){ G.mastered=true; flushKo(); checkWin(); if(G.winner==null&&G.phase==='master') toSkillPhase(); }
-const masterAtkDmg = (m,t)=>Math.max(0,D(m.def).cost*ruleset().masterAtk[t.master?'master':'svt']+dmgMods(m,t,'W').sum);
+const masterAtkDmg = (m,t)=>{ const dm=dmgMods(m,t,'W'); return applyPct(Math.max(0,D(m.def).cost*ruleset().masterAtk[t.master?'master':'svt']+dm.sum),dm.pct); };
 // 令呪の状態：P.spellLeft＝残りの画数 / P.spellUsed[i]＝その効果を使った / P.spell==='decl'＝宣言中（マスタールール）
 // 令呪を使える：マスタールールは未使用・このターンにサーヴァントが1回以上行動できる。
 // マスターチームは残りがあり、生存サーヴァントが全員1回以上行動でき、行動を1回減らせる
@@ -856,7 +860,7 @@ function canDeclareSpell(){
   return Object.values(G.maxActs).some(n=>n>0);
 }
 // 相手マスターへのダメージを令呪で防げる（残りがあり、宣言中でない）
-const canGuardSpell = pid=>G.players[pid].spellLeft>0&&G.players[pid].spell!=='decl';
+const canGuardSpell = pid=>{ const m=masterOf(pid); return G.players[pid].spellLeft>0&&G.players[pid].spell!=='decl'&&!(m&&disabled(m)); }; // 行動不能のマスターは令呪で守らせることもできない
 // 令呪の効果を使う。守る側の選択待ちになったら true
 // picked：マスターチームで「自軍サーヴァント」の対象に選んだ1騎
 function useSpell(m,i,picked){
@@ -1079,7 +1083,8 @@ const ACTIONS = {
     const txt=Object.entries(G.alloc).filter(([,n])=>n).map(([uid,n])=>`${dn(U(uid))}×${n}`).join('、');
     log(`配分：${txt||'なし'}`,'sub');
     const m=masterOf(G.cur);
-    if(m&&!m.out){ G.phase='master'; log(`③ ${TERMS.player}フェイズ`,'h'); phaseFx('MASTER',`${TERMS.player}フェイズ`); }
+    if(m&&!m.out&&disabled(m)){ log(`③ ${TERMS.player}フェイズ`,'h'); log(`${nm(m)}は行動不能（${TERMS.player}フェイズはスキップ）`,'bad'); toSkillPhase(); } // 宣言済みの令呪も、行動不能が治るまで使えない
+    else if(m&&!m.out){ G.phase='master'; log(`③ ${TERMS.player}フェイズ`,'h'); phaseFx('MASTER',`${TERMS.player}フェイズ`); }
     else toSkillPhase();
   },
   // ---------- マスターフェイズ（マスタールール） ----------

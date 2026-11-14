@@ -61,17 +61,25 @@ function critNeedD6(stars){ let n=0; CRIT_D6_TABLE.forEach(([s,v])=>{ if(stars>=
 //         secondBonus：後攻の最初のターン（G.turn===2）は全員の最大行動回数+1（先攻有利の緩和。6000戦で先攻勝率 55%→51%）
 // simple: シンプルルール（1on1・クリティカルは1d6）。宝具はチームバトルと同じくスキルフェイズで使う
 //         handicapAsc：ハンデ戦ON のとき、この値以上のコスト差があれば低コスト側が最初から霊基再臨済み
-//         hcapBonus  ：さらにコスト差が gap 以上なら、低コスト側のサーヴァントは攻撃ダメージ+atk・獲得NP+np%（攻撃・被弾・チェインのNP）
+//         hcapBonus  ：さらにコスト差に応じた段階ボーナス（HCAP_BONUS）。コスト差以下で最大の gap の行を使う。
+//                      低コスト側のサーヴァントは攻撃ダメージ+atk・獲得NP+np%（攻撃・被弾・チェインのNP）・最大HP+hp
+// ハンデ戦の段階ボーナス（gap の昇順）。高コスト側の勝率の目安（hard vs hard・シンプルルール・各5000〜10000戦）
+//   差1：再臨のみ 約60% ／ 差2：+20/NP10 約70% ／ 差3：+30/NP20/HP100 約75% ／ 差4以上：+70/NP30/HP150 約78%
+const HCAP_BONUS = [
+  {gap:2, atk:20, np:10, hp:0},
+  {gap:3, atk:30, np:20, hp:100},
+  {gap:4, atk:70, np:30, hp:150},
+];
 const RULESETS = {
   team:  { name:'チームバトル', partyMax:3, crit:'d100', secondBonus:true,
     desc:'3騎まで・コスト合計10以下で編成する基本ルール。' },
-  simple:{ name:'シンプル', partyMax:1, crit:'d6', handicapAsc:2, hcapBonus:{gap:3, atk:30, np:10},
+  simple:{ name:'シンプル', partyMax:1, crit:'d6', handicapAsc:1, hcapBonus:HCAP_BONUS,
     desc:`1騎同士で戦う簡易ルール。相手の${TERMS.unit}を${TERMS.out}にすれば勝利。` },
   // master: マスタールール（シンプルルール＋泥ペンマス）。行動回数決定の後にマスターフェイズが入る
   //   masterAtk   ：マスターの攻撃＝コスト×値（master＝相手マスターへ / svt＝相手サーヴァントへ）
   //   lateBonus   ：G.turn がこの値以上（=3ターン目の後攻から）は行動回数+1
   //   spellNowStars：令呪を宣言したターンにすぐ使うために消費するスター（クリティカルLv4 = CRIT_TABLE の16個）
-  master:{ name:'マスター', partyMax:1, crit:'d6', handicapAsc:2, hcapBonus:{gap:3, atk:30, np:10}, master:true,
+  master:{ name:'マスター', partyMax:1, crit:'d6', handicapAsc:1, hcapBonus:HCAP_BONUS, master:true,
     masterAtk:{ master:20, svt:10 }, lateBonus:6, spellNowStars:16,
     desc:`${TERMS.unit}1騎＋${TERMS.player}1人で戦うルール。行動回数の後に${TERMS.player}フェイズ（補助・攻撃・令呪・退避）。相手の${TERMS.unit}を${TERMS.out}にすれば勝利。` },
 };
@@ -209,6 +217,8 @@ const CMD_TYPES = ['R','B','G','W','ASC']; // W=白(特殊行動) / ASC=霊基�
 // timesOnly: 効果時間は回数だけで指定する  perm: 効果時間なし（永続）が正常  color: 色(R/B/G)で限定できる  only: その場所(ult/special)でだけ使える
 const FX = {
   atk:{name:'攻撃ダメージ+',buff:true,val:true,color:true}, atkDown:{name:'攻撃ダメージ-',buff:false,val:true,color:true},
+  // 攻撃ダメージ±%：コマンド攻撃・宝具のダメージ・マスター攻撃を、攻撃ダメージ+（固定値）やチェインを足したあとで ×(100+x)% にする（クリティカルの加算より前）。複数あれば％は足し引き（0%未満にはならない）
+  atkPct:{name:'攻撃ダメージ+%',buff:true,val:true,color:true}, atkPctDown:{name:'攻撃ダメージ-%',buff:false,val:true,color:true},
   def:{name:'被ダメージ-',buff:true,val:true},   defDown:{name:'被ダメージ+',buff:false,val:true},
   critPow:{name:'クリティカル威力+',buff:true,val:true,color:true},   // クリティカル時のダメージ増加量に+x
   critMult:{name:'クリティカル倍率',buff:true,val:true},     // クリティカル時のダメージを「+30（Buster+60）・色バフ2倍」の代わりに、クリティカル前のダメージ×x%にする（複数なら最大値）。獲得NP・スターは通常どおり2倍
@@ -280,6 +290,9 @@ const FX = {
   npPowDown:{name:'宝具威力ダウン',buff:false,val:true},   // 宝具のダメージ-x
   // 説明文：効果は持たない。これがあるスキル・宝具・特殊行動・補助・令呪の説明は、この文章に置き換わる（text）
   aoe:{name:'攻撃の全体化',inst:true,noTgt:true,only:'special'},   // ダメージつき特殊行動を敵全体に当てる（NP・スター・攻撃時効果は1回だけ。クリティカル・回避・無敵は対象ごと。敵マスターには当たらない）
+  // 通常攻撃の全体化：付いている間（turns・times のとおり）、自分の通常攻撃（コマンド）が敵全体に当たる。宝具・スキルのダメージには影響しない。1対1では効果なし
+  //   NP・スター・攻撃時効果は1回だけ。クリティカル・回避・無敵は対象ごと。敵マスターには当たらない（aoe と同じ扱い）
+  aoeNormal:{name:'通常攻撃の全体化',buff:true},
   desc:{name:'説明文（表示のみ）',inst:true,noTgt:true},
 };
 
@@ -293,12 +306,12 @@ const vsOk = (k,vs)=>k in VS_KINDS && !!FX[vs] && FX[vs].buff===VS_KINDS[k];
 const COND_KINDS = { trait:'属性', fx:'状態', hpBelow:'HP○%以下', hpAbove:'HP○%以上', npFull:'NP満タン', cls:'クラス', id:'キャラクター（ID）' };
 // 条件つきセリフ（condLines）で条件を見る相手：other＝その場面の相手（攻撃の対象・攻撃してきた相手・スキルの対象）/ self＝自分 / ally＝自分以外の味方のだれか / enemy＝敵のだれか
 const LINE_WHO = { other:'相手・対象', self:'自分', ally:'味方のだれか', enemy:'敵のだれか' };
-['atk','atkDown','def','defDown'].forEach(k=>{ if(FX[k]) FX[k].condUse=true; });
+['atk','atkDown','atkPct','atkPctDown','def','defDown'].forEach(k=>{ if(FX[k]) FX[k].condUse=true; });
 const FX_GROUPS = [
-  ['攻撃強化', ['atk','npPow','atkVs','atkTrait','ignoreDef','sureHit','pierce','critPow','critMult','critRoll','debuffUp','cardConv','onAtkStar','onAtkNp']],
+  ['攻撃強化', ['atk','atkPct','npPow','atkVs','atkTrait','ignoreDef','sureHit','pierce','critPow','critMult','critRoll','debuffUp','cardConv','onAtkStar','onAtkNp','aoeNormal']],
   ['防御・耐性', ['def','defTrait','evade','invul','guts','taunt','nullUnder','counter','maxHp','debuffImmune','mentalImmune','deathImmune','stripImmune','npDownImmune','starLossImmune']],
   ['継続・ターン', ['actsUp','regenHp','regenNp','regenStar','onHitNp','hitNpUp','onHitStar']],
-  ['弱体', ['atkDown','npPowDown','defDown','critDown','starDown','debuffDown','poison','burn','spread','drain','curse','hitNpSeal','stun','charm','fear','actsDown','sealSkill','sealUlt','healBlock','buffImmune']],
+  ['弱体', ['atkDown','atkPctDown','npPowDown','defDown','critDown','starDown','debuffDown','poison','burn','spread','drain','curse','hitNpSeal','stun','charm','fear','actsDown','sealSkill','sealUlt','healBlock','buffImmune']],
   ['回復・即時', ['heal','np','star','starLoss','cleanse','cleanseMental','strip','buffExtend','skillCharge']],
   ['攻撃・特殊', ['dmg','multiHit','aoe','selfDmg','instantDeath','copyRoll']],
   ['表示', ['desc']],

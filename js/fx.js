@@ -187,7 +187,7 @@ function showKo(L,ev){
   ev.uids.forEach(uid=>{
     delete FXHOLD[uid]; redrawSvt(uid);
     const el=document.querySelector(`.svt[data-uid="${uid}"]`); if(el) el.classList.add('ko');
-    const p=portraitOf(uid); if(p) showPop(L,{text:TERMS.out,cls:'ko'},p.getBoundingClientRect());
+    const p=portraitOf(uid); if(p) showPop(L,{text:(U(uid)&&U(uid).master)?'瀕死':TERMS.out,cls:'ko'},p.getBoundingClientRect());
   });
 }
 // 念のため：演出が全部終わったのに戦闘不能待ちが残っていたら表示を戻す

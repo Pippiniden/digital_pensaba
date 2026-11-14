@@ -955,19 +955,19 @@ const DEFAULT_UNITS = [
       "win":["あたしの勝ちィ！！……って、ああー……またやっちゃったよ、恥ずかしいなぁ"]
     },
     "faces":[
-      {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
-      {"acts":2,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":90,"np":0,"star":0}},
-      {"acts":1,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
-      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"R","dmg":60,"np":0,"star":0,"eff":[{"k":"aoe","t":"self","v":0}]}},
-      {"acts":3,"pre":{"c":"G","dmg":30,"np":0,"star":4},"post":{"c":"G","dmg":40,"np":0,"star":6}},
-      {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":3},"post":{"c":"G","dmg":40,"np":0,"star":5}}
+      {"acts":1,"pre":{"c":"R","dmg":90,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":60,"np":15,"star":0},"post":{"c":"B","dmg":70,"np":20,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"R","dmg":70,"np":0,"star":0,"eff":[{"k":"aoe","t":"self","v":0}]}},
+      {"acts":3,"pre":{"c":"G","dmg":40,"np":0,"star":4},"post":{"c":"G","dmg":50,"np":0,"star":6}},
+      {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":3},"post":{"c":"G","dmg":50,"np":0,"star":5}}
     ],
     "skills":[
       {"name":"勇猛","eff":[{"k":"mentalImmune","t":"self","v":0,"turns":3},{"k":"atk","t":"self","v":30,"turns":3}],"rank":"B"},
       {"name":"百発百中","eff":[{"k":"sureHit","t":"self","v":0,"turns":4},{"k":"regenStar","t":"self","v":5,"turns":4}],"rank":"B"},
       {"name":"乱戦の心得","eff":[{"k":"critRoll","t":"self","v":1,"turns":3},{"k":"onAtkStar","t":"ally_all","v":4,"turns":3}],"rank":"B"}
     ],
-    "ult":{"name":"鳥坂城・百花繚乱","c":"G","eff":[{"k":"atk","t":"self","v":30,"turns":3},{"k":"critPow","t":"self","v":30,"turns":3},{"k":"dmg","t":"enemy_all","v":370},{"k":"def","t":"self","v":30,"turns":3}],"ruby":"とっさかじょう・ひゃっかりょうらん"}
+    "ult":{"name":"鳥坂城・百花繚乱","c":"G","eff":[{"k":"atk","t":"self","v":50,"turns":3},{"k":"critPow","t":"self","v":30,"turns":3},{"k":"aoeNormal","t":"self","v":0,"turns":3},{"k":"defDown","t":"self","v":30,"turns":3}],"ruby":"とっさかじょう・ひゃっかりょうらん"}
   },
   {
     "id":"adonis", "name":"アドニス", "cls":"アーチャー", "cost":3, "hp":550,

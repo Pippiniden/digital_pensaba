@@ -110,9 +110,9 @@ function masterCardHTML(m){
   const fx=sh.fx.map(e=>`<span class="chip fx ${FX[e.k].buff?'buff':'debuff'}">${fxText(e)}</span>`).join('');
   const nb=sh.fx.filter(e=>FX[e.k].buff===true).length, nd=sh.fx.filter(e=>FX[e.k].buff===false).length;
   const pfx=nb||nd?`<span class="pfx">${nb?`<b class="buff">▲${nb}</b>`:''}${nd?`<b class="debuff">▼${nd}</b>`:''}</span>`:'';
-  return `<div class="svt mcard ${sh.out||m.out?'out':''} ${pick?'pickable':''} ${tgt?'targeted':''}" data-uid="${m.uid}" ${pick?'data-a="cardClick"':''}>
+  return `<div class="svt mcard ${sh.out?'out':''} ${pick?'pickable':''} ${tgt?'targeted':''}" data-uid="${m.uid}" ${pick?'data-a="cardClick"':''}>
     ${glowHTML(sh.fx)}
-    <div class="svin"><div class="portrait">${unitImg(d,'face','pimg',d.name)}<span class="pord">${TERMS.player}</span>${m.out?'<span class="pout">瀕死</span>':''}${pfx}</div>
+    <div class="svin"><div class="portrait">${unitImg(d,'face','pimg',d.name)}<span class="pord">${TERMS.player}</span>${sh.out?'<span class="pout">瀕死</span>':''}${pfx}</div>
     <div class="sinfo">
       <div class="sname"><b title="${esc(d.name)}">${esc(d.name)}</b><button class="info" data-ui="detail" data-uid="${m.uid}" title="詳細を見る">i</button></div>
       <div class="gauge hp"><span>HP</span><div class="bar"><i style="width:${pctOf(sh.hp,mhp)}%"></i></div><b>${fmt(sh.hp)}<small>/${mhp}</small></b></div>
@@ -137,10 +137,10 @@ function masterChipHTML(m){
   const tgt=G.phase==='target'&&G.target===m.uid&&!sh.out;
   const sp=P.spell==='decl'?'令呪 宣言中':P.spellLeft>0?`令呪 ${P.spellLeft}画`:'令呪 使用済み';
   const nb=sh.fx.filter(e=>FX[e.k].buff===true).length, nd=sh.fx.filter(e=>FX[e.k].buff===false).length, mhp=maxHp({def:m.def,fx:sh.fx});
-  return `<div class="mchip ${sh.out||m.out?'out':''} ${pick?'pickable':''} ${tgt?'targeted':''}" data-uid="${m.uid}" ${pick?'data-a="cardClick"':''} title="${esc(sh.fx.map(fxText).join(' / '))}">
+  return `<div class="mchip ${sh.out?'out':''} ${pick?'pickable':''} ${tgt?'targeted':''}" data-uid="${m.uid}" ${pick?'data-a="cardClick"':''} title="${esc(sh.fx.map(fxText).join(' / '))}">
     <span class="mlab">${TERMS.player}</span><b class="mname" title="${esc(d.name)}">${esc(d.name)}</b>
     <span class="gauge hp"><div class="bar"><i style="width:${pctOf(sh.hp,mhp)}%"></i></div><b>${fmt(sh.hp)}<small>/${mhp}</small></b></span>
-    <span class="mtag ${P.spellLeft>0&&P.spell!=='decl'?'':'off'}">${sp}</span>${P.evac?'<span class="mtag evac">退避中</span>':''}${m.out?'<span class="mtag dead">瀕死</span>':''}
+    <span class="mtag ${P.spellLeft>0&&P.spell!=='decl'?'':'off'}">${sp}</span>${P.evac?'<span class="mtag evac">退避中</span>':''}${sh.out?'<span class="mtag dead">瀕死</span>':''}
     ${nb||nd?`<span class="pfx">${nb?`<b class="buff">▲${nb}</b>`:''}${nd?`<b class="debuff">▼${nd}</b>`:''}</span>`:''}
     <button class="info" data-ui="detail" data-uid="${m.uid}" title="詳細を見る">i</button></div>`;
 }
@@ -608,10 +608,6 @@ document.addEventListener('change',e=>{ if(e.target.matches('select[data-uif],in
 
 // シンプルルール：相手のコストとハンデの説明
 // ハンデ戦の説明（モード選択の title・編成画面）
-function hcapRuleText(rs){
-  const b=rs.hcapBonus;
-  return `コスト差${rs.handicapAsc}以上なら低い方が${TERMS.ascFull}済みで開始${b?`、${b.gap}以上ならさらに攻撃ダメージ+${b.atk}・獲得${TERMS.gauge}+${b.np}%`:''}。`;
-}
 function handicapNote(pid){
   const rs=ruleset(), mr=!!rs.master, cost=p=>{ const u=G.picks[p][0], m=G.mpicks[p]; return (u?D(u).cost:0)+(mr&&m?D(m).cost:0); };
   const mine=mr&&(G.picks[pid][0]||G.mpicks[pid])?`合計コスト${cost(pid)}。`:'';

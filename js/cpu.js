@@ -235,7 +235,7 @@ function cmdOf(u,f){ const face=D(u.def).faces[f]; return !u.asc&&face.pre.c==='
 function cmdValue(u,c,stars,tgt){
   if(c.c==='ASC') return u.asc?0:ASC_VALUE;
   if(!(c.dmg>0)) return 0;
-  const m=dmgMods(u,tgt,c.c==='W'?null:c.c); let d=Math.max(0,c.dmg+m.sum);
+  const m=dmgMods(u,tgt,c.c==='W'?null:c.c); let d=applyPct(Math.max(0,c.dmg+m.sum),m.pct);
   if(stars>0&&c.c!=='W'){
     const p=ruleset().crit==='d6'?Math.min(1,critNeedD6(stars)/6):critChance(critLevel(stars))/100;
     d+=p*((c.c==='R'?RULES.critDmgR:RULES.critDmg)+m.colorBuff);
@@ -355,6 +355,7 @@ function cpuEffScore(u,effs,picked,si){
     const acting=ts.some(isActing);
     const foes=ts.filter(t=>t.pid!==u.pid);
     switch(e.k){
+      case 'atkPct': sc+=acting?3:0; break;
       case 'atk': sc+=cpuHard()?atkBuffScore(e,ts):acting?3:0; break;
       case 'critPow': sc+=acting&&!G.ult&&critLevel(stars)>=3?3:0; break;
       case 'ignoreDef': sc+=acting&&enemies.some(x=>has(x,'def'))?3:.5; break;
@@ -374,6 +375,7 @@ function cpuEffScore(u,effs,picked,si){
       case 'actsUp': sc+=ts.length&&!foes.length?2:0; break;
       case 'starLoss': sc+=foes.some(t=>G.players[t.pid].stars>0)?2:0; break;
       case 'critRoll': sc+=acting&&!G.ult&&stars>0?2:0; break;
+      case 'aoeNormal': sc+=acting&&enemies.length>=2?3:.3; break;
       case 'sureHit': sc+=acting&&enemies.some(x=>has(x,'evade'))?4:.5; break;
       case 'pierce': sc+=acting&&enemies.some(x=>has(x,'evade')||has(x,'invul'))?4:.5; break;
       case 'def': case 'evade': case 'invul': sc+=ts.some(t=>hpR(t)<.6)?3:0; break;
@@ -403,7 +405,7 @@ function cpuEffScore(u,effs,picked,si){
       case 'star': sc+=cpuHard()?starSkillScore(e.v,u.pid):G.ult?.5:2; break;
       case 'stun': case 'charm': sc+=3; break;
       case 'poison': case 'burn': sc+=ts.some(t=>!has(t,e.k))?2:0; break;
-      case 'curse': case 'hitNpSeal': case 'atkDown': sc+=2; break;
+      case 'curse': case 'hitNpSeal': case 'atkDown': case 'atkPctDown': sc+=2; break;
       case 'strip': sc+=ts.some(t=>t.fx.some(x=>e.vs?x.k===e.vs:FX[x.k].buff))?2:0; break;
       case 'defDown': sc+=ts.some(t=>t.pid===u.pid)?-1:1; break;
       case 'dmg': sc+=foes.length?2:0; break;
@@ -437,12 +439,12 @@ function estDamage(t){
   if(G.ult){
     const u=U(G.ult), ud=D(u.def).ult;
     const up=mods(u,'npPow').sum-mods(u,'npPowDown').sum;
-    return ud.eff.filter(e=>e.k==='dmg').reduce((s,e)=>s+(e.max?maxHp(t):Math.max(0,e.v+dmgMods(u,t,ud.c).sum+up)),0)*hitsOf(ud.eff);
+    return ud.eff.filter(e=>e.k==='dmg').reduce((s,e)=>s+(e.max?maxHp(t):(dm=>applyPct(Math.max(0,e.v+dm.sum+up),dm.pct))(dmgMods(u,t,ud.c))),0)*hitsOf(ud.eff);
   }
   const cols=G.rolled.map(r=>r.cmd.c), chainR=G.rolled.length===3&&cols.every(c=>c==='R');
   return G.rolled.reduce((s,r)=>{
     const c=r.cmd; if(!c.dmg) return s;
-    const a=U(r.uid), d=Math.max(0,c.dmg+dmgMods(a,t,c.c).sum)+(chainR?RULES.chainR:0);
+    const a=U(r.uid), dm=dmgMods(a,t,c.c), d=applyPct(Math.max(0,c.dmg+dm.sum)+(chainR?RULES.chainR:0),dm.pct);
     return s+d*hitsOf(c.eff)*(isAoe(c.eff)?Math.max(1,alive(t.pid).length):1);
   },0);
 }
