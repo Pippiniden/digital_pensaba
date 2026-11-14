@@ -723,3 +723,72 @@ body[data-screen="zukan"] #app{overflow:hidden}
   .zukan .sdetail{display:none} /* 狭い画面ではタップで詳細ウィンドウを開く */
 }
 .zlines li.zcond small{display:block;font-size:11px;color:var(--gold);line-height:1.4;margin-top:4px}
+/* ---------- アーケード：ステージ紹介（phase 'stage'）・総合リザルト ---------- */
+body[data-screen="stage"] #app{display:flex;padding:14px}
+.arc{position:relative;overflow:hidden;width:min(880px,100%);margin:auto;padding:16px 20px 20px;text-align:center;border-radius:6px;border:1px solid var(--gold);
+  background:var(--lattice),linear-gradient(160deg,#16295a,var(--panel) 40%,var(--panel2));box-shadow:var(--frame),var(--shadow)}
+.arc-head>small{font:600 11px var(--serif);letter-spacing:.3em;color:var(--sub)}
+.arc-kicker{margin:8px 0 0;font:700 13px var(--serif);letter-spacing:.5em;text-indent:.5em;color:var(--gold-hi)}
+.arc-head h2{margin:0;font:700 clamp(30px,6vw,46px)/1.15 var(--serif);letter-spacing:.16em;
+  background:linear-gradient(180deg,var(--gold-hi),var(--gold) 55%,var(--gold-lo));-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 2px 2px rgba(0,0,0,.9)) drop-shadow(0 0 16px rgba(255,220,150,.35))}
+.arc-head h2 b{font-size:1.35em}
+.arc-head h2 small{margin-left:.3em;font-size:.45em;letter-spacing:.1em}
+/* 進み具合：ひし形の印を線でつなぐ（済み＝金 / 今＝光る / これから＝暗い）。下にそのステージのCPUの強さ */
+.arc-track{display:flex;justify-content:center;margin:12px auto 16px;max-width:560px}
+.arc-node{position:relative;flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:9px;font-size:11px;color:var(--sub);white-space:nowrap}
+.arc-node::before{content:'';position:absolute;top:12px;right:50%;width:100%;height:1px;background:var(--gold-lo);opacity:.6}
+.arc-node:first-child::before{display:none}
+.arc-node.done::before,.arc-node.now::before{background:var(--gold-hi);opacity:1}
+.arc-node i{position:relative;z-index:1;display:grid;place-items:center;width:24px;height:24px;rotate:45deg;font-style:normal;border:1px solid var(--gold-lo);background:#0b1535}
+.arc-node i b{rotate:-45deg;font:700 12px var(--serif)}
+.arc-node.done i b{color:#1a1206}
+.arc-node.done i{border-color:var(--gold-hi);background:linear-gradient(135deg,var(--gold-hi),var(--gold))}
+.arc-node.now i{scale:1.25;color:var(--gold-hi);border-color:var(--gold-hi);box-shadow:0 0 0 3px rgba(246,227,161,.16),0 0 14px rgba(246,227,161,.7)}
+.arc-node.now{color:var(--gold-hi);font-weight:700}
+/* 先頭キャラ同士の VS：斜めに切った立ち絵を左右から */
+.arc-vs{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:clamp(12px,5vw,64px)}
+.arc-side{min-width:0;display:flex;flex-direction:column;gap:8px}
+.arc-side.s0{align-items:flex-end}.arc-side.s1{align-items:flex-start}
+.arc-side>*{width:min(100%,270px,calc((100dvh - 470px)*.75));min-width:132px}
+.arc-pt{position:relative;aspect-ratio:3/4;filter:drop-shadow(0 0 1px var(--gold-hi)) drop-shadow(0 0 1px var(--gold-hi)) drop-shadow(0 8px 18px rgba(0,0,0,.6))}
+.arc-pt>span{position:absolute;inset:0;overflow:hidden;clip-path:polygon(14% 0,100% 0,86% 100%,0 100%);background:var(--panel2)}
+.arc-pt>span::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,transparent 60%,color-mix(in srgb,var(--p0) 45%,transparent))}
+.arc-side.s1 .arc-pt>span::after{background:linear-gradient(180deg,transparent 60%,color-mix(in srgb,var(--p1) 45%,transparent))}
+.arc-who{display:flex;flex-direction:column;line-height:1.3}
+.arc-who small{font:700 11px var(--serif);letter-spacing:.12em}
+.arc-who b{font:700 clamp(15px,2.6vw,20px) var(--serif);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.arc-party{display:flex;justify-content:center;align-items:center;gap:5px;min-height:36px}
+.arc-mini{position:relative;flex:none;width:34px;height:34px;overflow:hidden;border-radius:3px;border:1px solid var(--gold-lo);background:var(--panel2)}
+.arc-mini.m{border-radius:50%;border-color:var(--gold)}
+.arc-cost{margin-left:4px;font:700 10px var(--serif);letter-spacing:.1em;color:var(--sub)}
+.arc-cost b{font-size:16px;color:var(--gold-hi)}
+.arc-mid{position:absolute;left:50%;top:calc(max(132px,min(270px,(100dvh - 470px)*.75))*.62);translate:-50% -50%;z-index:2;font:italic 700 clamp(30px,7vw,54px) var(--serif);letter-spacing:.04em;color:var(--gold-hi);
+  text-shadow:0 0 4px #000,0 2px 6px #000,0 0 22px rgba(246,227,161,.8);pointer-events:none}
+.arc-btns{justify-content:center;gap:12px;margin-top:16px}
+/* 登場：ステージごとに最初の1回だけ（.still＝描き直しでは再生しない） */
+.arc:not(.still) .arc-head h2{animation:arcPop .5s cubic-bezier(.2,.9,.3,1.2) both}
+.arc:not(.still) .arc-side.s0 .arc-pt{animation:arcL .55s cubic-bezier(.2,.8,.2,1) .1s both}
+.arc:not(.still) .arc-side.s1 .arc-pt{animation:arcR .55s cubic-bezier(.2,.8,.2,1) .1s both}
+.arc:not(.still) .arc-mid{animation:arcVs .45s cubic-bezier(.2,.9,.3,1.3) .5s both}
+.arc:not(.still) .arc-node.now i{animation:arcNow .6s ease-out .25s both}
+@keyframes arcPop{from{opacity:0;transform:scale(1.25)}}
+@keyframes arcL{from{opacity:0;transform:translateX(-70px)}}
+@keyframes arcR{from{opacity:0;transform:translateX(70px)}}
+@keyframes arcVs{from{opacity:0;scale:2.4}}
+@keyframes arcNow{from{scale:.6;box-shadow:0 0 0 14px rgba(246,227,161,0),0 0 0 rgba(246,227,161,0)}}
+@media (prefers-reduced-motion:reduce){.arc *{animation:none!important}}
+@media (max-width:640px){.arc{padding:12px 10px 16px}.arc-node{font-size:10px}.arc-side.s0,.arc-side.s1{align-items:center}.arc-mini{width:28px;height:28px}}
+.arcnote{margin:12px 0 0;text-align:center;line-height:1.7}
+/* 総合リザルト */
+.astages{display:flex;flex-direction:column;gap:4px;margin:0 0 10px;text-align:left}
+.astage{display:grid;grid-template-columns:20px 36px minmax(0,1fr) auto;gap:8px;align-items:center;padding:4px 10px 4px 8px;font-size:13px;border:1px solid rgba(246,227,161,.25);border-radius:4px;background:rgba(6,13,34,.5)}
+.astage>i{font:normal 700 13px var(--serif);color:var(--gold-hi);text-align:center}
+.astage .pimg,.astage .aq{position:static;inset:auto;width:36px;height:36px;object-fit:cover;border-radius:3px}
+.astage .aq{display:grid;place-items:center;color:var(--sub);border:1px dashed var(--gold-lo)}
+.astage>b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.astage>b small{display:block;font-weight:400;color:var(--sub)}
+.astage>em{font:normal 700 13px var(--serif);letter-spacing:.12em;color:var(--gold-hi);text-align:right}
+.astage>em small{display:block;font:400 11px var(--sans,inherit);letter-spacing:0;color:var(--sub)}
+.astage.lose{border-color:rgba(255,138,128,.6)}.astage.lose>em{color:#ff8a80}
+.astage.none{opacity:.45}
+.arcsum .rside .rrow span small{color:var(--sub)}

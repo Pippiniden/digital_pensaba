@@ -16,7 +16,7 @@ reloadUnits();
 let SPELL_FREE = 0;
 let G;
 function newGame(o={}){
-  G = { phase:'mode', mode:null, rule:o.rule||'team', handicap:o.handicap??true, cpu:[false,false], level:'normal', speed:(typeof window!=='undefined'&&window.SPEED_PREF)||700, seed:String(Math.random()),
+  G = { phase:'mode', mode:null, rule:o.rule||'team', handicap:o.handicap??true, cpu:[false,false], level:'normal', arcade:null, /* アーケード中だけ：{diff,stage,picks,mpick,leads,results}（arcadeStart） */ speed:(typeof window!=='undefined'&&window.SPEED_PREF)||700, seed:String(Math.random()),
     setupPid:0, picks:[[],[]], mpicks:[null,null], setupMsg:'',
     // master：マスタールールのマスター（makeMaster）。spell：令呪 null/'decl'(宣言済み・次のマスターフェイズで使う)/'used'
     // evac：退避中（次の相手ターンの間） / zeroNext：前のターンの行動回数が0だった（次の行動回数+1）
@@ -870,6 +870,34 @@ function checkWin(){
 }
 function win(pid){ G.winner=pid; G.phase='over'; log(`${esc(G.players[pid].name)} の勝利！`,'good');
   phaseFx(G.mode==='cpu'?(pid===0?'VICTORY':'DEFEAT'):'WINNER',G.mode==='cpu'?'':`${G.players[pid].name}の勝利`,{big:true,pid,end:true}); const w=alive(pid)[0]; if(w) say(w,'win'); }
+// ---------- アーケード（CPUと連戦。ARCADE＝rules.js） ----------
+// 流れ：chooseMode(arcade) → 編成（プレイヤーだけ）→ phase 'stage'（ステージ紹介）→ arcadeGo で対戦 → 勝ったら arcadeNext で次の 'stage' …
+// G.arcade：diff＝難易度 / stage＝今のステージ（0始まり）/ picks・mpick＝プレイヤーの編成（全ステージ共通）/ leads＝これまでの相手の先頭 / results＝終わったステージの記録
+const arcadeLast = ()=>!!G.arcade&&G.arcade.stage>=ARCADE.stages-1;
+// 今のステージの相手を編成して、ステージ紹介へ。1戦目だけコストを first ぶんずらす。先頭がこれまでの相手と重なったら選び直す（数回まで）
+function arcadeStage(){
+  const A=G.arcade, df=ARCADE.diffs[A.diff], delta=A.stage===0?df.first||0:0;
+  G.level=df.levels[A.stage]; G.setupPid=1; G.phase='setup';
+  for(let t=0;t<4;t++){ ACTIONS.setupCpu({how:'same',delta}); if(!A.leads.includes(G.picks[1][0])) break; }
+  A.leads.push(G.picks[1][0]);
+  G.setupMsg=''; G.phase='stage';
+}
+// 決着したステージの記録（総合リザルト用）
+function arcadeRec(){
+  const us=[...G.players[0].party,...(G.players[0].master?[G.players[0].master]:[])], S=u=>(G.stats&&G.stats[u.uid])||{}, sum=k=>us.reduce((s,u)=>s+(S(u)[k]||0),0);
+  return {level:G.level, win:G.winner===0, turn:G.turn, dealt:G.dealt[0], taken:sum('taken'), kills:sum('kills'), maxHit:Math.max(0,...us.map(u=>S(u).maxHit||0)),
+    lost:G.players[0].party.filter(u=>u.out).length, enemy:G.picks[1].slice(), emaster:G.mpicks[1], ecost:sumCost(G.picks[1])+mcost(1),
+    units:us.map(u=>({id:u.def, dealt:S(u).dealt||0, kills:S(u).kills||0}))};
+}
+// 終わったステージすべての記録（決着済みの今のステージを含む）
+const arcadeResults = ()=>G.arcade?[...G.arcade.results,...(G.phase==='over'?[arcadeRec()]:[])]:[];
+const arcadeCfg = level=>({mode:'cpu', level, cpu:[false,true], names:['あなた','CPU']});
+function arcadeStart(diff){
+  if(!ARCADE.rules.includes(G.rule)) G.rule=ARCADE.rules[0];
+  const d=ARCADE.diffs[diff]?diff:'normal';
+  G.arcade={diff:d, stage:0, picks:[], mpick:null, leads:[], results:[]};
+  applyMode(arcadeCfg(ARCADE.diffs[d].levels[0]));
+}
 function applyMode(cfg){
   Object.assign(G,{mode:cfg.mode, level:cfg.level, cpu:cfg.cpu, speed:cfg.speed||G.speed, phase:'setup'});
   cfg.names.forEach((n,i)=>G.players[i].name=n);
@@ -1006,13 +1034,15 @@ const ACTIONS = {
   useDefaultData(){ clearCustomUnits(); clearCustomMasters(); reloadUnits(); SHOW_IDS=null; newGame(keepRule()); },
   setRule({rule}){ if(G.phase==='mode'&&RULESETS[rule]) G.rule=rule; },
   toggleHandicap(){ if(G.phase==='mode') G.handicap=!G.handicap; },
-  chooseMode({mode,level}){
+  chooseMode({mode,level,diff}){
     if(G.phase!=='mode') return;
+    if(mode==='arcade'){ arcadeStart(diff); return; }
     applyMode(mode==='cpu'
       ? {mode, level:CPU_LEVELS[level]?level:'normal', cpu:[false,true], names:['あなた','CPU']}
       : {mode:'pvp', level:'normal', cpu:[false,false], names:[TERMS.player+'1',TERMS.player+'2']});
   },
   rematch(){
+    if(G.arcade){ const d=G.arcade.diff, speed=G.speed; newGame(keepRule()); arcadeStart(d); G.speed=speed; return; } // アーケード：同じ難易度で編成からやり直す
     const cfg={mode:G.mode, level:G.level, cpu:G.cpu, speed:G.speed, names:G.players.map(p=>p.name)};
     newGame(keepRule()); applyMode(cfg);
   },
@@ -1062,7 +1092,8 @@ const ACTIONS = {
     G.mpicks[pid]=id;
   },
   // CPUのおまかせ編成。how='random'：完全ランダム（setupRandom と同じ） / how='same'：相手と同じコストになるように選ぶ
-  setupCpu({how,cost}={}){
+  // delta：相手のコストからずらす量（アーケードの1戦目）
+  setupCpu({how,cost,delta}={}){
     if(G.phase!=='setup') return;
     const pid=G.setupPid; G.setupMsg='';
     if(how==='random'){ ACTIONS.setupRandom({cost}); return; }
@@ -1092,7 +1123,7 @@ const ACTIONS = {
     if(!combos.length){ ACTIONS.setupRandom(); return; }
     const size=opp.length||Math.max(...combos.map(x=>x.ids.length));
     const sized=combos.filter(x=>x.ids.length===size), pool=sized.length?sized:combos;
-    const want=opp.length?sumCost(opp)+mcost(1-pid):Math.max(...pool.map(x=>x.c));
+    const want=(opp.length?sumCost(opp)+mcost(1-pid):Math.max(...pool.map(x=>x.c)))+(Number(delta)||0);
     const gap=Math.min(...pool.map(x=>Math.abs(x.c-want))), top=pool.filter(x=>Math.abs(x.c-want)===gap), c=pick(top);
     G.picks[pid]=c.ids.slice().sort((a,b)=>D(b).hp-D(a).hp); // HPが高い順に1st
     if(c.m) G.mpicks[pid]=c.m;
@@ -1101,7 +1132,22 @@ const ACTIONS = {
   setupConfirm(){
     if(!G.picks[G.setupPid].length) return;
     if(masterRule()&&!G.mpicks[G.setupPid]){ G.setupMsg=`${TERMS.player}を選んでください`; return; }
+    if(G.arcade){ // アーケード：編成はプレイヤーだけ。相手はステージごとに自動で決まる
+      if(G.phase!=='setup'||G.setupPid!==0) return;
+      G.arcade.picks=G.picks[0].slice(); G.arcade.mpick=G.mpicks[0]; arcadeStage(); return;
+    }
     if(G.setupPid===0){ G.setupPid=1; G.setupMsg=''; } else { G.phase='init'; startGame(); }
+  },
+  // アーケード：ステージ紹介から対戦を始める
+  arcadeGo(){ if(G.arcade&&G.phase==='stage'){ G.phase='init'; startGame(); } },
+  // アーケード：勝ったステージを記録して、次のステージの紹介へ（編成はそのまま）
+  arcadeNext(){
+    const A=G.arcade; if(!A||G.phase!=='over'||G.winner!==0||arcadeLast()) return;
+    const next={...A, stage:A.stage+1, results:[...A.results,arcadeRec()]}, speed=G.speed;
+    newGame(keepRule()); G.arcade=next;
+    applyMode({...arcadeCfg(ARCADE.diffs[next.diff].levels[next.stage]), speed});
+    G.picks[0]=next.picks.slice(); G.mpicks[0]=next.mpick;
+    arcadeStage();
   },
   rollActs(){
     if(G.phase!=='actRoll'||G.actRolled) return;
@@ -1317,7 +1363,7 @@ const ACTIONS = {
 };
 function act(type,p={}){
   if(!ACTIONS[type]) return;
-  if(G.phase==='over' && !['restart','rematch','toggleSpeed','useDefaultData'].includes(type)) return;
+  if(G.phase==='over' && !['restart','rematch','toggleSpeed','useDefaultData','arcadeNext'].includes(type)) return;
   snapPre();
   ACTIONS[type](p);
   render();

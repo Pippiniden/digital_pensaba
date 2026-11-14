@@ -93,6 +93,16 @@ RULESETS.mteam = { name:'マスターチーム', partyMax:3, crit:'d100', master
   costBonus:{ base:3, atk:5, hp:50 },
   desc:`${TERMS.unit}3騎＋${TERMS.player}1人・合計コスト13以下で戦うチームバトル。${TERMS.player}フェイズは補助と令呪（3画）。相手の${TERMS.unit}を全員${TERMS.out}にすれば勝利。${TERMS.player}のコストが3より高いと自軍${TERMS.unit}は強化、低いと弱体（コスト1差ごとに攻撃ダメージ±5・最大HP±50）。` };
 
+// ---------- アーケード（CPUと連戦） ----------
+// rules：選べるルール / levels：ステージごとのCPUの強さ（cpu.js の CPU_LEVELS。数がステージ数）
+// first：1戦目の相手のコスト補正（プレイヤーの編成の合計コストとの差。2戦目以降は同コスト）
+const ARCADE = { rules:['team','mteam'], stages:5, diffs:{
+  easy:   { name:'イージー',     first:-1, levels:['easy','easy','easy','easy','easy'] },
+  normal: { name:'ノーマル',     first:-1, levels:['easy','easy','normal','normal','hard'] },
+  hard:   { name:'ハード',       first:-1, levels:['normal','hard','hard','hard','expert'] },
+  lunatic:{ name:'ルナティック', first:0,  levels:['expert','expert','expert','expert','expert'] },
+} };
+
 // ---------- 泥ペンマスシート（マスター作成の基準。エディタの警告と目安表示に使う） ----------
 // HP はコスト×hpPerCost を基準に ±hpRange まで補正してよい（hpStep 刻み）。
 // 補助の6面：4番（index 3）は必ず効果あり（他より強め）。4番以外で効果がある面はコストと同じ数。補助の効果はそのターンだけ

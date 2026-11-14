@@ -211,6 +211,7 @@ function promptHTML(){
       return `<p>ダメージフェイズが終わりました。</p><button class="primary big" data-a="endTurn">ターン終了</button>`;
     case 'over':
       if(!UI.endReady) return ''; // 決着の演出（VICTORY の帯）が終わってから出す
+      if(G.arcade) return `<p class="win">${G.winner!==0?'敗北…':arcadeLast()?'アーケードクリア！':`STAGE ${G.arcade.stage+1} クリア！`}</p><div class="row"><button class="ghost" data-a="restart">タイトルに戻る</button><button data-ui="openResult">リザルト</button>${arcadeNextBtn()}</div>`;
       return `<p class="win">${G.mode==='cpu'?(G.winner===0?'勝利！':'敗北…'):`${esc(G.players[G.winner].name)} の勝利！`}</p><div class="row"><button class="ghost" data-a="restart">タイトルに戻る</button><button data-ui="openResult">リザルト</button><button class="primary" data-a="rematch">もう一度</button></div>`;
   }
   return '';
@@ -409,10 +410,10 @@ function resultHTML(){
   const body={sum:resultSumHTML, unit:resultUnitsHTML, tl:resultTlHTML, log:resultLogHTML}[tab]();
   return `<div class="modal result"><div class="mback"></div>
     <div class="mbody"><h2 class="rtitle ${w===0?'p0':'p1'}">${title}</h2><p class="rsub">${sub}</p>
-      <p class="sub small rturn">${esc(ruleset().name)}ルール ・ 経過ターン <b>${G.turn}</b></p>
+      <p class="sub small rturn">${G.arcade?`アーケード STAGE ${G.arcade.stage+1}/${ARCADE.stages} ・ `:''}${esc(ruleset().name)}ルール ・ 経過ターン <b>${G.turn}</b></p>
       <div class="rtabs" role="tablist">${Object.entries(RTABS).map(([k,v])=>`<button role="tab" aria-selected="${tab===k}" class="${tab===k?'on':''}" data-ui="rtab" data-v="${k}">${v}</button>`).join('')}</div>
       <div class="rbody">${body}</div>
-      <div class="row"><button class="ghost" data-a="restart">タイトルに戻る</button><button data-ui="closeResult">盤面を見る</button><button class="primary" data-a="rematch">もう一度</button></div>
+      <div class="row"><button class="ghost" data-a="restart">タイトルに戻る</button><button data-ui="closeResult">盤面を見る</button>${G.arcade?arcadeNextBtn():'<button class="primary" data-a="rematch">もう一度</button>'}</div>
     </div></div>`;
 }
 function resultSumHTML(){
@@ -451,6 +452,51 @@ function resultLogHTML(){
   return `<div class="log rlog">${G.log.map(l=>`<div class="${l.cls}">${l.msg}</div>`).join('')}</div>`;
 }
 
+// ---------- アーケード ----------
+// 決着後の進むボタン：勝って次があれば「次のステージへ」、最後のステージか負けなら「総合リザルト」
+const arcadeNextBtn = ()=>G.winner===0&&!arcadeLast()?'<button class="primary" data-a="arcadeNext">次のステージへ</button>':'<button class="primary" data-ui="openTotal">総合リザルト</button>';
+const arcadeLabel = ()=>`アーケード（${ARCADE.diffs[G.arcade.diff].name}） STAGE ${G.arcade.stage+1}/${ARCADE.stages}`;
+// ステージ紹介（phase 'stage'）：対戦の前に、今のステージ・相手の先頭キャラ・CPUの強さを見せる。
+// 登場アニメーションはステージごとに最初の1回だけ（UI.stageSeen。render() のたびに再生しない）。オート進行では進めない（見せるための画面）
+function arcadeStageHTML(){
+  const A=G.arcade, df=ARCADE.diffs[A.diff], n=ARCADE.stages, s=A.stage;
+  const still=UI.stageSeen===s; UI.stageSeen=s;
+  const track=df.levels.map((l,i)=>`<div class="arc-node ${i<s?'done':i===s?'now':''}"><i><b>${i<s?'✓':i+1}</b></i><span>${esc(CPU_LEVELS[l].name)}</span></div>`).join('');
+  const side=pid=>{ const ids=G.picks[pid], lead=D(ids[0]), m=masterRule()?D(G.mpicks[pid]):null, cost=sumCost(ids)+(m?m.cost:0);
+    const minis=[...ids.slice(1).map(D),m].filter(Boolean).map(d=>`<span class="arc-mini${d===m?' m':''}" title="${esc(d.name)}">${unitImg(d,'face','pimg',d.name)}</span>`).join('');
+    return `<div class="arc-side s${pid}"><div class="arc-pt"><span>${unitImg(lead,'face','pimg',lead.name)}</span></div>
+      <div class="arc-who"><small class="p${pid}">${pid?`CPU ・ ${esc(CPU_LEVELS[G.level].name)}`:esc(G.players[0].name)}</small><b>${esc(lead.name)}</b></div>
+      <div class="arc-party">${minis}<span class="arc-cost">COST <b>${cost}</b></span></div></div>`; };
+  return `<div class="arc${still?' still':''}">
+    <div class="arc-head"><small>ARCADE ・ ${esc(df.name)} ・ ${esc(ruleset().name)}</small>
+      <p class="arc-kicker">${s===0?'ARCADE START':s===n-1?'FINAL STAGE':'NEXT STAGE'}</p>
+      <h2>STAGE <b>${s+1}</b><small>/ ${n}</small></h2></div>
+    <div class="arc-track">${track}</div>
+    <div class="arc-vs">${side(0)}<em class="arc-mid">VS</em>${side(1)}</div>
+    <div class="row arc-btns"><button class="ghost" data-a="restart">リタイア</button><button class="primary big" data-a="arcadeGo">バトル開始</button></div>
+  </div>`;
+}
+// 総合リザルト：ステージごとの結果・合計・パーティの成績（与ダメージ順。いちばん上が MVP）
+function arcadeTotalHTML(){
+  const A=G.arcade, df=ARCADE.diffs[A.diff], rs=arcadeResults(), wins=rs.filter(r=>r.win).length, clear=wins>=ARCADE.stages;
+  const sum=k=>rs.reduce((t,r)=>t+r[k],0);
+  const stages=df.levels.map((l,i)=>{ const r=rs[i], lead=r&&D(r.enemy[0]);
+    if(!r) return `<div class="astage none"><i>${i+1}</i><span class="aq">？</span><b>CPU ・ ${esc(CPU_LEVELS[l].name)}</b><em>—</em></div>`;
+    return `<div class="astage ${r.win?'':'lose'}"><i>${i+1}</i>${unitImg(lead,'face','pimg',lead.name)}<b>${r.enemy.map(id=>esc(D(id).name)).join('・')}<small>CPU ・ ${esc(CPU_LEVELS[r.level].name)} ・ コスト${r.ecost}</small></b><em>${r.win?'WIN':'LOSE'}<small>${r.turn}ターン</small></em></div>`; }).join('');
+  const us={}; rs.forEach(r=>r.units.forEach(u=>{ const x=us[u.id]||(us[u.id]={id:u.id,dealt:0,kills:0}); x.dealt+=u.dealt; x.kills+=u.kills; }));
+  const party=Object.values(us).sort((a,b)=>b.dealt-a.dealt).map((u,i)=>{ const d=D(u.id);
+    return `<div class="rrow">${unitImg(d,'face','pimg',d.name)}<b>${esc(d.name)}${i===0&&u.dealt?' <em class="mvp">MVP</em>':''}</b><span>与ダメージ ${fmt(u.dealt)}<small> ・ 撃破 ${u.kills}</small></span></div>`; }).join('');
+  const kv=(k,v)=>`<div><span>${k}</span><b>${v}</b></div>`;
+  return `<div class="modal result arcsum"><div class="mback"></div>
+    <div class="mbody"><h2 class="rtitle ${clear?'p0':'p1'}">${clear?'ARCADE CLEAR':'GAME OVER'}</h2><p class="rsub">${clear?'全ステージ制覇！':`STAGE ${rs.length} で敗北…`}</p>
+      <p class="sub small rturn">アーケード（${esc(df.name)}） ・ ${esc(ruleset().name)}ルール</p>
+      <div class="astages">${stages}</div>
+      <div class="rsides"><div class="rside"><h4>合計</h4><div class="rkv akv">${kv('クリア',`${wins} / ${ARCADE.stages}`)}${kv('合計ターン',sum('turn'))}${kv('与えたダメージ',fmt(sum('dealt')))}${kv('受けたダメージ',fmt(sum('taken')))}${kv('撃破',sum('kills'))}${kv(`${TERMS.out}になった数`,sum('lost'))}${kv('最大ダメージ',fmt(Math.max(0,...rs.map(r=>r.maxHit))))}</div></div>
+        <div class="rside"><h4>パーティの成績</h4>${party}</div></div>
+      <div class="row"><button class="ghost" data-a="restart">タイトルに戻る</button><button data-ui="closeResult">盤面を見る</button><button class="primary" data-a="rematch" title="同じ難易度で、編成からやり直します">もう一度</button></div>
+    </div></div>`;
+}
+
 // ---------- 編成画面 ----------
 function setupHTML(){
   const pid=G.setupPid, picks=G.picks[pid], rs=ruleset(), solo=rs.partyMax===1, cost=sumCost(picks)+(rs.master?mcost(pid):0), cap=costCap();
@@ -465,7 +511,7 @@ function setupHTML(){
   return `<div class="setup">
     <div class="sethead">
       <div class="settitle"><h2><span class="p${pid}">${esc(G.players[pid].name)}</span> の${solo?`${TERMS.unit}選択`:'パーティ編成'}</h2>
-        <p class="sub small nm">${solo?`${rs.name}ルール：${TERMS.unit}を1騎${rs.master?`と${TERMS.player}を1人`:''}選びます。${handicapNote(pid)}`:`${rs.master?`${TERMS.player}1人と`:''}コスト合計${cap}以下${rs.master?`（${TERMS.player}込み）`:''}・最大${rs.partyMax}騎。選んだ順に 1st / 2nd / 3rd。`}</p></div>
+        <p class="sub small nm">${solo?`${rs.name}ルール：${TERMS.unit}を1騎${rs.master?`と${TERMS.player}を1人`:''}選びます。${handicapNote(pid)}`:`${rs.master?`${TERMS.player}1人と`:''}コスト合計${cap}以下${rs.master?`（${TERMS.player}込み）`:''}・最大${rs.partyMax}騎。選んだ順に 1st / 2nd / 3rd。`}${G.arcade?`<b class="hl"> アーケード（${esc(ARCADE.diffs[G.arcade.diff].name)}）：この編成で全${ARCADE.stages}戦を戦います。</b>`:''}</p></div>
       <div class="slots">${slots}</div>
       <div class="costm" ${solo?'hidden':''}><span>COST</span><b>${cost}</b><small>/ ${cap}</small><div class="bar"><i style="width:${pctOf(cost,cap)}%"></i></div></div>
       <div class="setbtns ${mr?'wide':''}">${pid===0?`<button class="back" data-a="restart" data-keepnav="1" title="メニューに戻ります">戻る</button>`:''}${pid===1?`<button class="back" data-a="setupBack" title="${esc(G.players[0].name)}の編成に戻ります（ここまでの選択は残ります）">戻る</button>`:''}<select class="rcost" data-rcost title="おまかせ（ランダム）で選ぶ${solo?'':'合計'}コスト${mr?`（${TERMS.player}込み）`:''}を指定します">${['',...Array.from({length:cap+1},(_,i)=>i)].map(c=>`<option value="${c}" ${String(c)===String(UI.rcost??'')?'selected':''}>${c===''?'コスト指定なし':`コスト ${c}`}</option>`).join('')}</select>${isCpu(pid)
@@ -667,6 +713,14 @@ function modeHTML(){
   if(s==='quick'&&nav.step==='level'){
     const lv=CPU_LEVELS[nav.level]?nav.level:'normal';
     panel=`${back()}<div class="navstep"><h3>CPUの強さ</h3><div class="levels">${Object.entries(CPU_LEVELS).map(([k,l])=>`<button class="gbtn ${k===lv?'p':''}" data-ui="navLevel" data-level="${k}">${esc(l.name)}</button>`).join('')}</div><div class="row mt"><button class="gbtn go" data-a="chooseMode" data-mode="cpu" data-level="${lv}">次へ</button></div></div>`;
+  }else if(s==='arcade'&&nav.step==='level'){ // アーケード：難易度（ステージごとのCPUの強さを下に出す）
+    const df=ARCADE.diffs[nav.diff]?nav.diff:'normal';
+    panel=`${back()}<p class="navtitle">アーケード</p><div class="navstep"><h3>難易度</h3><div class="levels">${Object.entries(ARCADE.diffs).map(([k,d])=>`<button class="gbtn ${k===df?'p':''}" data-ui="navDiff" data-diff="${k}">${esc(d.name)}</button>`).join('')}</div>
+      <p class="sub small arcnote">全${ARCADE.stages}戦：${ARCADE.diffs[df].levels.map(l=>esc(CPU_LEVELS[l].name)).join(' → ')}<br>${ARCADE.diffs[df].first?`1戦目の相手はあなたの編成よりコストが${-ARCADE.diffs[df].first}低く、2戦目からは同じコスト。`:'相手は1戦目からあなたの編成と同じコスト。'}</p>
+      <div class="row mt"><button class="gbtn go" data-a="chooseMode" data-mode="arcade" data-diff="${df}">次へ</button></div></div>`;
+  }else if(s==='arcade'){ const ar=ARCADE.rules.includes(G.rule)?G.rule:ARCADE.rules[0];
+    panel=`${back()}<p class="navtitle">アーケード</p><div class="navstep"><h3>ルールを選ぶ</h3><div class="rules">${ARCADE.rules.map(k=>`<button class="gbtn ${ar===k?'p':''}" data-a="setRule" data-rule="${k}">${esc(RULESETS[k].name)}</button>`).join('')}</div>
+      <p class="sub small arcnote">CPUと全${ARCADE.stages}戦の連戦。最初に選んだ編成で最後まで戦います。</p><div class="row mt"><button class="gbtn go" data-ui="navNext">次へ</button></div></div>`;
   }else if(s==='quick') panel=`${back()}<p class="navtitle">クイックバトル</p>${rulePick('<button class="gbtn go" data-ui="navNext">次へ</button>')}`;
   else if(s==='local') panel=`${back()}<p class="navtitle">ローカル対戦</p>${rulePick('<button class="gbtn go" data-a="chooseMode" data-mode="pvp">はじめる</button>')}`;
   else if(s==='tutorial') panel=`${back()}<p class="navtitle">チュートリアル</p>${rulesGuideHTML(false)}${statusGuideHTML(false)}`;
@@ -674,6 +728,7 @@ function modeHTML(){
   const top=`<div class="showcase">${show}</div>${src}
     <div class="topmenu">
       <button class="gbtn p" data-ui="nav" data-s="quick">クイックバトル</button>
+      <button class="gbtn" data-ui="nav" data-s="arcade">アーケード</button>
       <button class="gbtn" data-ui="nav" data-s="local">ローカル対戦</button>
       <button class="gbtn" data-ui="nav" data-s="zukan">図鑑</button>
       <button class="gbtn" data-ui="nav" data-s="tutorial">チュートリアル</button>
@@ -689,12 +744,13 @@ function overlaysHTML(){ return settingsModalHTML()+tutorialModalHTML();
 // ---------- 描画 ----------
 function render(){
   const app=document.querySelector('#app'), hinfo=document.querySelector('#hinfo');
-  const screen=G.phase==='mode'?(UI.nav.s==='zukan'?'zukan':'mode'):G.phase==='setup'?'setup':'battle';
+  const screen=G.phase==='mode'?(UI.nav.s==='zukan'?'zukan':'mode'):G.phase==='setup'?'setup':G.phase==='stage'?'stage':'battle';
   document.body.dataset.screen=screen;
   document.body.dataset.phase=G.phase;
   if(G.phase!=='over'){ UI.result=false; UI.resultShown=false; UI.endReady=false; }
   if(G.phase!=='master') UI.spellPick=false;
   if(screen!=='setup'&&screen!=='zukan') UI.sinfo=null;
+  if(screen!=='stage') UI.stageSeen=null;
   document.body.classList.toggle('lock',cpuActing());
   const ab=document.querySelector('#autobtn'), spd=document.querySelector('#spd');
   ab.hidden=screen!=='battle'; ab.textContent=`オート：${UI.auto?'ON':'OFF'}`; ab.classList.toggle('on',UI.auto);
@@ -705,10 +761,11 @@ function render(){
   if(screen==='mode'){ setHTML(app,modeHTML()+overlaysHTML()); hinfo.textContent=''; }
   else if(screen==='zukan'){ setHTML(app,zukanHTML()+(UI.sinfo?sinfoModalHTML():'')+linkModalHTML()+overlaysHTML()); hinfo.textContent='図鑑'; }
   else if(screen==='setup'){ setHTML(app,setupHTML()+(UI.sinfo?sinfoModalHTML():'')+linkModalHTML()+overlaysHTML()); hinfo.textContent=ruleset().partyMax===1?`${ruleset().name}ルール ・ ${TERMS.unit}選択`:'パーティ編成'; }
+  else if(screen==='stage'){ setHTML(app,arcadeStageHTML()+overlaysHTML()); hinfo.textContent=arcadeLabel(); }
   else {
     if(UI.detail&&!U(UI.detail)) UI.detail=null;
-    setHTML(app,`<div class="battle ${UI.log?'':'nolog'}"><main class="field">${sideHTML(1,'top')}${stageHTML()}${sideHTML(0,'bottom')}</main>${UI.log?logHTML():''}</div>${UI.detail?detailModalHTML():''}${UI.result&&G.phase==='over'?resultHTML():''}${linkModalHTML()}${overlaysHTML()}`);
-    hinfo.textContent=`${G.rule!=='team'?`${ruleset().name}ルール ・ `:''}ターン${G.turn}`;
+    setHTML(app,`<div class="battle ${UI.log?'':'nolog'}"><main class="field">${sideHTML(1,'top')}${stageHTML()}${sideHTML(0,'bottom')}</main>${UI.log?logHTML():''}</div>${UI.detail?detailModalHTML():''}${UI.result&&G.phase==='over'?(UI.result==='total'&&G.arcade?arcadeTotalHTML():resultHTML()):''}${linkModalHTML()}${overlaysHTML()}`);
+    hinfo.textContent=`${G.arcade?`${arcadeLabel()} ・ `:''}${G.rule!=='team'?`${ruleset().name}ルール ・ `:''}ターン${G.turn}`;
     const l=document.querySelector('#log'); if(l) l.scrollTop=l.scrollHeight;
     animateLane();
     syncMagicCircle(); syncPulses();
@@ -802,6 +859,8 @@ function uiAct(a,ds){
     case 'navClose': UI.nav={s:'top',step:'rule'}; break;
     case 'navNext': UI.nav.step='level'; break;
     case 'navLevel': UI.nav.level=ds.level; break;
+    case 'navDiff': UI.nav.diff=ds.diff; break;
+    case 'openTotal': UI.result='total'; break;
     case 'openSettings': UI.settings=true; break;
     case 'closeSettings': UI.settings=false; break;
     case 'openTutorial': UI.tut=true; break;
@@ -811,7 +870,7 @@ function uiAct(a,ds){
     case 'setLog': UI.log=ds.v==='1'; savePref('pencilduel.logOpen',UI.log?'1':'0'); break;
     case 'setBottom': UI.bottom=Math.min(BOTTOM_STEPS.length-1,Math.max(0,Number(ds.v)||0)); savePref('pencilduel.bottom',String(UI.bottom)); applyBottom(); break;
     case 'rcost': UI.rcost=ds.v; break;
-    case 'navBack': if(UI.nav.s==='quick'&&UI.nav.step==='level') UI.nav.step='rule'; else UI.nav={s:'top',step:'rule'}; break;
+    case 'navBack': if((UI.nav.s==='quick'||UI.nav.s==='arcade')&&UI.nav.step==='level') UI.nav.step='rule'; else UI.nav={s:'top',step:'rule'}; break;
     case 'setSpeed': { const v=Number(ds.v)||700; savePref('pencilduel.speed',String(v)); window.SPEED_PREF=v; G.speed=v; break; }
     case 'setNoCanon': {
       savePref(CANON_PREF,ds.v==='0'?'0':'1'); reloadUnits(); SHOW_IDS=null; UI.setupView=null;

@@ -48,6 +48,7 @@ Balance page (balance.html): rules → units → masters → common → balance
 - **Runtime unit** `makeUnit()`; look up the definition with `D(id)`, a unit with `U(uid)`. Read max HP via `maxHp(u)`, never `D(u.def).hp`.
 - **Rules** (`G.rule`, via `ruleset()`): `team` (3v3, cost 10), `simple` (1v1), `master` (simple + master), `mteam` (team + master, cost 13). No class matchups.
 - **Phases** (`G.phase`): `mode → setup → actRoll → [master] → skill → action → target → end → (swap) …→ over`; `guard` is a defender-side interlude in master rules.
+- **Arcade** (`G.arcade`, config `ARCADE` in rules.js): 5 battles vs CPU in `team`/`mteam`. Player sets up once → phase `stage` (stage intro, `arcadeStageHTML`) → `arcadeGo` → battle → `arcadeNext` (re-creates `G`, keeps `G.arcade`) … → total result (`arcadeTotalHTML`). `G.mode` stays `'cpu'`. The `stage` screen is deliberately not auto-advanced.
 - **Terminology**: knocked out = `u.out` / `retreat()` shown as `TERMS.out` (戦闘不能, never 撤退). Ascension = `asc`/`ASC` shown as `TERMS.asc` (再臨) or `TERMS.ascFull` (霊基再臨); never hard-code 覚醒/再臨. Pull UI terms from `TERMS`.
 
 ## 5. Design rules (do not break)
@@ -76,6 +77,7 @@ Balance page (balance.html): rules → units → masters → common → balance
 | New ACTION | `ACTIONS` + `data-a` button; `cpuDecide`; allow-list in `act()` if usable after game over; `FREE_ACTIONS` if pressable on CPU's turn |
 | Damage / crit / chains | `resolveCommand`, `resolveUlt`, `resolveDamage`, `dmgMods` |
 | CPU strength | `js/cpu.js` (`CPU_LEVELS`) |
+| Arcade stages / difficulty | `ARCADE` (rules.js); flow `arcadeStage`/`arcadeRec`/`arcadeNext` (engine.js); screens `arcadeStageHTML`/`arcadeTotalHTML` (game-ui.js), `.arc*`/`.astage` (game.css) |
 | Screens / layout | `game-ui.js` + `game.css` |
 | Cut-in look | `cutin.css` + `cutin.js` (try in `docs/cutin-np-sample.html` first) |
 | Editor form / validation | `editor.js` (`renderForm`/`effRow`), `validateUnits`/`checkEffs` in `common.js` |
