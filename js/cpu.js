@@ -314,7 +314,9 @@ function cpuNextSkill(easy){
 }
 // つよい（チームバトル）：回避・無敵を含むスキルは、敵の宝具（NP100%）に合わせて使う。
 // 敵が宝具を撃てる → 狙われそうな味方（全体宝具なら誰でも）に回避・無敵が付くなら最優先。
-// そうでなければ、倒れそうなとき（HP35%未満）まで温存する。シンプルルールでは効果がなかったので使わない
+// そうでなければ通常の点数（cpuEffScore）のまま。以前は倒れそうなとき（HP35%未満）まで温存していたが、同じスキルの攻撃強化なども止まって弱かったのでやめた
+// 測定（チームバトル・各20万試合、温存あり＝旧版との対戦）：温存なし 51.2% 勝ち。温存を解くHPを 50〜90% にしても 50.6〜50.8% どまり。宝具に合わせる部分まで外すと 48.9%
+// シンプルルールでは効果がなかったので使わない
 function cpuGuardScore(u,si){
   const s=D(u.def).skills[si];
   return cpuGuardEff(u,s.eff,s.pick?cpuPickTarget(u.uid,si,false):null,si);
@@ -329,9 +331,8 @@ function cpuGuardEff(u,effs,picked,si){
   if(ready.length){
     const likely=[...alive(u.pid)].sort((a,b)=>maxHp(b)-maxHp(a))[0]; // 単体宝具が来そうな相手（つよいの狙い方と同じく大物）
     if((ready.some(ultNoTarget)||ts.includes(likely))&&!ts.some(t=>has(t,'evade')||has(t,'invul'))) return Math.max(base,5);
-    return base;
   }
-  return ts.some(t=>hpR(t)<.35) ? base : Math.min(base,0);
+  return base;
 }
 // つよい以上：このターンの攻撃回数（宝具を撃つならその1回、通常ならその対象が割り振られた行動数の合計）
 function attackCount(ts){
