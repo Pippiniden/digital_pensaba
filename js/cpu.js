@@ -346,6 +346,14 @@ function atkBuffScore(e,ts){
   return n===1&&(e.turns||0)>1 ? 2 : n===1 ? 1.5 : 0;
 }
 // スター付与：次のクリティカルレベル（シンプルルールは出目の上限）に届いて、その分の期待ダメージ（攻撃回数×上昇した確率×クリティカル追加ダメージ）が見込めるときに使う
+// クリティカル率アップ（critRoll）：持っているスターでのクリティカル率がどれだけ上がるか × 今ターンの攻撃回数。スターがなければ0、宝具のターンは判定がない
+function critRollScore(e,ts,stars){
+  if(G.ult||stars<=0) return 0;
+  const mine=ts.filter(t=>t.pid===G.cur&&!t.master), n=attackCount(mine); if(!n) return 0;
+  const d6=ruleset().crit==='d6';
+  const p=v=>d6?Math.min(1,(critNeedD6(stars)+v)/6):critChance(Math.min(CRIT_TABLE.length,critLevel(stars)+v))/100;
+  return Math.min(4,Math.max(1,n*(p(e.v)-p(0))*(RULES.critDmg+RULES.critDmgR)/2/4.5));
+}
 // 攻撃時NP・攻撃時スター（onAtkNp / onAtkStar）：効果が続く間に見込める攻撃の回数で価値が決まる。
 // 攻撃回数＝このターンに割り振られた行動（宝具ならその1回）＋効果が残る次以降のターン（1ターンあたり1.5回、シンプルルールは2回）。回数制（times）は回数が上限
 function onAtkScore(e,ts){
@@ -356,7 +364,7 @@ function onAtkScore(e,ts){
   if(atks<=0) return 0;
   if(e.k==='onAtkNp'){ // 全体で貯まるNP：宝具が撃てない味方がいなければ価値は低い
     if(!mine.some(t=>t.np<RULES.ultCost)) return .3;
-    return Math.min(4,atks*e.v/RULES.ultCost*4);
+    return Math.min(4.5,atks*e.v/RULES.ultCost*6); // 効果量10・攻撃3回なら+30%。次のターン以降の分も合わせて、宝具が近づく価値として評価する
   }
   // 攻撃時スター：増えたスターは次のターンのクリティカルになる。1ターンぶんの価値＝スターが増える前後のクリティカル率の差×次のターンの攻撃回数（starSkillScore と同じ見方）。
   // このターンはその割り振りで、残りのターンは1ターンの見込み攻撃回数で、2ターン目以降は先の不確かさで6割に割り引く
@@ -412,7 +420,7 @@ function cpuEffScore(u,effs,picked,si){
       case 'nullUnder': sc+=ts.some(t=>hpR(t)<.8)?2:1; break;
       case 'actsUp': sc+=ts.length&&!foes.length?2:0; break;
       case 'starLoss': sc+=foes.some(t=>G.players[t.pid].stars>0)?2:0; break;
-      case 'critRoll': sc+=acting&&!G.ult&&stars>0?2:0; break;
+      case 'critRoll': sc+=critRollScore(e,ts,stars); break;
       case 'aoeNormal': sc+=acting&&enemies.length>=2?3:.3; break;
       case 'sureHit': sc+=acting&&enemies.some(x=>has(x,'evade'))?4:.5; break;
       case 'pierce': sc+=acting&&enemies.some(x=>has(x,'evade')||has(x,'invul'))?4:.5; break;
