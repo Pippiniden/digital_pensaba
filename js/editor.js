@@ -354,10 +354,16 @@ function tabsHTML(){
     `<button role="tab" aria-selected="${tab===k}" class="${tab===k?'on':''}" data-act="tab" data-tab="${k}">${l}</button>`).join('')}</div>`;
 }
 function renderList(){
-  const iss=issuesNow(), L=list(), si=selIdx();
+  const iss=issuesNow(), L=list();
+  // 設定「原作キャラを含まない」がONの間は、原作キャラを一覧に出さない（データ自体は残る。添字は元の並びのまま）
+  const hid=u=>noCanon()&&(isM()?CANON_MASTER_IDS:CANON_UNIT_IDS).includes(u.id);
+  const vis=L.filter(u=>!hid(u));
+  if(L[selIdx()]&&hid(L[selIdx()])){ const f=L.findIndex(u=>!hid(u)); if(f>=0) setSel(f); }
+  const si=selIdx();
   document.querySelector('#list').innerHTML=`${tabsHTML()}
-    <div class="row"><b>${isM()?TERMS.player:TERMS.unit}一覧</b><span class="sub small">${L.length}${isM()?'人':'体'}</span></div>
+    <div class="row"><b>${isM()?TERMS.player:TERMS.unit}一覧</b><span class="sub small">${vis.length}${isM()?'人':'体'}</span></div>
     <div class="ulist">${L.map((u,i)=>{
+      if(hid(u)) return '';
       const e=iss.filter(x=>x.i===i&&x.level==='error').length, w=iss.filter(x=>x.i===i&&x.level==='warn').length, bg=iss.filter(x=>x.i===i&&x.level==='big').length, ln=iss.filter(x=>x.i===i&&x.level==='line').length;
       return `<button class="uitem ${i===si?'on':''}" data-act="sel" data-i="${i}">
         ${isM()?'':clsBadge(u.cls,true)}${faceImg(u,'face xs')}<span class="uname">${esc(u.name)||'（名前なし）'}</span>${u.wip?'<span class="wipbadge" title="制作中：js書き出しに含まれません">制作中</span>':''}<span class="sub small">C${u.cost}</span>

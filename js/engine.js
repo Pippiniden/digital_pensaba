@@ -8,12 +8,6 @@
 
 let UNITS=[], MASTERS=[], UNIT_SOURCE='default', UNIT_BROKEN=false, MASTER_SOURCE='default', MASTER_BROKEN=false;
 let ALL_UNITS=[], ALL_MASTERS=[]; // 原作キャラも含む全員（D() の引き当て用）。UNITS / MASTERS は設定で原作キャラを除いたもの
-// 原作キャラ（設定「原作キャラを含まない」がONの間、選択肢・タイトル画面から外す）。コスト1のアルトリア（ahotoria）は含まない
-const CANON_UNIT_IDS=['artoria','emiya','cu','medusa','kojiro','hassan','mash','heracles','medea'];
-const CANON_MASTER_IDS=['m_rin','m_kiritsugu','m_shirou','m_ritsuka','m_celenike','m_shinji','m_kariya'];
-const CANON_PREF='pencilduel.noCanon';
-// 既定ON（'0' のときだけ含める）。localStorage の無い Worker（シミュレーション）では外さない
-function noCanon(){ try{ return localStorage.getItem(CANON_PREF)!=='0'; }catch(e){ return false; } }
 function reloadUnits(){ const r=loadUnits(); ALL_UNITS=r.units; UNIT_SOURCE=r.source; UNIT_BROKEN=!!r.broken; const mr=loadMasters(ALL_UNITS); ALL_MASTERS=mr.masters; MASTER_SOURCE=mr.source; MASTER_BROKEN=!!mr.broken;
   const nc=noCanon(); UNITS=nc?ALL_UNITS.filter(u=>!CANON_UNIT_IDS.includes(u.id)):ALL_UNITS; MASTERS=nc?ALL_MASTERS.filter(m=>!CANON_MASTER_IDS.includes(m.id)):ALL_MASTERS; }
 reloadUnits();

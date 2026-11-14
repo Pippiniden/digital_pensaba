@@ -669,3 +669,11 @@ function hcapTierText(rs){
 function hcapRuleText(rs){
   return `コスト差${rs.handicapAsc}以上なら低い方が${TERMS.ascFull}済みで開始${hcapTierText(rs)}。`;
 }
+
+// ---------- 原作キャラの除外設定（ゲーム・エディタ共通。engine.js から移動） ----------
+// 原作キャラ（設定「原作キャラを含まない」がONの間、ゲームの選択肢・タイトル画面・エディタの一覧から外す）。コスト1のアルトリア（ahotoria）は含まない
+const CANON_UNIT_IDS=['artoria','emiya','cu','medusa','kojiro','hassan','mash','heracles','medea'];
+const CANON_MASTER_IDS=['m_rin','m_kiritsugu','m_shirou','m_ritsuka','m_celenike','m_shinji','m_kariya'];
+const CANON_PREF='pencilduel.noCanon';
+// 既定ON（'0' のときだけ含める）。localStorage の無い Worker（シミュレーション）では外さない
+function noCanon(){ try{ return localStorage.getItem(CANON_PREF)!=='0'; }catch(e){ return false; } }
