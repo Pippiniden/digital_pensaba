@@ -23,6 +23,9 @@ Read this first. It is a slim map; details live in `docs/agents/` and are read *
 | `js/guide.js` | Rules guide + status help (`FX_HELP`; add a line there for each new FX key) |
 | `js/game-ui.js` | Game screens (mode / setup / battle / result / zukan), `render()`, click handling |
 | `js/editor.js`, `js/sim.js`, `js/editor-sim.js` | Editor UI; headless balance sim core; editor's balance dialog |
+| `js/scenario-core.js`, `js/scenario.js`, `css/scenario.css` | **Scenario mode** (sound novel + battles): shared format / validation / storage; player (`SCN`, `#scn`) → `docs/agents/scenario.md` |
+| `scenario-editor.html`, `js/scenario-editor.js`, `css/scenario-editor.css` | Scenario editor (exports one JSON) |
+| `scenarios/` | `index.js` (`SCENARIO_FILES` list), scenario JSON files, `assets/` (images / audio not embedded in the JSON) |
 | `js/sim-worker.js`, `js/balance*.js`, `css/balance.css` | Workers and developer-only balance lab |
 | `css/base.css`, `css/buttons.css`, `css/game.css`, `css/editor.css` | Styles. **All button looks live in `buttons.css`** (principles in `docs/ui-design.md`); do not add button colours/shapes elsewhere. New blue panels layer `var(--lattice)` first |
 | `img/units/{id}.webp` (+ `{id}_card.webp`) | Character images by id (not data); other assets in `img/classes`, `img/placeholder`, `img/ui`, `img/pwa` |
@@ -37,6 +40,7 @@ Game   (index.html) : rules → units → masters → common → engine → cpu 
 Editor (editor.html): rules → units → masters → common → cutin → editor → sim → editor-sim   (+ css/cutin.css)
 Worker (sim-worker.js / balance-worker.js, importScripts): rules → units → masters → common → engine → cpu → sim
 Balance page (balance.html): rules → units → masters → common → balance
+Scenario: game adds (after game-ui / tapfx) scenarios/index.js → scenario-core → scenario; scenario-editor.html: rules → units → masters → common → cpu → scenario-core → scenario-editor
 ```
 - `engine.js` calls `reloadUnits()` at load, so `common.js` and `units.js` must come first. `render()` / `fxBusy()` are resolved at run time.
 - A new `.js` file goes after everything it depends on.
@@ -49,6 +53,7 @@ Balance page (balance.html): rules → units → masters → common → balance
 - **Rules** (`G.rule`, via `ruleset()`): `team` (3v3, cost 10), `simple` (1v1), `master` (simple + master), `mteam` (team + master, cost 13). No class matchups.
 - **Phases** (`G.phase`): `mode → setup → actRoll → [master] → skill → action → target → end → (swap) …→ over`; `guard` is a defender-side interlude in master rules.
 - **Arcade** (`G.arcade`, config `ARCADE` in rules.js): 5 battles vs CPU in `team`/`mteam`. Player sets up once → phase `stage` (stage intro, `arcadeStageHTML`) → `arcadeGo` → battle → `arcadeNext` (re-creates `G`, keeps `G.arcade`) … → total result (`arcadeTotalHTML`). `G.mode` stays `'cpu'`. The `stage` screen is deliberately not auto-advanced.
+- **Scenario** (`G.scn`, details → `docs/agents/scenario.md`): a story JSON (`format:'pensaba-scenario'`) with top / bottom dialogue windows, choices, flags, BGM and battles. Shown in the menu only when `scnAvail()` (a JSON listed in `scenarios/index.js`, or one imported into IndexedDB). Story state lives in `SCN` (scenario.js, outside `G`; `#scn` is not rebuilt by `render()`); a battle starts with `act('scnBattle',spec)` → `scnBegin` (rule / CPU level / enemy / locked members / selectable pool come from the scenario) and returns via `scnAfter`. Scenario-only characters are swapped in by `setScnData`.
 - **Terminology**: knocked out = `u.out` / `retreat()` shown as `TERMS.out` (戦闘不能, never 撤退). Ascension = `asc`/`ASC` shown as `TERMS.asc` (再臨) or `TERMS.ascFull` (霊基再臨); never hard-code 覚醒/再臨. Pull UI terms from `TERMS`.
 
 ## 5. Design rules (do not break)
@@ -79,6 +84,7 @@ Balance page (balance.html): rules → units → masters → common → balance
 | CPU strength | `js/cpu.js` (`CPU_LEVELS`) |
 | Arcade stages / difficulty | `ARCADE` (rules.js); flow `arcadeStage`/`arcadeRec`/`arcadeNext` (engine.js); screens `arcadeStageHTML`/`arcadeTotalHTML` (game-ui.js), `.arc*`/`.astage` (game.css) |
 | Screens / layout | `game-ui.js` + `game.css` |
+| Scenario command / playback / editor | `SCN_CMDS` + `scnNormCmd` + `validateScenario` (scenario-core.js) → `scnRun` (scenario.js) → `cmdFields` (scenario-editor.js); battle hand-off `scnBegin` / `scnRandom` (engine.js) |
 | Cut-in look | `cutin.css` + `cutin.js` (try in `docs/cutin-np-sample.html` first) |
 | Editor form / validation | `editor.js` (`renderForm`/`effRow`), `validateUnits`/`checkEffs` in `common.js` |
 | Balance testing | `simGame` in `sim.js`; dialog `editor-sim.js`; lab `balance.html` (needs http, not `file://`) |

@@ -30,4 +30,4 @@
 | `css/game.css` / `css/editor.css` | Per-screen styles |
 | `img/units/` | **Character images by id**: `{id}.webp` (face), `{id}_card.webp` (command card, optional). Names/extension set by `IMG_DIR` / `IMG_EXT` / `IMG_CARD_SUFFIX` in rules.js |
 | `img/classes/` | Class icons (webp) / `img/placeholder/` placeholder images (face.webp / card.webp) / `img/ui/` magic circle and `grail.webp` (the Holy Grail on the ascension card), `title-bg.webp` (title background for landscape screens, 16:9, ideally 2560×1440) / `title-bg-sp.webp` (portrait screens, `max-aspect-ratio:1/1`, about 1080×2340); keep the centre dark and empty because the title, showcase, menu and magic circle sit there (paths in `UI_IMG`) |
-
+| `js/scenario-core.js` / `js/scenario.js` / `js/scenario-editor.js` / `scenario-editor.html` / `css/scenario.css` / `css/scenario-editor.css` / `scenarios/` | **Scenario mode and its editor**. See `scenario.md` (format, flow, storage, engine hand-off via `G.scn`) |

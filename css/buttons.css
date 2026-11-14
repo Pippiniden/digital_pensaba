@@ -137,3 +137,12 @@ header button.on{color:var(--gold-hi);border-color:var(--gold)}
 /* ---------- 編集用の危険ボタン ---------- */
 button.danger{color:#ff9a8f}
 button.danger:hover:not(:disabled){border-color:var(--r);box-shadow:var(--btn-ring),0 0 10px rgba(226,72,60,.35)}
+
+/* シナリオモード：下のバー（小さめ・ON は金）、選択肢（大きい横長）、セーブスロット */
+.sn-bar button{padding:3px 10px;font-size:12px;color:var(--sub);background:rgba(6,13,34,.55)}
+.sn-bar button.on{color:var(--gold-hi);border-color:var(--gold)}
+.sn-choices button{width:min(560px,100%);padding:12px 18px;font-size:16px;justify-content:center;background:rgba(10,21,51,.92)}
+.sn-slot{display:grid;grid-template-columns:auto 1fr auto;gap:10px;width:100%;padding:9px 12px;text-align:left;justify-content:stretch}
+.sn-slot b{color:var(--gold-hi)}
+.sn-slot span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sn-slot small{color:var(--sub)}

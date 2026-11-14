@@ -60,6 +60,7 @@
 | `pencilduel.logOpen` | Whether the battle log is open |
 | `pencilduel.auto` | Whether auto-advance is on (`'1'`) |
 | `pencilduel.simExclude` | Character ids excluded from the editor's balance test |
+| `pencilduel.scn.*`, `pencilduel.scnRun` (sessionStorage), IndexedDB `pensaba-scenarios` | Scenario mode: saves / read lines / prefs / resume record / imported scenarios and the editor draft → `scenario.md` |
 | `pencilduel.match` (**sessionStorage**) | The match in progress (`G`, log trimmed to 200). Saved by `saveMatch()` at the end of every `render()`, removed on the mode screen. `restoreMatch()` at page load resumes it in the same tab after any reload (mobile pull-to-refresh, the browser reloading the tab under memory pressure, going to the editor and back). Skipped if the unit source changed or a character is missing |
 
 If the applied data has validation errors, `loadUnits()` falls back to the default data and returns `broken:true`.

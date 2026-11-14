@@ -27,4 +27,4 @@
 | Data validation rules (errors / warnings) | `validateUnits` / `checkEffs` in `common.js` |
 | **Add a new field to characters** | `normalizeUnit` in `common.js` (otherwise it is dropped) → `unitsToJS` (export) → `newUnit` and `renderForm` in `editor.js` → `validateUnits` → existing data in `units.js` |
 | Colors / fonts / shared components | CSS variables in `css/base.css` |
-
+| Scenario mode (commands, playback, saves, editor) | See `scenario.md`. Format + validation in `js/scenario-core.js`, playback in `js/scenario.js`, editor in `js/scenario-editor.js`, battle hand-off (`scnBegin`, locked members, `ROSTER()`) in `js/engine.js` |

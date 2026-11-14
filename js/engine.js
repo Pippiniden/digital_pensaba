@@ -9,14 +9,21 @@
 let UNITS=[], MASTERS=[], UNIT_SOURCE='default', UNIT_BROKEN=false, MASTER_SOURCE='default', MASTER_BROKEN=false;
 let ALL_UNITS=[], ALL_MASTERS=[]; // 原作キャラも含む全員（D() の引き当て用）。UNITS / MASTERS は設定で原作キャラを除いたもの
 function reloadUnits(){ const r=loadUnits(); ALL_UNITS=r.units; UNIT_SOURCE=r.source; UNIT_BROKEN=!!r.broken; const mr=loadMasters(ALL_UNITS); ALL_MASTERS=mr.masters; MASTER_SOURCE=mr.source; MASTER_BROKEN=!!mr.broken;
-  const nc=noCanon(); UNITS=nc?ALL_UNITS.filter(u=>!CANON_UNIT_IDS.includes(u.id)):ALL_UNITS; MASTERS=nc?ALL_MASTERS.filter(m=>!CANON_MASTER_IDS.includes(m.id)):ALL_MASTERS; }
+  const nc=noCanon(); UNITS=nc?ALL_UNITS.filter(u=>!CANON_UNIT_IDS.includes(u.id)):ALL_UNITS; MASTERS=nc?ALL_MASTERS.filter(m=>!CANON_MASTER_IDS.includes(m.id)):ALL_MASTERS;
+  // シナリオ専用キャラ：同じ id は差し替え、新しい id は D() で引けるようにだけする（編成の一覧には出さない。出すのは G.scn.pool）
+  if(XUNITS.length||XMASTERS.length){ const mix=(base,x)=>[...x,...base.filter(b=>!x.some(y=>y.id===b.id))], swap=(list,x)=>list.map(b=>x.find(y=>y.id===b.id)||b);
+    UNITS=swap(UNITS,XUNITS); MASTERS=swap(MASTERS,XMASTERS); ALL_UNITS=mix(ALL_UNITS,XUNITS); ALL_MASTERS=mix(ALL_MASTERS,XMASTERS); }
+}
+// シナリオ専用のキャラ（シナリオJSONに同梱。シナリオを遊んでいる間だけ有効）。scenario.js が setScnData で出し入れする
+let XUNITS=[], XMASTERS=[];
+function setScnData(units=[],masters=[]){ XUNITS=units; XMASTERS=masters; reloadUnits(); }
 reloadUnits();
 
 // 実験用：マスターチームの令呪が行動回数を使わない（0=従来 / 1=使わず、使うとそのターンの補助は無し / 2=使わず、補助とも併用・続けて何度でも）
 let SPELL_FREE = 0;
 let G;
 function newGame(o={}){
-  G = { phase:'mode', mode:null, rule:o.rule||'team', handicap:o.handicap??true, cpu:[false,false], level:'normal', arcade:null, /* アーケード中だけ：{diff,stage,picks,mpick,leads,results}（arcadeStart） */ speed:(typeof window!=='undefined'&&window.SPEED_PREF)||700, seed:String(Math.random()),
+  G = { phase:'mode', mode:null, rule:o.rule||'team', handicap:o.handicap??true, cpu:[false,false], level:'normal', scn:null, /* シナリオの戦闘中だけ：{spec,title,lock,mlock,pool,cap,pick,loseGo}（scnBegin） */ arcade:null, /* アーケード中だけ：{diff,stage,picks,mpick,leads,results}（arcadeStart） */ speed:(typeof window!=='undefined'&&window.SPEED_PREF)||700, seed:String(Math.random()),
     setupPid:0, picks:[[],[]], mpicks:[null,null], setupMsg:'',
     // master：マスタールールのマスター（makeMaster）。spell：令呪 null/'decl'(宣言済み・次のマスターフェイズで使う)/'used'
     // evac：退避中（次の相手ターンの間） / zeroNext：前のターンの行動回数が0だった（次の行動回数+1）
@@ -103,7 +110,9 @@ const ALL = ()=>[...G.players[0].party,...G.players[1].party];
 const masterOf = pid=>G.players[pid].master;
 const masterRule = ()=>!!ruleset().master;
 const mTeam = ()=>!!ruleset().mTeam; // マスターチームバトル
-const costCap = ()=>ruleset().costCap||RULES.costCap;
+const costCap = ()=>(G.scn&&G.scn.cap)||ruleset().costCap||RULES.costCap;
+// 編成で選べるサーヴァント（シナリオが選べるキャラを指定していればそれだけ）
+const ROSTER = ()=>G&&G.scn&&G.scn.pool?G.scn.pool.map(D).filter(Boolean):UNITS;
 const mcost = pid=>G.mpicks[pid]&&D(G.mpicks[pid])?D(G.mpicks[pid]).cost:0; // 編成中のマスターのコスト
 const ALLM = ()=>[...ALL(),...G.players.map(P=>P.master).filter(Boolean)]; // サーヴァント＋マスター
 const U = uid=>ALLM().find(u=>u.uid===uid);
@@ -898,6 +907,42 @@ function arcadeStart(diff){
   G.arcade={diff:d, stage:0, picks:[], mpick:null, leads:[], results:[]};
   applyMode(arcadeCfg(ARCADE.diffs[d].levels[0]));
 }
+// ---------- シナリオの戦闘（scenario.js が act('scnBattle',spec) で始める） ----------
+// spec：{title, rule, level, cap, mode:'keep'|'choose'|'fixed', lock:[id], mlock:id, pool:[id], prev:{picks,mpick}, enemy:[id], emaster:id, ename, loseGo}
+//   keep＝前に選んだ編成（prev）が使えるならそのまま、なければ選ぶ / choose＝毎回選ぶ（prev を初期値に） / fixed＝lock と mlock で固定
+//   prev.rule＝その編成を選んだときのルール / lock＝外せないメンバー / pool＝選べるキャラ（空ならゲームの全キャラ） / loseGo＝負けても物語が進む（false は再挑戦だけ）
+function scnBegin(spec){
+  const speed=G.speed; newGame({rule:RULESETS[spec.rule]?spec.rule:'team', handicap:false});
+  const rs=ruleset(), isM=id=>{ const d=D(id); return !!d&&Array.isArray(d.spells); }, isU=id=>!!D(id)&&!isM(id), uniq=a=>[...new Set((a||[]).filter(isU))];
+  const lock=uniq(spec.lock).slice(0,rs.partyMax), mlock=rs.master&&isM(spec.mlock)?spec.mlock:null, pool=uniq(spec.pool);
+  G.scn={spec, title:String(spec.title||''), lock, mlock, pool:pool.length?[...new Set([...lock,...pool])]:null, cap:Number(spec.cap)>0?Number(spec.cap):0, loseGo:!!spec.loseGo, pick:false};
+  applyMode({mode:'cpu', level:CPU_LEVELS[spec.level]?spec.level:'normal', cpu:[false,true], names:['あなた',String(spec.ename||'')||'CPU'], speed});
+  G.picks[1]=uniq(spec.enemy).slice(0,rs.partyMax); G.mpicks[1]=rs.master?(isM(spec.emaster)?spec.emaster:(MASTERS[0]||{}).id||null):null;
+  if(!G.picks[1].length&&UNITS[0]) G.picks[1]=[UNITS[0].id];
+  const prev=spec.prev||{}, pv=uniq(prev.picks), ros=ROSTER();
+  const pr=RULESETS[prev.rule]||rs; // 選んだときのルールと人数・マスターの有無が違えば選び直す
+  const good=pr.partyMax===rs.partyMax&&!!pr.master===!!rs.master&&pv.length>0&&pv.length<=rs.partyMax&&lock.every(id=>pv.includes(id))&&pv.every(id=>lock.includes(id)||ros.some(d=>d.id===id))
+    &&(!rs.master||(isM(prev.mpick)&&(mlock?prev.mpick===mlock:MASTERS.some(m=>m.id===prev.mpick))))
+    &&(rs.partyMax===1||sumCost(pv)+(rs.master?D(prev.mpick).cost:0)<=costCap());
+  const fixed=spec.mode==='fixed'&&lock.length>0&&(!rs.master||mlock), use=!fixed&&good;
+  G.picks[0]=use?pv:lock.slice(); G.mpicks[0]=rs.master?(use?prev.mpick:mlock):null;
+  G.scn.pick=!fixed&&(spec.mode==='choose'||!good);
+  if(G.scn.pick){ G.phase='setup'; G.setupPid=0; } else { G.phase='init'; startGame(); }
+}
+// シナリオの編成のおまかせ：固定メンバーはそのままで、残りを選べるキャラから埋める
+function scnRandom(only){
+  const S=G.scn, rs=ruleset(), rnd=a=>a[Math.floor(Math.random()*a.length)]; G.setupMsg='';
+  if(rs.master&&!S.mlock&&only!=='svt'&&MASTERS.length) G.mpicks[0]=rnd(MASTERS).id;
+  if(only==='master') return;
+  let best=null;
+  for(let t=0;t<50;t++){
+    const p=S.lock.slice();
+    for(const d of [...ROSTER()].sort(()=>Math.random()-.5)) if(!p.includes(d.id)&&p.length<rs.partyMax&&(rs.partyMax===1||sumCost(p)+d.cost+mcost(0)<=costCap())) p.push(d.id);
+    if(!best||p.length>best.length) best=p;
+    if(best.length===rs.partyMax) break;
+  }
+  G.picks[0]=best;
+}
 function applyMode(cfg){
   Object.assign(G,{mode:cfg.mode, level:cfg.level, cpu:cfg.cpu, speed:cfg.speed||G.speed, phase:'setup'});
   cfg.names.forEach((n,i)=>G.players[i].name=n);
@@ -1041,7 +1086,9 @@ const ACTIONS = {
       ? {mode, level:CPU_LEVELS[level]?level:'normal', cpu:[false,true], names:['あなた','CPU']}
       : {mode:'pvp', level:'normal', cpu:[false,false], names:[TERMS.player+'1',TERMS.player+'2']});
   },
+  scnBattle(spec){ if(spec&&Array.isArray(spec.enemy)) scnBegin(spec); },
   rematch(){
+    if(G.scn){ scnBegin({...G.scn.spec, prev:{picks:G.picks[0].slice(), mpick:G.mpicks[0], rule:G.rule}}); return; } // シナリオ：同じ戦闘に再挑戦
     if(G.arcade){ const d=G.arcade.diff, speed=G.speed; newGame(keepRule()); arcadeStart(d); G.speed=speed; return; } // アーケード：同じ難易度で編成からやり直す
     const cfg={mode:G.mode, level:G.level, cpu:G.cpu, speed:G.speed, names:G.players.map(p=>p.name)};
     newGame(keepRule()); applyMode(cfg);
@@ -1050,9 +1097,13 @@ const ACTIONS = {
   setupToggle({id}){
     const pid=G.setupPid, picks=G.picks[pid], d=D(id); G.setupMsg='';
     if(!d) return;
-    const i=picks.indexOf(id);
+    const i=picks.indexOf(id), max=ruleset().partyMax;
+    if(G.scn){ // シナリオ：固定メンバーは外せない・選べるキャラ以外は選べない
+      if(G.phase!=='setup') return;
+      if(G.scn.lock.includes(id)||G.scn.lock.length>=max){ G.setupMsg='固定メンバーは変えられません'; return; }
+      if(i<0&&!ROSTER().some(x=>x.id===id)) return;
+    }
     if(i>=0){ picks.splice(i,1); return; }
-    const max=ruleset().partyMax;
     if(max===1){ picks.splice(0,1,id); return; } // 1騎だけのルールは選び直し
     if(picks.length>=max){ G.setupMsg=`最大${max}体までです`; return; }
     if(sumCost(picks)+d.cost+mcost(pid)>costCap()){ G.setupMsg=`コスト合計が${costCap()}を超えます${masterRule()?`（${TERMS.player}込み）`:''}`; return; }
@@ -1063,6 +1114,7 @@ const ACTIONS = {
   // おまかせ。only='svt'：サーヴァントだけ（選んだマスターはそのまま） / only='master'：マスターだけ（選んだサーヴァントはそのまま）
   setupRandom({only,cost}={}){
     if(G.phase!=='setup') return;
+    if(G.scn){ scnRandom(only); return; }
     const pid=G.setupPid, team=ruleset().partyMax>1, rnd=a=>a[Math.floor(Math.random()*a.length)];
     const want=cost===undefined||cost===''||cost===null?null:Number(cost);
     if(want!==null&&Number.isFinite(want)) return setupRandomCost(pid,team,only,want,rnd);
@@ -1087,6 +1139,7 @@ const ACTIONS = {
   setupMaster({id}){
     if(G.phase!=='setup'||!masterRule()||!MASTERS.some(m=>m.id===id)) return;
     const pid=G.setupPid; G.setupMsg='';
+    if(G.scn&&G.scn.mlock){ G.setupMsg=`${TERMS.player}は固定です`; return; }
     if(G.mpicks[pid]===id){ G.mpicks[pid]=null; return; }
     if(ruleset().partyMax>1&&sumCost(G.picks[pid])+D(id).cost>costCap()){ G.setupMsg=`コスト合計が${costCap()}を超えます（${TERMS.player}込み）`; return; }
     G.mpicks[pid]=id;
@@ -1094,7 +1147,7 @@ const ACTIONS = {
   // CPUのおまかせ編成。how='random'：完全ランダム（setupRandom と同じ） / how='same'：相手と同じコストになるように選ぶ
   // delta：相手のコストからずらす量（アーケードの1戦目）
   setupCpu({how,cost,delta}={}){
-    if(G.phase!=='setup') return;
+    if(G.phase!=='setup'||G.scn) return;
     const pid=G.setupPid; G.setupMsg='';
     if(how==='random'){ ACTIONS.setupRandom({cost}); return; }
     const opp=G.picks[1-pid], pick=a=>a[Math.floor(Math.random()*a.length)];
@@ -1132,6 +1185,7 @@ const ACTIONS = {
   setupConfirm(){
     if(!G.picks[G.setupPid].length) return;
     if(masterRule()&&!G.mpicks[G.setupPid]){ G.setupMsg=`${TERMS.player}を選んでください`; return; }
+    if(G.scn){ if(G.phase==='setup'&&G.setupPid===0){ G.phase='init'; startGame(); } return; } // シナリオ：相手は決まっているのですぐ対戦
     if(G.arcade){ // アーケード：編成はプレイヤーだけ。相手はステージごとに自動で決まる
       if(G.phase!=='setup'||G.setupPid!==0) return;
       G.arcade.picks=G.picks[0].slice(); G.arcade.mpick=G.mpicks[0]; arcadeStage(); return;
@@ -1363,7 +1417,7 @@ const ACTIONS = {
 };
 function act(type,p={}){
   if(!ACTIONS[type]) return;
-  if(G.phase==='over' && !['restart','rematch','toggleSpeed','useDefaultData','arcadeNext'].includes(type)) return;
+  if(G.phase==='over' && !['restart','rematch','toggleSpeed','useDefaultData','arcadeNext','scnBattle'].includes(type)) return;
   snapPre();
   ACTIONS[type](p);
   render();

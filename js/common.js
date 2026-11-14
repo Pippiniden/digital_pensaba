@@ -491,10 +491,12 @@ function clsBadge(cls,iconOnly){ return `<span class="cls${iconOnly?' only':''}"
 // 一度読み込めなかったURLは IMG_BAD に覚えて、次の描画からは最初から飛ばす
 // （毎回 404 → 差し替え をくり返すと、描き直すたびに画像がチカチカ消える）
 const IMG_BAD=new Set();
+// シナリオ専用キャラの画像（{id:{face,card}}。シナリオJSONの素材。scenario.js が出し入れする）。あればフォルダの画像より先に使う
+const IMG_OVERRIDE={};
 function imgCandidates(d,k){
-  const id=d&&d.id, base=id?IMG_DIR+encodeURIComponent(id):'';
+  const id=d&&d.id, base=id?IMG_DIR+encodeURIComponent(id):'', o=(id&&IMG_OVERRIDE[id])||{};
   const face=base?base+'.'+IMG_EXT:'', card=base?base+IMG_CARD_SUFFIX+'.'+IMG_EXT:'';
-  const all=(k==='card' ? [card,face,IMG_PLACEHOLDER.card] : [face,IMG_PLACEHOLDER.face]).filter(Boolean);
+  const all=(k==='card' ? [o.card,o.face,card,face,IMG_PLACEHOLDER.card] : [o.face,face,IMG_PLACEHOLDER.face]).filter(Boolean);
   const ok=all.filter(u=>!IMG_BAD.has(u));
   return ok.length?ok:all.slice(-1);
 }

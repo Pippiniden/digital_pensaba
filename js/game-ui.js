@@ -363,6 +363,7 @@ function settingsBodyHTML(){
     ${row('原作キャラを含まない','ONの間、原作のサーヴァント・マスターを選択肢とタイトル画面に出しません',onoff('setNoCanon',noCanon()))}
     ${row('設定リンクの確認','キャラクター設定リンクを開く前の確認',seg(linkConfirmOn()?1:0,[['確認する','setLinkConfirm',1,1],['確認しない','setLinkConfirm',0,0]]))}
     ${row('下の余白','スマホで画面の下がブラウザのバーに隠れるときに余白を足します',seg(UI.bottom,BOTTOM_LABELS.map((l,i)=>[l,'setBottom',i,i])))}
+    ${typeof scnAvail==='function'&&G.phase==='mode'?row('シナリオの読み込み','シナリオのJSONファイルを読み込みます（この端末のブラウザに保存されます）','<button data-ui="scnImport">JSONを読み込む</button>'):''}
   </div>`;
 }
 function settingsModalHTML(){
@@ -410,12 +411,14 @@ function resultHTML(){
   const body={sum:resultSumHTML, unit:resultUnitsHTML, tl:resultTlHTML, log:resultLogHTML}[tab]();
   return `<div class="modal result"><div class="mback"></div>
     <div class="mbody"><h2 class="rtitle ${w===0?'p0':'p1'}">${title}</h2><p class="rsub">${sub}</p>
-      <p class="sub small rturn">${G.arcade?`アーケード STAGE ${G.arcade.stage+1}/${ARCADE.stages} ・ `:''}${esc(ruleset().name)}ルール ・ 経過ターン <b>${G.turn}</b></p>
+      <p class="sub small rturn">${G.scn&&G.scn.title?`${esc(G.scn.title)} ・ `:''}${G.arcade?`アーケード STAGE ${G.arcade.stage+1}/${ARCADE.stages} ・ `:''}${esc(ruleset().name)}ルール ・ 経過ターン <b>${G.turn}</b></p>
       <div class="rtabs" role="tablist">${Object.entries(RTABS).map(([k,v])=>`<button role="tab" aria-selected="${tab===k}" class="${tab===k?'on':''}" data-ui="rtab" data-v="${k}">${v}</button>`).join('')}</div>
       <div class="rbody">${body}</div>
-      <div class="row"><button class="ghost" data-a="restart">タイトルに戻る</button><button data-ui="closeResult">盤面を見る</button>${G.arcade?arcadeNextBtn():'<button class="primary" data-a="rematch">もう一度</button>'}</div>
+      <div class="row"><button class="ghost" data-a="restart">タイトルに戻る</button><button data-ui="closeResult">盤面を見る</button>${G.scn?scnResultBtn():G.arcade?arcadeNextBtn():'<button class="primary" data-a="rematch">もう一度</button>'}</div>
     </div></div>`;
 }
+// シナリオの戦闘：勝ったとき・負けても物語が進むときは「物語を進める」（scenario.js の scnAfter）、そうでなければ再挑戦
+const scnResultBtn = ()=>G.winner===0||G.scn.loseGo?'<button class="primary" data-ui="scnAfter">物語を進める</button>':'<button class="primary" data-a="rematch">再挑戦</button>';
 function resultSumHTML(){
   const w=G.winner; // MVP：勝った側でいちばんダメージを与えたサーヴァント
   const mvp=G.players[w].party.reduce((b,u)=>!b||stOf(u).dealt>stOf(b).dealt?u:b,null);
@@ -500,27 +503,27 @@ function arcadeTotalHTML(){
 // ---------- 編成画面 ----------
 function setupHTML(){
   const pid=G.setupPid, picks=G.picks[pid], rs=ruleset(), solo=rs.partyMax===1, cost=sumCost(picks)+(rs.master?mcost(pid):0), cap=costCap();
-  const view=D(UI.setupView)||D(picks[picks.length-1])||UNITS[0];
-  const mr=masterRule(), mp=D(G.mpicks[pid]);
+  const view=D(UI.setupView)||D(picks[picks.length-1])||ROSTER()[0];
+  const mr=masterRule(), mp=D(G.mpicks[pid]), S=G.scn, locked=id=>!!S&&S.lock.includes(id), mlock=!!S&&!!S.mlock;
   const slots=Array.from({length:rs.partyMax},(_,i)=>i).map(i=>{
     const d=D(picks[i]);
-    return d ? `<button class="slot filled" data-a="setupToggle" data-id="${esc(d.id)}" data-view="${esc(d.id)}" title="外す">${unitImg(d,'face','pimg',d.name)}<span>${ORD[i]}</span><b>${esc(d.name)}</b></button>`
+    return d ? `<button class="slot filled${locked(d.id)?' lock':''}" data-a="setupToggle" data-id="${esc(d.id)}" data-view="${esc(d.id)}" title="${locked(d.id)?'固定メンバー':'外す'}">${unitImg(d,'face','pimg',d.name)}<span>${ORD[i]}${locked(d.id)?' 固定':''}</span><b>${esc(d.name)}</b></button>`
              : `<div class="slot"><span>${ORD[i]}</span></div>`;
-  }).join('')+(!mr?'':mp?`<button class="slot filled mslot" data-a="setupMaster" data-id="${esc(mp.id)}" data-view="${esc(mp.id)}" title="外す">${unitImg(mp,'face','pimg',mp.name)}<span>${TERMS.player}</span><b>${esc(mp.name)}</b></button>`
+  }).join('')+(!mr?'':mp?`<button class="slot filled mslot${mlock?' lock':''}" data-a="setupMaster" data-id="${esc(mp.id)}" data-view="${esc(mp.id)}" title="${mlock?'固定':'外す'}">${unitImg(mp,'face','pimg',mp.name)}<span>${TERMS.player}${mlock?' 固定':''}</span><b>${esc(mp.name)}</b></button>`
              :`<div class="slot mslot"><span>${TERMS.player}</span></div>`);
   return `<div class="setup">
     <div class="sethead">
       <div class="settitle"><h2><span class="p${pid}">${esc(G.players[pid].name)}</span> の${solo?`${TERMS.unit}選択`:'パーティ編成'}</h2>
-        <p class="sub small nm">${solo?`${rs.name}ルール：${TERMS.unit}を1騎${rs.master?`と${TERMS.player}を1人`:''}選びます。${handicapNote(pid)}`:`${rs.master?`${TERMS.player}1人と`:''}コスト合計${cap}以下${rs.master?`（${TERMS.player}込み）`:''}・最大${rs.partyMax}騎。選んだ順に 1st / 2nd / 3rd。`}${G.arcade?`<b class="hl"> アーケード（${esc(ARCADE.diffs[G.arcade.diff].name)}）：この編成で全${ARCADE.stages}戦を戦います。</b>`:''}</p></div>
+        <p class="sub small nm">${solo?`${rs.name}ルール：${TERMS.unit}を1騎${rs.master?`と${TERMS.player}を1人`:''}選びます。${handicapNote(pid)}`:`${rs.master?`${TERMS.player}1人と`:''}コスト合計${cap}以下${rs.master?`（${TERMS.player}込み）`:''}・最大${rs.partyMax}騎。選んだ順に 1st / 2nd / 3rd。`}${G.arcade?`<b class="hl"> アーケード（${esc(ARCADE.diffs[G.arcade.diff].name)}）：この編成で全${ARCADE.stages}戦を戦います。</b>`:''}${S?`<b class="hl"> シナリオ：${S.lock.length||mlock?'「固定」のメンバーは変えられません。':''}${S.spec.mode==='keep'?'ここで選んだ編成を、この先の戦闘でも使います。':''}</b>`:''}</p></div>
       <div class="slots">${slots}</div>
       <div class="costm" ${solo?'hidden':''}><span>COST</span><b>${cost}</b><small>/ ${cap}</small><div class="bar"><i style="width:${pctOf(cost,cap)}%"></i></div></div>
-      <div class="setbtns ${mr?'wide':''}">${pid===0?`<button class="back" data-a="restart" data-keepnav="1" title="メニューに戻ります">戻る</button>`:''}${pid===1?`<button class="back" data-a="setupBack" title="${esc(G.players[0].name)}の編成に戻ります（ここまでの選択は残ります）">戻る</button>`:''}<select class="rcost" data-rcost title="おまかせ（ランダム）で選ぶ${solo?'':'合計'}コスト${mr?`（${TERMS.player}込み）`:''}を指定します">${['',...Array.from({length:cap+1},(_,i)=>i)].map(c=>`<option value="${c}" ${String(c)===String(UI.rcost??'')?'selected':''}>${c===''?'コスト指定なし':`コスト ${c}`}</option>`).join('')}</select>${isCpu(pid)
+      <div class="setbtns ${mr?'wide':''}">${pid===0?`<button class="back" data-a="restart" data-keepnav="1" title="${S?'シナリオを中断してタイトルに戻ります（つづきから再開できます）':'メニューに戻ります'}">${S?'中断':'戻る'}</button>`:''}${pid===1?`<button class="back" data-a="setupBack" title="${esc(G.players[0].name)}の編成に戻ります（ここまでの選択は残ります）">戻る</button>`:''}<select class="rcost" data-rcost ${S?'hidden':''} title="おまかせ（ランダム）で選ぶ${solo?'':'合計'}コスト${mr?`（${TERMS.player}込み）`:''}を指定します">${['',...Array.from({length:cap+1},(_,i)=>i)].map(c=>`<option value="${c}" ${String(c)===String(UI.rcost??'')?'selected':''}>${c===''?'コスト指定なし':`コスト ${c}`}</option>`).join('')}</select>${isCpu(pid)
         ?`<button data-a="setupCpu" data-how="same" title="相手と同じ${solo?'コスト':'合計コスト・人数'}になるように選びます">おまかせ（同コスト）</button><button data-a="setupCpu" data-how="random" title="コスト上限の中から完全にランダムに選びます">おまかせ（ランダム）</button>`
         :`<button data-a="setupRandom">おまかせ</button>`}${mr?`<button data-a="setupRandom" data-only="svt" title="選んだ${TERMS.player}はそのままで、${TERMS.unit}だけランダムに選びます">${TERMS.unit}だけおまかせ</button><button data-a="setupRandom" data-only="master" title="選んだ${TERMS.unit}はそのままで、${TERMS.player}だけランダムに選びます">${TERMS.player}だけおまかせ</button>`:''}<button class="primary big" data-a="setupConfirm" ${picks.length&&(!masterRule()||G.mpicks[pid])?'':'disabled'}>決定</button></div>
     </div>
     ${G.setupMsg?`<p class="warn nm">${G.setupMsg}</p>`:''}
     <div class="setbody">
-      <div class="rosterwrap">${mr?masterRosterHTML(pid,view):''}${rosterFilterHTML()}<div class="roster">${rosterTilesHTML(view)}</div></div>
+      <div class="rosterwrap">${mr&&!mlock?masterRosterHTML(pid,view):''}${rosterFilterHTML()}<div class="roster">${rosterTilesHTML(view)}</div></div>
       <div class="sdetail">${view?unitDetailHTML(view):''}</div>
     </div>
   </div>`;
@@ -601,12 +604,12 @@ function rosterOver(d){
 }
 function rosterList(){
   const f=UI.roster, q=f.q.trim().toLowerCase();
-  const list=UNITS.filter(d=>(!f.cls||d.cls===f.cls)&&(f.cost===''||d.cost===Number(f.cost))
+  const all=ROSTER(), list=all.filter(d=>(!f.cls||d.cls===f.cls)&&(f.cost===''||d.cost===Number(f.cost))
     &&(!q||d.name.toLowerCase().includes(q)||d.cls.toLowerCase().includes(q))&&(!f.ok||G.phase!=='setup'||!rosterOver(d)));
   const ci=c=>{ const i=CLASSES.indexOf(c); return i<0?CLASSES.length:i; };
   const by={ costDesc:(a,b)=>b.cost-a.cost, costAsc:(a,b)=>a.cost-b.cost, hpDesc:(a,b)=>b.hp-a.hp, hpAsc:(a,b)=>a.hp-b.hp,
     name:(a,b)=>a.name.localeCompare(b.name,'ja'), cls:(a,b)=>ci(a.cls)-ci(b.cls)||b.cost-a.cost }[f.sort];
-  return by?[...list].sort((a,b)=>by(a,b)||UNITS.indexOf(a)-UNITS.indexOf(b)):list;
+  return by?[...list].sort((a,b)=>by(a,b)||all.indexOf(a)-all.indexOf(b)):list;
 }
 function rosterTilesHTML(view){
   const picks=G.picks[G.setupPid], list=rosterList();
@@ -621,8 +624,8 @@ function rosterTilesHTML(view){
 }
 function rosterFilterHTML(){
   const f=UI.roster;
-  const clss=[...new Set(UNITS.map(d=>d.cls))].sort((a,b)=>(CLASSES.indexOf(a)+1||99)-(CLASSES.indexOf(b)+1||99));
-  const costs=[...new Set(UNITS.map(d=>d.cost))].sort((a,b)=>a-b);
+  const clss=[...new Set(ROSTER().map(d=>d.cls))].sort((a,b)=>(CLASSES.indexOf(a)+1||99)-(CLASSES.indexOf(b)+1||99));
+  const costs=[...new Set(ROSTER().map(d=>d.cost))].sort((a,b)=>a-b);
   const chip=(v,label,body)=>`<button class="rchip ${f.cls===v?'on':''}" data-ui="rosterCls" data-v="${esc(v)}" title="${esc(label)}">${body}</button>`;
   const n=rosterList().length;
   return `<div class="rfilter">
@@ -632,7 +635,7 @@ function rosterFilterHTML(){
       <select data-uif="cost" title="コストで絞り込み"><option value="">コスト：すべて</option>${costs.map(c=>`<option value="${c}" ${String(c)===f.cost?'selected':''}>コスト ${c}</option>`).join('')}</select>
       <select data-uif="sort" title="並べ替え">${Object.entries(ROSTER_SORTS).map(([k,v])=>`<option value="${k}" ${f.sort===k?'selected':''}>${v}</option>`).join('')}</select>
       ${G.phase==='setup'&&ruleset().partyMax>1?`<label class="rok"><input type="checkbox" data-uif="ok" ${f.ok?'checked':''}>編成できるものだけ</label>`:''}
-      <span class="sub small rcount">${n} / ${UNITS.length}騎</span>
+      <span class="sub small rcount">${n} / ${ROSTER().length}騎</span>
     </div>
   </div>`;
 }
@@ -641,8 +644,8 @@ function redrawRoster(){
   const r=document.querySelector('.roster'); if(!r){ render(); return; }
   if(G.phase!=='setup'){ setHTML(r,zukanTilesHTML(zukanView())); const c=document.querySelector('.rcount'); if(c) c.textContent=`${rosterList().length} / ${UNITS.length}騎`; return; }
   const picks=G.picks[G.setupPid];
-  setHTML(r,rosterTilesHTML(D(UI.setupView)||D(picks[picks.length-1])||UNITS[0]));
-  const c=document.querySelector('.rcount'); if(c) c.textContent=`${rosterList().length} / ${UNITS.length}騎`;
+  setHTML(r,rosterTilesHTML(D(UI.setupView)||D(picks[picks.length-1])||ROSTER()[0]));
+  const c=document.querySelector('.rcount'); if(c) c.textContent=`${rosterList().length} / ${ROSTER().length}騎`;
 }
 function onRosterField(e){
   const el=e.target.closest('[data-uif]'); if(!el) return;
@@ -729,11 +732,13 @@ function modeHTML(){
     <div class="topmenu">
       <button class="gbtn p" data-ui="nav" data-s="quick">クイックバトル</button>
       <button class="gbtn" data-ui="nav" data-s="arcade">アーケード</button>
+      ${typeof scnAvail==='function'&&scnAvail()?'<button class="gbtn" data-ui="scnList">シナリオ</button>':''}
       <button class="gbtn" data-ui="nav" data-s="local">ローカル対戦</button>
       <button class="gbtn" data-ui="nav" data-s="zukan">図鑑</button>
       <button class="gbtn" data-ui="nav" data-s="tutorial">チュートリアル</button>
       <button class="gbtn" data-ui="nav" data-s="settings">設定</button>
       <a class="gbtn editorlink" href="editor.html">ペンシルエディタ</a>
+      <a class="gbtn editorlink" href="scenario-editor.html">シナリオエディタ</a>
     </div>`;
   return `<div class="mode">${head}${top}</div>${panel?`<div class="modal navmodal"><div class="mback" data-ui="navClose"></div><div class="mbody navpanel">${panel}</div></div>`:''}`;
 }
@@ -765,12 +770,13 @@ function render(){
   else {
     if(UI.detail&&!U(UI.detail)) UI.detail=null;
     setHTML(app,`<div class="battle ${UI.log?'':'nolog'}"><main class="field">${sideHTML(1,'top')}${stageHTML()}${sideHTML(0,'bottom')}</main>${UI.log?logHTML():''}</div>${UI.detail?detailModalHTML():''}${UI.result&&G.phase==='over'?(UI.result==='total'&&G.arcade?arcadeTotalHTML():resultHTML()):''}${linkModalHTML()}${overlaysHTML()}`);
-    hinfo.textContent=`${G.arcade?`${arcadeLabel()} ・ `:''}${G.rule!=='team'?`${ruleset().name}ルール ・ `:''}ターン${G.turn}`;
+    hinfo.textContent=`${G.scn&&G.scn.title?`${G.scn.title} ・ `:''}${G.arcade?`${arcadeLabel()} ・ `:''}${G.rule!=='team'?`${ruleset().name}ルール ・ `:''}ターン${G.turn}`;
     const l=document.querySelector('#log'); if(l) l.scrollTop=l.scrollHeight;
     animateLane();
     syncMagicCircle(); syncPulses();
   }
   saveMatch();
+  if(typeof scnHook==='function') scnHook();
   scheduleCpu();
   scheduleAuto();
   fxKick();
@@ -782,14 +788,17 @@ function render(){
 const MATCH_KEY='pencilduel.match';
 function saveMatch(){
   try{
-    if(G.phase==='mode'||G.phase==='init'){ sessionStorage.removeItem(MATCH_KEY); return; }
+    if(G.phase==='mode'||G.phase==='init'){ if(!MATCH_HOLD) sessionStorage.removeItem(MATCH_KEY); return; }
     sessionStorage.setItem(MATCH_KEY,JSON.stringify({v:1,src:UNIT_SOURCE,G:{...G,log:G.log.slice(-200)}}));
   }catch(e){}
 }
-function restoreMatch(){
+// シナリオの戦闘（G.scn）は、シナリオ本体を読み込んだあと scenario.js が restoreMatch(true) で再開する。それまで保存を消さない（MATCH_HOLD）
+let MATCH_HOLD=false;
+function restoreMatch(scn=false){
   try{
     const s=JSON.parse(sessionStorage.getItem(MATCH_KEY)||'null');
     if(!s||s.v!==1||!s.G||s.src!==UNIT_SOURCE) return false;
+    if(!!s.G.scn!==scn){ if(s.G.scn) MATCH_HOLD=true; return false; }
     const g=s.G, ids=[...g.picks.flat(),...g.players.flatMap(P=>P.party.map(u=>u.def))];
     if(!ids.every(id=>D(id))) return false; // データが変わってキャラがいなければ再開しない
     G=g;
@@ -890,6 +899,7 @@ function uiAct(a,ds){
     case 'mToggle': UI.mfold=!UI.mfold; break;
     case 'rosterCls': UI.roster.cls=ds.v; break;
     case 'rosterReset': UI.roster={...UI.roster, cls:'', cost:'', q:'', ok:false}; break;
+    default: if(typeof scnUi==='function') scnUi(a,ds); // シナリオ（scenario.js）
   }
   render();
 }
