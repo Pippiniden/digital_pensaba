@@ -276,7 +276,7 @@ const DEFAULT_UNITS = [
     "ult":{"name":"疑似展開/人理の礎","c":"B","eff":[{"k":"def","t":"ally_all","v":30,"turns":3}],"ruby":"ロード・カルデアス"}
   },
   {
-    "id":"kagemiya", "name":"カゲミヤ", "cls":"シャドウチェイサー", "cost":4, "hp":650,
+    "id":"kagemiya", "name":"カゲミヤ", "cls":"シャドウチェイサー", "cost":4, "hp":670,
     "traits":["中立","中庸","人","男性","愛する者"],
     "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":7,"z":89},"cut":{"x":0,"y":2,"z":97}},
     "lines":{
@@ -877,7 +877,7 @@ const DEFAULT_UNITS = [
     "ult":{"name":"赤い盾","c":"R","eff":[{"k":"dmg","t":"target","v":300},{"k":"invul","t":"self","v":0,"turns":1},{"k":"cleanse","t":"ally_all","v":0}],"ruby":"レッドシールド"}
   },
   {
-    "id":"guillaume", "name":"ギヨーム9世", "cls":"キャスター", "cost":3, "hp":550,
+    "id":"guillaume", "name":"ギヨーム9世", "cls":"キャスター", "cost":3, "hp":520,
     "traits":["男性","混沌","善","人","人型","フランス"],
     "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":0,"z":105},"cut":{"x":0,"y":12,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%c5%a5%a5%da%a5%f3%a5%b5%a5%d0%a5%b7%a1%bc%a5%c8%a1%f9%a3%b3",
@@ -896,16 +896,16 @@ const DEFAULT_UNITS = [
       {"acts":1,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":90,"np":0,"star":0}},
       {"acts":1,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
-      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"R","dmg":110,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"NP上昇","eff":[{"k":"np","t":"self","v":20},{"k":"np","t":"ally_all","v":5}],"dmg":0,"np":0,"star":0}},
       {"acts":3,"pre":{"c":"B","dmg":40,"np":10,"star":0},"post":{"c":"B","dmg":50,"np":15,"star":0}},
       {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":4},"post":{"c":"G","dmg":40,"np":0,"star":6}}
     ],
     "skills":[
       {"name":"陣地作成(奏)","eff":[{"k":"evade","t":"ally_all","v":0,"times":1},{"k":"heal","t":"ally_all","v":100},{"k":"deathImmune","t":"ally_all","v":0,"times":1}],"rank":"A"},
       {"name":"道具作成","eff":[{"k":"cleanse","t":"ally_other","v":0},{"k":"stripImmune","t":"ally_other","v":0,"times":1}],"rank":"A"},
-      {"name":"自己保存","eff":[{"k":"invul","t":"self","v":0,"turns":1},{"k":"np","t":"self","v":50}],"rank":"C"}
+      {"name":"自己保存","eff":[{"k":"invul","t":"self","v":0,"turns":1},{"k":"np","t":"self","v":40}],"rank":"C"}
     ],
-    "ult":{"name":"全ての騎士たちの歌","c":"B","eff":[{"k":"np","t":"ally_all","v":60},{"k":"npPow","t":"picked","v":100,"turns":2}],"ruby":"ヴィーダ","pick":"other"}
+    "ult":{"name":"全ての騎士たちの歌","c":"B","eff":[{"k":"np","t":"ally_all","v":50},{"k":"npPow","t":"picked","v":80,"turns":2}],"ruby":"ヴィーダ","pick":"other"}
   },
   {
     "id":"vercingetorix", "name":"ウェルキンゲトリクス", "cls":"セイバー", "cost":4, "hp":880,
@@ -1029,11 +1029,11 @@ const DEFAULT_UNITS = [
       {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":3},"post":{"c":"G","dmg":50,"np":0,"star":5}}
     ],
     "skills":[
-      {"name":"スキル1","eff":[{"k":"def","t":"self","v":20,"turns":1},{"k":"atk","t":"self","v":10,"turns":3},{"k":"debuffImmune","t":"self","v":0,"turns":3}]},
-      {"name":"心眼(偽)","eff":[{"k":"evade","t":"self","v":0,"turns":1},{"k":"critPow","t":"self","v":30,"turns":3}]},
-      {"name":"スキル3","eff":[{"k":"taunt","t":"self","v":0,"turns":1},{"k":"debuffImmune","t":"self","v":0,"turns":5,"times":3},{"k":"regenNp","t":"self","v":5,"turns":5},{"k":"npPow","t":"self","v":60,"turns":5,"chance":3}]}
+      {"name":"女神の寵愛","eff":[{"k":"def","t":"self","v":20,"turns":1},{"k":"atk","t":"self","v":10,"turns":3},{"k":"debuffImmune","t":"self","v":0,"turns":3}],"rank":"A"},
+      {"name":"月光の先導者","eff":[{"k":"evade","t":"self","v":0,"turns":1},{"k":"critPow","t":"self","v":30,"turns":3},{"k":"onAtkNp","t":"self","v":5,"turns":3}],"rank":"A+"},
+      {"name":"第三の試練","eff":[{"k":"taunt","t":"self","v":0,"turns":1},{"k":"debuffImmune","t":"self","v":0,"turns":5,"times":3},{"k":"regenNp","t":"self","v":5,"turns":5},{"k":"npPow","t":"self","v":60,"turns":5,"chance":3}],"rank":"B++"}
     ],
-    "ult":{"name":"宝具","c":"G","eff":[{"k":"evade","t":"self","v":0,"turns":3,"times":3},{"k":"atk","t":"self","v":40,"turns":3,"color":"G"},{"k":"onAtkNp","t":"self","v":10,"turns":3,"color":"G"},{"k":"critPow","t":"self","v":30,"turns":3,"color":"G"},{"k":"onAtkStar","t":"self","v":3,"turns":3,"color":"G"},{"k":"dmg","t":"enemy_all","v":300}]}
+    "ult":{"name":"我が身に届く矢はあらじ","c":"G","eff":[{"k":"evade","t":"self","v":0,"turns":3,"times":3},{"k":"atk","t":"self","v":40,"turns":3,"color":"G"},{"k":"onAtkNp","t":"self","v":10,"turns":3,"color":"G"},{"k":"critPow","t":"self","v":30,"turns":3,"color":"G"},{"k":"onAtkStar","t":"self","v":3,"turns":3,"color":"G"},{"k":"dmg","t":"enemy_all","v":300}],"ruby":"アグロテラ・ケリュネイア"}
   },
   {
     "id":"hughes", "name":"ユーグ・ド・パイヤン", "cls":"セイバー", "cost":5, "hp":850,
@@ -1067,7 +1067,7 @@ const DEFAULT_UNITS = [
     "ult":{"name":"聖堂に集え、守護の剣","c":"B","eff":[{"k":"dmg","t":"target","v":300},{"k":"def","t":"ally_all","v":30,"turns":3}],"ruby":"オルドル・デュ・テンプル"}
   },
   {
-    "id":"necho1", "name":"ネコ1世", "cls":"ライダー", "cost":1, "hp":250,
+    "id":"necho1", "name":"ネコ1世", "cls":"ライダー", "cost":1, "hp":300,
     "traits":["女性","中立","善","アホ","エジプト"],
     "fit":{"face":{"x":50,"y":31,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":29,"z":105},"cut":{"x":0,"y":4,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%cd%a5%b3",
