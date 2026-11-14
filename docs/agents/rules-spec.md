@@ -75,6 +75,7 @@ UI notes: in the master rule (not mteam) the master is drawn as a card beside th
 |---|---|---|
 | `critPow` | Critical damage **+x** (additive, not a multiplier). Optional `color`: only counts when the critting command is that color (`mods(att,'critPow',cmd.c)`) | `attackHit` |
 | `critRoll` | "クリティカル率アップ" (was クリティカルロール-) = critical level **+x**; pair of `critDown` (クリティカル率ダウン) | `resolveCommand` |
+| `buffDown` | 強化成功率ダウン: when the holder applies a buff (`FX[k].buff===true`) to an **ally/self**, the `chance` threshold N becomes N−x (0–6; "必ず" counts as 6, so any `buffDown` can make it fail). One use consumed per effect. Shares `debuffRate` / `applyEffects` with `debuffUp`/`debuffDown` | `debuffRate` / `applyEffects` |
 | `debuffUp` / `debuffDown` | 弱体成功率アップ／ダウン: when the holder applies a debuff (`FX[k].buff===false`) to an **enemy**, the `chance` roll threshold N becomes N+up−down (0–6; "必ず" counts as 6, so only `debuffDown` can make it fail; `debuffUp` only helps effects with `chance`). One use is consumed per effect (not per target). Not for self/ally targets or instant effects | `debuffRate` / `applyEffects` / `chanceRoll` |
 | `critMult` | "Crit multiplier": on a crit, damage becomes (damage before the crit step) × x% **instead of** +30/+60 and the color-buff doubling; `critPow` is still added after. Highest value wins. NP / stars keep the normal crit ×2 | `resolveCommand` |
 | `healBlock` | Debuff: blocks `heal` and `regenHp` (not the HP gained from `maxHp`) | `applyOne`, `endPhase` |

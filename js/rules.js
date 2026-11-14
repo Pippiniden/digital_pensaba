@@ -269,7 +269,8 @@ const FX = {
   critDown:{name:'クリティカル率ダウン',buff:false,val:true},
   starDown:{name:'スター発生数ダウン',buff:false,val:true},          // 攻撃1回で発生するスターが x 個減る
   debuffDown:{name:'弱体成功率ダウン',buff:false,val:true},   // 自分が敵に付ける弱体の判定ロールをN-xにする。「必ず」の弱体もロール6以下の判定になる
-  healBlock:{name:'回復無効',buff:false},                   // HP回復・毎ターンHP回復を受けない // 攻撃時のクリティカルレベル-x（シンプルは出目+x）
+  buffDown:{name:'強化成功率ダウン',buff:false,val:true},    // 自分が味方（自分含む）に付ける強化の判定ロールをN-xにする。「必ず」の強化もロール6以下の判定になる
+  healBlock:{name:'回復無効',buff:false},                 // HP回復・毎ターンHP回復を受けない // 攻撃時のクリティカルレベル-x（シンプルは出目+x）
   // 即時
   heal:{name:'HP回復',val:true,inst:true}, np:{name:'NP増減',val:true,inst:true}, star:{name:'スター獲得',val:true,inst:true},
   starLoss:{name:'スター消失',val:true,inst:true},             // 対象のマスターがスターを失う
@@ -311,7 +312,7 @@ const FX_GROUPS = [
   ['攻撃強化', ['atk','atkPct','npPow','atkVs','atkTrait','ignoreDef','sureHit','pierce','critPow','critMult','critRoll','debuffUp','cardConv','onAtkStar','onAtkNp','aoeNormal']],
   ['防御・耐性', ['def','defTrait','evade','invul','guts','taunt','nullUnder','counter','maxHp','debuffImmune','mentalImmune','deathImmune','stripImmune','npDownImmune','starLossImmune']],
   ['継続・ターン', ['actsUp','regenHp','regenNp','regenStar','onHitNp','hitNpUp','onHitStar']],
-  ['弱体', ['atkDown','atkPctDown','npPowDown','defDown','critDown','starDown','debuffDown','poison','burn','spread','drain','curse','hitNpSeal','stun','charm','fear','actsDown','sealSkill','sealUlt','healBlock','buffImmune']],
+  ['弱体', ['atkDown','atkPctDown','npPowDown','defDown','critDown','starDown','debuffDown','buffDown','poison','burn','spread','drain','curse','hitNpSeal','stun','charm','fear','actsDown','sealSkill','sealUlt','healBlock','buffImmune']],
   ['回復・即時', ['heal','np','star','starLoss','cleanse','cleanseMental','strip','buffExtend','skillCharge']],
   ['攻撃・特殊', ['dmg','multiHit','aoe','selfDmg','instantDeath','copyRoll']],
   ['表示', ['desc']],

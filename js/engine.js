@@ -249,10 +249,19 @@ function chanceRoll(e,who,need=e.chance){
 }
 // 弱体の成功率：敵に付ける弱体の判定は、弱体成功率アップ(+x)／ダウン(-x)でロールの基準値をずらす（0〜6）。
 // 「必ず」の弱体はロール6以下として扱うので、ダウンがあるときだけ失敗しうる。アップは確率つきの弱体にだけ効く
+// 強化の成功率：味方（自分含む）に付ける強化の判定は、強化成功率ダウン(-x)でロールの基準値が下がる。
+// 「必ず」の強化もロール6以下として扱うので、ダウンがあれば失敗しうる
 function debuffRate(src,e){
-  if(!(FX[e.k]&&FX[e.k].buff===false)) return null;
-  const up=mods(src,'debuffUp'), dn=mods(src,'debuffDown');
-  return (up.list.length||dn.list.length)?{up:up.sum,dn:dn.sum,list:[...up.list,...dn.list],used:false}:null;
+  const b=FX[e.k]&&FX[e.k].buff;
+  if(b===false){
+    const up=mods(src,'debuffUp'), dn=mods(src,'debuffDown');
+    return (up.list.length||dn.list.length)?{up:up.sum,dn:dn.sum,list:[...up.list,...dn.list],used:false,foe:true}:null;
+  }
+  if(b===true){
+    const dn=mods(src,'buffDown');
+    return dn.list.length?{up:0,dn:dn.sum,list:dn.list,used:false,foe:false}:null;
+  }
+  return null;
 }
 // o.tmp：マスターの補助（このターンだけ）。付いた効果は終了フェイズで消える
 function applyEffects(src,effs,picked,o={}){
@@ -267,7 +276,7 @@ function applyEffects(src,effs,picked,o={}){
     const rate=debuffRate(src,e);
     resolveTargets(src,e.t,picked).forEach(t=>{
       if(condAtApply(e)&&!condOk(e.cond,t)){ log(`${nm(t)}：条件（${condText(e.cond)}）を満たさないため「${FX[e.k].name}」は効果なし`,'sub'); return; }
-      if(rate&&t.pid!==src.pid&&(e.chance||rate.dn)){ // 敵への弱体：成功率アップ／ダウンで判定をずらす
+      if(rate&&(t.pid!==src.pid)===rate.foe&&(e.chance||rate.dn)){ // 敵への弱体／味方への強化：成功率アップ／ダウンで判定をずらす
         rate.used=true;
         const need=Math.max(0,Math.min(6,(e.chance||6)+rate.up-rate.dn));
         if(need<6&&!chanceRoll(e,t,need)) return;
