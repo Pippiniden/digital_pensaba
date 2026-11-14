@@ -504,15 +504,17 @@ function gainNpStar(att,cmd,mult){
 const isCopyCmd = c=>!!c&&c.c==='W'&&(c.eff||[]).some(e=>e.k==='copyRoll');
 const copyCands = u=>G.players.flatMap(P=>P.party).filter(x=>!x.out&&x.uid!==u.uid);
 // 選んだサーヴァントの鉛筆をロールし、再臨後コマンドを返す（同じ特殊行動が出たら振り直し）
-function copyRollFrom(src){
+// orig＝ロールの元になった特殊行動。そのほかの効果（例：クリティカル率アップ）は、出たコマンドの攻撃前に適用する
+function copyRollFrom(src,orig){
   const d=D(src.def); let f, c;
   for(let i=0;i<20;i++){ f=roll(); c=d.faces[f].post; if(!isCopyCmd(c)) break; }
   if(isCopyCmd(c)) c={c:'W',label:'不発',eff:[],np:0,star:0,dmg:0};
-  return {f, cmd:{...c, from:d.name}};
+  const extra=((orig&&orig.eff)||[]).filter(e=>e.k!=='copyRoll'&&!(FX[e.k]&&FX[e.k].noTgt)).map(e=>({...e,at:'pre'}));
+  return {f, cmd:{...c, ...(extra.length?{eff:[...extra,...(c.eff||[])]}:{}), from:d.name}};
 }
 function doCopy(uid,src){
   const r=G.rolled[G.copy.idx], u=U(uid);
-  const {f,cmd}=copyRollFrom(src);
+  const {f,cmd}=copyRollFrom(src,r.cmd);
   r.cmd=cmd; u.face={i:r.f,kind:'cmd',cmd};
   rollFx(src.uid,f,{cmd,def:src.def,keys:[`f:${uid}`,`r:${G.copy.idx}`]});
   log(`${nm(u)}：${nm(src)}の鉛筆をロール 出目${f+1} → ${cmdChip(cmd)}`);
@@ -601,7 +603,7 @@ function resolveCommand(att,cmd,tgt,o={}){
   if(cmd.c==='ASC'){ if(cmdLine(cmd)) say(att,'attack',{own:cmd.line}); atkFx(null); log(`${n}：${TERMS.ascFull}（1行動）`,'sub'); return; }
   if(isCopyCmd(cmd)){ // エクストラアタックで出たときは対象をランダムに選んで、その場でロール
     const cs=copyCands(att); if(!cs.length) return;
-    const src=cs[Math.floor(Math.random()*cs.length)], r=copyRollFrom(src);
+    const src=cs[Math.floor(Math.random()*cs.length)], r=copyRollFrom(src,cmd);
     log(`${n}：${nm(src)}の鉛筆をロール 出目${r.f+1} → ${cmdChip(r.cmd)}`);
     rollFx(src.uid,r.f,{cmd:r.cmd,def:src.def});
     return resolveCommand(att,r.cmd,tgt,o);

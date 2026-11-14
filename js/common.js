@@ -179,7 +179,8 @@ function validateUnits(units){
         if(c.c==='W'){
           if(!c.label.trim()) add('warn',`${where}：特殊行動の名前が空です`);
           if(!c.eff.length&&!(c.dmg>0)) add('warn',`${where}：特殊行動に効果もダメージもありません`);
-          if(c.eff.some(e=>e.k==='copyRoll')&&(c.dmg>0||c.eff.length>1)) add('warn',`${where}：「${FX.copyRoll.name}」があるときは、ダメージやほかの効果は使われません`);
+          if(c.eff.some(e=>e.k==='copyRoll')&&c.dmg>0) add('warn',`${where}：「${FX.copyRoll.name}」があるときは、ダメージは使われません`);
+          if(c.eff.some(e=>e.k==='copyRoll')&&c.eff.some(e=>e.k!=='copyRoll'&&e.t!=='self')) add('warn',`${where}：「${FX.copyRoll.name}」と一緒に使うほかの効果は、出たコマンドの攻撃前に適用されます（自身への効果向き）`);
           checkEffs(c.eff,'special',where,add);
         }
       });
