@@ -163,34 +163,35 @@ const DEFAULT_MASTERS = [
     ]
   },
   {
-    "id":"m_erika", "name":"黒咲恵梨佳", "cost":5, "hp":500,
+    "id":"m_erika", "name":"黒咲恵梨佳", "cost":4, "hp":350,
+    "fit":{"face":{"x":50,"y":16,"z":100}},
     "faces":[
-      {"label":"血晶魔術・爆破","eff":[{"k":"dmg","t":"enemy_master","v":100}]},
-      {"label":"血晶魔術・治癒","eff":[{"k":"heal","t":"ally_svt","v":80}]},
-      {"label":"血晶魔術・加速","eff":[{"k":"atk","t":"ally_svt","v":15},{"k":"atk","t":"ally_svt","v":40,"color":"G"},{"k":"critPow","t":"ally_svt","v":30}]},
-      {"label":"起源血晶の欠片","eff":[{"k":"heal","t":"ally_all","v":80},{"k":"cleanse","t":"ally_all","v":0}]},
-      {"label":"血晶魔術・覚醒","eff":[{"k":"onAtkNp","t":"svt","v":10},{"k":"onAtkNp","t":"ally_svt","v":15,"color":"G"},{"k":"onAtkStar","t":"ally_svt","v":3,"color":"G"}]},
-      {"label":"血晶魔術・閃光","eff":[{"k":"star","t":"master","v":6},{"k":"atk","t":"ally_svt","v":10,"color":"G"},{"k":"critPow","t":"ally_svt","v":40,"color":"G"}]}
+      {"label":"高速思考","eff":[{"k":"desc","t":"self","v":0,"text":"黒咲恵梨佳は戦況を見極めようとしている。"}]},
+      {"label":"血晶魔術・治癒","eff":[{"k":"heal","t":"ally_svt","v":30}]},
+      {"label":"血晶魔術・加速","eff":[{"k":"atk","t":"ally_svt","v":10},{"k":"atk","t":"ally_svt","v":20,"color":"G"},{"k":"critPow","t":"ally_svt","v":30,"color":"G"}]},
+      {"label":"起源血晶の欠片","eff":[{"k":"heal","t":"ally_all","v":60},{"k":"cleanse","t":"ally_all","v":0}]},
+      {"label":"血晶魔術・覚醒","eff":[{"k":"onAtkNp","t":"svt","v":5},{"k":"onAtkNp","t":"ally_svt","v":5,"color":"G"},{"k":"onAtkStar","t":"ally_svt","v":4,"color":"G"}]},
+      {"label":"血晶魔術・閃光","eff":[{"k":"star","t":"master","v":6},{"k":"atk","t":"ally_svt","v":20,"color":"G"},{"k":"critPow","t":"ally_svt","v":30,"color":"G"}]}
     ],
     "spells":[
       {"name":"血晶魔術・反転","eff":[{"k":"stun","t":"enemy_svt","v":0,"turns":1},{"k":"defDown","t":"enemy_svt","v":20,"turns":1}]},
       {"name":"起源血晶","eff":[{"k":"heal","t":"ally_all","v":130},{"k":"cleanse","t":"ally_all","v":0},{"k":"debuffImmune","t":"ally_all","v":0,"turns":1},{"k":"np","t":"ally_all","v":5}]},
-      {"name":"血晶魔術・","eff":[{"k":"dmg","t":"enemy_svt","v":100},{"k":"dmg","t":"enemy_master","v":150}]}
+      {"name":"血晶魔術・爆破","eff":[{"k":"dmg","t":"enemy_svt","v":80},{"k":"dmg","t":"enemy_master","v":120}]}
     ]
   },
   {
-    "id":"m_seiji", "name":"柏木星司", "cost":5, "hp":400,
+    "id":"m_seiji", "name":"柏木星司", "cost":5, "hp":450,
     "faces":[
-      {"label":"","eff":[{"k":"onAtkStar","t":"ally_svt","v":2}]},
-      {"label":"","eff":[{"k":"onAtkStar","t":"ally_svt","v":2}]},
-      {"label":"","eff":[{"k":"onAtkStar","t":"ally_svt","v":2}]},
+      {"label":"","eff":[{"k":"onAtkStar","t":"ally_svt","v":3}]},
+      {"label":"","eff":[{"k":"onAtkStar","t":"ally_svt","v":3}]},
+      {"label":"","eff":[{"k":"onAtkStar","t":"ally_svt","v":3}]},
+      {"label":"","eff":[{"k":"atk","t":"ally_svt","v":50,"color":"R"}]},
       {"label":"","eff":[{"k":"atk","t":"ally_svt","v":30,"color":"R"}]},
-      {"label":"","eff":[{"k":"atk","t":"ally_svt","v":20,"color":"R"}]},
-      {"label":"","eff":[{"k":"atk","t":"ally_svt","v":20,"color":"R"}]}
+      {"label":"","eff":[{"k":"atk","t":"ally_svt","v":30,"color":"R"}]}
     ],
     "spells":[
-      {"name":"竜の心臓","eff":[{"k":"np","t":"ally_svt","v":40},{"k":"hitNpSeal","t":"ally_svt","v":0,"turns":1,"sure":true},{"k":"selfDmg","t":"ally_svt","v":50},{"k":"selfDmg","t":"self","v":50}]},
-      {"name":"EMCカートリッジ","eff":[{"k":"critRoll","t":"svt","v":2,"turns":1},{"k":"np","t":"svt","v":-20}]},
+      {"name":"竜の心臓","eff":[{"k":"np","t":"ally_svt","v":50},{"k":"hitNpSeal","t":"ally_svt","v":0,"turns":1,"sure":true}]},
+      {"name":"EMCカートリッジ","eff":[{"k":"critRoll","t":"svt","v":2,"turns":1}]},
       {"name":"Quad_Burst","eff":[{"k":"dmg","t":"enemy_svt","v":180},{"k":"selfDmg","t":"self","v":200}]}
     ]
   },
@@ -212,20 +213,20 @@ const DEFAULT_MASTERS = [
     ]
   },
   {
-    "id":"m_jubiro", "name":"石鷹授比郎", "cost":1, "hp":100,
+    "id":"m_jubiro", "name":"石鷹授比郎", "cost":1, "hp":190,
     "fit":{"face":{"x":50,"y":0,"z":100}},
     "lines":{"support":["こいつぁスゲェ！！なんて入り組んだストーリーと謎だ！！","この聖杯戦争に！！俺達の骨を埋めてやろうじゃねぇかぁ！！","この戦争に勝てないと心が折れたら、逃げ時だぜ？"],"attack":[],"spell":["先の詠める漫画なんざつまらないにもほどがあるだろうがァァアアア！！！","この聖杯戦争ッ！！”俺に描かせろ”ッッッ！！！！"]},
     "faces":[
-      {"label":"","eff":[{"k":"atk","t":"ally_svt","v":30,"color":"R"},{"k":"onAtkNp","t":"ally_svt","v":5}]},
+      {"label":"","eff":[{"k":"atk","t":"ally_svt","v":40,"color":"R"},{"k":"onAtkNp","t":"ally_svt","v":10}]},
       {"label":"","eff":[]},
       {"label":"","eff":[]},
-      {"label":"","eff":[{"k":"critRoll","t":"ally_svt","v":2},{"k":"critPow","t":"svt","v":30}]},
+      {"label":"","eff":[{"k":"critRoll","t":"ally_svt","v":2},{"k":"critPow","t":"svt","v":40}]},
       {"label":"","eff":[]},
       {"label":"","eff":[]}
     ],
     "spells":[
-      {"name":"しおさいと銅鑼","eff":[{"k":"actsUp","t":"ally_svt","v":3,"turns":1},{"k":"critRoll","t":"ally_svt","v":2,"turns":1},{"k":"np","t":"ally_svt","v":20}]},
-      {"name":"倶利伽羅サーフィス","eff":[{"k":"evade","t":"ally_svt","v":0,"turns":1},{"k":"heal","t":"ally_svt","v":250},{"k":"cleanse","t":"ally_svt","v":0},{"k":"np","t":"ally_svt","v":10}]},
+      {"name":"しおさいと銅鑼","eff":[{"k":"actsUp","t":"ally_svt","v":3,"turns":1},{"k":"critRoll","t":"ally_svt","v":2,"turns":1},{"k":"np","t":"ally_svt","v":25}]},
+      {"name":"倶利伽羅サーフィス","eff":[{"k":"evade","t":"ally_svt","v":0,"turns":1},{"k":"heal","t":"ally_svt","v":250},{"k":"cleanse","t":"ally_svt","v":0},{"k":"np","t":"ally_svt","v":20}]},
       {"name":"日光条約","eff":[{"k":"sealUlt","t":"enemy_svt","v":0,"turns":1,"chance":4},{"k":"sealSkill","t":"enemy_svt","v":0,"turns":1,"chance":4},{"k":"fear","t":"enemy_svt","v":0,"turns":1,"chance":4},{"k":"stun","t":"svt","v":0,"turns":1,"chance":4}]}
     ]
   },
@@ -278,6 +279,40 @@ const DEFAULT_MASTERS = [
       {"name":"ケミカルブースト","eff":[{"k":"actsUp","t":"ally_svt","v":3,"times":1}],"line":["悪に障害は無いのさぁ！"]},
       {"name":"違法改造","eff":[{"k":"skillCharge","t":"ally_svt","v":1}],"line":["さあ、キリキリ働きなよ！"]},
       {"name":"巨大メス","eff":[{"k":"dmg","t":"enemy_master","v":300}],"line":["さーて、解剖のお時間だよ！"]}
+    ]
+  },
+  {
+    "id":"m_isla", "name":" アイラ・ダウル・オルナ", "cost":5, "hp":540,
+    "fit":{"face":{"x":50,"y":21,"z":100}},
+    "faces":[
+      {"label":"","eff":[{"k":"onAtkNp","t":"ally_svt","v":10},{"k":"onAtkNp","t":"ally_svt","v":5,"color":"B"},{"k":"atk","t":"ally_svt","v":30,"color":"B"},{"k":"cardConv","t":"ally_svt","v":0,"color":"B"}]},
+      {"label":"","eff":[{"k":"onAtkNp","t":"svt","v":10},{"k":"onAtkNp","t":"ally_svt","v":5,"color":"B"},{"k":"atk","t":"ally_svt","v":20,"color":"B"}]},
+      {"label":"","eff":[{"k":"atk","t":"ally_svt","v":15},{"k":"atk","t":"ally_svt","v":20,"color":"B"}]},
+      {"label":"","eff":[{"k":"evade","t":"svt","v":0,"times":1}]},
+      {"label":"","eff":[{"k":"atk","t":"ally_svt","v":15},{"k":"atk","t":"ally_svt","v":30,"color":"B"},{"k":"cardConv","t":"ally_svt","v":0,"color":"B"}]},
+      {"label":"","eff":[{"k":"onAtkNp","t":"ally_svt","v":10},{"k":"onAtkNp","t":"ally_svt","v":5,"color":"B"},{"k":"atk","t":"ally_svt","v":30,"color":"B"}]}
+    ],
+    "spells":[
+      {"name":"戦魔女の嘶き","eff":[{"k":"actsUp","t":"svt","v":3,"turns":1},{"k":"onAtkStar","t":"svt","v":8,"turns":1},{"k":"defDown","t":"svt","v":20,"turns":1}]},
+      {"name":"秘蔵の宝石","eff":[{"k":"atk","t":"ally_svt","v":40,"turns":1,"color":"B"},{"k":"np","t":"svt","v":25}]},
+      {"name":"大神慟哭・三弦狂騒","eff":[{"k":"stun","t":"enemy_all","v":0,"turns":1,"chance":2},{"k":"charm","t":"enemy_all","v":0,"turns":1,"chance":4},{"k":"defDown","t":"enemy_all","v":20,"turns":1}]}
+    ]
+  },
+  {
+    "id":"m_ophelia", "name":"ベアズリー・オフィーリア", "cost":3, "hp":300,
+    "fit":{"face":{"x":50,"y":0,"z":100}},
+    "faces":[
+      {"label":"","eff":[{"k":"heal","t":"svt","v":30}]},
+      {"label":"","eff":[{"k":"heal","t":"ally_svt","v":50}]},
+      {"label":"","eff":[{"k":"heal","t":"ally_svt","v":50}]},
+      {"label":"","eff":[{"k":"heal","t":"ally_svt","v":80}]},
+      {"label":"","eff":[]},
+      {"label":"","eff":[]}
+    ],
+    "spells":[
+      {"name":"応急手当","eff":[{"k":"heal","t":"ally_svt","v":200}]},
+      {"name":"怪我しないでね？","eff":[{"k":"heal","t":"ally_svt","v":100},{"k":"def","t":"ally_svt","v":20,"turns":1}]},
+      {"name":"真なる慈愛","eff":[{"k":"guts","t":"ally_svt","v":250,"turns":2}]}
     ]
   },
   {
