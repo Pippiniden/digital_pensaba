@@ -26,7 +26,7 @@ Read this first. It is a slim map; details live in `docs/agents/` and are read *
 | `js/sim-worker.js`, `js/balance*.js`, `css/balance.css` | Workers and developer-only balance lab |
 | `css/base.css`, `css/buttons.css`, `css/game.css`, `css/editor.css` | Styles. **All button looks live in `buttons.css`** (principles in `docs/ui-design.md`); do not add button colours/shapes elsewhere. New blue panels layer `var(--lattice)` first |
 | `img/units/{id}.webp` (+ `{id}_card.webp`) | Character images by id (not data); other assets in `img/classes`, `img/placeholder`, `img/ui`, `img/pwa` |
-| `manifest.webmanifest`, `sw.js` | PWA (stale-while-revalidate, cache `pensaba-duel-v1`) |
+| `manifest.webmanifest`, `sw.js` | PWA (stale-while-revalidate, cache `pensaba-duel-v2`) |
 | `presets/original/` | Not loaded by the game; frozen canon data copy |
 | `docs/` | `agents/` detail docs, `ui-design.md`, `*-sample.html` stand-alone tuning samples (not loaded by the game) |
 
