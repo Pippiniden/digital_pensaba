@@ -1096,5 +1096,38 @@ const DEFAULT_UNITS = [
       {"name":"天空神の寵愛","eff":[{"k":"guts","t":"self","v":1,"turns":3,"chance":2},{"k":"cleanse","t":"self","v":0,"chance":2},{"k":"instantDeath","t":"self","v":0,"chance":1}],"rank":"C"}
     ],
     "ult":{"name":"天機破綻す猫屋敷","c":"R","eff":[{"k":"atkDown","t":"enemy_all","v":40,"turns":3},{"k":"instantDeath","t":"self","v":0,"chance":2}],"ruby":"シルシュ・アンシャル・キャットエディション"}
+  },
+  {
+    "id":"croesusalter", "name":"クロイソス【オルタ】", "cls":"セイバー", "cost":5, "hp":900,
+    "fit":{"face":{"x":50,"y":27,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":14,"z":105},"cut":{"x":0,"y":4,"z":100}},
+    "lines":{
+      "start":["金の力はクラスすら自在に選べるのだ！"],
+      "attack":["冨め、『蛇銭剣』","お前は釣り合う相手か？","これが俺の『千両邪銭金櫻』だ…"],
+      "extra":["無尽金銭大盤振舞！！貴様ごときの命では利子にもならんほどの奥義だ！ワハハハハハハ！！"],
+      "damage":[],
+      "skill":["ウワハハハハハハハ！！","金がなければ冥界へ行くことすらできん！！","ワハハハハハハ！"],
+      "np":["『信仰はかくも容易く崩れ去る』――！報酬はすでに支払われた"],
+      "npDamage":[],
+      "defeat":["俺はわざと負ける方を選んだのだ！！"],
+      "win":["フフフ…ハハハハハ…ワハハハハハハハハ！！","そうだとも神々ですら俺を殺せなかったのだ！","先程まで俺たちは…いや、金は天下の回り物ということか！面白い…面白いぞ！"]
+    },
+    "condLines":[
+      {"key":"start","who":"other","cond":{"k":"id","v":"croesus"},"lines":["ふぅん、下らぬことで悩む俺もいるものだな！"]},
+      {"key":"win","who":"other","cond":{"k":"id","v":"croesus"},"lines":["所詮は俺もお前も両表のコインのごとき出来損ないだ"]}
+    ],
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":100,"np":0,"star":0},"post":{"c":"R","dmg":120,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"B","dmg":40,"np":10,"star":0},"post":{"c":"B","dmg":80,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":60,"np":15,"star":0},"post":{"c":"B","dmg":70,"np":15,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"特殊行動","eff":[{"k":"critRoll","t":"self","v":1,"turns":1},{"k":"copyRoll","t":"self","v":0}],"dmg":0,"np":0,"star":0}},
+      {"acts":3,"pre":{"c":"B","dmg":50,"np":10,"star":0},"post":{"c":"B","dmg":70,"np":15,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":3},"post":{"c":"G","dmg":60,"np":5,"star":5}}
+    ],
+    "skills":[
+      {"name":"黄金律","eff":[{"k":"onAtkNp","t":"self","v":10,"turns":3}],"rank":"A++"},
+      {"name":"千里眼(金)","eff":[{"k":"onAtkStar","t":"self","v":3,"turns":3}]},
+      {"name":"星の開拓者","eff":[{"k":"np","t":"self","v":50},{"k":"star","t":"master","v":10}],"rank":"EX"}
+    ],
+    "ult":{"name":"信仰はかくも容易く崩れ去る","c":"B","eff":[{"k":"critRoll","t":"self","v":3,"turns":1},{"k":"copyBuff","t":"self","v":0,"from":"target"},{"k":"copyRoll","t":"self","v":0},{"k":"copyRoll","t":"self","v":0},{"k":"copyRoll","t":"self","v":0}],"ruby":"しゅへのうらぎり","pick":"any"}
   }
 ];
