@@ -283,7 +283,12 @@ const FX = {
   dmg:{name:'ダメージ',val:true,inst:true,maxOk:true,only:['ult','master']}, // マスターの補助・令呪では固定ダメージ（補正・無敵・回避なし）。max で対象の最大HPぶん（軽減不可）
   // 特殊行動専用：自分以外の戦闘不能でないサーヴァント1体（敵味方どちらでも）を選び、その鉛筆を代わりにロールして
   // 出た再臨後コマンドをこの行動として使う
-  copyRoll:{name:'他のサーヴァントをロール',inst:true,only:'special'},
+  // 宝具でも使える：宝具の「対象の選び方」で選んだ1体の鉛筆をロール（選ばないときはランダムに1体）。出たコマンドを攻撃対象に使う（NP・スターは増えない）
+  copyRoll:{name:'他のサーヴァントをロール',inst:true,only:['special','ult']},
+  // 状態コピー：コピー元（Eff.from）の強化状態／弱体状態を、対象（Eff.t）に同じ値・残りターン・回数で付ける。
+  // コピー元は1体（自身／選んだ1体／攻撃対象）。強化無効・弱体無効は1つずつ判定する。解除・無効不可・補助の一時効果はコピーしない
+  copyBuff:{name:'強化状態をコピー',inst:true,copy:true,only:['skill','ult','special']},
+  copyDebuff:{name:'弱体状態をコピー',inst:true,copy:true,only:['skill','ult','special']},
   // 連続攻撃：このコマンド（宝具ならダメージ効果それぞれ）の攻撃を v 回行う。1回ごとに補正・クリティカル・NP・スターを処理し、
   // 回避・無敵・回数制のバフも1回ごとに消費する。対象の指定は使わない
   multiHit:{name:'連続攻撃',val:true,inst:true,noTgt:true,only:['special','ult']},
@@ -315,7 +320,7 @@ const FX_GROUPS = [
   ['防御・耐性', ['def','defTrait','evade','invul','guts','taunt','nullUnder','counter','maxHp','debuffImmune','mentalImmune','deathImmune','stripImmune','npDownImmune','starLossImmune']],
   ['継続・ターン', ['actsUp','regenHp','regenNp','regenStar','onHitNp','hitNpUp','onHitStar']],
   ['弱体', ['atkDown','atkPctDown','npPowDown','defDown','critDown','starDown','debuffDown','debuffResDown','buffDown','poison','burn','spread','drain','curse','hitNpSeal','stun','charm','fear','actsDown','sealSkill','sealUlt','healBlock','buffImmune']],
-  ['回復・即時', ['heal','np','star','starLoss','cleanse','cleanseMental','strip','buffExtend','skillCharge']],
+  ['回復・即時', ['heal','np','star','starLoss','cleanse','cleanseMental','strip','buffExtend','skillCharge','copyBuff','copyDebuff']],
   ['攻撃・特殊', ['dmg','multiHit','aoe','selfDmg','instantDeath','copyRoll']],
   ['表示', ['desc']],
 ];
@@ -340,7 +345,10 @@ const TGT_BY_CTX = {
   special:['self','target','ally_all','ally_other','enemy_all','master'],
   master:['svt','ally_svt','self','ally_all','enemy_all','enemy_both','enemy_svt','enemy_master','master'],
 };
-const fxOnlyIn = (k,ctx)=>!FX[k].only||[].concat(FX[k].only).includes(ctx); // その場所で使える効果か
+// 状態コピー（copyBuff / copyDebuff）のコピー元（Eff.from）。場所ごとに選べるもの（コピー先は Eff.t で TGT_BY_CTX から選ぶ）
+const FROM_TARGETS = { self:'自身', picked:'選んだ1体', target:'攻撃対象' };
+const FROM_BY_CTX = { skill:['self','picked'], ult:['self','picked','target'], special:['self','target'] };
+const fxOnlyIn =(k,ctx)=>!FX[k].only||[].concat(FX[k].only).includes(ctx); // その場所で使える効果か
 const PICKS = { '':'選ばない', ally:'味方単体', other:'自分以外の味方単体', enemy:'敵単体', any:'単体（敵味方）' };
 
 // ---------- エディタ用：カード構成テンプレ（コスト × カード構成） ----------

@@ -106,7 +106,9 @@ const FX_VAL_MASTER = { heal:30, dmg:50, star:5 };
 // 1ターンで足りる効果（ほかは3ターン）
 const FX_TURN1 = ['evade','invul','pierce','sureHit','stun','sealSkill','sealUlt','charm','fear','ignoreDef','actsDown','taunt'];
 // 対象の側：ally＝味方側（既定は自分） / enemy＝敵側 / master＝マスター（スター） / selfOnly＝自分だけ
-const FX_SIDE = { star:'master', starLoss:'enemy', strip:'enemy', instantDeath:'enemy', dmg:'enemy', selfDmg:'selfOnly', copyRoll:'selfOnly' };
+const FX_SIDE = { star:'master', starLoss:'enemy', strip:'enemy', instantDeath:'enemy', dmg:'enemy', selfDmg:'selfOnly', copyRoll:'selfOnly', copyBuff:'selfOnly', copyDebuff:'enemy' };
+// 状態コピーのコピー元の既定（強化は敵から自分へ、弱体は自分から敵へ）
+const FROM_DEF = { copyBuff:{skill:'picked',ult:'target',special:'target'}, copyDebuff:{skill:'self',ult:'self',special:'self'} };
 const sideOfFx = k=>FX_SIDE[k]||((FX[k]||{}).buff===false?'enemy':'ally');
 const T_ALLY = ['self','ally_all','ally_other','master','svt','ally_svt','picked'], T_ENEMY = ['enemy_all','target','enemy_svt','enemy_master','enemy_both','picked'];
 const T_DEF = { ally:{skill:'self',ult:'self',special:'self',master:'ally_svt'}, enemy:{skill:'enemy_all',ult:'enemy_all',special:'target',master:'enemy_svt'},
@@ -117,6 +119,7 @@ function autoEff(e,ctx,path){
   if(f.noTgt){ fixEff(e); return; }
   e.v=f.val?((m&&FX_VAL_MASTER[e.k])||FX_VAL[e.k]||20):0;
   delete e.turns; delete e.times;
+  if(f.copy) e.from=(FROM_DEF[e.k]||{})[ctx]||'self';
   if(!f.inst&&!f.perm){
     if(f.timesOnly) e.times=1;
     else if(!(m&&/^faces\./.test(path||''))) e.turns=m?1:(FX_TURN1.includes(e.k)?1:3); // 令呪の継続効果は1ターン（補助の面はそのターンだけなのでターン数なし）
@@ -138,6 +141,8 @@ function fixEff(e){
   if(!f.color) delete e.color;
   if(!(e.k in VS_KINDS)) delete e.vs;
   else if(e.vs&&!vsOk(e.k,e.vs)) delete e.vs; // 種類を変えたら、合わない指定は外す
+  if(!f.copy) delete e.from;
+  else if(!(e.from in FROM_TARGETS)) e.from='self';
   if(!f.trait) delete e.trait;
   else if(!e.trait) e.trait=allTraits()[0]||'';
   if(e.k==='cardConv'&&!e.color) e.color='R';
@@ -274,7 +279,7 @@ function diffLists(draft,game){
 // 項目名（例：スキル2 › 効果1 › 値）
 const SEG={name:'名前',ruby:'ルビ',cls:'クラス',cost:'コスト',hp:'HP',traits:'属性',link:'リンク',wip:'制作中',fit:'画像の位置',lines:'セリフ',ult:TERMS.ult,
   pre:'再臨前',post:'再臨後',acts:'行動数',c:'色',dmg:'ダメージ',np:'NP',star:'スター',label:'名前',line:'専用セリフ',pick:'対象の選び方',br:'改行位置',
-  k:'種類',t:'対象',v:'値',turns:'ターン',times:'回数',chance:'確率',color:'色指定',trait:'属性指定',at:'タイミング',max:'最大HP',text:'説明文',cond:'条件',sure:'解除・無効不可',vs:'対象の状態',
+  k:'種類',t:'対象',v:'値',turns:'ターン',times:'回数',chance:'確率',color:'色指定',trait:'属性指定',at:'タイミング',max:'最大HP',text:'説明文',cond:'条件',sure:'解除・無効不可',vs:'対象の状態',from:'コピー元',
   key:'場面',who:'誰',face:'顔',card:'カード',cut:'カットインの立ち絵',x:'横',y:'縦',z:'拡大',master:'マスター'};
 function pathLabel(p,m){
   const out=[];
@@ -698,6 +703,7 @@ function effRow(path,j,e,ctx,n,atKind){
   return `<div class="eff" data-ep="${p}">
     <select class="effgrp" data-act="effGrp" data-ep="${p}" data-ctx="${ctx}" aria-label="効果の分類">${groups.map(([g,ks])=>opt(g,`${g}（${ks.length}）`,grp)).join('')}</select>
     <select data-p="${p}.k" data-act="effKind" data-ctx="${ctx}" aria-label="効果の種類">${kinds.map(k=>opt(k,FX[k].name,e.k)).join('')}${kinds.includes(e.k)?'':opt(e.k,(FX[e.k]||{}).name||e.k,e.k)}</select>
+    ${f.copy?`<label class="mini" title="どこから強化・弱体をコピーするか"><span>コピー元</span><select data-p="${p}.from">${[...(FROM_BY_CTX[ctx]||['self']),...((FROM_BY_CTX[ctx]||[]).includes(e.from)?[]:[e.from||'self'])].map(t=>opt(t,FROM_TARGETS[t]||t,e.from||'self')).join('')}</select></label><span class="sub">→ コピー先</span>`:''}
     ${f.noTgt?'':`<select data-p="${p}.t" aria-label="対象">${tg.map(t=>opt(t,(ctx==='master'?mTLabel(t):TARGETS[t])||t,e.t)).join('')}</select>`}
     ${val}
     ${f.inst?'':(f.timesOnly||(ctx==='master'&&/^faces./.test(path))?'':optNum(p+'.turns',e.turns,'ターン'))+optNum(p+'.times',e.times,'回数')}

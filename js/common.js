@@ -74,6 +74,7 @@ function normEff(e){
   // vs：弱体状態特攻の対象の弱体 / 弱体無効＝防ぐ弱体の種類 / 強化無効＝防ぐ強化の種類（未指定＝すべて）
   if(e.vs&&vsOk(String(e.k),e.vs)) o.vs=String(e.vs);
   const tr=String(e.trait??'').trim(); if(tr) o.trait=tr; // 属性特攻・特防の対象の属性
+  if(FX[o.k]&&FX[o.k].copy) o.from=e.from in FROM_TARGETS?String(e.from):'self'; // 状態コピーのコピー元（自身／選んだ1体／攻撃対象）
   const cd=normCond(e.cond); if(cd&&!(FX[o.k]&&FX[o.k].noTgt)) o.cond=cd; // 条件つき効果
   if(EFF_AT[e.at]) o.at=e.at; // 攻撃の前/後（未指定なら既定のタイミング。rules.js の EFF_AT）
   if(e.max&&FX[o.k]&&FX[o.k].maxOk) o.max=true; // 値＝対象の最大HP（軽減不可）
@@ -188,7 +189,7 @@ function validateUnits(units){
       if(si===2&&!ascN&&!s.eff.length) return; // 霊基再臨しないサーヴァントのスキル3は空でよい
       if(!s.name.trim()) add('warn',`${where}：名前が空です`);
       if(!s.eff.length) add('warn',`${where}：効果がありません`);
-      const usesPicked=s.eff.some(e=>e.t==='picked');
+      const usesPicked=s.eff.some(e=>e.t==='picked'||(FX[e.k]&&FX[e.k].copy&&e.from==='picked'));
       if(usesPicked&&!s.pick) add('error',`${where}：「${TARGETS.picked}」を使うには、対象の選び方を設定してください`);
       if(s.pick&&!usesPicked) add('warn',`${where}：対象を選びますが、「${TARGETS.picked}」への効果がありません`);
       checkEffs(s.eff,'skill',where,add);
@@ -197,8 +198,8 @@ function validateUnits(units){
     if(!u.ult.name.trim()) add('warn',`${TERMS.ult}：名前が空です`);
     if(u.ult.br>0&&u.ult.br>=[...u.ult.name].length) add('warn',`${TERMS.ult}：カットインの改行位置が名前の長さを超えています（自動で表示します）`);
     if(!u.ult.eff.length) add('warn',`${TERMS.ult}：効果がありません`);
-    const uPicked=u.ult.eff.some(e=>e.t==='picked');
-    if(uPicked&&!u.ult.pick) add('error',`${TERMS.ult}：「${TARGETS.picked}」を使うには、対象の選び方を設定してください`);
+    const uPicked=u.ult.eff.some(e=>e.t==='picked'||e.k==='copyRoll'||(FX[e.k]&&FX[e.k].copy&&e.from==='picked')); // copyRoll は選んだ1体の鉛筆をロール（選ばなければランダム）
+    if(u.ult.eff.some(e=>e.t==='picked'||(FX[e.k]&&FX[e.k].copy&&e.from==='picked'))&&!u.ult.pick) add('error',`${TERMS.ult}：「${TARGETS.picked}」を使うには、対象の選び方を設定してください`);
     if(u.ult.pick&&!uPicked) add('warn',`${TERMS.ult}：対象を選びますが、「${TARGETS.picked}」への効果がありません`);
     checkEffs(u.ult.eff,'ult',TERMS.ult,add);
   });
@@ -218,6 +219,11 @@ function checkEffs(effs,ctx,where,add){
     if(!fxOnlyIn(e.k,ctx)) add('error',`${w}：「${FX[e.k].name}」は${[].concat(FX[e.k].only).map(c=>({ult:TERMS.ult,special:'特殊行動',master:TERMS.player}[c])).join('・')}でのみ使えます`);
     if(e.color&&!FX[e.k].color) add('warn',`${w}：この効果では色の指定は使われません`);
     if(!FX[e.k].noTgt&&!TGT_BY_CTX[ctx].includes(e.t)) add('error',`${w}：ここでは「${TARGETS[e.t]||e.t}」を対象にできません`);
+    if(FX[e.k].copy){
+      if(!(FROM_BY_CTX[ctx]||[]).includes(e.from)) add('error',`${w}：ここではコピー元に「${FROM_TARGETS[e.from]||e.from}」を使えません`);
+      if(e.t==='master') add('warn',`${w}：${TERMS.player}にはコピーできません`);
+      if(e.from===e.t) add('warn',`${w}：コピー元とコピー先が同じだと効果がありません`);
+    }
     if(e.t==='master'&&e.k!=='star'&&e.k!=='starLoss') add('warn',`${w}：${TERMS.player}が対象だと、${TERMS.star}獲得以外は効果がありません`);
     if(FX[e.k].val&&e.v===0&&!e.max) add('warn',`${w}：値が0です`);
     if(!FX[e.k].inst&&!FX[e.k].perm&&e.turns==null&&e.times==null) add('warn',`${w}：効果時間がないため、ずっと続きます`);
@@ -576,6 +582,7 @@ function fxText(e){
     case 'critMult': s=`クリティカル時ダメージ×${e.v}%`; break;
     case 'guts': s=`ガッツ(HP${e.v})`; break;
     case 'critRoll': s=`クリティカル率アップ(Lv+${e.v})`; break;
+    case 'copyBuff': case 'copyDebuff': s=`${FROM_TARGETS[e.from]||FROM_TARGETS.self}の${e.k==='copyBuff'?'強化':'弱体'}状態をコピー`; break;
     case 'buffUp': s=`強化成功率アップ(ロール+${e.v})`; break;
     case 'debuffUp': s=`弱体成功率アップ(ロール+${e.v})`; break;
     case 'debuffResDown': s=`弱体耐性ダウン(受ける弱体のロール+${e.v})`; break;

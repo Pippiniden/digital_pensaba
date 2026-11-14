@@ -133,7 +133,7 @@ function makeUnit(pid,idx,id){ return {uid:`p${pid}u${idx}`,pid,idx,def:id,hp:D(
 // マスター：サーヴァントと同じ形（fx・hp・out）にして、効果やダメージの処理を共用する。out＝瀕死
 function makeMaster(pid,id){ return {uid:`p${pid}m`,pid,idx:-1,def:id,hp:D(id).hp,np:0,asc:false,out:false,used:[],fx:[],face:null,master:true}; }
 // 宝具に「攻撃対象」を使う効果がない（全体宝具・補助宝具）なら、対象を選ばず敵全体が対象
-const ultNoTarget = u=>!D(u.def).ult.eff.some(e=>e.t==='target');
+const ultNoTarget = u=>!D(u.def).ult.eff.some(e=>e.t==='target'||e.k==='copyRoll'||(FX[e.k]&&FX[e.k].copy&&e.from==='target')); // 攻撃対象を使う効果がなければ全体宝具扱い（コマンドのロール・攻撃対象からのコピーは対象が要る）
 function targetCandidates(){ const es=alive(1-G.cur); const t=es.filter(u=>has(u,'taunt')); return t.length?t:es; }
 function pendingSkill(){ return G.pending ? (G.pending.ult ? D(U(G.pending.uid).def).ult : D(U(G.pending.uid).def).skills[G.pending.si]) : null; } // 宝具の対象選びも同じ pending を使う（ult:true）
 // スキルの対象に選べるか（pick：ally=味方 / other=自分以外の味方 / enemy=敵 / any=敵味方）
@@ -268,6 +268,12 @@ function applyEffects(src,effs,picked,o={}){
       continue;
     }
     const rate=debuffRate(src,e);
+    let oe=o; // 状態コピー：コピー元（from）を1体に決めて applyOne へ渡す
+    if(FX[e.k]&&FX[e.k].copy){
+      const fu=resolveTargets(src,e.from||'self',picked)[0];
+      if(!fu){ log(`${nm(src)}：コピー元がいないため「${FX[e.k].name}」は効果なし`,'sub'); continue; }
+      oe={...o,from:fu};
+    }
     resolveTargets(src,e.t,picked).forEach(t=>{
       if(condAtApply(e)&&!condOk(e.cond,t)){ log(`${nm(t)}：条件（${condText(e.cond)}）を満たさないため「${FX[e.k].name}」は効果なし`,'sub'); return; }
       // 弱体耐性ダウン：対象が受ける弱体（確率つきのみ）の判定ロールをN+xにする
@@ -281,7 +287,7 @@ function applyEffects(src,effs,picked,o={}){
         if(need<6&&!chanceRoll(e,t,need)) return;
       } else if(e.chance&&!chanceRoll(e,t)) return;
       if(e.k==='dmg'){ if(src.master) fixedHit(src,t,effVal(e,t)); return; } // 宝具のダメージは resolveUlt で処理
-      applyOne(src,t,e,o);
+      applyOne(src,t,e,oe);
     });
     if(rate&&rate.used) consume(src,rate.list); // 判定に使ったら回数を1消費（全体効果でも1回）
   }
@@ -372,7 +378,20 @@ function applyOne0(src,t,e,o={}){
       t.hp=0; if(!gutsHold(t)) retreat(t); return;
     }
     case 'selfDmg': { const v=effVal(e,t); log(`${nm(t)} ${FX.selfDmg.name} <b>${fmt(v)}</b>${e.max?'（最大HP・軽減不可）':''}`,'bad'); dealDamage(t,v,false,{src:t}); return; }
-    case 'dmg': case 'multiHit': case 'aoe': case 'desc': return; // 宝具側で処理 / 効果なし
+    case 'copyBuff': case 'copyDebuff': { // コピー元（o.from）の強化／弱体を、同じ値・残り時間で対象に付ける（付与は1つずつ無効判定・上書きルールに従う）
+      const fu=o.from, want=e.k==='copyBuff', nmv=want?'強化':'弱体';
+      if(!fu||fu===t){ log(`${nm(t)}：コピー元と対象が同じため${nmv}状態のコピーは効果なし`,'sub'); return; }
+      const list=fu.fx.filter(x=>FX[x.k]&&FX[x.k].buff===want&&!x.tmp&&!x.sure);
+      if(!list.length){ log(`${nm(fu)}に${nmv}状態がないため、${nm(t)}へのコピーは効果なし`,'sub'); return; }
+      log(`${nm(t)}が${nm(fu)}の${nmv}状態（${list.length}個）をコピー`, want?'good':'bad');
+      list.forEach(x=>{
+        const c={k:x.k,t:e.t,v:x.v};
+        ['color','turns','times','vs','trait','cond'].forEach(p=>{ if(x[p]!=null) c[p]=x[p]; });
+        if(!t.out) applyOne0(src,t,c,{});
+      });
+      return;
+    }
+    case 'copyRoll': case 'dmg': case 'multiHit': case 'aoe': case 'desc': return; // 宝具側で処理 / 効果なし
   }
   if(e.k==='guts') t.fx=t.fx.filter(x=>x.k!=='guts'); // ガッツは重複不可
   if(e.k==='curse'){ // 呪いは回数のみ。重ねると回数が増える
@@ -621,6 +640,17 @@ function resolveCommand(att,cmd,tgt,o={}){
   // 攻撃後の効果（例：自身の弱体解除）
   applyEffects(att,postE,null);
 }
+// 宝具の「他のサーヴァントをロール」：選んだ1体（picked）の鉛筆を、選ばなければランダムな1体のを、ロールして
+// 出た再臨後コマンドを攻撃対象に使う（NP・スターは増えない。宝具が選んだ相手＝コピー元は敵味方どちらでもよい）
+function ultCopyRoll(u,tgt,picked){
+  const cs=copyCands(u); if(!cs.length) return;
+  const src=picked&&cs.includes(picked)?picked:cs[Math.floor(Math.random()*cs.length)];
+  const r=copyRollFrom(src);
+  log(`${nm(u)}：${nm(src)}の鉛筆をロール 出目${r.f+1} → ${cmdChip(r.cmd)}`);
+  rollFx(src.uid,r.f,{cmd:r.cmd,def:src.def});
+  const t=tgt||alive(1-u.pid)[0]; if(!t) return;
+  resolveCommand(u,r.cmd,t,{noGain:true});
+}
 function resolveUlt(u,tgt,picked){
   const ud=D(u.def).ult;
   if(picked===undefined) picked=G.ultPick?U(G.ultPick):null;
@@ -632,6 +662,7 @@ function resolveUlt(u,tgt,picked){
   if(hits>1) log(`${hits}回連続攻撃`,'sub');
   for(const e of ultEffOrder(ud.eff)){
     if(u.out) break; // 反撃で倒れたら残りの効果は出ない
+    if(e.k==='copyRoll'){ ultCopyRoll(u,tgt,picked); flushKo(); continue; }
     if(e.k!=='dmg'){ applyEffects(u,[e],picked); continue; }
     for(let h=0;h<hits;h++){
       if(u.out) break;
@@ -820,7 +851,7 @@ function applyMode(cfg){
 // 宝具を使う（picked＝対象を選ぶ宝具で選んだ1体）
 function startUlt(u,picked){
   const uid=u.uid;
-  if(masterRule()&&!D(u.def).ult.eff.some(e=>e.k==='dmg')){
+  if(masterRule()&&!D(u.def).ult.eff.some(e=>e.k==='dmg'||e.k==='copyRoll'||(FX[e.k]&&FX[e.k].copy&&e.from==='target'))){
     // マスタールール：ダメージのない宝具は、行動回数-1でその場で使い、スキルフェイズを続けて行動決定へ進める
     u.np=0; syncU(u); G.ultDone=true; resolveUlt(u,null,picked);
     const top=Object.entries(G.alloc).filter(([,n])=>n>0).sort((a,b)=>b[1]-a[1])[0];

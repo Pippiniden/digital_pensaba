@@ -268,7 +268,8 @@ function cpuAllocEV(us){
 function ultPower(u){
   const ud=D(u.def).ult, h=hitsOf(ud.eff), up=mods(u,'npPow').sum-mods(u,'npPowDown').sum;
   const one=e=>e.max?Math.max(0,...alive(1-u.pid).map(maxHp)):Math.max(0,e.v+up);
-  return ud.eff.filter(e=>e.k==='dmg').reduce((s,e)=>s+one(e)*h*(e.t==='enemy_all'?alive(1-u.pid).length:1),0);
+  return ud.eff.filter(e=>e.k==='dmg').reduce((s,e)=>s+one(e)*h*(e.t==='enemy_all'?alive(1-u.pid).length:1),0)
+    +(ud.eff.some(e=>e.k==='copyRoll')?80:0); // コマンドのロールは平均的な攻撃1回ぶんと見る
 }
 function cpuUltUser(){
   const c=alive(G.cur).filter(u=>canUlt(u)&&u.np>=RULES.ultCost);
@@ -394,6 +395,11 @@ function cpuEffScore(u,effs,picked,si){
       case 'critDown': sc+=foes.length?1.5:-1; break;
       case 'starDown': sc+=foes.length?1:-1; break;
       case 'debuffUp': sc+=acting?1:0; break;
+      case 'copyBuff': case 'copyDebuff': { // コピー元に強化（弱体）があり、対象が味方（弱体は敵）なら価値あり
+        const want=e.k==='copyBuff', fu=resolveTargets(u,e.from||'self',picked)[0];
+        const n=fu?fu.fx.filter(x=>FX[x.k].buff===want&&!x.tmp&&!x.sure).length:0;
+        const good=want?ts.some(t=>t.pid===u.pid&&t!==fu):foes.some(t=>t!==fu);
+        sc+=n&&good?Math.min(4,1+n):want?0:-1; break; }
       case 'buffUp': sc+=acting?.5:0; break;
       case 'debuffResDown': sc+=foes.length?1:-1; break;
       case 'debuffDown': sc+=foes.length?1.5:-1; break;
@@ -431,6 +437,9 @@ function cpuPickTarget(uid,si,easy){
   if(!cands.length) return u;
   if(easy) return cands[Math.floor(rnd01(`${G.turn}p${uid}${si}`)*cands.length)];
   const k=s.eff.map(e=>e.k);
+  if(k.includes('copyBuff')&&s.eff.some(e=>e.k==='copyBuff'&&e.from==='picked')) return [...cands].sort((a,b)=>a.fx.filter(x=>FX[x.k].buff===true).length<b.fx.filter(x=>FX[x.k].buff===true).length?1:-1)[0]; // 強化が多い相手からコピー
+  if(k.includes('copyDebuff')&&s.eff.some(e=>e.k==='copyDebuff'&&e.from==='picked')) return [...cands].sort((a,b)=>a.fx.filter(x=>FX[x.k].buff===false).length<b.fx.filter(x=>FX[x.k].buff===false).length?1:-1)[0];
+  if(k.includes('copyRoll')){ const avg=x=>D(x.def).faces.reduce((s2,f)=>s2+(isCopyCmd(f.post)?0:f.post.dmg||0),0); return [...cands].sort((a,b)=>avg(b)-avg(a))[0]; } // 再臨後コマンドの平均ダメージが高い相手の鉛筆
   if(k.includes('heal')||k.includes('cleanse')) return [...cands].sort((a,b)=>hpR(a)-hpR(b))[0];
   if(k.includes('np')){ const below=cands.filter(c=>c.np<RULES.ultCost); return [...(below.length?below:cands)].sort((a,b)=>b.np-a.np)[0]; }
   if(['stun','charm','fear','sealSkill','sealUlt','instantDeath'].some(x=>k.includes(x))) return [...cands].sort((a,b)=>b.np-a.np||b.hp-a.hp)[0];
