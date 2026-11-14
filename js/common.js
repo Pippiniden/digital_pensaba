@@ -577,6 +577,7 @@ function fxText(e){
     case 'guts': s=`ガッツ(HP${e.v})`; break;
     case 'critRoll': s=`クリティカル率アップ(Lv+${e.v})`; break;
     case 'debuffUp': s=`弱体成功率アップ(ロール+${e.v})`; break;
+    case 'debuffResDown': s=`弱体耐性ダウン(受ける弱体のロール+${e.v})`; break;
     case 'debuffDown': s=`弱体成功率ダウン(ロール-${e.v})`; break;
     case 'buffDown': s=`強化成功率ダウン(ロール-${e.v})`; break;
     case 'poison': s=`毒${e.v||RULES.dot}`; break;

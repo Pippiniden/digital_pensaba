@@ -270,9 +270,14 @@ function applyEffects(src,effs,picked,o={}){
     const rate=debuffRate(src,e);
     resolveTargets(src,e.t,picked).forEach(t=>{
       if(condAtApply(e)&&!condOk(e.cond,t)){ log(`${nm(t)}：条件（${condText(e.cond)}）を満たさないため「${FX[e.k].name}」は効果なし`,'sub'); return; }
-      if(rate&&(t.pid!==src.pid)===rate.foe&&(e.chance||rate.dn)){ // 敵への弱体／味方への強化：成功率アップ／ダウンで判定をずらす
-        rate.used=true;
-        const need=Math.max(0,Math.min(6,(e.chance||6)+rate.up-rate.dn));
+      // 弱体耐性ダウン：対象が受ける弱体（確率つきのみ）の判定ロールをN+xにする
+      const rd=(FX[e.k]&&FX[e.k].buff===false&&e.chance)?mods(t,'debuffResDown'):null;
+      const useRd=!!(rd&&rd.list.length);
+      const useRate=!!(rate&&(t.pid!==src.pid)===rate.foe&&(e.chance||rate.dn));
+      if(useRate||useRd){ // 敵への弱体／味方への強化：成功率アップ／ダウンで判定をずらす
+        if(useRate) rate.used=true;
+        const need=Math.max(0,Math.min(6,(e.chance||6)+(useRate?rate.up-rate.dn:0)+(useRd?rd.sum:0)));
+        if(useRd) consume(t,rd.list);
         if(need<6&&!chanceRoll(e,t,need)) return;
       } else if(e.chance&&!chanceRoll(e,t)) return;
       if(e.k==='dmg'){ if(src.master) fixedHit(src,t,effVal(e,t)); return; } // 宝具のダメージは resolveUlt で処理
