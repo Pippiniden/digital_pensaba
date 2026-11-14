@@ -336,6 +336,7 @@ function settleGuts(){
     } else if(u.hp<=0) retreat(u); // 踏みとどまっている間にガッツを解除された
   });
 }
+const FX_CAP=60; // 1体に付けられる状態の数の上限（コピーの暴走止め）
 function applyOne(src,t,e,o={}){ applyOne0(src,t,e,o); syncU(t); }
 function applyOne0(src,t,e,o={}){
   if(t.master&&mTeam()&&FX[e.k].buff===false){ log(`${nm(t)}は${TERMS.unit}に守られていて弱体を受けない`,'sub'); return; } // マスターチーム：マスターは弱体を受けない
@@ -381,8 +382,13 @@ function applyOne0(src,t,e,o={}){
     case 'copyBuff': case 'copyDebuff': { // コピー元（o.from）の強化／弱体を、同じ値・残り時間で対象に付ける（付与は1つずつ無効判定・上書きルールに従う）
       const fu=o.from, want=e.k==='copyBuff', nmv=want?'強化':'弱体';
       if(!fu||fu===t){ log(`${nm(t)}：コピー元と対象が同じため${nmv}状態のコピーは効果なし`,'sub'); return; }
-      const list=fu.fx.filter(x=>FX[x.k]&&FX[x.k].buff===want&&!x.tmp&&!x.sure);
-      if(!list.length){ log(`${nm(fu)}に${nmv}状態がないため、${nm(t)}へのコピーは効果なし`,'sub'); return; }
+      const src=fu.fx.filter(x=>FX[x.k]&&FX[x.k].buff===want&&!x.tmp&&!x.sure);
+      if(!src.length){ log(`${nm(fu)}に${nmv}状態がないため、${nm(t)}へのコピーは効果なし`,'sub'); return; }
+      // 同じ状態（種類・値・色・種類指定・属性・条件が同じ）は、対象がすでに持っている数までは重ねない（コピーし合うと状態が倍々に増えて処理が止まるため）
+      const key=x=>[x.k,x.v,x.color||'',x.vs||'',x.trait||'',x.cond?JSON.stringify(x.cond):''].join('|'), have={};
+      t.fx.forEach(x=>{ const k=key(x); have[k]=(have[k]||0)+1; });
+      const list=src.filter(x=>{ const k=key(x); if(have[k]>0){ have[k]--; return false; } return true; }).slice(0,Math.max(0,FX_CAP-t.fx.length));
+      if(!list.length){ log(`${nm(t)}は${nm(fu)}の${nmv}状態をすでに持っているため、コピーは効果なし`,'sub'); return; }
       log(`${nm(t)}が${nm(fu)}の${nmv}状態（${list.length}個）をコピー`, want?'good':'bad');
       list.forEach(x=>{
         const c={k:x.k,t:e.t,v:x.v};
