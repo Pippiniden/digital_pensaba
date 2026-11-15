@@ -316,6 +316,23 @@ const DEFAULT_MASTERS = [
     ]
   },
   {
+    "id":"m_masaru", "name":"大聖寺マサル", "cost":3, "hp":300,
+    "fit":{"face":{"x":50,"y":43,"z":100}},
+    "faces":[
+      {"label":"","eff":[]},
+      {"label":"","eff":[{"k":"def","t":"ally_svt","v":20},{"k":"maxHp","t":"svt","v":60}]},
+      {"label":"","eff":[{"k":"def","t":"svt","v":20},{"k":"maxHp","t":"svt","v":40}]},
+      {"label":"","eff":[{"k":"def","t":"ally_svt","v":30},{"k":"maxHp","t":"ally_svt","v":80}]},
+      {"label":"","eff":[{"k":"def","t":"svt","v":20},{"k":"maxHp","t":"svt","v":30}]},
+      {"label":"","eff":[]}
+    ],
+    "spells":[
+      {"name":"必殺強化","eff":[{"k":"npPow","t":"ally_svt","v":100,"turns":1}]},
+      {"name":"応急手当","eff":[{"k":"heal","t":"ally_svt","v":200}]},
+      {"name":"緊急回避","eff":[{"k":"evade","t":"ally_svt","v":0,"turns":1},{"k":"actsUp","t":"ally_svt","v":1,"times":1}]}
+    ]
+  },
+  {
     "id":"m_chudovishche", "name":"チュドーヴィシチェ", "cost":2, "hp":240,
     "fit":{"face":{"x":50,"y":16,"z":100}},
     "faces":[

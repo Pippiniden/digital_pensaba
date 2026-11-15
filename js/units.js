@@ -1291,5 +1291,36 @@ const DEFAULT_UNITS = [
       {"name":"威猛き女王の恋","eff":[{"k":"taunt","t":"picked","v":0,"turns":1},{"k":"np","t":"self","v":40},{"k":"heal","t":"self","v":120}],"rank":"E","pick":"enemy"}
     ],
     "ult":{"name":"死かふたりが婚姻わるか","c":"R","eff":[{"k":"pierce","t":"self","v":0,"turns":1},{"k":"npPow","t":"self","v":30,"turns":1},{"k":"dmg","t":"target","v":100},{"k":"multiHit","t":"self","v":3}],"ruby":"ブリュンヒルト・フェアローブング"}
+  },
+  {
+    "id":"nileus", "name":"ニレウス", "cls":"シャインチェイサー", "cost":1, "hp":500,
+    "traits":["男性","秩序","善","地","人型","ギリシャ"],
+    "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":9,"z":100},"np":{"x":50,"y":14,"z":105},"cut":{"x":0,"y":0,"z":100}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%A5%CB%A5%EC%A5%A6%A5%B9",
+    "lines":{
+      "start":["フッ……シャインチェイサー、ニレウスここに……。美しき戦いをしましょう","美しくない……疾く消えなさい！","最早美醜を語るまでもない……"],
+      "attack":["舞いましょう","シャッ！","ヒョウッ！","シャシャシャシャッ"],
+      "extra":["あなたの血で化粧をしましょうか！"],
+      "damage":["なにっ！"],
+      "skill":["フッ……","私は美しい！"],
+      "np":["フッ、散り際こそかく美しくあれ……。せめてマスターの腕の中で！"],
+      "npDamage":["くっ……"],
+      "defeat":["悔いは……ありませぬ……","至れないと言うのか……","ぐふっ……もはやこれまで……"],
+      "win":["勝利とはかくも美しい……","当然のこと……"]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":50,"np":0,"star":0},"post":{"c":"R","dmg":70,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"B","dmg":30,"np":20,"star":0},"post":{"c":"B","dmg":40,"np":25,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":30,"np":15,"star":0},"post":{"c":"B","dmg":40,"np":20,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"特殊行動","eff":[{"k":"heal","t":"self","v":100}],"dmg":0,"np":0,"star":0}},
+      {"acts":3,"pre":{"c":"B","dmg":20,"np":15,"star":0},"post":{"c":"B","dmg":30,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":10,"np":0,"star":6},"post":{"c":"G","dmg":20,"np":0,"star":8}}
+    ],
+    "skills":[
+      {"name":"魔力放出(光)","eff":[{"k":"atk","t":"self","v":30,"turns":1,"color":"B"},{"k":"def","t":"self","v":20,"turns":1},{"k":"onAtkNp","t":"self","v":10,"turns":1}]},
+      {"name":"黄金率(体)","eff":[{"k":"onHitNp","t":"self","v":10,"turns":3},{"k":"star","t":"master","v":3},{"k":"np","t":"self","v":10}]},
+      {"name":"美の顕現(偽)","eff":[{"k":"defTrait","t":"self","v":50,"turns":3,"trait":"悪"},{"k":"mentalImmune","t":"self","v":0,"turns":3},{"k":"np","t":"self","v":20}],"rank":"A"}
+    ],
+    "ult":{"name":"花の如き死化粧","c":"B","eff":[{"k":"atk","t":"ally_other","v":20,"turns":3},{"k":"def","t":"ally_other","v":20,"turns":3},{"k":"star","t":"master","v":15},{"k":"selfDmg","t":"self","v":20,"max":true}],"ruby":"エレガンス・メンズノンノ"}
   }
 ];
