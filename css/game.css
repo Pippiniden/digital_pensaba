@@ -126,10 +126,9 @@ body[data-screen="battle"] #app{overflow:hidden}
 /* 中央 */
 .stage{position:relative;overflow:hidden;padding:8px 14px 10px;border-radius:6px;border:1px solid var(--gold);
   background:radial-gradient(ellipse at 50% 60%,rgba(61,111,214,.4),rgba(10,21,51,.92) 70%);box-shadow:var(--frame),var(--shadow)}
-.circle{position:absolute;left:50%;top:50%;width:min(600px,80%);aspect-ratio:1;translate:-50% -50%;pointer-events:none;opacity:.42;mix-blend-mode:screen}
-/* 黒地の画像を screen で透過して重ねる。opacity/translate があると .circle の中で合成が閉じて黒い四角が出るので、.circle 自体に掛ける */
-.circle img{position:absolute;inset:0;width:100%;height:100%}
-.circle .mc-i{mix-blend-mode:screen}
+.circle{position:absolute;left:50%;top:50%;width:min(600px,80%);aspect-ratio:1;translate:-50% -50%;pointer-events:none;opacity:.42}
+/* 画像は黒を透過にした RGBA（*-a.webp）。mix-blend-mode は毎フレーム背面を読み戻すので重く、使わない */
+.circle img{position:absolute;inset:0;width:100%;height:100%;will-change:rotate}
 /* 回転は JS（game-ui.js の syncMagicCircle）で付ける：CSS の animation は描き直しで最初からやり直しになるため */
 .stagetop{position:relative;display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px}
 .turnno{font:700 12px var(--serif);letter-spacing:.15em;color:var(--sub)}
@@ -283,7 +282,7 @@ body[data-screen="mode"] #app{position:relative} /* 背景（position:fixed）�
 @keyframes tbTwinkle{0%,100%{opacity:1}50%{opacity:.35}}
 /* 魔法陣はタイトル文字の真後ろ（--tb-cy＝画面上端からタイトル中央までの目安） */
 #titlebg .tb-circle{--tb-size:520px;--tb-cy:135px;left:50%;top:calc(var(--tb-cy) - var(--tb-size)/2);width:var(--tb-size);height:var(--tb-size);margin-left:calc(var(--tb-size)/-2);
-  background:var(--tb-circle) center/contain no-repeat;opacity:.22;mix-blend-mode:screen;animation:tbSpin 120s linear infinite}
+  background:var(--tb-circle) center/contain no-repeat;opacity:.22;will-change:transform;animation:tbSpin 120s linear infinite}
 @keyframes tbSpin{to{transform:rotate(360deg)}}
 #titlebg .tb-mist{left:-20%;right:-20%;bottom:0;height:45%;
   background:radial-gradient(ellipse 40% 40% at 25% 90%,rgba(170,180,230,.16),transparent 70%),radial-gradient(ellipse 45% 35% at 75% 95%,rgba(170,180,230,.14),transparent 70%);
