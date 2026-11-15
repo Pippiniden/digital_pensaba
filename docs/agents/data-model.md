@@ -59,6 +59,9 @@
 | `pencilduel.noCanon` | 「原作キャラを含まない」設定（既定ON、`'0'`でOFF）。ONの間、`reloadUnits()`（engine.js）が `CANON_UNIT_IDS` / `CANON_MASTER_IDS` のキャラを `UNITS` / `MASTERS` から外す（`ALL_UNITS` / `ALL_MASTERS` は全員。`D()` は両方から引く）。Worker（localStorageなし）では外さない |
 | `pencilduel.logOpen` | Whether the battle log is open |
 | `pencilduel.auto` | Whether auto-advance is on (`'1'`) |
+| `pencilduel.hint` | Whether the move hint (おすすめ表示) is on (`'1'`; default off). `hintHTML()` in game-ui.js |
+| `pencilduel.records` | Player records `{v:1, cpu:{rule:{level:{w,l}}}, pvp:{rule:{n}}, arcade:{rule:{diff:{battles,wins,clears,best,minCont,bestTurns}}}, units:{id:{use,win,dealt,kills}}}`. Written by `recordMatch()` (records.js) from `win()`; scenario battles and CPU rollouts are not counted. Reset from the 戦績 panel (`recReset`) |
+| `pencilduel.parties` | Saved parties `[{rule, picks:[id], mpick}]` (newest first, max `PARTY_MAX`). Saved / loaded from the setup screen's 編成リスト (`partyModalHTML`); loading goes through `act('setupLoad')` |
 | `pencilduel.simExclude` | Character ids excluded from the editor's balance test |
 | `pencilduel.scn.*`, `pencilduel.scnRun` (sessionStorage), IndexedDB `pensaba-scenarios` | Scenario mode: saves / read lines / prefs / resume record / imported scenarios and the editor draft → `scenario.md` |
 | `pencilduel.match` (**sessionStorage**) | The match in progress (`G`, log trimmed to 200). Saved by `saveMatch()` at the end of every `render()`, removed on the mode screen. `restoreMatch()` at page load resumes it in the same tab after any reload (mobile pull-to-refresh, the browser reloading the tab under memory pressure, going to the editor and back). Skipped if the unit source changed or a character is missing |

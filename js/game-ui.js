@@ -16,6 +16,9 @@ function readLogPref(){
   return window.innerWidth>1100;
 }
 const ORD=['1st','2nd','3rd'];
+// 自分が操作できない番：CPUの手番、またはオンライン対戦で相手の番（net.js。編成中も含む）
+const netWait=()=>typeof netWaiting==='function'&&netWaiting();
+const otherActing=()=>cpuActing()||netWait();
 const pctOf=(a,b)=>Math.max(0,Math.min(100,a/b*100));
 
 // ---------- 対戦画面：サーヴァント ----------
@@ -56,7 +59,7 @@ function ctlHTML(u){
 }
 // 行動配分：このサーヴァントにもう1回行動を割り振れるか
 function canAllocMore(u){
-  return G.phase==='actRoll'&&G.actRolled&&u.pid===G.cur&&!u.out&&!cpuActing()&&!FXHIDE.has(`f:${u.uid}`)
+  return G.phase==='actRoll'&&G.actRolled&&u.pid===G.cur&&!u.out&&!otherActing()&&!FXHIDE.has(`f:${u.uid}`)
     &&(G.alloc[u.uid]||0)<(G.maxActs[u.uid]||0)&&totalAlloc()<RULES.actionsMax;
 }
 // 画面に出すHP・戦闘不能の状態（ダメージ演出の再生中は演出に合わせて遅れて変わる）
@@ -76,7 +79,7 @@ function svtHTML(u){
   const acting=G.ult?G.ult===u.uid:(G.alloc[u.uid]||0)>0;
   const tgt=(G.targetAll?u.pid!==G.cur&&!u.out&&['target','end'].includes(ph):G.target===u.uid)&&!sh.out;
   // スキルを使える自分のサーヴァント（スキル欄が隠れる小さい表示のとき、ⓘ を光らせて知らせる）
-  const canSk=u.pid===G.cur&&ph==='skill'&&!G.pending&&!cpuActing()&&(d.skills.some((s,i)=>skillUsable(u,i))||!G.ult&&!G.ultDone&&canUlt(u)&&u.np>=RULES.ultCost);
+  const canSk=u.pid===G.cur&&ph==='skill'&&!G.pending&&!otherActing()&&(d.skills.some((s,i)=>skillUsable(u,i))||!G.ult&&!G.ultDone&&canUlt(u)&&u.np>=RULES.ultCost);
   const cls=['svt',sh.out?'out':'',pickable?'pickable':'',tgt?'targeted':'',acting&&u.pid===G.cur?'acting':'',canSk?'canskill':''].join(' ');
   const fx=(hasHcap(u)?`<span class="chip fx buff hcapchip">ハンデ：${hcapText()}</span>`:'')+costChip(u)+sh.fx.map(e=>`<span class="chip fx ${FX[e.k].buff?'buff':'debuff'}">${fxText(e)}</span>`).join('');
   // スマホの簡易表示用：効果の数（強化▲・弱体▼）。中身は拡大ウィンドウで見る
@@ -104,7 +107,7 @@ function svtHTML(u){
 const masterBeside = P=>!!P.master&&masterRule()&&!mTeam();
 function masterCardHTML(m){
   const d=D(m.def), sh=shown(m), P=G.players[m.pid], mhp=maxHp({def:m.def,fx:sh.fx});
-  const pick=G.phase==='target'&&!G.pending&&!G.copy&&!cpuActing()&&masterTargetable()===m;
+  const pick=G.phase==='target'&&!G.pending&&!G.copy&&!otherActing()&&masterTargetable()===m;
   const tgt=G.phase==='target'&&G.target===m.uid&&!sh.out;
   const sp=P.spell==='decl'?'令呪 宣言中':P.spellLeft>0?`令呪 ${P.spellLeft}画`:'令呪 使用済み';
   const fx=sh.fx.map(e=>`<span class="chip fx ${FX[e.k].buff?'buff':'debuff'}">${fxText(e)}</span>`).join('');
@@ -133,7 +136,7 @@ function sideHTML(pid,pos){
 // 陣営の帯に出す小さなパネル。攻撃対象の選択中は、敵マスターを押して対象にできる
 function masterChipHTML(m){
   const d=D(m.def), sh=shown(m), P=G.players[m.pid];
-  const pick=G.phase==='target'&&!G.pending&&!G.copy&&!cpuActing()&&masterTargetable()===m;
+  const pick=G.phase==='target'&&!G.pending&&!G.copy&&!otherActing()&&masterTargetable()===m;
   const tgt=G.phase==='target'&&G.target===m.uid&&!sh.out;
   const sp=P.spell==='decl'?'令呪 宣言中':P.spellLeft>0?`令呪 ${P.spellLeft}画`:'令呪 使用済み';
   const nb=sh.fx.filter(e=>FX[e.k].buff===true).length, nd=sh.fx.filter(e=>FX[e.k].buff===false).length, mhp=maxHp({def:m.def,fx:sh.fx});
@@ -186,7 +189,8 @@ function guardPromptHTML(){
 // ---------- 対戦画面：中央 ----------
 function promptHTML(){
   const ph=G.phase;
-  if(cpuActing()) return `<p class="thinking">CPUが行動中</p>`;
+  if(netWait()) return `<p class="thinking">相手が行動中</p>`;
+  if(otherActing()) return `<p class="thinking">CPUが行動中</p>`;
   switch(ph){
     case 'actRoll':
       return !G.actRolled
@@ -228,7 +232,7 @@ function allocCards(){
     .flatMap(u=>Array.from({length:G.alloc[u.uid]||0},(_,k)=>({u,k})));
 }
 function allocLaneHTML(){
-  const cs=allocCards(), own=!cpuActing();
+  const cs=allocCards(), own=!otherActing();
   if(!cs.length) return `<span class="sub small lanehint">${TERMS.unit}を選ぶとここに並びます</span>`;
   const slots=Array.from({length:RULES.actionsMax-cs.length},()=>`<div class="it"><div class="aslot"></div><span>&nbsp;</span></div>`).join('');
   return cs.map(({u,k})=>{ const d=D(u.def);
@@ -303,7 +307,7 @@ function stageHTML(){
     ${magicCircleHTML()}
     <div class="stagetop"><span class="turnno">TURN <b>${G.turn}</b></span><span class="p${G.cur} who">${esc(me.name)}の手番</span><div class="steps">${steps}</div></div>
     <div class="stagebody">
-      <div class="prompt">${promptHTML()}</div>
+      <div class="prompt">${promptHTML()}${hintHTML()}</div>
       <div class="lane">${laneHTML()}</div>
       <div class="critbox"><span>クリティカル</span><b>★${stars}</b><small>${critInfo(stars)}</small></div>
     </div>
@@ -359,12 +363,50 @@ function settingsBodyHTML(){
   return `<div class="navstep setting">
     ${row('ゲーム進行速度','CPUの手番や演出の速さ',seg(sp,[['普通','setSpeed',700,700],['速い','setSpeed',250,250],['最速','setSpeed',120,120]]))}
     ${row('オート','選ぶ余地のない操作（ロール・決定だけのボタン）を自動で進めます',onoff('setAuto',UI.auto))}
+    ${row('おすすめ表示','あなたの手番に、CPU（つよい）なら選ぶ手を表示します',onoff('setHint',hintOn()))}
     ${row('バトルログ','対戦画面にログを表示します',onoff('setLog',UI.log))}
     ${row('原作キャラを含まない','ONの間、原作のサーヴァント・マスターを選択肢とタイトル画面に出しません',onoff('setNoCanon',noCanon()))}
     ${row('設定リンクの確認','キャラクター設定リンクを開く前の確認',seg(linkConfirmOn()?1:0,[['確認する','setLinkConfirm',1,1],['確認しない','setLinkConfirm',0,0]]))}
     ${row('下の余白','スマホで画面の下がブラウザのバーに隠れるときに余白を足します',seg(UI.bottom,BOTTOM_LABELS.map((l,i)=>[l,'setBottom',i,i])))}
     ${typeof scnAvail==='function'&&G.phase==='mode'?row('シナリオの読み込み','シナリオのJSONファイルを読み込みます（この端末のブラウザに保存されます）','<button data-ui="scnImport">JSONを読み込む</button>'):''}
   </div>`;
+}
+// ---------- おすすめ表示（設定でON/OFF。pencilduel.hint） ----------
+// 人の手番に、CPU（つよい）なら選ぶ手を cpuDecide() に聞いて案内に出す。選ぶ余地のない操作（ロール・決定だけ）は出さない。
+// 同じ局面で何度も計算しないよう、局面のキーで覚えておく（render() のたびに呼ばれるため）
+const HINT_PREF='pencilduel.hint';
+const hintOn=()=>readPref(HINT_PREF)==='1';
+let HINT={key:null,text:''};
+function hintText(m){
+  if(!m) return '';
+  const t=m[0], p=m[1]||{}, u=p.uid?U(p.uid):null;
+  switch(t){
+    case 'setAlloc': { if(Object.values(G.maxActs).reduce((a,b)=>a+b,0)<=RULES.actionsMax) return '';
+      return Object.entries(JSON.parse(p.alloc)).filter(([,n])=>n>0).map(([id,n])=>`${dn(U(id))}×${n}`).join('・'); }
+    case 'useSkill': return `${dn(u)}のS${Number(p.si)+1}「${esc(D(u.def).skills[p.si].name)}」`;
+    case 'useUlt': return `${dn(u)}の${TERMS.ult}「${esc(D(u.def).ult.name)}」`;
+    case 'skillDone': return hasSkillChoice()?'スキルを使わずに進む':'';
+    case 'cardClick': return u?`${dn(u)}を選ぶ`:'';
+    case 'masterSupport': return MASTER_ACTS.support;
+    case 'masterEvac': return MASTER_ACTS.evac;
+    case 'masterAttack': return `${MASTER_ACTS.attack}：${p.to==='master'?TERMS.player:TERMS.unit}`;
+    case 'masterSpell': case 'masterSpellUse': { const s=D(masterOf(G.cur).def).spells[p.i];
+      return `${MASTER_ACTS.spell}${p.now?'（即時）':''}${s?`「${esc(s.name)}」`:''}${u?` → ${dn(u)}`:''}`; }
+    case 'guard': return {take:'受ける', block:'令呪で守る', master:`${TERMS.player}で受ける`, svt:`${TERMS.unit}で受ける`}[p.to]||'';
+  }
+  return '';
+}
+function hintHTML(){
+  if(!hintOn()||otherActing()||!['actRoll','master','guard','skill','action','target'].includes(G.phase)) return '';
+  if(G.phase==='actRoll'&&!G.actRolled) return '';
+  const key=JSON.stringify([G.turn,G.cur,G.phase,G.maxActs,G.rolled.length,G.target,G.pending,G.ult,G.ultDone,G.copy,G.spellPick,G.guard,G.mastered,ALLM().map(u=>[u.hp,u.np,u.used,u.fx.length])]);
+  if(HINT.key!==key){
+    const lv=G.level; let m=null;
+    try{ G.level='hard'; m=cpuDecide(); }catch(e){ m=null; }finally{ G.level=lv; }
+    let text=''; try{ text=hintText(m); }catch(e){}
+    HINT={key,text};
+  }
+  return HINT.text?`<p class="hl hintp">💡 おすすめ：${HINT.text}</p>`:'';
 }
 function settingsModalHTML(){
   if(!UI.settings) return '';
@@ -411,7 +453,7 @@ function resultHTML(){
   const body={sum:resultSumHTML, unit:resultUnitsHTML, tl:resultTlHTML, log:resultLogHTML}[tab]();
   return `<div class="modal result"><div class="mback"></div>
     <div class="mbody"><h2 class="rtitle ${w===0?'p0':'p1'}">${title}</h2><p class="rsub">${sub}</p>
-      <p class="sub small rturn">${G.scn&&G.scn.title?`${esc(G.scn.title)} ・ `:''}${G.arcade?`アーケード STAGE ${G.arcade.stage+1}/${ARCADE.stages} ・ `:''}${esc(ruleset().name)}ルール ・ 経過ターン <b>${G.turn}</b></p>
+      <p class="sub small rturn">${G.scn&&G.scn.title?`${esc(G.scn.title)} ・ `:''}${G.arcade?`アーケード ${arcadeStageNo()} ・ `:''}${esc(ruleset().name)}ルール ・ 経過ターン <b>${G.turn}</b></p>
       <div class="rtabs" role="tablist">${Object.entries(RTABS).map(([k,v])=>`<button role="tab" aria-selected="${tab===k}" class="${tab===k?'on':''}" data-ui="rtab" data-v="${k}">${v}</button>`).join('')}</div>
       <div class="rbody">${body}</div>
       <div class="row"><button class="ghost" data-a="restart">タイトルに戻る</button><button data-ui="closeResult">盤面を見る</button>${G.scn?scnResultBtn():G.arcade?arcadeNextBtn():'<button class="primary" data-a="rematch">もう一度</button>'}</div>
@@ -457,23 +499,29 @@ function resultLogHTML(){
 
 // ---------- アーケード ----------
 // 決着後の進むボタン：勝って次があれば「次のステージへ」、最後のステージか負けなら「総合リザルト」
-const arcadeNextBtn = ()=>G.winner===0&&!arcadeLast()?'<button class="primary" data-a="arcadeNext">次のステージへ</button>':'<button class="primary" data-ui="openTotal">総合リザルト</button>';
-const arcadeLabel = ()=>`アーケード（${ARCADE.diffs[G.arcade.diff].name}） STAGE ${G.arcade.stage+1}/${ARCADE.stages}`;
+// 負けたときはコンティニュー（同じ相手ともう一度。エンドレスにはない）も出す
+const arcadeNextBtn = ()=>G.winner===0&&!arcadeLast()?'<button class="primary" data-a="arcadeNext">次のステージへ</button>'
+  :arcadeCanContinue()?'<button data-ui="openTotal">総合リザルト</button><button class="primary" data-a="arcadeContinue" title="同じ相手ともう一度戦います（コンティニューの回数は総合リザルトに出ます）">コンティニュー</button>'
+  :'<button class="primary" data-ui="openTotal">総合リザルト</button>';
+const arcadeStageNo = ()=>`STAGE ${G.arcade.stage+1}${arcadeEndless()?'':`/${ARCADE.stages}`}`;
+const arcadeLabel = ()=>`アーケード（${ARCADE.diffs[G.arcade.diff].name}） ${arcadeStageNo()}`;
 // ステージ紹介（phase 'stage'）：対戦の前に、今のステージ・相手の先頭キャラ・CPUの強さを見せる。
 // 登場アニメーションはステージごとに最初の1回だけ（UI.stageSeen。render() のたびに再生しない）。オート進行では進めない（見せるための画面）
 function arcadeStageHTML(){
-  const A=G.arcade, df=ARCADE.diffs[A.diff], n=ARCADE.stages, s=A.stage;
+  const A=G.arcade, df=ARCADE.diffs[A.diff], endless=!!df.endless, n=arcadeStages(), s=A.stage;
   const still=UI.stageSeen===s; UI.stageSeen=s;
-  const track=df.levels.map((l,i)=>`<div class="arc-node ${i<s?'done':i===s?'now':''}"><i><b>${i<s?'✓':i+1}</b></i><span>${esc(CPU_LEVELS[l].name)}</span></div>`).join('');
+  // 進行の目盛り：通常は全ステージ、エンドレスは今のステージの前後5つ
+  const base=endless?Math.max(0,s-2):0;
+  const track=Array.from({length:endless?5:df.levels.length},(_,k)=>base+k).map(i=>{ const l=arcadeLevel(df,i); return `<div class="arc-node ${i<s?'done':i===s?'now':''}"><i><b>${i<s?'✓':i+1}</b></i><span>${esc(CPU_LEVELS[l].name)}</span></div>`; }).join('');
   const side=pid=>{ const ids=G.picks[pid], lead=D(ids[0]), m=masterRule()?D(G.mpicks[pid]):null, cost=sumCost(ids)+(m?m.cost:0);
     const minis=[...ids.slice(1).map(D),m].filter(Boolean).map(d=>`<span class="arc-mini${d===m?' m':''}" title="${esc(d.name)}">${unitImg(d,'face','pimg',d.name)}</span>`).join('');
     return `<div class="arc-side s${pid}"><div class="arc-pt"><span>${unitImg(lead,'face','pimg',lead.name)}</span></div>
       <div class="arc-who"><small class="p${pid}">${pid?`CPU ・ ${esc(CPU_LEVELS[G.level].name)}`:esc(G.players[0].name)}</small><b>${esc(lead.name)}</b></div>
       <div class="arc-party">${minis}<span class="arc-cost">COST <b>${cost}</b></span></div></div>`; };
   return `<div class="arc${still?' still':''}">
-    <div class="arc-head"><small>ARCADE ・ ${esc(df.name)} ・ ${esc(ruleset().name)}</small>
+    <div class="arc-head"><small>ARCADE ・ ${esc(df.name)} ・ ${esc(ruleset().name)}${A.continues?` ・ コンティニュー ${A.continues}回`:''}</small>
       <p class="arc-kicker">${s===0?'ARCADE START':s===n-1?'FINAL STAGE':'NEXT STAGE'}</p>
-      <h2>STAGE <b>${s+1}</b><small>/ ${n}</small></h2></div>
+      <h2>STAGE <b>${s+1}</b>${endless?'':`<small>/ ${n}</small>`}</h2></div>
     <div class="arc-track">${track}</div>
     <div class="arc-vs">${side(0)}<em class="arc-mid">VS</em>${side(1)}</div>
     <div class="row arc-btns"><button class="ghost" data-a="restart">リタイア</button><button class="primary big" data-a="arcadeGo">バトル開始</button></div>
@@ -481,9 +529,10 @@ function arcadeStageHTML(){
 }
 // 総合リザルト：ステージごとの結果・合計・パーティの成績（与ダメージ順。いちばん上が MVP）
 function arcadeTotalHTML(){
-  const A=G.arcade, df=ARCADE.diffs[A.diff], rs=arcadeResults(), wins=rs.filter(r=>r.win).length, clear=wins>=ARCADE.stages;
+  const A=G.arcade, df=ARCADE.diffs[A.diff], endless=!!df.endless, rs=arcadeResults(), wins=rs.filter(r=>r.win).length, clear=!endless&&wins>=ARCADE.stages;
   const sum=k=>rs.reduce((t,r)=>t+r[k],0);
-  const stages=df.levels.map((l,i)=>{ const r=rs[i], lead=r&&D(r.enemy[0]);
+  // エンドレスは戦ったステージだけ、通常は全ステージ（まだのステージは「？」）
+  const stages=(endless?rs.map((_,i)=>i):df.levels.map((_,i)=>i)).map(i=>{ const l=arcadeLevel(df,i), r=rs[i], lead=r&&D(r.enemy[0]);
     if(!r) return `<div class="astage none"><i>${i+1}</i><span class="aq">？</span><b>CPU ・ ${esc(CPU_LEVELS[l].name)}</b><em>—</em></div>`;
     return `<div class="astage ${r.win?'':'lose'}"><i>${i+1}</i>${unitImg(lead,'face','pimg',lead.name)}<b>${r.enemy.map(id=>esc(D(id).name)).join('・')}<small>CPU ・ ${esc(CPU_LEVELS[r.level].name)} ・ コスト${r.ecost}</small></b><em>${r.win?'WIN':'LOSE'}<small>${r.turn}ターン</small></em></div>`; }).join('');
   const us={}; rs.forEach(r=>r.units.forEach(u=>{ const x=us[u.id]||(us[u.id]={id:u.id,dealt:0,kills:0}); x.dealt+=u.dealt; x.kills+=u.kills; }));
@@ -491,12 +540,12 @@ function arcadeTotalHTML(){
     return `<div class="rrow">${unitImg(d,'face','pimg',d.name)}<b>${esc(d.name)}${i===0&&u.dealt?' <em class="mvp">MVP</em>':''}</b><span>与ダメージ ${fmt(u.dealt)}<small> ・ 撃破 ${u.kills}</small></span></div>`; }).join('');
   const kv=(k,v)=>`<div><span>${k}</span><b>${v}</b></div>`;
   return `<div class="modal result arcsum"><div class="mback"></div>
-    <div class="mbody"><h2 class="rtitle ${clear?'p0':'p1'}">${clear?'ARCADE CLEAR':'GAME OVER'}</h2><p class="rsub">${clear?'全ステージ制覇！':`STAGE ${rs.length} で敗北…`}</p>
+    <div class="mbody"><h2 class="rtitle ${clear?'p0':'p1'}">${clear?'ARCADE CLEAR':'GAME OVER'}</h2><p class="rsub">${clear?'全ステージ制覇！':`${endless?`${wins}連勝 ・ `:''}STAGE ${rs.length} で敗北…`}</p>
       <p class="sub small rturn">アーケード（${esc(df.name)}） ・ ${esc(ruleset().name)}ルール</p>
       <div class="astages">${stages}</div>
-      <div class="rsides"><div class="rside"><h4>合計</h4><div class="rkv akv">${kv('クリア',`${wins} / ${ARCADE.stages}`)}${kv('合計ターン',sum('turn'))}${kv('与えたダメージ',fmt(sum('dealt')))}${kv('受けたダメージ',fmt(sum('taken')))}${kv('撃破',sum('kills'))}${kv(`${TERMS.out}になった数`,sum('lost'))}${kv('最大ダメージ',fmt(Math.max(0,...rs.map(r=>r.maxHit))))}</div></div>
+      <div class="rsides"><div class="rside"><h4>合計</h4><div class="rkv akv">${endless?kv('連勝',wins):kv('クリア',`${wins} / ${ARCADE.stages}`)+kv('コンティニュー',`${A.continues||0}回`)}${kv('合計ターン',sum('turn'))}${kv('与えたダメージ',fmt(sum('dealt')))}${kv('受けたダメージ',fmt(sum('taken')))}${kv('撃破',sum('kills'))}${kv(`${TERMS.out}になった数`,sum('lost'))}${kv('最大ダメージ',fmt(Math.max(0,...rs.map(r=>r.maxHit))))}</div></div>
         <div class="rside"><h4>パーティの成績</h4>${party}</div></div>
-      <div class="row"><button class="ghost" data-a="restart">タイトルに戻る</button><button data-ui="closeResult">盤面を見る</button><button class="primary" data-a="rematch" title="同じ難易度で、編成からやり直します">もう一度</button></div>
+      <div class="row"><button class="ghost" data-a="restart">タイトルに戻る</button><button data-ui="closeResult">盤面を見る</button>${arcadeCanContinue()?'<button data-a="arcadeContinue" title="同じ相手ともう一度戦います">コンティニュー</button>':''}<button class="primary" data-a="rematch" title="同じ難易度で、編成からやり直します">もう一度</button></div>
     </div></div>`;
 }
 
@@ -514,12 +563,12 @@ function setupHTML(){
   return `<div class="setup">
     <div class="sethead">
       <div class="settitle"><h2><span class="p${pid}">${esc(G.players[pid].name)}</span> の${solo?`${TERMS.unit}選択`:'パーティ編成'}</h2>
-        <p class="sub small nm">${solo?`${rs.name}ルール：${TERMS.unit}を1騎${rs.master?`と${TERMS.player}を1人`:''}選びます。${handicapNote(pid)}`:`${rs.master?`${TERMS.player}1人と`:''}コスト合計${cap}以下${rs.master?`（${TERMS.player}込み）`:''}・最大${rs.partyMax}騎。選んだ順に 1st / 2nd / 3rd。`}${G.arcade?`<b class="hl"> アーケード（${esc(ARCADE.diffs[G.arcade.diff].name)}）：この編成で全${ARCADE.stages}戦を戦います。</b>`:''}${S?`<b class="hl"> シナリオ：${S.lock.length||mlock?'「固定」のメンバーは変えられません。':''}${S.spec.mode==='keep'?'ここで選んだ編成を、この先の戦闘でも使います。':''}</b>`:''}</p></div>
+        <p class="sub small nm">${solo?`${rs.name}ルール：${TERMS.unit}を1騎${rs.master?`と${TERMS.player}を1人`:''}選びます。${handicapNote(pid)}`:`${rs.master?`${TERMS.player}1人と`:''}コスト合計${cap}以下${rs.master?`（${TERMS.player}込み）`:''}・最大${rs.partyMax}騎。選んだ順に 1st / 2nd / 3rd。`}${netWait()?'<b class="hl"> 相手が編成中です。決定されるまでお待ちください。</b>':''}${G.arcade?`<b class="hl"> アーケード（${esc(ARCADE.diffs[G.arcade.diff].name)}）：この編成で${arcadeEndless()?'負けるまで':`全${ARCADE.stages}戦を`}戦います。</b>`:''}${S?`<b class="hl"> シナリオ：${S.lock.length||mlock?'「固定」のメンバーは変えられません。':''}${S.spec.mode==='keep'?'ここで選んだ編成を、この先の戦闘でも使います。':''}</b>`:''}</p></div>
       <div class="slots">${slots}</div>
       <div class="costm" ${solo?'hidden':''}><span>COST</span><b>${cost}</b><small>/ ${cap}</small><div class="bar"><i style="width:${pctOf(cost,cap)}%"></i></div></div>
       <div class="setbtns ${mr?'wide':''}">${pid===0?`<button class="back" data-a="restart" data-keepnav="1" title="${S?'シナリオを中断してタイトルに戻ります（つづきから再開できます）':'メニューに戻ります'}">${S?'中断':'戻る'}</button>`:''}${pid===1?`<button class="back" data-a="setupBack" title="${esc(G.players[0].name)}の編成に戻ります（ここまでの選択は残ります）">戻る</button>`:''}<select class="rcost" data-rcost ${S?'hidden':''} title="おまかせ（ランダム）で選ぶ${solo?'':'合計'}コスト${mr?`（${TERMS.player}込み）`:''}を指定します">${['',...Array.from({length:cap+1},(_,i)=>i)].map(c=>`<option value="${c}" ${String(c)===String(UI.rcost??'')?'selected':''}>${c===''?'コスト指定なし':`コスト ${c}`}</option>`).join('')}</select>${isCpu(pid)
         ?`<button data-a="setupCpu" data-how="same" title="相手と同じ${solo?'コスト':'合計コスト・人数'}になるように選びます">おまかせ（同コスト）</button><button data-a="setupCpu" data-how="random" title="コスト上限の中から完全にランダムに選びます">おまかせ（ランダム）</button>`
-        :`<button data-a="setupRandom">おまかせ</button>`}${mr?`<button data-a="setupRandom" data-only="svt" title="選んだ${TERMS.player}はそのままで、${TERMS.unit}だけランダムに選びます">${TERMS.unit}だけおまかせ</button><button data-a="setupRandom" data-only="master" title="選んだ${TERMS.unit}はそのままで、${TERMS.player}だけランダムに選びます">${TERMS.player}だけおまかせ</button>`:''}<button class="primary big" data-a="setupConfirm" ${picks.length&&(!masterRule()||G.mpicks[pid])?'':'disabled'}>決定</button></div>
+        :`<button data-a="setupRandom">おまかせ</button>`}${mr?`<button data-a="setupRandom" data-only="svt" title="選んだ${TERMS.player}はそのままで、${TERMS.unit}だけランダムに選びます">${TERMS.unit}だけおまかせ</button><button data-a="setupRandom" data-only="master" title="選んだ${TERMS.unit}はそのままで、${TERMS.player}だけランダムに選びます">${TERMS.player}だけおまかせ</button>`:''}${S?'':'<button data-ui="partyOpen" title="編成を保存する・保存した編成を呼び出す">編成リスト</button>'}<button class="primary big" data-a="setupConfirm" ${picks.length&&(!masterRule()||G.mpicks[pid])?'':'disabled'}>決定</button></div>
     </div>
     ${G.setupMsg?`<p class="warn nm">${G.setupMsg}</p>`:''}
     <div class="setbody">
@@ -577,7 +626,7 @@ function zukanLinesHTML(d){
   return `<h4>セリフ</h4><div class="zlines">${rows.map(([k,label,l,c])=>`<details><summary>${esc(label)}<small class="sub">${l.length+c.reduce((n,x)=>n+x.lines.length,0)}件</small></summary>
     <ul>${l.map(t=>`<li>${esc(t)}</li>`).join('')}${c.map(x=>x.lines.map(t=>`<li class="zcond"><small>${esc(cl(x))}</small>${esc(t)}</li>`).join('')).join('')}</ul></details>`).join('')}</div>`;
 }
-const zukanDetailHTML = d=>unitDetailHTML(d).replace(/<\/div>\s*$/,'')+zukanLinesHTML(d)+'</div>';
+const zukanDetailHTML = d=>unitDetailHTML(d).replace(/<\/div>\s*$/,'')+recUnitHTML(d)+zukanLinesHTML(d)+'</div>';
 // 編成画面・図鑑のどちらでも、右の詳細欄と ⓘ のウィンドウに出す中身
 const viewDetailHTML = d=>G.phase==='mode'?zukanDetailHTML(d):unitDetailHTML(d);
 function zukanHTML(){
@@ -719,36 +768,40 @@ function modeHTML(){
   }else if(s==='arcade'&&nav.step==='level'){ // アーケード：難易度（ステージごとのCPUの強さを下に出す）
     const df=ARCADE.diffs[nav.diff]?nav.diff:'normal';
     panel=`${back()}<p class="navtitle">アーケード</p><div class="navstep"><h3>難易度</h3><div class="levels">${Object.entries(ARCADE.diffs).map(([k,d])=>`<button class="gbtn ${k===df?'p':''}" data-ui="navDiff" data-diff="${k}">${esc(d.name)}</button>`).join('')}</div>
-      <p class="sub small arcnote">全${ARCADE.stages}戦：${ARCADE.diffs[df].levels.map(l=>esc(CPU_LEVELS[l].name)).join(' → ')}<br>${ARCADE.diffs[df].first?`1戦目の相手はあなたの編成よりコストが${-ARCADE.diffs[df].first}低く、2戦目からは同じコスト。`:'相手は1戦目からあなたの編成と同じコスト。'}</p>
+      <p class="sub small arcnote">${ARCADE.diffs[df].endless?`負けるまで続く連戦（コンティニューなし）：${ARCADE.diffs[df].levels.map(l=>esc(CPU_LEVELS[l].name)).join(' → ')} → 以降ずっと同じ強さ`:`全${ARCADE.stages}戦：${ARCADE.diffs[df].levels.map(l=>esc(CPU_LEVELS[l].name)).join(' → ')}`}<br>${ARCADE.diffs[df].first?`1戦目の相手はあなたの編成よりコストが${-ARCADE.diffs[df].first}低く、2戦目からは同じコスト。`:'相手は1戦目からあなたの編成と同じコスト。'}</p>
       <div class="row mt"><button class="gbtn go" data-a="chooseMode" data-mode="arcade" data-diff="${df}">次へ</button></div></div>`;
   }else if(s==='arcade'){ const ar=ARCADE.rules.includes(G.rule)?G.rule:ARCADE.rules[0];
     panel=`${back()}<p class="navtitle">アーケード</p><div class="navstep"><h3>ルールを選ぶ</h3><div class="rules">${ARCADE.rules.map(k=>`<button class="gbtn ${ar===k?'p':''}" data-a="setRule" data-rule="${k}">${esc(RULESETS[k].name)}</button>`).join('')}</div>
-      <p class="sub small arcnote">CPUと全${ARCADE.stages}戦の連戦。最初に選んだ編成で最後まで戦います。</p><div class="row mt"><button class="gbtn go" data-ui="navNext">次へ</button></div></div>`;
+      <p class="sub small arcnote">CPUと全${ARCADE.stages}戦の連戦。最初に選んだ編成で最後まで戦います。負けてもコンティニューできます。</p><div class="row mt"><button class="gbtn go" data-ui="navNext">次へ</button></div></div>`;
   }else if(s==='quick') panel=`${back()}<p class="navtitle">クイックバトル</p>${rulePick('<button class="gbtn go" data-ui="navNext">次へ</button>')}`;
   else if(s==='local') panel=`${back()}<p class="navtitle">ローカル対戦</p>${rulePick('<button class="gbtn go" data-a="chooseMode" data-mode="pvp">はじめる</button>')}`;
   else if(s==='tutorial') panel=`${back()}<p class="navtitle">チュートリアル</p>${rulesGuideHTML(false)}${statusGuideHTML(false)}`;
   else if(s==='settings') panel=`${back()}<p class="navtitle">設定</p>${settingsBodyHTML()}`;
+  else if(s==='online') panel=netPanelHTML(rulePick);
+  else if(s==='records') panel=`${back()}<p class="navtitle">戦績</p>${recordsBodyHTML()}`;
   const top=`<div class="showcase">${show}</div>${src}
     <div class="topmenu">
       <button class="gbtn p" data-ui="nav" data-s="quick">クイックバトル</button>
       <button class="gbtn" data-ui="nav" data-s="arcade">アーケード</button>
       ${typeof scnAvail==='function'&&scnAvail()?'<button class="gbtn" data-ui="scnList">シナリオ</button>':''}
       <button class="gbtn" data-ui="nav" data-s="local">ローカル対戦</button>
+      <button class="gbtn" data-ui="nav" data-s="online">オンライン対戦</button>
       <button class="gbtn" data-ui="nav" data-s="zukan">図鑑</button>
+      <button class="gbtn" data-ui="nav" data-s="records">戦績</button>
       <button class="gbtn" data-ui="nav" data-s="tutorial">チュートリアル</button>
       <button class="gbtn" data-ui="nav" data-s="settings">設定</button>
       <a class="gbtn editorlink" href="editor.html">ペンシルエディタ</a>
       <a class="gbtn editorlink" href="scenario-editor.html">シナリオエディタ</a>
     </div>`;
-  return `<div class="mode">${head}${top}</div>${panel?`<div class="modal navmodal"><div class="mback" data-ui="navClose"></div><div class="mbody navpanel">${panel}</div></div>`:''}`;
+  return `<div class="mode">${head}${top}</div>${panel?`<div class="modal navmodal"><div class="mback" data-ui="navClose"></div><div class="mbody navpanel${s==='records'?' wide':''}">${panel}</div></div>`:''}`;
 }
 // 全画面で重ねて出す設定・チュートリアルのウィンドウ（ハンバーガーメニューから）
-function overlaysHTML(){ return settingsModalHTML()+tutorialModalHTML();
+function overlaysHTML(){ return settingsModalHTML()+tutorialModalHTML()+(typeof netNoticeHTML==='function'?netNoticeHTML():'');
 }
 
 // ---------- 描画 ----------
 function render(){
-  const app=document.querySelector('#app'), hinfo=document.querySelector('#hinfo');
+  const app=document.querySelector('#app'), hinfo=document.querySelector('#hinfo'), online=typeof netOn==='function'&&netOn(), me=online?netMe():0; // オンラインのゲストは自分（プレイヤー2）を下に出す
   const screen=G.phase==='mode'?(UI.nav.s==='zukan'?'zukan':'mode'):G.phase==='setup'?'setup':G.phase==='stage'?'stage':'battle';
   document.body.dataset.screen=screen;
   document.body.dataset.phase=G.phase;
@@ -756,7 +809,9 @@ function render(){
   if(G.phase!=='master') UI.spellPick=false;
   if(screen!=='setup'&&screen!=='zukan') UI.sinfo=null;
   if(screen!=='stage') UI.stageSeen=null;
-  document.body.classList.toggle('lock',cpuActing());
+  if(screen!=='setup'){ UI.party=false; UI.partyDel=null; }
+  if(screen!=='mode'||UI.nav.s!=='records') UI.recAsk=false;
+  document.body.classList.toggle('lock',otherActing());
   const ab=document.querySelector('#autobtn'), spd=document.querySelector('#spd');
   ab.hidden=screen!=='battle'; ab.textContent=`オート：${UI.auto?'ON':'OFF'}`; ab.classList.toggle('on',UI.auto);
   spd.hidden=screen!=='battle'; spd.textContent=`速度：${G.speed<=150?'最速':G.speed<500?'速い':'普通'}`;
@@ -765,12 +820,12 @@ function render(){
   // 画面は毎回作り直すが、読み込み済みの画像は残す（setHTML：フェイズ切り替えで画像がチカチカ消えないように）
   if(screen==='mode'){ setHTML(app,modeHTML()+overlaysHTML()); hinfo.textContent=''; }
   else if(screen==='zukan'){ setHTML(app,zukanHTML()+(UI.sinfo?sinfoModalHTML():'')+linkModalHTML()+overlaysHTML()); hinfo.textContent='図鑑'; }
-  else if(screen==='setup'){ setHTML(app,setupHTML()+(UI.sinfo?sinfoModalHTML():'')+linkModalHTML()+overlaysHTML()); hinfo.textContent=ruleset().partyMax===1?`${ruleset().name}ルール ・ ${TERMS.unit}選択`:'パーティ編成'; }
+  else if(screen==='setup'){ setHTML(app,setupHTML()+(UI.sinfo?sinfoModalHTML():'')+partyModalHTML()+linkModalHTML()+overlaysHTML()); hinfo.textContent=(online?`オンライン対戦（${me?'ゲスト':'ホスト'}） ・ `:'')+(ruleset().partyMax===1?`${ruleset().name}ルール ・ ${TERMS.unit}選択`:'パーティ編成'); }
   else if(screen==='stage'){ setHTML(app,arcadeStageHTML()+overlaysHTML()); hinfo.textContent=arcadeLabel(); }
   else {
     if(UI.detail&&!U(UI.detail)) UI.detail=null;
-    setHTML(app,`<div class="battle ${UI.log?'':'nolog'}"><main class="field">${sideHTML(1,'top')}${stageHTML()}${sideHTML(0,'bottom')}</main>${UI.log?logHTML():''}</div>${UI.detail?detailModalHTML():''}${UI.result&&G.phase==='over'?(UI.result==='total'&&G.arcade?arcadeTotalHTML():resultHTML()):''}${linkModalHTML()}${overlaysHTML()}`);
-    hinfo.textContent=`${G.scn&&G.scn.title?`${G.scn.title} ・ `:''}${G.arcade?`${arcadeLabel()} ・ `:''}${G.rule!=='team'?`${ruleset().name}ルール ・ `:''}ターン${G.turn}`;
+    setHTML(app,`<div class="battle ${UI.log?'':'nolog'}"><main class="field">${sideHTML(1-me,'top')}${stageHTML()}${sideHTML(me,'bottom')}</main>${UI.log?logHTML():''}</div>${UI.detail?detailModalHTML():''}${UI.result&&G.phase==='over'?(UI.result==='total'&&G.arcade?arcadeTotalHTML():resultHTML()):''}${linkModalHTML()}${overlaysHTML()}`);
+    hinfo.textContent=`${online?`オンライン対戦（${me?'ゲスト':'ホスト'}） ・ `:''}${G.scn&&G.scn.title?`${G.scn.title} ・ `:''}${G.arcade?`${arcadeLabel()} ・ `:''}${G.rule!=='team'?`${ruleset().name}ルール ・ `:''}ターン${G.turn}`;
     const l=document.querySelector('#log'); if(l) l.scrollTop=l.scrollHeight;
     animateLane();
     syncMagicCircle(); syncPulses();
@@ -788,7 +843,7 @@ function render(){
 const MATCH_KEY='pencilduel.match';
 function saveMatch(){
   try{
-    if(G.phase==='mode'||G.phase==='init'){ if(!MATCH_HOLD) sessionStorage.removeItem(MATCH_KEY); return; }
+    if(G.phase==='mode'||G.phase==='init'||(typeof netOn==='function'&&netOn())){ if(!MATCH_HOLD) sessionStorage.removeItem(MATCH_KEY); return; } // オンライン対戦は再開できない（つなぎ直しになる）ので保存しない
     sessionStorage.setItem(MATCH_KEY,JSON.stringify({v:1,src:UNIT_SOURCE,G:{...G,log:G.log.slice(-200)}}));
   }catch(e){}
 }
@@ -818,7 +873,7 @@ function hasSkillChoice(){
       || (!G.ult&&!G.ultDone&&alive(G.cur).some(u=>canUlt(u)&&u.np>=RULES.ultCost));
 }
 function autoMove(){
-  if(!UI.auto||cpuActing()||UI.detail||G.pending||G.copy) return null;
+  if(!UI.auto||otherActing()||UI.detail||G.pending||G.copy) return null;
   switch(G.phase){
     case 'actRoll':
       if(!G.actRolled) return ['rollActs'];
@@ -877,6 +932,17 @@ function uiAct(a,ds){
     case 'setAuto': UI.auto=ds.v==='1'; savePref('pencilduel.auto',UI.auto?'1':'0'); break;
     case 'toggleSpeed': { const v=G.speed>=500?250:G.speed>150?120:700; savePref('pencilduel.speed',String(v)); window.SPEED_PREF=v; G.speed=v; break; }
     case 'setLog': UI.log=ds.v==='1'; savePref('pencilduel.logOpen',UI.log?'1':'0'); break;
+    case 'setHint': savePref(HINT_PREF,ds.v==='1'?'1':'0'); break;
+    case 'recAsk': UI.recAsk=true; break;
+    case 'recCancel': UI.recAsk=false; break;
+    case 'recReset': recReset(); UI.recAsk=false; break;
+    case 'partyOpen': UI.party=true; UI.partyDel=null; break;
+    case 'partyClose': UI.party=false; UI.partyDel=null; break;
+    case 'partySave': partySaveCur(); break;
+    case 'partyDelAsk': UI.partyDel=ds.sig; break;
+    case 'partyDelCancel': UI.partyDel=null; break;
+    case 'partyDel': partyDelete(ds.sig); UI.partyDel=null; break;
+    case 'partyLoad': { const e=partyList().find(x=>partySig(x)===ds.sig); UI.party=false; if(e){ UI.setupView=null; act('setupLoad',{picks:e.picks,mpick:e.mpick}); return; } break; }
     case 'setBottom': UI.bottom=Math.min(BOTTOM_STEPS.length-1,Math.max(0,Number(ds.v)||0)); savePref('pencilduel.bottom',String(UI.bottom)); applyBottom(); break;
     case 'rcost': UI.rcost=ds.v; break;
     case 'navBack': if((UI.nav.s==='quick'||UI.nav.s==='arcade')&&UI.nav.step==='level') UI.nav.step='rule'; else UI.nav={s:'top',step:'rule'}; break;
@@ -899,7 +965,8 @@ function uiAct(a,ds){
     case 'mToggle': UI.mfold=!UI.mfold; break;
     case 'rosterCls': UI.roster.cls=ds.v; break;
     case 'rosterReset': UI.roster={...UI.roster, cls:'', cost:'', q:'', ok:false}; break;
-    default: if(typeof scnUi==='function') scnUi(a,ds); // シナリオ（scenario.js）
+    default: if(typeof netUi==='function'&&netUi(a,ds)) break; // オンライン対戦（net.js）
+      if(typeof scnUi==='function') scnUi(a,ds); // シナリオ（scenario.js）
   }
   render();
 }
@@ -915,7 +982,7 @@ document.addEventListener('click',e=>{
   if(b.dataset.view) UI.setupView=b.dataset.view;
   if(b.dataset.a==='setupMaster'&&b.classList.contains('mtile')) UI.mfold=!b.classList.contains('sel'); // 選んだら畳む／外したら開く
   if(b.dataset.a==='setupConfirm') UI.mfold=false; // 次の人の編成では、マスター一覧を開いた状態から始める
-  if(cpuActing() && !FREE_ACTIONS.includes(b.dataset.a)){ if(b.dataset.view) render(); return; } // CPUの手番中は操作を受け付けない
+  if(otherActing() && !FREE_ACTIONS.includes(b.dataset.a)){ if(b.dataset.view) render(); return; } // CPUの手番中は操作を受け付けない
   const pl={...b.dataset};
   if(pl.a==='setupRandom'||(pl.a==='setupCpu'&&pl.how==='random')) pl.cost=UI.rcost??''; // おまかせ（ランダム）のコスト指定
   act(b.dataset.a,pl);
@@ -931,6 +998,7 @@ document.addEventListener('mouseover',e=>{
 });
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'&&(UI.settings||UI.tut)){ UI.settings=false; UI.tut=false; render(); return; }
+  if(e.key==='Escape'&&UI.party){ UI.party=false; UI.partyDel=null; render(); return; }
   if(e.key==='Escape'&&UI.linkAsk){ UI.linkAsk=null; render(); return; }
   if(e.key==='Escape'&&(UI.detail||UI.sinfo)){ UI.detail=null; UI.sinfo=null; render(); return; }
   if(e.key==='Escape'&&G.phase==='mode'&&UI.nav.s!=='top'){ UI.nav={s:'top',step:'rule'}; render(); return; }

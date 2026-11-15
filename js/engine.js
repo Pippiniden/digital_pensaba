@@ -13,7 +13,11 @@ function reloadUnits(){ const r=loadUnits(); ALL_UNITS=r.units; UNIT_SOURCE=r.so
   // シナリオ専用キャラ：同じ id は差し替え、新しい id は D() で引けるようにだけする（編成の一覧には出さない。出すのは G.scn.pool）
   if(XUNITS.length||XMASTERS.length){ const mix=(base,x)=>[...x,...base.filter(b=>!x.some(y=>y.id===b.id))], swap=(list,x)=>list.map(b=>x.find(y=>y.id===b.id)||b);
     UNITS=swap(UNITS,XUNITS); MASTERS=swap(MASTERS,XMASTERS); ALL_UNITS=mix(ALL_UNITS,XUNITS); ALL_MASTERS=mix(ALL_MASTERS,XMASTERS); }
+  // オンライン対戦のゲスト：対戦中はホストから届いたデータだけを使う（net.js の setNetData）
+  if(NETDATA){ UNITS=ALL_UNITS=NETDATA.units; MASTERS=ALL_MASTERS=NETDATA.masters; }
 }
+let NETDATA=null;
+function setNetData(d){ NETDATA=d||null; reloadUnits(); }
 // シナリオ専用のキャラ（シナリオJSONに同梱。シナリオを遊んでいる間だけ有効）。scenario.js が setScnData で出し入れする
 let XUNITS=[], XMASTERS=[];
 function setScnData(units=[],masters=[]){ XUNITS=units; XMASTERS=masters; reloadUnits(); }
@@ -22,8 +26,11 @@ reloadUnits();
 // 実験用：マスターチームの令呪が行動回数を使わない（0=従来 / 1=使わず、使うとそのターンの補助は無し / 2=使わず、補助とも併用・続けて何度でも）
 let SPELL_FREE = 0;
 let G;
+// オンライン対戦（net.js）用：NEWGAME_N＝newGame の回数（ゲストが演出を消す合図）／ FX_TAP＝1回の act() で出た演出イベントの控え（ホストがゲストへ送る）
+let NEWGAME_N=0, FX_TAP=null;
 function newGame(o={}){
-  G = { phase:'mode', mode:null, rule:o.rule||'team', handicap:o.handicap??true, cpu:[false,false], level:'normal', scn:null, /* シナリオの戦闘中だけ：{spec,title,lock,mlock,pool,cap,pick,loseGo}（scnBegin） */ arcade:null, /* アーケード中だけ：{diff,stage,picks,mpick,leads,results}（arcadeStart） */ speed:(typeof window!=='undefined'&&window.SPEED_PREF)||700, seed:String(Math.random()),
+  NEWGAME_N++; if(FX_TAP) FX_TAP.length=0;
+  G = { phase:'mode', mode:null, rule:o.rule||'team', handicap:o.handicap??true, cpu:[false,false], level:'normal', scn:null, /* シナリオの戦闘中だけ：{spec,title,lock,mlock,pool,cap,pick,loseGo}（scnBegin） */ arcade:null, /* アーケード中だけ：{diff,stage,picks,mpick,leads,results,continues}（arcadeStart） */ speed:(typeof window!=='undefined'&&window.SPEED_PREF)||700, seed:String(Math.random()),
     setupPid:0, picks:[[],[]], mpicks:[null,null], setupMsg:'',
     // master：マスタールールのマスター（makeMaster）。spell：令呪 null/'decl'(宣言済み・次のマスターフェイズで使う)/'used'
     // evac：退避中（次の相手ターンの間） / zeroNext：前のターンの行動回数が0だった（次の行動回数+1）
@@ -62,7 +69,7 @@ function fxEmit(ev){
     holdOf(ev.uid);
     if(ev.t==='dmg'&&FXHOLD[ev.uid]&&!FXQ.some(e=>e.uid===ev.uid&&(e.t==='sync'||(e.t==='dmg'&&e.hp!=null)))) FXHOLD[ev.uid].hp=ev.hp0;
   }
-  FXQ.push(ev);
+  FXQ.push(ev); if(FX_TAP) FX_TAP.push(ev);
 }
 // NP・効果・HPが変わったことを演出に積む。画面の表示は、この演出が再生されたときに変わる
 function syncU(u){
@@ -877,17 +884,25 @@ function checkWin(){
   if(alive(1-G.cur).length===0) win(G.cur);      // 同時全滅は手番側の勝ち
   else if(alive(G.cur).length===0) win(1-G.cur);
 }
-function win(pid){ G.winner=pid; G.phase='over'; log(`${esc(G.players[pid].name)} の勝利！`,'good');
+function win(pid){ const first=G.winner==null; G.winner=pid; G.phase='over';
+  if(first&&typeof recordMatch==='function'&&!(typeof cpuInRollout!=='undefined'&&cpuInRollout)) recordMatch(); // 戦績（records.js。ゲーム画面だけ）
+  log(`${esc(G.players[pid].name)} の勝利！`,'good');
   phaseFx(G.mode==='cpu'?(pid===0?'VICTORY':'DEFEAT'):'WINNER',G.mode==='cpu'?'':`${G.players[pid].name}の勝利`,{big:true,pid,end:true}); const w=alive(pid)[0]; if(w) say(w,'win'); }
 // ---------- アーケード（CPUと連戦。ARCADE＝rules.js） ----------
 // 流れ：chooseMode(arcade) → 編成（プレイヤーだけ）→ phase 'stage'（ステージ紹介）→ arcadeGo で対戦 → 勝ったら arcadeNext で次の 'stage' …
 // G.arcade：diff＝難易度 / stage＝今のステージ（0始まり）/ picks・mpick＝プレイヤーの編成（全ステージ共通）/ leads＝これまでの相手の先頭 / results＝終わったステージの記録
-const arcadeLast = ()=>!!G.arcade&&G.arcade.stage>=ARCADE.stages-1;
+// エンドレス（ARCADE.diffs[].endless）はステージ数の上限なし。CPUの強さは levels を順に使い、使い切ったら最後の強さのまま
+const arcadeEndless = ()=>!!G.arcade&&!!ARCADE.diffs[G.arcade.diff].endless;
+const arcadeStages = ()=>arcadeEndless()?Infinity:ARCADE.stages;
+const arcadeLevel = (df,i)=>df.levels[Math.min(i,df.levels.length-1)];
+const arcadeLast = ()=>!!G.arcade&&G.arcade.stage>=arcadeStages()-1;
+// コンティニュー：負けたステージを同じ相手でやり直す（回数は G.arcade.continues。総合リザルトに出す）。エンドレスでは不可
+const arcadeCanContinue = ()=>!!G.arcade&&G.phase==='over'&&G.winner!==0&&!arcadeEndless();
 // 今のステージの相手を編成して、ステージ紹介へ。1戦目だけコストを first ぶんずらす。先頭がこれまでの相手と重なったら選び直す（数回まで）
 function arcadeStage(){
   const A=G.arcade, df=ARCADE.diffs[A.diff], delta=A.stage===0?df.first||0:0;
-  G.level=df.levels[A.stage]; G.setupPid=1; G.phase='setup';
-  for(let t=0;t<4;t++){ ACTIONS.setupCpu({how:'same',delta}); if(!A.leads.includes(G.picks[1][0])) break; }
+  G.level=arcadeLevel(df,A.stage); G.setupPid=1; G.phase='setup';
+  for(let t=0;t<4;t++){ ACTIONS.setupCpu({how:'same',delta}); if(!A.leads.slice(-4).includes(G.picks[1][0])) break; }
   A.leads.push(G.picks[1][0]);
   G.setupMsg=''; G.phase='stage';
 }
@@ -904,7 +919,7 @@ const arcadeCfg = level=>({mode:'cpu', level, cpu:[false,true], names:['あな�
 function arcadeStart(diff){
   if(!ARCADE.rules.includes(G.rule)) G.rule=ARCADE.rules[0];
   const d=ARCADE.diffs[diff]?diff:'normal';
-  G.arcade={diff:d, stage:0, picks:[], mpick:null, leads:[], results:[]};
+  G.arcade={diff:d, stage:0, picks:[], mpick:null, leads:[], results:[], continues:0};
   applyMode(arcadeCfg(ARCADE.diffs[d].levels[0]));
 }
 // ---------- シナリオの戦闘（scenario.js が act('scnBattle',spec) で始める） ----------
@@ -1084,7 +1099,7 @@ const ACTIONS = {
     if(mode==='arcade'){ arcadeStart(diff); return; }
     applyMode(mode==='cpu'
       ? {mode, level:CPU_LEVELS[level]?level:'normal', cpu:[false,true], names:['あなた','CPU']}
-      : {mode:'pvp', level:'normal', cpu:[false,false], names:[TERMS.player+'1',TERMS.player+'2']});
+      : {mode:'pvp', level:'normal', cpu:[false,false], names:mode==='net'?['ホスト','ゲスト']:[TERMS.player+'1',TERMS.player+'2']}); // net＝オンライン対戦（net.js）。進め方はローカル対戦と同じ
   },
   scnBattle(spec){ if(spec&&Array.isArray(spec.enemy)) scnBegin(spec); },
   rematch(){
@@ -1108,6 +1123,16 @@ const ACTIONS = {
     if(picks.length>=max){ G.setupMsg=`最大${max}体までです`; return; }
     if(sumCost(picks)+d.cost+mcost(pid)>costCap()){ G.setupMsg=`コスト合計が${costCap()}を超えます${masterRule()?`（${TERMS.player}込み）`:''}`; return; }
     picks.push(id);
+  },
+  // 保存した編成（records.js の編成リスト）を呼び出す。今のルール・データで使えるものだけ
+  setupLoad({picks,mpick}={}){
+    if(G.phase!=='setup'||G.scn) return;
+    const pid=G.setupPid, rs=ruleset(), ids=[...new Set(Array.isArray(picks)?picks:[])], bad='この編成は今のルール・データでは使えません';
+    if(!ids.length||ids.length>rs.partyMax||!ids.every(id=>UNITS.some(u=>u.id===id))){ G.setupMsg=bad; return; }
+    const m=rs.master&&MASTERS.some(x=>x.id===mpick)?mpick:null;
+    if(rs.master&&!m){ G.setupMsg=bad; return; }
+    if(rs.partyMax>1&&sumCost(ids)+(m?D(m).cost:0)>costCap()){ G.setupMsg=`コスト合計が${costCap()}を超えます`; return; }
+    G.picks[pid]=ids; G.mpicks[pid]=m; G.setupMsg='';
   },
   // 2人目（CPU）の編成から1人目の編成に戻る
   setupBack(){ if(G.phase==='setup'&&G.setupPid===1){ G.setupPid=0; G.setupMsg=''; } },
@@ -1199,9 +1224,18 @@ const ACTIONS = {
     const A=G.arcade; if(!A||G.phase!=='over'||G.winner!==0||arcadeLast()) return;
     const next={...A, stage:A.stage+1, results:[...A.results,arcadeRec()]}, speed=G.speed;
     newGame(keepRule()); G.arcade=next;
-    applyMode({...arcadeCfg(ARCADE.diffs[next.diff].levels[next.stage]), speed});
+    applyMode({...arcadeCfg(arcadeLevel(ARCADE.diffs[next.diff],next.stage)), speed});
     G.picks[0]=next.picks.slice(); G.mpicks[0]=next.mpick;
     arcadeStage();
+  },
+  // アーケード：負けたステージを同じ相手でやり直す（ステージ紹介から）
+  arcadeContinue(){
+    if(!arcadeCanContinue()) return;
+    const A=G.arcade, next={...A, continues:(A.continues||0)+1}, speed=G.speed, level=G.level, ep=G.picks[1].slice(), em=G.mpicks[1];
+    newGame(keepRule()); G.arcade=next;
+    applyMode({...arcadeCfg(level), speed});
+    G.picks=[next.picks.slice(),ep]; G.mpicks=[next.mpick,em];
+    G.setupPid=1; G.setupMsg=''; G.phase='stage';
   },
   rollActs(){
     if(G.phase!=='actRoll'||G.actRolled) return;
@@ -1417,8 +1451,11 @@ const ACTIONS = {
 };
 function act(type,p={}){
   if(!ACTIONS[type]) return;
-  if(G.phase==='over' && !['restart','rematch','toggleSpeed','useDefaultData','arcadeNext','scnBattle'].includes(type)) return;
+  if(typeof netAct==='function'&&netAct(type,p)) return; // オンライン：ゲストは操作をホストへ送るだけ／相手の番の操作は捨てる（net.js）
+  if(G.phase==='over' && !['restart','rematch','toggleSpeed','useDefaultData','arcadeNext','arcadeContinue','scnBattle'].includes(type)) return;
   snapPre();
+  FX_TAP=typeof netTapOn==='function'&&netTapOn()?[]:null;
   ACTIONS[type](p);
+  if(FX_TAP){ const fx=FX_TAP; FX_TAP=null; netSync(fx); } // オンラインのホスト：状態と演出をゲストへ送る
   render();
 }

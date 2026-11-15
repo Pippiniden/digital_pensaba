@@ -20,7 +20,9 @@ Read this first. It is a slim map; details live in `docs/agents/` and are read *
 | `js/engine.js` | Game logic: state `G`, `ACTIONS`, damage / effect resolution, turn flow |
 | `js/cpu.js` | CPU brain (`cpuDecide()` returns one move; levels in `CPU_LEVELS`) |
 | `js/fx.js`, `js/cutin.js`, `css/cutin.css` | Visual effects queue (`FXQ`), Noble Phantasm cut-in (shared with the editor preview) |
+| `js/net.js` | **Online play** (serverless WebRTC data channel, manual invite / reply codes). Host-authoritative: guest sends `{type,payload}`, host runs `act()` and sends `G` + that act's FX events. Hooks in `act()`: `netAct` / `netTapOn` / `netSync` |
 | `js/guide.js` | Rules guide + status help (`FX_HELP`; add a line there for each new FX key) |
+| `js/records.js` | Player records (`recordMatch()` called from `win()`; 戦績 panel, reset) and saved parties (編成リスト on the setup screen). localStorage only, never in `G` |
 | `js/game-ui.js` | Game screens (mode / setup / battle / result / zukan), `render()`, click handling |
 | `js/editor.js`, `js/sim.js`, `js/editor-sim.js` | Editor UI; headless balance sim core; editor's balance dialog |
 | `js/scenario-core.js`, `js/scenario.js`, `css/scenario.css` | **Scenario mode** (sound novel + battles): shared format / validation / storage; player (`SCN`, `#scn`) → `docs/agents/scenario.md` |
@@ -36,7 +38,7 @@ Read this first. It is a slim map; details live in `docs/agents/` and are read *
 ## 3. Script load order
 
 ```
-Game   (index.html) : rules → units → masters → common → engine → cpu → cutin → fx → game-ui   (+ css/cutin.css)
+Game   (index.html) : rules → units → masters → common → engine → cpu → cutin → fx → guide → records → net → game-ui   (+ css/cutin.css)
 Editor (editor.html): rules → units → masters → common → cutin → editor → sim → editor-sim   (+ css/cutin.css)
 Worker (sim-worker.js / balance-worker.js, importScripts): rules → units → masters → common → engine → cpu → sim
 Balance page (balance.html): rules → units → masters → common → balance
@@ -52,7 +54,8 @@ Scenario: game adds (after game-ui / tapfx) scenarios/index.js → scenario-core
 - **Runtime unit** `makeUnit()`; look up the definition with `D(id)`, a unit with `U(uid)`. Read max HP via `maxHp(u)`, never `D(u.def).hp`.
 - **Rules** (`G.rule`, via `ruleset()`): `team` (3v3, cost 10), `simple` (1v1), `master` (simple + master), `mteam` (team + master, cost 13). No class matchups.
 - **Phases** (`G.phase`): `mode → setup → actRoll → [master] → skill → action → target → end → (swap) …→ over`; `guard` is a defender-side interlude in master rules.
-- **Arcade** (`G.arcade`, config `ARCADE` in rules.js): 5 battles vs CPU in `team`/`mteam`. Player sets up once → phase `stage` (stage intro, `arcadeStageHTML`) → `arcadeGo` → battle → `arcadeNext` (re-creates `G`, keeps `G.arcade`) … → total result (`arcadeTotalHTML`). `G.mode` stays `'cpu'`. The `stage` screen is deliberately not auto-advanced.
+- **Arcade** (`G.arcade`, config `ARCADE` in rules.js): 5 battles vs CPU in `team`/`mteam`. Player sets up once → phase `stage` (stage intro, `arcadeStageHTML`) → `arcadeGo` → battle → `arcadeNext` (re-creates `G`, keeps `G.arcade`) … → total result (`arcadeTotalHTML`). `G.mode` stays `'cpu'`. The `stage` screen is deliberately not auto-advanced. After a loss, `arcadeContinue` replays the same stage against the same enemy (`G.arcade.continues`, shown in the total result). The `endless` difficulty (`ARCADE.diffs[].endless`) has no stage limit and no continue; use `arcadeStages()` / `arcadeLevel()` / `arcadeEndless()` instead of `ARCADE.stages` / `levels[i]`.
+- **Online** (`NET` in net.js, outside `G`; `G.mode` stays `'pvp'`, names ホスト / ゲスト): host = player 0, guest = player 1 (guest's screen is flipped via `netMe()`). Only the host runs the engine; the guest's `act()` is forwarded (`netAct`) and its `G` is replaced by each snapshot (`netApply`, which replays the FX events through `fxEmit`). The guest uses the host's character data for the session (`setNetData`). In game-ui.js use `otherActing()` (CPU's turn **or** the remote player's turn), not `cpuActing()`, for anything that locks input. No save / resume, no records while online.
 - **Scenario** (`G.scn`, details → `docs/agents/scenario.md`): a story JSON (`format:'pensaba-scenario'`) with top / bottom dialogue windows, choices, flags, BGM and battles. Shown in the menu only when `scnAvail()` (a JSON listed in `scenarios/index.js`, or one imported into IndexedDB). Story state lives in `SCN` (scenario.js, outside `G`; `#scn` is not rebuilt by `render()`); a battle starts with `act('scnBattle',spec)` → `scnBegin` (rule / CPU level / enemy / locked members / selectable pool come from the scenario) and returns via `scnAfter`. Scenario-only characters are swapped in by `setScnData`.
 - **Terminology**: knocked out = `u.out` / `retreat()` shown as `TERMS.out` (戦闘不能, never 撤退). Ascension = `asc`/`ASC` shown as `TERMS.asc` (再臨) or `TERMS.ascFull` (霊基再臨); never hard-code 覚醒/再臨. Pull UI terms from `TERMS`.
 
@@ -79,11 +82,13 @@ Scenario: game adds (after game-ui / tapfx) scenarios/index.js → scenario-core
 | New effect target | `TARGETS`, `TGT_BY_CTX` → `resolveTargets` |
 | New line scene | `LINE_KEYS` → `say(u,'key')` in engine.js |
 | Turn flow / phases | `ACTIONS`, `beginTurn`/`endPhase`/`toTargetPhase`; UI `promptHTML`/`stageHTML`/`ctlHTML`; update `cpuDecide` |
-| New ACTION | `ACTIONS` + `data-a` button; `cpuDecide`; allow-list in `act()` if usable after game over; `FREE_ACTIONS` if pressable on CPU's turn |
+| New ACTION | `ACTIONS` + `data-a` button; `cpuDecide`; add to `NET_BAN` (net.js) if the online guest must not send it; allow-list in `act()` if usable after game over; `FREE_ACTIONS` if pressable on CPU's turn |
 | Damage / crit / chains | `resolveCommand`, `resolveUlt`, `resolveDamage`, `dmgMods` |
 | CPU strength | `js/cpu.js` (`CPU_LEVELS`) |
-| Arcade stages / difficulty | `ARCADE` (rules.js); flow `arcadeStage`/`arcadeRec`/`arcadeNext` (engine.js); screens `arcadeStageHTML`/`arcadeTotalHTML` (game-ui.js), `.arc*`/`.astage` (game.css) |
+| Arcade stages / difficulty | `ARCADE` (rules.js); flow `arcadeStage`/`arcadeRec`/`arcadeNext`/`arcadeContinue` (engine.js); screens `arcadeStageHTML`/`arcadeTotalHTML` (game-ui.js), `.arc*`/`.astage` (game.css) |
 | Screens / layout | `game-ui.js` + `game.css` |
+| Online play (connection, sync, lobby screen) | `js/net.js` (`netPanelHTML` / `netUi` lobby, `netPack` / `netUnpack` codes, `netRecv` host-side validation); bump `NET_VER` when the message format or `G`'s shape changes incompatibly |
+| Records / saved parties / move hints | `js/records.js` (`recordMatch`, `recordsBodyHTML`, `partyModalHTML`; load goes through `act('setupLoad')`); hints = `hintHTML` / `hintText` in game-ui.js (asks `cpuDecide()` at level `hard`; setting `pencilduel.hint`) |
 | Scenario command / playback / editor | `SCN_CMDS` + `scnNormCmd` + `validateScenario` (scenario-core.js) → `scnRun` (scenario.js) → `cmdFields` (scenario-editor.js); battle hand-off `scnBegin` / `scnRandom` (engine.js) |
 | Cut-in look | `cutin.css` + `cutin.js` (try in `docs/cutin-np-sample.html` first) |
 | Editor form / validation | `editor.js` (`renderForm`/`effRow`), `validateUnits`/`checkEffs` in `common.js` |
@@ -91,7 +96,7 @@ Scenario: game adds (after game-ui / tapfx) scenarios/index.js → scenario-core
 
 ## 7. Verification
 
-No automated tests; verify in a browser. Game: play one full match (vs CPU and 2-player), exercising what you changed. Editor: edit in `editor.html` → validation panel has no errors → "apply to game" → check the mode screen. Check the console for errors. For rule changes also run a headless check: load `rules/units/common/engine/cpu` into a Node `vm` with a no-op `render()`, `newGame()`, loop `act(...cpuDecide())` with `G.cpu=[true,true]` for a few hundred games, and look for hangs or `NaN` in `G.log`.
+No automated tests; verify in a browser. Game: play one full match (vs CPU and 2-player), exercising what you changed. Online: open two tabs, exchange the codes between them and play (the guest tab must stay in sync). Editor: edit in `editor.html` → validation panel has no errors → "apply to game" → check the mode screen. Check the console for errors. For rule changes also run a headless check: load `rules/units/common/engine/cpu` into a Node `vm` with a no-op `render()`, `newGame()`, loop `act(...cpuDecide())` with `G.cpu=[true,true]` for a few hundred games, and look for hangs or `NaN` in `G.log`.
 
 ## 8. Caveats
 
