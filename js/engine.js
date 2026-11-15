@@ -496,10 +496,10 @@ function dmgMods(att,tgt,color){
     // 属性特攻：対象が属性 trait を持っていれば加算
     const tt=traitsOf(tgt), at=att.fx.filter(e=>e.k==='atkTrait'&&tt.includes(e.trait));
     if(at.length){ sum+=at.reduce((s,e)=>s+e.v,0); usedA.push(...at); }
-    const dd=modsC(tgt,'defDown',null,att); sum+=dd.sum; usedT.push(...dd.list);
+    const dd=modsC(tgt,'defDown',color,att); sum+=dd.sum; usedT.push(...dd.list);
     const ig=att.fx.find(e=>e.k==='ignoreDef');
-    if(ig){ if(modsC(tgt,'def',null,att).list.length) usedA.push(ig); }
-    else { const df=modsC(tgt,'def',null,att); sum-=df.sum; usedT.push(...df.list);
+    if(ig){ if(modsC(tgt,'def',color,att).list.length) usedA.push(ig); }
+    else { const df=modsC(tgt,'def',color,att); sum-=df.sum; usedT.push(...df.list);
       // 属性特防：攻撃してきた相手が属性 trait を持っていれば減算（被ダメージ減少無視なら見ない）
       const ta=traitsOf(att), dt=tgt.fx.filter(e=>e.k==='defTrait'&&ta.includes(e.trait));
       if(dt.length){ sum-=dt.reduce((s,e)=>s+e.v,0); usedT.push(...dt); } }

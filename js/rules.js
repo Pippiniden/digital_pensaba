@@ -229,7 +229,7 @@ const FX = {
   atk:{name:'攻撃ダメージ+',buff:true,val:true,color:true}, atkDown:{name:'攻撃ダメージ-',buff:false,val:true,color:true},
   // 攻撃ダメージ±%：コマンド攻撃・宝具のダメージ・マスター攻撃を、攻撃ダメージ+（固定値）やチェインを足したあとで ×(100+x)% にする（クリティカルの加算より前）。複数あれば％は足し引き（0%未満にはならない）
   atkPct:{name:'攻撃ダメージ+%',buff:true,val:true,color:true}, atkPctDown:{name:'攻撃ダメージ-%',buff:false,val:true,color:true},
-  def:{name:'被ダメージ-',buff:true,val:true},   defDown:{name:'被ダメージ+',buff:false,val:true},
+  def:{name:'被ダメージ-',buff:true,val:true,color:true},   defDown:{name:'被ダメージ+',buff:false,val:true,color:true}, // color＝その色の攻撃を受けるときだけ
   critPow:{name:'クリティカル威力+',buff:true,val:true,color:true},   // クリティカル時のダメージ増加量に+x
   critMult:{name:'クリティカル倍率',buff:true,val:true},     // クリティカル時のダメージを「+30（Buster+60）・色バフ2倍」の代わりに、クリティカル前のダメージ×x%にする（複数なら最大値）。獲得NP・スターは通常どおり2倍
   evade:{name:'回避',buff:true}, invul:{name:'無敵',buff:true},
