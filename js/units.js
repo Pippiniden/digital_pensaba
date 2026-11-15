@@ -636,11 +636,11 @@ const DEFAULT_UNITS = [
       {"acts":1,"pre":{"c":"G","dmg":10,"np":0,"star":2},"post":{"c":"G","dmg":20,"np":0,"star":4}}
     ],
     "skills":[
-      {"name":"円卓の忠実なる従者","eff":[{"k":"np","t":"ally_all","v":10},{"k":"regenStar","t":"self","v":2,"turns":3}],"rank":"A","pick":"ally"},
+      {"name":"円卓の忠実なる従者","eff":[{"k":"np","t":"ally_all","v":10},{"k":"regenStar","t":"self","v":2,"turns":3}],"rank":"A"},
       {"name":"戦闘続行","eff":[{"k":"guts","t":"self","v":80,"turns":5}],"rank":"C"},
       {"name":"執事モード","eff":[{"k":"evade","t":"self","v":0,"times":3}]}
     ],
-    "ult":{"name":"玲瓏興宴の給仕","c":"B","eff":[{"k":"heal","t":"ally_all","v":100},{"k":"def","t":"ally_all","v":10,"turns":3},{"k":"np","t":"ally_other","v":10}],"ruby":"ビー・アワー・ゲスト"}
+    "ult":{"name":"玲瓏興宴の給仕","c":"B","eff":[{"k":"heal","t":"ally_all","v":100},{"k":"def","t":"ally_all","v":10,"turns":3},{"k":"np","t":"ally_other","v":10},{"k":"atkDown","t":"enemy_all","v":10,"turns":3}],"ruby":"ビー・アワー・ゲスト"}
   },
   {
     "id":"almeida", "name":"アルメイダ", "cls":"ランサー", "cost":2, "hp":450,
@@ -702,7 +702,7 @@ const DEFAULT_UNITS = [
       {"name":"悪神の智慧","eff":[{"k":"atk","t":"picked","v":20,"turns":3},{"k":"atk","t":"picked","v":30,"turns":3,"color":"R"},{"k":"defDown","t":"picked","v":30,"turns":3}],"pick":"ally"},
       {"name":"山の心臓","eff":[{"k":"np","t":"self","v":30}],"rank":"EX"}
     ],
-    "ult":{"name":"\t原初の太陽","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":550},{"k":"stun","t":"self","v":0,"turns":2},{"k":"defDown","t":"self","v":30,"turns":3}]}
+    "ult":{"name":"原初の太陽","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":550},{"k":"stun","t":"self","v":0,"turns":2},{"k":"defDown","t":"self","v":30,"turns":3}],"ruby":"ナウイ・オセロトル"}
   },
   {
     "id":"ahotoria", "name":"アルトリア・ペンドラゴン", "cls":"セイバー", "cost":1, "hp":450,
@@ -1007,7 +1007,7 @@ const DEFAULT_UNITS = [
   {
     "id":"ceryneia", "name":"ケリュネイアの鹿", "cls":"アーチャー", "cost":4, "hp":670,
     "traits":["女性","ギリシャ","混沌","善","地","人型","獣"],
-    "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":14,"z":105},"cut":{"x":0,"y":4,"z":100}},
+    "fit":{"face":{"x":50,"y":18,"z":129},"card":{"x":50,"y":21,"z":128},"np":{"x":50,"y":14,"z":105},"cut":{"x":0,"y":4,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%b1%a5%ea%a5%e5%a5%cd%a5%a4%a5%a2%a4%ce%bc%af",
     "lines":{
       "start":["私の走りを邪魔するつもり？それじゃあ容赦しないから！","ふーん、その程度で私を狩るつもり？"],
@@ -1036,7 +1036,7 @@ const DEFAULT_UNITS = [
     "ult":{"name":"我が身に届く矢はあらじ","c":"G","eff":[{"k":"evade","t":"self","v":0,"turns":3,"times":3},{"k":"atk","t":"self","v":40,"turns":3,"color":"G"},{"k":"onAtkNp","t":"self","v":10,"turns":3,"color":"G"},{"k":"critPow","t":"self","v":30,"turns":3,"color":"G"},{"k":"onAtkStar","t":"self","v":3,"turns":3,"color":"G"},{"k":"dmg","t":"enemy_all","v":300}],"ruby":"アグロテラ・ケリュネイア"}
   },
   {
-    "id":"hughes", "name":"ユーグ・ド・パイヤン", "cls":"セイバー", "cost":5, "hp":1000,
+    "id":"hughes", "name":"ユーグ・ド・パイヤン", "cls":"セイバー", "cost":5, "hp":800,
     "traits":["男性","フランス","秩序","善","人","人型","騎士","キリスト教"],
     "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":0,"z":133},"cut":{"x":0,"y":15,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%e6%a1%bc%a5%b0%a1%a6%a5%c9%a1%a6%a5%d1%a5%a4%a5%e4%a5%f3",
@@ -1064,7 +1064,7 @@ const DEFAULT_UNITS = [
       {"name":"聖堂に誓え、騎士の忠","eff":[{"k":"regenNp","t":"self","v":5,"turns":3},{"k":"debuffImmune","t":"self","v":0,"turns":3},{"k":"atk","t":"self","v":40,"turns":3,"color":"B"},{"k":"onAtkNp","t":"self","v":5,"turns":3,"color":"B"},{"k":"heal","t":"self","v":120}],"rank":"A","line":["主よ、我らを導きたまえ","我が信仰に曇りなく","降伏よりは死を選ばん","誓いを、此処に"]},
       {"name":"魔力防御(光)","eff":[{"k":"def","t":"ally_all","v":20,"turns":3},{"k":"defTrait","t":"ally_all","v":30,"turns":3,"trait":"悪"},{"k":"debuffImmune","t":"ally_all","v":0,"turns":3}],"rank":"A","line":["守り抜きます"]}
     ],
-    "ult":{"name":"聖堂に集え、守護の剣","c":"B","eff":[{"k":"dmg","t":"target","v":300},{"k":"def","t":"ally_all","v":30,"turns":3}],"ruby":"オルドル・デュ・テンプル"}
+    "ult":{"name":"聖堂に集え、守護の剣","c":"B","eff":[{"k":"dmg","t":"enemy_all","v":200},{"k":"def","t":"ally_all","v":30,"turns":3}],"ruby":"オルドル・デュ・テンプル"}
   },
   {
     "id":"necho1", "name":"ネコ1世", "cls":"ライダー", "cost":1, "hp":300,
@@ -1086,7 +1086,7 @@ const DEFAULT_UNITS = [
       {"acts":1,"pre":{"c":"R","dmg":25,"np":0,"star":0},"post":{"c":"R","dmg":45,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"R","dmg":25,"np":0,"star":0},"post":{"c":"R","dmg":45,"np":0,"star":0}},
       {"acts":1,"pre":{"c":"R","dmg":25,"np":0,"star":0},"post":{"c":"R","dmg":45,"np":0,"star":0}},
-      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"ツメトギ","eff":[{"k":"multiHit","t":"self","v":25},{"k":"atk","t":"self","v":10,"turns":3},{"k":"selfDmg","t":"self","v":25}],"dmg":1,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"ツメトギ","eff":[{"k":"multiHit","t":"self","v":10},{"k":"atk","t":"self","v":10,"turns":3},{"k":"selfDmg","t":"self","v":25}],"dmg":2,"np":0,"star":0}},
       {"acts":3,"pre":{"c":"B","dmg":25,"np":20,"star":0,"eff":[{"k":"atkDown","t":"ally_all","v":10,"turns":3}]},"post":{"c":"B","dmg":40,"np":25,"star":0}},
       {"acts":1,"pre":{"c":"G","dmg":25,"np":0,"star":4,"eff":[{"k":"curse","t":"ally_all","v":0,"times":1}]},"post":{"c":"G","dmg":30,"np":0,"star":6}}
     ],
@@ -1195,5 +1195,101 @@ const DEFAULT_UNITS = [
       {"name":"常春の妖精たち","eff":[{"k":"atk","t":"picked","v":20,"turns":3},{"k":"onAtkNp","t":"picked","v":10,"turns":3},{"k":"critRoll","t":"picked","v":1,"turns":1},{"k":"pierce","t":"picked","v":0,"turns":1},{"k":"debuffImmune","t":"picked","v":0,"turns":3},{"k":"heal","t":"picked","v":100}],"rank":"B","pick":"ally","line":["みんな、よろしくお願いします","仲良くしてくださいね"]}
     ],
     "ult":{"name":"清浄たる常春庭園","c":"B","eff":[{"k":"def","t":"ally_all","v":30,"turns":3},{"k":"nullUnder","t":"ally_all","v":60,"turns":3},{"k":"heal","t":"ally_all","v":150},{"k":"onAtkNp","t":"ally_all","v":10,"turns":3}],"ruby":"ラ・プランタン・エテルネル"}
+  },
+  {
+    "id":"odysseiya", "name":"オデュッセウス", "cls":"グラップラー", "cost":3, "hp":460,
+    "traits":["女性","混沌","善","地","ギリシャ","王"],
+    "fit":{"face":{"x":50,"y":10,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":14,"z":98},"cut":{"x":0,"y":0,"z":88}},
+    "lines":{
+      "start":["よーい、どんだ！","ゴングを鳴らしてくれ！","キミは自分の体の中にコスモを感じたことはあるかい？"],
+      "attack":["せいや！","しゅん！","しゃいな！"],
+      "extra":["五感すべて失われようと、燃えろ、ボクのコスモよ!"],
+      "damage":["ぐぅっ！","うわぁっ！"],
+      "skill":["燃え上がれ、ボクのコスモ！"],
+      "np":["見えたぞ、水の一雫！　『青銅流星拳』！"],
+      "npDamage":["身体の傷は勇気の証だ……！"],
+      "defeat":["認めるよ……ボクの負けだ……","テンカウント……","ボ、ボクのコスモよ……奇跡を、起こ……"],
+      "win":["いえーい、金メダルだ！","このボクに力任せの技は通じない。もはやこれは常識！","相手が勝ち誇った時、そいつは既に敗北している！","キミは今、伝説の中にいる！"]
+    },
+    "condLines":[
+      {"key":"start","who":"other","cond":{"k":"id","v":"odysseus"},"lines":["近接戦ならボクが相手でも負けはしない！"]},
+      {"key":"start","who":"other","cond":{"k":"cls","v":"アーチャー"},"lines":["飛び道具はルール違反だよ！"]}
+    ],
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":60,"np":0,"star":0},"post":{"c":"R","dmg":80,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":25,"np":10,"star":0,"eff":[{"k":"multiHit","t":"self","v":2}]}},
+      {"acts":1,"pre":{"c":"B","dmg":40,"np":10,"star":0},"post":{"c":"B","dmg":25,"np":10,"star":0,"eff":[{"k":"multiHit","t":"self","v":2}]}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"特殊行動","eff":[{"k":"evade","t":"self","v":0,"turns":1},{"k":"counter","t":"self","v":30,"turns":1}],"dmg":0,"np":0,"star":0}},
+      {"acts":3,"pre":{"c":"B","dmg":20,"np":10,"star":0},"post":{"c":"B","dmg":20,"np":10,"star":0,"eff":[{"k":"multiHit","t":"self","v":2}]}},
+      {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":4},"post":{"c":"G","dmg":40,"np":0,"star":6}}
+    ],
+    "skills":[
+      {"name":"アスレテス","eff":[{"k":"atk","t":"self","v":40,"turns":3,"color":"B"},{"k":"evade","t":"self","v":0,"turns":3,"times":2}],"rank":"B"},
+      {"name":"心眼(真)","eff":[{"k":"evade","t":"self","v":0,"turns":1},{"k":"critRoll","t":"self","v":30,"turns":3}],"rank":"C"},
+      {"name":"女神の寵愛","eff":[{"k":"def","t":"self","v":10,"turns":1},{"k":"atk","t":"self","v":10,"turns":3},{"k":"debuffImmune","t":"self","v":0,"turns":3}],"rank":"A","line":["アテナ様のおかげです"]}
+    ],
+    "ult":{"name":"青銅流星拳","c":"B","eff":[{"k":"dmg","t":"target","v":250},{"k":"evade","t":"self","v":0,"turns":1},{"k":"stun","t":"target","v":0,"turns":1,"chance":5},{"k":"star","t":"master","v":15}],"ruby":"ブロンズりゅうせいけん"}
+  },
+  {
+    "id":"magoichi", "name":"雑賀孫市", "cls":"アーチャー", "cost":3, "hp":530,
+    "traits":["男性","中立","中庸","人","人型","日本","戦国時代"],
+    "fit":{"face":{"x":50,"y":18,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":6,"z":105},"cut":{"x":0,"y":12,"z":100}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%bb%a8%b2%ec%c2%b9%bb%d4",
+    "lines":{
+      "start":["敵影を視認した。これより作戦行動を────雑賀を開始する","行くぞ、速やかに敵軍を殲滅する"],
+      "attack":["速射、連射！","牽制、次いで掃射！","支援しろ！"],
+      "extra":["狙いは、外さん！"],
+      "damage":["補足されたか……！"],
+      "skill":["臆するな。我らには八咫烏が付いている","残弾確認。装填完了"],
+      "np":["陽の光が届くのならば、我らの弾丸もまた届くのだ……射線は通った。撃ち抜く────『八咫鏡』！"],
+      "npDamage":["ぐあああああっ！！"],
+      "defeat":["陽が、沈む……","任務、失敗……無念だ"],
+      "win":["任務完了。報酬の振り込みは速やかに頼む"]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":50,"np":10,"star":0},"post":{"c":"B","dmg":60,"np":15,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"G","dmg":60,"np":0,"star":0,"eff":[{"k":"sureHit","t":"self","v":0,"turns":1,"at":"pre"}]}},
+      {"acts":3,"pre":{"c":"G","dmg":40,"np":0,"star":5},"post":{"c":"G","dmg":50,"np":0,"star":7}},
+      {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":4},"post":{"c":"G","dmg":50,"np":0,"star":5}}
+    ],
+    "skills":[
+      {"name":"雑賀流連携銃術","eff":[{"k":"critPow","t":"picked","v":30,"turns":3,"times":3},{"k":"regenStar","t":"ally_all","v":2,"turns":3},{"k":"np","t":"self","v":10}],"rank":"A","pick":"ally"},
+      {"name":"千里眼(鳥)","eff":[{"k":"sureHit","t":"self","v":0,"turns":3},{"k":"critPow","t":"ally_all","v":30,"turns":3},{"k":"onAtkStar","t":"ally_all","v":3,"turns":3}],"rank":"B+"},
+      {"name":"鉄砲伝来","eff":[{"k":"np","t":"picked","v":10},{"k":"critRoll","t":"picked","v":1,"turns":1},{"k":"star","t":"master","v":8}],"rank":"A","pick":"ally"}
+    ],
+    "ult":{"name":"八咫鏡","c":"G","eff":[{"k":"star","t":"master","v":15},{"k":"defDown","t":"enemy_all","v":50,"turns":2,"color":"G"},{"k":"dmg","t":"enemy_all","v":230}],"ruby":"やたのかがみ"}
+  },
+  {
+    "id":"brunhild", "name":"ブリュンヒルト", "cls":"ランサー", "cost":4, "hp":790,
+    "traits":["女性","中立","中庸","地","人型","ドイツ"],
+    "fit":{"face":{"x":50,"y":17,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":16,"z":105},"cut":{"x":0,"y":-3,"z":89}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%a5%d6%a5%ea%a5%e5%a5%f3%a5%d2%a5%eb%a5%c8%28%c1%e4%29",
+    "lines":{
+      "start":["ほう、このブリュンヒルトに挑む覚悟があるか","歓喜せよ。女王の武勇をその身で味わえるのだから","槍投げ、石投げ……いいや、やはり殺し合いで確かめるとしよう"],
+      "attack":["ふんッ、ぜぇいッ！","強く、猛く、雄々しく！","己が非力を呪うがいい","軟弱にも程があろう！","正面から捻じ伏せる！","ゼヤァァァアアアッ！"],
+      "extra":["興が乗った、我が腕で打ち砕いてやろう！","この程度で死んでくれるなよ……！"],
+      "damage":["ふむ"],
+      "skill":["捻り潰してやろう","もっと私を滾らせよ……！"],
+      "np":["お前が私に相応しいかどうか、その力を示して見せよ。一つ！……二つ！……失格だ。愚行を犯したその罪科、貴様の命で償うがいい。『死かふたりが婚姻わるか』！","貴様が勇士か、それとも愚者か。この女王が裁定してやろう。一投！……二投！……この程度か、話にならん。身の程を弁えよ！『死かふたりが婚姻わるか』！"],
+      "npDamage":["楽しませてくれる……ッ！"],
+      "defeat":["戦いで負けて死ぬのなら……まだ、納得できる結末だ","まだだ……我が悲願を、果たすまでは……くっ","これが、あの時の戦いであったなら……"],
+      "win":["この程度の戦力で、このブリュンヒルトに勝てると思ったのか？愚かな","はぁ……貴様も、私を受け止められる勇士では無かったか","この戦は終わりか。では次に行くぞ。手早く支度を済ませよ、マスター"]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":90,"np":0,"star":0},"post":{"c":"R","dmg":120,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"R","dmg":90,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"怒り奮え、情愛の破断","eff":[{"k":"counter","t":"self","v":60,"turns":1,"cond":{"k":"trait","v":"男性"}}],"dmg":0,"np":0,"star":0}},
+      {"acts":3,"pre":{"c":"B","dmg":70,"np":15,"star":0},"post":{"c":"B","dmg":80,"np":25,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":2},"post":{"c":"G","dmg":50,"np":0,"star":4}}
+    ],
+    "skills":[
+      {"name":"女傑の覇力","eff":[{"k":"ignoreDef","t":"self","v":0,"turns":3},{"k":"atk","t":"self","v":20,"turns":3},{"k":"debuffImmune","t":"self","v":0,"turns":3},{"k":"heal","t":"self","v":100}],"rank":"EX"},
+      {"name":"破瓜なき操","eff":[{"k":"atk","t":"self","v":20,"turns":3,"color":"R"},{"k":"atkTrait","t":"self","v":30,"turns":3,"trait":"男性","cond":{"k":"trait","v":"男性"}},{"k":"defTrait","t":"self","v":30,"turns":3,"trait":"男性"}],"rank":"A","line":["女に負ける訳がない……などと考えてはいないだろうな？"]},
+      {"name":"威猛き女王の恋","eff":[{"k":"taunt","t":"picked","v":0,"turns":1},{"k":"np","t":"self","v":40},{"k":"heal","t":"self","v":120}],"rank":"E","pick":"enemy"}
+    ],
+    "ult":{"name":"死かふたりが婚姻わるか","c":"R","eff":[{"k":"pierce","t":"self","v":0,"turns":1},{"k":"npPow","t":"self","v":30,"turns":1},{"k":"dmg","t":"target","v":100},{"k":"multiHit","t":"self","v":3}],"ruby":"ブリュンヒルト・フェアローブング"}
   }
 ];
