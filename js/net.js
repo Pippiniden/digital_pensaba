@@ -12,7 +12,8 @@
 const NET_VER = 1;                 // 通信の形式が変わったら上げる（違う版同士はつながない）
 const NET_FRAME = 4000;            // 1回に送る文字数（長いメッセージは分けて送る）
 const NET_ICE = [{urls:['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302']}];
-const NET = { on:false, me:0, pc:null, dc:null, remote:false, ng:null, logSent:0, lastNg:null, buf:'' };
+const NET_HIGH = 1<<20;            // 送信待ちがこれ（バイト）を超えたら、減るまで次を送らない
+const NET = { on:false, me:0, pc:null, dc:null, remote:false, ng:null, logSent:0, lastNg:null, buf:'', q:[], tries:0, lastErr:'', sent:0, got:0 };
 const netOn = ()=>NET.on;
 const netMe = ()=>NET.on?NET.me:0;
 // 相手が操作する番（自分は待つ）。編成中も含む
@@ -50,34 +51,65 @@ function netApply(m){
 }
 
 // ---------- 送受信 ----------
+// 長いメッセージは分けて順番待ち（NET.q）に入れ、送信待ちが溜まりすぎないように少しずつ送る。
+// 送信に失敗したら少し待ってやり直し、続けて失敗したときだけ切断扱いにする（原因はお知らせの「詳細」に出す）
 function netSend(obj){
   const dc=NET.dc; if(!dc||dc.readyState!=='open') return;
-  const s=JSON.stringify(obj);
-  try{ for(let i=0;i<s.length;i+=NET_FRAME) dc.send((i+NET_FRAME>=s.length?'F':'P')+s.slice(i,i+NET_FRAME)); }catch(e){ netDrop('通信エラーが起きました'); }
+  let s; try{ s=JSON.stringify(obj); }catch(e){ netFail('送るデータを作れませんでした',e); return; }
+  for(let i=0;i<s.length;i+=NET_FRAME) NET.q.push((i+NET_FRAME>=s.length?'F':'P')+s.slice(i,i+NET_FRAME));
+  netPump();
+}
+function netPump(){
+  const dc=NET.dc; if(!dc||dc.readyState!=='open') return;
+  clearTimeout(NET.pumpT);
+  while(NET.q.length){
+    if(dc.bufferedAmount>NET_HIGH){ dc.bufferedAmountLowThreshold=NET_HIGH>>2; dc.onbufferedamountlow=netPump; return; }
+    try{ dc.send(NET.q[0]); NET.q.shift(); NET.tries=0; NET.sent++; }
+    catch(e){
+      if(++NET.tries>20){ netFail('データを送れませんでした',e); return; }
+      NET.pumpT=setTimeout(netPump,150); return;
+    }
+  }
+}
+const netErrText = e=>e?`${e.name||'Error'}: ${e.message||e}${e.sctpCauseCode!=null?`（sctp ${e.sctpCauseCode}）`:''}${e.errorDetail?`（${e.errorDetail}）`:''}`:'';
+function netFail(msg,e){ console.error('[net]',msg,e); NET.lastErr=netErrText(e)||NET.lastErr; netDrop(msg); }
+// 切れたときの状況（お知らせの「詳細」。原因を調べる手がかり）
+function netDiag(){
+  const pc=NET.pc, dc=NET.dc, a=[];
+  try{
+    a.push(NET.me?'ゲスト':'ホスト', `場面 ${G.phase}${G.turn?`・ターン${G.turn}`:''}`);
+    if(pc) a.push(`接続 ${pc.connectionState}/${pc.iceConnectionState}`);
+    if(dc) a.push(`チャネル ${dc.readyState}`, `送信待ち ${dc.bufferedAmount}B＋${NET.q.length}件`);
+    a.push(`送信 ${NET.sent}・受信 ${NET.got}`);
+    if(NET.lastErr) a.push(NET.lastErr);
+  }catch(e){}
+  return a.join(' ／ ');
 }
 function netRecv(data){
   if(typeof data!=='string') return;
+  NET.got++;
   NET.buf+=data.slice(1); if(data[0]!=='F') return;
-  let m; try{ m=JSON.parse(NET.buf); }catch(e){ m=null; } NET.buf='';
+  let m; try{ m=JSON.parse(NET.buf); }catch(e){ m=null; NET.lastErr='受信データを読めませんでした（'+netErrText(e)+'）'; console.error('[net] parse',e); } NET.buf='';
   if(!m) return;
   if(m.t==='bye'){ netDrop('相手が退出しました'); return; }
   if(NET.me===1){
     if(m.t==='hello'){
       if(m.v!==NET_VER||!Array.isArray(m.units)||!Array.isArray(m.masters)){ netDrop('ゲームの版が合いません。2人ともページを読み込み直してください'); return; }
       setNetData({units:m.units,masters:m.masters}); UI.net=null; UI.nav={s:'top',step:'rule'}; SHOW_IDS=null; render();
-    }else if(m.t==='s'&&m.g) netApply(m);
+    }else if(m.t==='s'&&m.g){ try{ netApply(m); }catch(e){ netFail('受け取った状態を表示できませんでした',e); } }
     return;
   }
   // ホスト：ゲストの操作。ゲストの番（決着後は「もう一度」だけ）で、許された操作だけ実行する
   if(m.t==='a'&&typeof m.type==='string'&&ACTIONS[m.type]&&!NET_BAN.includes(m.type)){
     if(G.phase==='over'?m.type!=='rematch':(['mode','init','stage'].includes(G.phase)||actor()!==1)) return;
-    NET.remote=true; try{ act(m.type,m.p&&typeof m.p==='object'?m.p:{}); }finally{ NET.remote=false; }
+    NET.remote=true; try{ act(m.type,m.p&&typeof m.p==='object'?m.p:{}); }catch(e){ console.error('[net] act',m.type,e); NET.lastErr=`操作 ${m.type} の処理でエラー（${netErrText(e)}）`; throw e; }finally{ NET.remote=false; }
   }
 }
 
 // ---------- 接続 ----------
 function netCloseConn(){
   const {pc,dc}=NET; NET.pc=null; NET.dc=null; NET.on=false; NET.buf=''; NET.ng=null; NET.logSent=0; NET.lastNg=null;
+  NET.q=[]; NET.tries=0; NET.lastErr=''; NET.sent=0; NET.got=0; clearTimeout(NET.pumpT); clearTimeout(NET.timer);
   try{ if(dc){ dc.onclose=null; dc.onmessage=null; dc.close(); } }catch(e){}
   try{ if(pc){ pc.onconnectionstatechange=null; pc.close(); } }catch(e){}
 }
@@ -85,13 +117,15 @@ function netCloseConn(){
 function netLeave(){ if(!NET.on) return; netSend({t:'bye'}); netCloseConn(); setNetData(null); UI.net=null; }
 // 切れた・相手が抜けた：タイトルに戻してお知らせを出す
 function netDrop(msg){
-  const was=NET.on; netCloseConn();
-  if(!was){ if(UI.net){ UI.net.busy=false; UI.net.err=msg; if(G.phase==='mode') render(); } return; }
-  setNetData(null); newGame(keepRule()); UI.net=null; UI.nav={s:'top',step:'rule'}; SHOW_IDS=null; UI.netMsg=msg; render();
+  const was=NET.on, diag=netDiag(); netCloseConn();
+  console.warn('[net]',msg,diag);
+  if(!was){ if(UI.net){ UI.net.busy=false; UI.net.err=msg; UI.net.diag=diag; if(G.phase==='mode') render(); } return; }
+  setNetData(null); newGame(keepRule()); UI.net=null; UI.nav={s:'top',step:'rule'}; SHOW_IDS=null; UI.netMsg=msg; UI.netDiag=diag; render();
 }
 function netWire(dc){
   NET.dc=dc;
   dc.onmessage=e=>netRecv(e.data);
+  dc.onerror=e=>{ NET.lastErr=netErrText(e&&e.error)||'チャネルのエラー'; console.error('[net] channel',e&&e.error||e); };
   dc.onclose=()=>{ if(NET.dc===dc) netDrop('接続が切れました'); };
   dc.onopen=()=>{
     if(NET.dc!==dc) return;
@@ -106,7 +140,9 @@ function netWire(dc){
 function netNewPc(){
   netCloseConn();
   const pc=new RTCPeerConnection({iceServers:NET_ICE}); NET.pc=pc;
-  pc.onconnectionstatechange=()=>{ if(NET.pc===pc&&pc.connectionState==='failed') netDrop(NET.on?'接続が切れました':'接続できませんでした。回線の組み合わせによっては直接つながらないことがあります'); };
+  // つながる前の 'failed' では切らない：ゲストは返信コードを作った時点で相手を探し始めるので、ホストが貼り付けるまで時間がかかると
+  // いったん 'failed' になる（コードのやり取りには何分もかかる）。ホストが貼り付けて探し始めれば、そこからつながる
+  pc.onconnectionstatechange=()=>{ if(NET.pc===pc&&pc.connectionState==='failed'&&NET.on) netDrop('接続が切れました'); };
   return pc;
 }
 // アドレス候補が出そろうまで待つ（長くても数秒）
@@ -165,7 +201,7 @@ async function netJoinCode(code){
 function netPanelHTML(rulePick){
   const N=UI.net||(UI.net={step:'top'});
   const bar=`<div class="navbar"><button class="back" data-ui="netBack">戻る</button></div><p class="navtitle">オンライン対戦</p>`;
-  const err=N.err?`<p class="warn nm">${esc(N.err)}</p>`:'';
+  const err=N.err?`<p class="warn nm">${esc(N.err)}</p>${N.diag?`<p class="sub small netdiag">詳細：${esc(N.diag)}</p>`:''}`:'';
   const out=(label,note)=>`<div class="netbox"><b>${label}</b><textarea class="netcode" readonly data-netout>${esc(N.code||'')}</textarea>
     <div class="row"><button data-ui="netCopy">${N.copied?'コピーしました':'コードをコピー'}</button></div><small class="sub">${note}</small></div>`;
   const inp=(label,ph)=>`<div class="netbox"><b>${label}</b><textarea class="netcode" data-netin placeholder="${ph}">${esc(N.inp||'')}</textarea></div>`;
@@ -197,15 +233,15 @@ function netPanelHTML(rulePick){
 // お知らせ（切断など）。全画面共通の重ね表示（overlaysHTML）
 function netNoticeHTML(){
   if(!UI.netMsg) return '';
-  return `<div class="modal linkask"><div class="mback" data-ui="netMsgOk"></div><div class="mbody"><p>${esc(UI.netMsg)}</p><div class="row"><button class="primary" data-ui="netMsgOk">OK</button></div></div></div>`;
+  return `<div class="modal linkask"><div class="mback" data-ui="netMsgOk"></div><div class="mbody"><p>${esc(UI.netMsg)}</p>${UI.netDiag?`<p class="sub small netdiag">詳細：${esc(UI.netDiag)}</p>`:''}<div class="row"><button class="primary" data-ui="netMsgOk">OK</button></div></div></div>`;
 }
 // uiAct（game-ui.js）から呼ばれる。扱ったら true
 function netUi(a,ds){
   const N=UI.net||(UI.net={step:'top'});
-  const fail=e=>{ N.busy=false; N.err=(e&&e.message)||'うまくいきませんでした。もう一度やり直してください'; if(G.phase==='mode') render(); };
+  const fail=e=>{ console.error('[net]',e); N.busy=false; N.diag=''; N.err=(e&&e.message)||'うまくいきませんでした。もう一度やり直してください'; if(G.phase==='mode') render(); };
   const redraw=()=>{ if(G.phase==='mode'&&UI.net===N) render(); };
   switch(a){
-    case 'netMsgOk': UI.netMsg=null; return true;
+    case 'netMsgOk': UI.netMsg=null; UI.netDiag=null; return true;
     case 'netBack':
       if(N.step==='top'){ UI.net=null; UI.nav={s:'top',step:'rule'}; }
       else { if(!NET.on) netCloseConn(); UI.net={step:'top'}; }
