@@ -318,9 +318,17 @@ function critInfo(stars){
   if(ruleset().crit==='d6'){ const n=critNeedD6(stars); return !n?'判定なし':n>=6?'確定':`出目${n}以下`; }
   const lv=critLevel(stars); return lv?`Lv${lv}・${critChance(lv)}%`:'判定なし';
 }
+// バトルログの行。セリフ（cls 'say'。engine.js の say() が積む）は設定（pencilduel.logSay）でON/OFF。顔画像つき
+const logSayOn = ()=>readPref('pencilduel.logSay')!=='0';
+function logRowsHTML(max){
+  const say=logSayOn(), list=G.log.filter(l=>say||l.cls!=='say');
+  return (max?list.slice(-max):list).map(l=>l.cls==='say'?`<div class="say s${l.p}"><span class="lface">${unitImg(D(l.u),'face','')}</span><span>${l.msg}</span></div>`:`<div class="${l.cls}">${l.msg}</div>`).join('');
+}
+// セリフの表示切り替えと書き出し（js/battlelog.js）。ビューア（battlelog.html）は書き出したCSVを読む
+const logToolsHTML = ()=>`<div class="logtools"><button class="small ghost${logSayOn()?' on':''}" data-ui="toggleLogSay" aria-pressed="${logSayOn()}" title="キャラクターのセリフをログに表示します">セリフ：${logSayOn()?'ON':'OFF'}</button><span class="grow"></span><button class="small ghost" data-ui="logHtml" title="画像つきの読みやすいHTMLファイルで保存します">HTML出力</button><button class="small ghost" data-ui="logCsv" title="CSVファイルで保存します（ビューアで読み込めます）">CSV出力</button><a class="btn small ghost" href="battlelog.html" target="_blank" rel="noopener" title="書き出したCSVを読むビューアを開きます">ビューア</a></div>`;
 function logHTML(){
-  return `<aside class="logpane"><div class="loghead"><b>バトルログ</b><button class="small ghost" data-ui="toggleLog">閉じる</button></div>
-    <div id="log" class="log">${G.log.slice(-200).map(l=>`<div class="${l.cls}">${l.msg}</div>`).join('')}</div></aside>`;
+  return `<aside class="logpane"><div class="loghead"><b>バトルログ</b><button class="small ghost" data-ui="toggleLog">閉じる</button></div>${logToolsHTML()}
+    <div id="log" class="log">${logRowsHTML(200)}</div></aside>`;
 }
 
 // マスターチームのコスト補正（常時。効果ではないのでここで別に表示する）
@@ -494,7 +502,7 @@ function resultTlHTML(){
   return `<div class="tllegend">${[0,1].map(p=>`<span><i class="p${p}bg"></i>${esc(G.players[p].name)}の与ダメージ 合計 <b>${fmt(tot(p))}</b></span>`).join('')}</div><div class="tl">${rows}</div>`;
 }
 function resultLogHTML(){
-  return `<div class="log rlog">${G.log.map(l=>`<div class="${l.cls}">${l.msg}</div>`).join('')}</div>`;
+  return `${logToolsHTML()}<div class="log rlog">${logRowsHTML()}</div>`;
 }
 
 // ---------- アーケード ----------
@@ -513,9 +521,10 @@ function arcadeStageHTML(){
   // 進行の目盛り：通常は全ステージ、エンドレスは今のステージの前後5つ
   const base=endless?Math.max(0,s-2):0;
   const track=Array.from({length:endless?5:df.levels.length},(_,k)=>base+k).map(i=>{ const l=arcadeLevel(df,i); return `<div class="arc-node ${i<s?'done':i===s?'now':''}"><i><b>${i<s?'✓':i+1}</b></i><span>${esc(CPU_LEVELS[l].name)}</span></div>`; }).join('');
-  const side=pid=>{ const ids=G.picks[pid], lead=D(ids[0]), m=masterRule()?D(G.mpicks[pid]):null, cost=sumCost(ids)+(m?m.cost:0);
-    const minis=[...ids.slice(1).map(D),m].filter(Boolean).map(d=>`<span class="arc-mini${d===m?' m':''}" title="${esc(d.name)}">${unitImg(d,'face','pimg',d.name)}</span>`).join('');
-    return `<div class="arc-side s${pid}"><div class="arc-pt"><span>${unitImg(lead,'face','pimg',lead.name)}</span></div>
+  // マスター戦（マスターのいるルール）は、マスター同士を大きく対峙させて、サーヴァントは全員を下に並べる
+  const side=pid=>{ const ids=G.picks[pid], m=masterRule()?D(G.mpicks[pid]):null, lead=m||D(ids[0]), cost=sumCost(ids)+(m?m.cost:0);
+    const minis=(m?ids:ids.slice(1)).map(D).filter(Boolean).map(d=>`<span class="arc-mini" title="${esc(d.name)}">${unitImg(d,'face','pimg',d.name)}</span>`).join('');
+    return `<div class="arc-side s${pid}${m?' mst':''}"><div class="arc-pt"><span>${unitImg(lead,'face','pimg',lead.name)}</span>${m?`<i class="arc-tag">${TERMS.player}</i>`:''}</div>
       <div class="arc-who"><small class="p${pid}">${pid?`CPU ・ ${esc(CPU_LEVELS[G.level].name)}`:esc(G.players[0].name)}</small><b>${esc(lead.name)}</b></div>
       <div class="arc-party">${minis}<span class="arc-cost">COST <b>${cost}</b></span></div></div>`; };
   return `<div class="arc${still?' still':''}">
@@ -849,7 +858,7 @@ const MATCH_KEY='pencilduel.match';
 function saveMatch(){
   try{
     if(G.phase==='mode'||G.phase==='init'||(typeof netOn==='function'&&netOn())){ if(!MATCH_HOLD) sessionStorage.removeItem(MATCH_KEY); return; } // オンライン対戦は再開できない（つなぎ直しになる）ので保存しない
-    sessionStorage.setItem(MATCH_KEY,JSON.stringify({v:1,src:UNIT_SOURCE,G:{...G,log:G.log.slice(-200)}}));
+    sessionStorage.setItem(MATCH_KEY,JSON.stringify({v:1,src:UNIT_SOURCE,G:{...G,log:G.log.slice(-400)}}));
   }catch(e){}
 }
 // シナリオの戦闘（G.scn）は、シナリオ本体を読み込んだあと scenario.js が restoreMatch(true) で再開する。それまで保存を消さない（MATCH_HOLD）
@@ -963,6 +972,9 @@ function uiAct(a,ds){
     }
     case 'setLinkConfirm': savePref(LINK_PREF,ds.v==='0'?'0':'1'); break;
     case 'toggleLinkConfirm': savePref(LINK_PREF,linkConfirmOn()?'0':'1'); break;
+    case 'toggleLogSay': savePref('pencilduel.logSay',logSayOn()?'0':'1'); break;
+    case 'logHtml': blogExportHTML(); return;
+    case 'logCsv': blogExportCSV(); return;
     case 'toggleLog': UI.log=!UI.log; savePref('pencilduel.logOpen',UI.log?'1':'0'); break;
     case 'toggleAuto': UI.auto=!UI.auto; savePref('pencilduel.auto',UI.auto?'1':'0'); break;
     case 'toggleMenu': UI.menu=!UI.menu; break;

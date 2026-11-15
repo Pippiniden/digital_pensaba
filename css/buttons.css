@@ -36,16 +36,16 @@ button.primary:hover:not(:disabled),.navpanel .gbtn.go:hover{color:#24180a;borde
 button.primary:disabled{opacity:.45;filter:grayscale(.85)}
 
 /* ---------- 控えめ：戻る・閉じる・キャンセル・ヘッダー ---------- */
-button.back,button.ghost,.mclose,header button,header a.btn{color:var(--sub);background:rgba(6,13,34,.45);
+button.back,button.ghost,a.btn.ghost,.mclose,header button,header a.btn{color:var(--sub);background:rgba(6,13,34,.45);
   border:1px solid rgba(157,176,220,.3);box-shadow:none;text-shadow:none;font-family:inherit;font-weight:500}
-button.back:hover:not(:disabled),button.ghost:hover:not(:disabled),.mclose:hover,header button:hover:not(:disabled),header a.btn:hover{
+button.back:hover:not(:disabled),button.ghost:hover:not(:disabled),a.btn.ghost:hover,.mclose:hover,header button:hover:not(:disabled),header a.btn:hover{
   color:var(--ink);border-color:var(--gold);background:rgba(20,38,86,.6);box-shadow:var(--btn-glow)}
 /* 戻る：左向きの山形を付ける（文字は「戻る」「閉じる」だけでよい） */
 button.back{padding-left:12px}
 button.back::before{content:"";width:6px;height:6px;margin-right:2px;border:solid currentColor;border-width:0 0 1.5px 1.5px;transform:rotate(45deg)}
 
 /* ---------- 大きさ ---------- */
-button.small,.ctl button,.prompt button.small{padding:3px 10px;font-size:12px}
+button.small,a.btn.small,.ctl button,.prompt button.small{padding:3px 10px;font-size:12px}
 button.big{padding:8px 24px;font-size:15px;white-space:nowrap}
 @media (max-width:860px){
   button.big{padding:6px 14px;font-size:13.5px;letter-spacing:.04em}
@@ -54,7 +54,7 @@ button.big{padding:8px 24px;font-size:15px;white-space:nowrap}
 
 /* ---------- ヘッダー：小さく静かに。オートONなど「入っている」ものは金の文字 ---------- */
 header button,header a.btn{padding:4px 12px;font-size:12.5px}
-header button.on{color:var(--gold-hi);border-color:var(--gold)}
+header button.on,.logtools button.on{color:var(--gold-hi);border-color:var(--gold)}
 #menubtn{padding:0}
 @media (max-width:860px){
   #menu button,#menu a.btn{padding:8px 12px;font-size:13.5px}

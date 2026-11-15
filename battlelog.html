@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pensaba Duel バトルログ ビューア</title>
+<link rel="icon" href="img/pwa/icon-192.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Noto+Serif+JP:wght@600;700;900&display=swap">
+<style>
+/* ビューアの枠だけ。ログの見た目は js/battlelog.js の BLOG_CSS（HTML出力と同じ）を下で差し込む */
+.blv-top{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid #8a6a26;background:#0b1630}
+.blv-top h1{margin:0 auto 0 0;font:700 15px "Cinzel","Noto Serif JP",serif;letter-spacing:.14em;color:#f6e3a1}
+.blv-top h1 small{margin-left:8px;font-size:11px;letter-spacing:.04em;color:#9fb0d6}
+.blv-top button,.blv-top a,.blv-top input[type=search]{font:inherit;font-size:13px;padding:5px 14px;border-radius:4px;border:1px solid #8a6a26;color:#e8ecf8;background:rgba(6,13,34,.6);text-decoration:none;cursor:pointer}
+.blv-top input[type=search]{cursor:text;width:150px}
+.blv-top button:hover,.blv-top a:hover{border-color:#f6e3a1;color:#fff}
+.blv-top button.primary{color:#1a1206;font-weight:700;border-color:#f6e3a1;background:linear-gradient(180deg,#f6e3a1,#d6b25e)}
+.blv-top :focus-visible{outline:2px solid #f6e3a1;outline-offset:2px}
+.blv-drop{max-width:560px;margin:60px auto;padding:44px 20px;text-align:center;border:2px dashed #8a6a26;border-radius:8px;color:#9fb0d6;line-height:2}
+.blv-drop b{display:block;font:700 18px "Cinzel","Noto Serif JP",serif;color:#f6e3a1}
+body.drag .blv-drop,body.drag #view{outline:3px dashed #f6e3a1;outline-offset:-6px}
+.blv-err{max-width:560px;margin:16px auto 0;padding:8px 14px;border:1px solid #ff8a80;border-radius:4px;color:#ff8a80;text-align:center}
+</style>
+</head>
+<body class="bl-page">
+<div class="blv-top">
+  <h1>BATTLE LOG VIEWER<small id="fname"></small></h1>
+  <input type="search" id="q" placeholder="ログを検索" aria-label="ログを検索" hidden>
+  <button class="primary" id="open">CSVを開く</button>
+  <a href="index.html">ゲームへ</a>
+  <input type="file" id="file" accept=".csv,text/csv" hidden>
+</div>
+<div id="err" class="blv-err" hidden></div>
+<div id="view"><div class="blv-drop"><b>バトルログのCSVを開く</b>ゲームの「バトルログ」→「CSV出力」で保存したファイルを、<br>ここにドラッグ＆ドロップするか「CSVを開く」から選んでください。</div></div>
+
+<script src="js/rules.js"></script>
+<script src="js/units.js"></script>
+<script src="js/masters.js"></script>
+<script src="js/common.js"></script>
+<script src="js/battlelog.js"></script>
+<script>
+'use strict';
+document.head.appendChild(Object.assign(document.createElement('style'),{textContent:BLOG_CSS}));
+// 顔画像：id から img/units の画像を探す（トリミング設定はこの端末のキャラクターデータから。なければ既定）
+const DEFS=(()=>{ try{ const us=loadUnits().units; return [...us,...loadMasters(us).masters]; }catch(e){ return []; } })();
+const face=(id,name)=>id?`<span class="bl-face">${unitImg(DEFS.find(d=>d.id===id)||{id},'face','',name)}</span>`:blogNoFace(name);
+const $=s=>document.querySelector(s);
+function show(text,name){
+  const err=$('#err');
+  try{
+    setHTML($('#view'),blogBodyHTML(blogFromCSV(text),face));
+    err.hidden=true; $('#fname').textContent=name||''; $('#q').hidden=false; $('#q').value='';
+  }catch(e){ err.textContent=e.message||String(e); err.hidden=false; }
+}
+function readFile(f){ if(!f) return; const r=new FileReader(); r.onload=()=>show(String(r.result),f.name); r.onerror=()=>{ $('#err').textContent='ファイルを読み込めませんでした'; $('#err').hidden=false; }; r.readAsText(f); }
+$('#open').addEventListener('click',()=>$('#file').click());
+$('#file').addEventListener('change',e=>{ readFile(e.target.files[0]); e.target.value=''; });
+// 検索：合わない行を隠す（ターンの見出しは残す）
+$('#q').addEventListener('input',e=>{ const q=e.target.value.trim().toLowerCase();
+  document.querySelectorAll('#view .bl-log .bl-r').forEach(el=>el.classList.toggle('hide',!!q&&!el.textContent.toLowerCase().includes(q))); });
+addEventListener('dragover',e=>{ e.preventDefault(); document.body.classList.add('drag'); });
+addEventListener('dragleave',e=>{ if(!e.relatedTarget) document.body.classList.remove('drag'); });
+addEventListener('drop',e=>{ e.preventDefault(); document.body.classList.remove('drag'); readFile(e.dataTransfer.files[0]); });
+</script>
+</body>
+</html>

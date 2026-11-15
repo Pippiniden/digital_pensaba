@@ -2,7 +2,7 @@
 // Bump CACHE only to force-drop old caches.
 const CACHE = 'pensaba-duel-v2';
 const PRECACHE = ['./', 'index.html', 'manifest.webmanifest', 'css/base.css', 'css/game.css', 'css/buttons.css',
-  'js/rules.js', 'js/units.js', 'js/masters.js', 'js/common.js', 'js/engine.js', 'js/cpu.js', 'js/cutin.js', 'js/fx.js', 'js/guide.js', 'js/records.js', 'js/net.js', 'js/game-ui.js',
+  'js/rules.js', 'js/units.js', 'js/masters.js', 'js/common.js', 'js/engine.js', 'js/cpu.js', 'js/cutin.js', 'js/fx.js', 'js/guide.js', 'js/records.js', 'js/net.js', 'js/battlelog.js', 'js/game-ui.js',
   'css/scenario.css', 'scenarios/index.js', 'js/scenario-core.js', 'js/scenario.js'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => Promise.allSettled(PRECACHE.map(u => c.add(u)))).then(() => self.skipWaiting()));

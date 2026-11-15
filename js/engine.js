@@ -86,7 +86,9 @@ const FXHIDE=new Set();
 function say(u,key,o={}){ const {own,other,...r}=o; let t='';
   if(!(own&&own.length)){ const hit=condLineFor(u,key,other); if(hit) t=pickLine(null,key,hit.lines); }
   if(!t) t=pickLine(D(u.def),key,own);
-  if(t) fxEmit({t:'say',uid:u.uid,key,text:t,...r}); }
+  if(t){ fxEmit({t:'say',uid:u.uid,key,text:t,...r});
+    // セリフもバトルログに残す（cls 'say'。表示するかは画面側の設定。u=キャラid / p=陣営 / x=セリフそのもの）
+    if(G&&G.log) G.log.push({msg:`${nm(u)}「${esc(t)}」`,cls:'say',t:G.turn,c:G.cur,u:u.def,p:u.pid,x:t}); } }
 // 条件つきセリフ：場面 key に合い、条件を満たす最初のもの（なければ null）
 function condLineFor(u,key,other){
   const cl=(D(u.def)||{}).condLines; if(!cl||!cl.length) return null;
@@ -132,7 +134,7 @@ const canUlt = u=>!u.out&&!disabled(u)&&!has(u,'sealUlt')&&(!D(u.def).ult.pick||
 const fmt = n=>Number.isInteger(n)?n:Math.round(n*10)/10;
 const dn = u=>esc(D(u.def).name);
 const nm = u=>`<span class="p${u.pid}">${dn(u)}</span>`;
-const log = (msg,cls='')=>G.log.push({msg,cls});
+const log = (msg,cls='')=>G.log.push({msg,cls,t:G.turn,c:G.cur}); // t=ターン / c=手番（ログの書き出し用）
 const sumCost = ids=>ids.reduce((s,id)=>s+D(id).cost,0);
 const totalAlloc = ()=>Object.values(G.alloc).reduce((a,b)=>a+b,0);
 // 行動回数は必ず使い切る：割り振る合計は「最大行動回数の合計」と上限（actionsMax）の小さい方ちょうど
