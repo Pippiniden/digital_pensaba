@@ -504,11 +504,11 @@ const arcadeNextBtn = ()=>G.winner===0&&!arcadeLast()?'<button class="primary" d
   :arcadeCanContinue()?'<button data-ui="openTotal">総合リザルト</button><button class="primary" data-a="arcadeContinue" title="同じ相手ともう一度戦います（コンティニューの回数は総合リザルトに出ます）">コンティニュー</button>'
   :'<button class="primary" data-ui="openTotal">総合リザルト</button>';
 const arcadeStageNo = ()=>`STAGE ${G.arcade.stage+1}${arcadeEndless()?'':`/${ARCADE.stages}`}`;
-const arcadeLabel = ()=>`アーケード（${ARCADE.diffs[G.arcade.diff].name}） ${arcadeStageNo()}`;
+const arcadeLabel = ()=>`${arcadeEndless()?'エンドレス':'アーケード'}（${ARCADE.diffs[G.arcade.diff].name}）${arcadeStageNo()}`;
 // ステージ紹介（phase 'stage'）：対戦の前に、今のステージ・相手の先頭キャラ・CPUの強さを見せる。
 // 登場アニメーションはステージごとに最初の1回だけ（UI.stageSeen。render() のたびに再生しない）。オート進行では進めない（見せるための画面）
 function arcadeStageHTML(){
-  const A=G.arcade, df=ARCADE.diffs[A.diff], endless=!!df.endless, n=arcadeStages(), s=A.stage;
+  const A=G.arcade, df=ARCADE.diffs[A.diff], endless=arcadeEndless(), n=arcadeStages(), s=A.stage;
   const still=UI.stageSeen===s; UI.stageSeen=s;
   // 進行の目盛り：通常は全ステージ、エンドレスは今のステージの前後5つ
   const base=endless?Math.max(0,s-2):0;
@@ -529,7 +529,7 @@ function arcadeStageHTML(){
 }
 // 総合リザルト：ステージごとの結果・合計・パーティの成績（与ダメージ順。いちばん上が MVP）
 function arcadeTotalHTML(){
-  const A=G.arcade, df=ARCADE.diffs[A.diff], endless=!!df.endless, rs=arcadeResults(), wins=rs.filter(r=>r.win).length, clear=!endless&&wins>=ARCADE.stages;
+  const A=G.arcade, df=ARCADE.diffs[A.diff], endless=arcadeEndless(), rs=arcadeResults(), wins=rs.filter(r=>r.win).length, clear=!endless&&wins>=ARCADE.stages;
   const sum=k=>rs.reduce((t,r)=>t+r[k],0);
   // エンドレスは戦ったステージだけ、通常は全ステージ（まだのステージは「？」）
   const stages=(endless?rs.map((_,i)=>i):df.levels.map((_,i)=>i)).map(i=>{ const l=arcadeLevel(df,i), r=rs[i], lead=r&&D(r.enemy[0]);
@@ -765,14 +765,19 @@ function modeHTML(){
   if(s==='quick'&&nav.step==='level'){
     const lv=CPU_LEVELS[nav.level]?nav.level:'normal';
     panel=`${back()}<div class="navstep"><h3>CPUの強さ</h3><div class="levels">${Object.entries(CPU_LEVELS).map(([k,l])=>`<button class="gbtn ${k===lv?'p':''}" data-ui="navLevel" data-level="${k}">${esc(l.name)}</button>`).join('')}</div><div class="row mt"><button class="gbtn go" data-a="chooseMode" data-mode="cpu" data-level="${lv}">次へ</button></div></div>`;
-  }else if(s==='arcade'&&nav.step==='level'){ // アーケード：難易度（ステージごとのCPUの強さを下に出す）
+  }else if(s==='arcade'&&nav.step==='kind'){ // アーケード：アーケード（全5戦）かエンドレスか
+    const df=ARCADE.diffs[nav.diff]?nav.diff:'normal';
+    panel=`${back()}<p class="navtitle">アーケード（${esc(ARCADE.diffs[df].name)}）</p><div class="navstep"><h3>モードを選ぶ</h3><div class="levels">
+      <button class="gbtn" data-a="chooseMode" data-mode="arcade" data-diff="${df}">アーケード</button>
+      <button class="gbtn" data-a="chooseMode" data-mode="arcade" data-diff="${df}" data-endless="1">エンドレス</button></div>
+      <p class="sub small arcnote">アーケード：全${ARCADE.stages}戦の連戦。負けてもコンティニューできます。<br>エンドレス：負けるまで続く連戦（コンティニューなし）。</p></div>`;
+  }else if(s==='arcade'&&nav.step==='level'){ // アーケード：難易度
     const df=ARCADE.diffs[nav.diff]?nav.diff:'normal';
     panel=`${back()}<p class="navtitle">アーケード</p><div class="navstep"><h3>難易度</h3><div class="levels">${Object.entries(ARCADE.diffs).map(([k,d])=>`<button class="gbtn ${k===df?'p':''}" data-ui="navDiff" data-diff="${k}">${esc(d.name)}</button>`).join('')}</div>
-      <p class="sub small arcnote">${ARCADE.diffs[df].endless?`負けるまで続く連戦（コンティニューなし）：${ARCADE.diffs[df].levels.map(l=>esc(CPU_LEVELS[l].name)).join(' → ')} → 以降ずっと同じ強さ`:`全${ARCADE.stages}戦：${ARCADE.diffs[df].levels.map(l=>esc(CPU_LEVELS[l].name)).join(' → ')}`}<br>${ARCADE.diffs[df].first?`1戦目の相手はあなたの編成よりコストが${-ARCADE.diffs[df].first}低く、2戦目からは同じコスト。`:'相手は1戦目からあなたの編成と同じコスト。'}</p>
-      <div class="row mt"><button class="gbtn go" data-a="chooseMode" data-mode="arcade" data-diff="${df}">次へ</button></div></div>`;
+      <div class="row mt"><button class="gbtn go" data-ui="navKind">次へ</button></div></div>`;
   }else if(s==='arcade'){ const ar=ARCADE.rules.includes(G.rule)?G.rule:ARCADE.rules[0];
     panel=`${back()}<p class="navtitle">アーケード</p><div class="navstep"><h3>ルールを選ぶ</h3><div class="rules">${ARCADE.rules.map(k=>`<button class="gbtn ${ar===k?'p':''}" data-a="setRule" data-rule="${k}">${esc(RULESETS[k].name)}</button>`).join('')}</div>
-      <p class="sub small arcnote">CPUと全${ARCADE.stages}戦の連戦。最初に選んだ編成で最後まで戦います。負けてもコンティニューできます。</p><div class="row mt"><button class="gbtn go" data-ui="navNext">次へ</button></div></div>`;
+      <p class="sub small arcnote">CPUとの連戦。最初に選んだ編成で最後まで戦います。</p><div class="row mt"><button class="gbtn go" data-ui="navNext">次へ</button></div></div>`;
   }else if(s==='quick') panel=`${back()}<p class="navtitle">クイックバトル</p>${rulePick('<button class="gbtn go" data-ui="navNext">次へ</button>')}`;
   else if(s==='local') panel=`${back()}<p class="navtitle">ローカル対戦</p>${rulePick('<button class="gbtn go" data-a="chooseMode" data-mode="pvp">はじめる</button>')}`;
   else if(s==='tutorial') panel=`${back()}<p class="navtitle">チュートリアル</p>${rulesGuideHTML(false)}${statusGuideHTML(false)}`;
@@ -924,6 +929,7 @@ function uiAct(a,ds){
     case 'navNext': UI.nav.step='level'; break;
     case 'navLevel': UI.nav.level=ds.level; break;
     case 'navDiff': UI.nav.diff=ds.diff; break;
+    case 'navKind': UI.nav.step='kind'; break;
     case 'openTotal': UI.result='total'; break;
     case 'openSettings': UI.settings=true; break;
     case 'closeSettings': UI.settings=false; break;
@@ -945,7 +951,7 @@ function uiAct(a,ds){
     case 'partyLoad': { const e=partyList().find(x=>partySig(x)===ds.sig); UI.party=false; if(e){ UI.setupView=null; act('setupLoad',{picks:e.picks,mpick:e.mpick}); return; } break; }
     case 'setBottom': UI.bottom=Math.min(BOTTOM_STEPS.length-1,Math.max(0,Number(ds.v)||0)); savePref('pencilduel.bottom',String(UI.bottom)); applyBottom(); break;
     case 'rcost': UI.rcost=ds.v; break;
-    case 'navBack': if((UI.nav.s==='quick'||UI.nav.s==='arcade')&&UI.nav.step==='level') UI.nav.step='rule'; else UI.nav={s:'top',step:'rule'}; break;
+    case 'navBack': if(UI.nav.s==='arcade'&&UI.nav.step==='kind') UI.nav.step='level'; else if((UI.nav.s==='quick'||UI.nav.s==='arcade')&&UI.nav.step==='level') UI.nav.step='rule'; else UI.nav={s:'top',step:'rule'}; break;
     case 'setSpeed': { const v=Number(ds.v)||700; savePref('pencilduel.speed',String(v)); window.SPEED_PREF=v; G.speed=v; break; }
     case 'setNoCanon': {
       savePref(CANON_PREF,ds.v==='0'?'0':'1'); reloadUnits(); SHOW_IDS=null; UI.setupView=null;
@@ -991,6 +997,7 @@ document.addEventListener('change',e=>{ if(e.target.matches('select[data-rcost]'
 // 編成画面：カードにマウスを乗せると右側に詳細
 document.addEventListener('mouseover',e=>{
   const t=e.target.closest('.tile[data-view]'); if(!t||UI.setupView===t.dataset.view) return;
+  if(G.phase==='mode') return; // 図鑑はクリックで固定（マウスを乗せただけでは切り替えない）
   UI.setupView=t.dataset.view;
   const box=document.querySelector('.sdetail'), d=D(UI.setupView);
   if(box&&d) setHTML(box,viewDetailHTML(d));

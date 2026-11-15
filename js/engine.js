@@ -892,7 +892,7 @@ function win(pid){ const first=G.winner==null; G.winner=pid; G.phase='over';
 // 流れ：chooseMode(arcade) → 編成（プレイヤーだけ）→ phase 'stage'（ステージ紹介）→ arcadeGo で対戦 → 勝ったら arcadeNext で次の 'stage' …
 // G.arcade：diff＝難易度 / stage＝今のステージ（0始まり）/ picks・mpick＝プレイヤーの編成（全ステージ共通）/ leads＝これまでの相手の先頭 / results＝終わったステージの記録
 // エンドレス（ARCADE.diffs[].endless）はステージ数の上限なし。CPUの強さは levels を順に使い、使い切ったら最後の強さのまま
-const arcadeEndless = ()=>!!G.arcade&&!!ARCADE.diffs[G.arcade.diff].endless;
+const arcadeEndless = ()=>!!G.arcade&&!!G.arcade.endless;
 const arcadeStages = ()=>arcadeEndless()?Infinity:ARCADE.stages;
 const arcadeLevel = (df,i)=>df.levels[Math.min(i,df.levels.length-1)];
 const arcadeLast = ()=>!!G.arcade&&G.arcade.stage>=arcadeStages()-1;
@@ -916,10 +916,10 @@ function arcadeRec(){
 // 終わったステージすべての記録（決着済みの今のステージを含む）
 const arcadeResults = ()=>G.arcade?[...G.arcade.results,...(G.phase==='over'?[arcadeRec()]:[])]:[];
 const arcadeCfg = level=>({mode:'cpu', level, cpu:[false,true], names:['あなた','CPU']});
-function arcadeStart(diff){
+function arcadeStart(diff,endless){
   if(!ARCADE.rules.includes(G.rule)) G.rule=ARCADE.rules[0];
   const d=ARCADE.diffs[diff]?diff:'normal';
-  G.arcade={diff:d, stage:0, picks:[], mpick:null, leads:[], results:[], continues:0};
+  G.arcade={diff:d, endless:!!endless, stage:0, picks:[], mpick:null, leads:[], results:[], continues:0};
   applyMode(arcadeCfg(ARCADE.diffs[d].levels[0]));
 }
 // ---------- シナリオの戦闘（scenario.js が act('scnBattle',spec) で始める） ----------
@@ -1094,9 +1094,9 @@ const ACTIONS = {
   useDefaultData(){ clearCustomUnits(); clearCustomMasters(); reloadUnits(); SHOW_IDS=null; newGame(keepRule()); },
   setRule({rule}){ if(G.phase==='mode'&&RULESETS[rule]) G.rule=rule; },
   toggleHandicap(){ if(G.phase==='mode') G.handicap=!G.handicap; },
-  chooseMode({mode,level,diff}){
+  chooseMode({mode,level,diff,endless}){
     if(G.phase!=='mode') return;
-    if(mode==='arcade'){ arcadeStart(diff); return; }
+    if(mode==='arcade'){ arcadeStart(diff,endless==='1'||endless===true); return; }
     applyMode(mode==='cpu'
       ? {mode, level:CPU_LEVELS[level]?level:'normal', cpu:[false,true], names:['あなた','CPU']}
       : {mode:'pvp', level:'normal', cpu:[false,false], names:mode==='net'?['ホスト','ゲスト']:[TERMS.player+'1',TERMS.player+'2']}); // net＝オンライン対戦（net.js）。進め方はローカル対戦と同じ
@@ -1104,7 +1104,7 @@ const ACTIONS = {
   scnBattle(spec){ if(spec&&Array.isArray(spec.enemy)) scnBegin(spec); },
   rematch(){
     if(G.scn){ scnBegin({...G.scn.spec, prev:{picks:G.picks[0].slice(), mpick:G.mpicks[0], rule:G.rule}}); return; } // シナリオ：同じ戦闘に再挑戦
-    if(G.arcade){ const d=G.arcade.diff, speed=G.speed; newGame(keepRule()); arcadeStart(d); G.speed=speed; return; } // アーケード：同じ難易度で編成からやり直す
+    if(G.arcade){ const d=G.arcade.diff, en=G.arcade.endless, speed=G.speed; newGame(keepRule()); arcadeStart(d,en); G.speed=speed; return; } // アーケード：同じ難易度で編成からやり直す
     const cfg={mode:G.mode, level:G.level, cpu:G.cpu, speed:G.speed, names:G.players.map(p=>p.name)};
     newGame(keepRule()); applyMode(cfg);
   },

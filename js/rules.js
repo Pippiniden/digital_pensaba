@@ -101,8 +101,7 @@ const ARCADE = { rules:['team','mteam'], stages:5, diffs:{
   normal: { name:'ノーマル',     first:-1, levels:['easy','easy','normal','normal','hard'] },
   hard:   { name:'ハード',       first:-1, levels:['normal','hard','hard','hard','expert'] },
   lunatic:{ name:'ルナティック', first:0,  levels:['expert','expert','expert','expert','expert'] },
-  // エンドレス（endless:true）：負けるまで続く。levels を順に使い、使い切ったら最後の強さのまま。コンティニューなし（何連勝できたかが記録）
-  endless:{ name:'エンドレス',   first:-1, endless:true, levels:['easy','normal','normal','hard','hard','expert'] },
+  // エンドレスは難易度とは別に選ぶ（G.arcade.endless）：負けるまで続く。levels を順に使い、使い切ったら最後の強さのまま。コンティニューなし
 } };
 
 // ---------- 泥ペンマスシート（マスター作成の基準。エディタの警告と目安表示に使う） ----------
