@@ -44,7 +44,9 @@ function condText(c,use){
 //   相手・対象（other）：場面ごとの相手を主語に「対象がランスロットの場合」「相手の先頭が〜の場合」
 //   自分（self）：「自分のHPが50%以下の場合」
 //   味方・敵（ally / enemy）：「味方に黒咲恵梨佳がいる場合」「〔竜〕属性の相手がいる場合」
-const CL_OTHER = { start:'相手の先頭', attack:'対象', extra:'対象', np:'対象', skill:'対象', damage:'攻撃してきた相手', npDamage:'攻撃してきた相手', defeat:'相手', win:'相手' };
+const CL_OTHER = { start:'相手の先頭', attack:'対象', extra:'対象', np:'対象', skill:'対象', damage:'攻撃してきた相手', npDamage:'攻撃してきた相手', defeat:'倒した相手', win:'最後に倒した相手' };
+// 条件を見る人（who）の表示名。'other' だけは場面で指すものが変わる（敗退＝とどめを刺した相手 / 勝利＝最後に倒した相手）
+const lineWhoLabel=(key,who)=>who==='other'?(key==='defeat'||key==='win'?CL_OTHER[key]:LINE_WHO.other):(LINE_WHO[who]||'');
 function condLineText(cl,nameOf){
   const c=cl&&cl.cond; if(!c) return '';
   const nmOf=nameOf||(v=>((typeof D==='function'&&D(v))||{}).name||v), not=!!c.not, v=c.v;
