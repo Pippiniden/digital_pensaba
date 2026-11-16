@@ -496,14 +496,14 @@ const DEFAULT_UNITS = [
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":90,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"B","dmg":60,"np":20,"star":0},"post":{"c":"B","dmg":70,"np":25,"star":0}},
-      {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":5},"post":{"c":"G","dmg":60,"np":0,"star":7}},
+      {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":3},"post":{"c":"G","dmg":60,"np":0,"star":5}},
       {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"隠れ身の術","eff":[{"k":"evade","t":"self","v":0,"turns":1},{"k":"star","t":"master","v":6}],"dmg":0,"np":0,"star":0}},
-      {"acts":3,"pre":{"c":"G","dmg":40,"np":0,"star":5},"post":{"c":"G","dmg":60,"np":0,"star":7}},
-      {"acts":1,"pre":{"c":"G","dmg":50,"np":0,"star":5},"post":{"c":"G","dmg":60,"np":0,"star":6}}
+      {"acts":3,"pre":{"c":"G","dmg":40,"np":0,"star":2},"post":{"c":"G","dmg":60,"np":0,"star":4}},
+      {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":2},"post":{"c":"G","dmg":60,"np":0,"star":3}}
     ],
     "skills":[
       {"name":"無辜の怪物","eff":[{"k":"taunt","t":"self","v":0,"turns":3},{"k":"regenStar","t":"self","v":2,"turns":3},{"k":"evade","t":"self","v":0,"times":1}],"rank":"A"},
-      {"name":"忍術","eff":[{"k":"evade","t":"self","v":0,"times":3},{"k":"critRoll","t":"self","v":1,"turns":3}],"rank":"EX"},
+      {"name":"忍術","eff":[{"k":"evade","t":"picked","v":0,"times":2},{"k":"critRoll","t":"picked","v":1,"turns":3}],"rank":"EX","pick":"ally"},
       {"name":"闇夜の襲撃者","eff":[{"k":"onAtkStar","t":"self","v":3,"turns":3},{"k":"atk","t":"self","v":20,"turns":3,"color":"G"}],"rank":"C"}
     ],
     "ult":{"name":"是・闇に潜み忍ぶ者","c":"G","eff":[{"k":"dmg","t":"enemy_all","v":320},{"k":"strip","t":"enemy_all","v":0}],"ruby":"レジェンド・ニンジャ・マスター"}
@@ -619,7 +619,7 @@ const DEFAULT_UNITS = [
       "skill":["抵抗はなさいませんように","覚悟してくださいまし"],
       "np":["どうぞお掛けになってください。大事なお客様には最高のひと時を……『玲瓏興宴の給仕』"],
       "npDamage":["いけません！"],
-      "defeat":["申し訳……御座いません……","「また、最後まで……"],
+      "defeat":["申し訳……御座いません……","また、最後まで……"],
       "win":["戦いにも抜かりはありません。それがメイドというものです","お疲れとお見受けします。すぐにお紅茶のご用意をいたしますね、マスター"]
     },
     "condLines":[
@@ -880,7 +880,7 @@ const DEFAULT_UNITS = [
     "id":"guillaume", "name":"ギヨーム9世", "cls":"キャスター", "cost":3, "hp":520,
     "traits":["男性","混沌","善","人","人型","フランス"],
     "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":0,"z":105},"cut":{"x":0,"y":12,"z":100}},
-    "link":"https://seesaawiki.jp/kagemiya/d/%c5%a5%a5%da%a5%f3%a5%b5%a5%d0%a5%b7%a1%bc%a5%c8%a1%f9%a3%b3",
+    "link":"https://seesaawiki.jp/kagemiya/d/%a5%ae%a5%e8%a1%bc%a5%e09%c0%a4",
     "lines":{
       "start":[],
       "attack":[],
@@ -1322,5 +1322,136 @@ const DEFAULT_UNITS = [
       {"name":"美の顕現(偽)","eff":[{"k":"defTrait","t":"self","v":50,"turns":3,"trait":"悪"},{"k":"mentalImmune","t":"self","v":0,"turns":3},{"k":"np","t":"self","v":20}],"rank":"A"}
     ],
     "ult":{"name":"花の如き死化粧","c":"B","eff":[{"k":"atk","t":"ally_other","v":20,"turns":3},{"k":"def","t":"ally_other","v":20,"turns":3},{"k":"star","t":"master","v":15},{"k":"selfDmg","t":"self","v":20,"max":true}],"ruby":"エレガンス・メンズノンノ"}
+  },
+  {
+    "id":"gwydion", "name":"グウィディオン", "cls":"キャスター", "cost":4, "hp":660,
+    "traits":["男性","混沌","悪","天","イギリス"],
+    "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":8,"z":100},"np":{"x":50,"y":4,"z":105},"cut":{"x":-1,"y":0,"z":90}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%a5%b0%a5%a6%a5%a3%a5%c7%a5%a3%a5%aa%a5%f3",
+    "lines":{
+      "start":["がーっはっはっはっは！　おまえ、俺様に楯突いてタダで済むと思ってんのか！？","俺様は世界で一番強ぇ。つまり、てめーは死ねえーっ！！"],
+      "attack":["おらぁっ！","死にやがれ！","くたばれ！","超雷撃！","超爆炎！","超暗黒！"],
+      "extra":["超！　グウィディオン破壊光線！","ドハデにずばばばーんと決めてやるぁ！"],
+      "damage":["てんめえ！"],
+      "skill":["ぐぁっはははははは！","がーははははは！","よーし、そこを動くんじゃねーぞ！"],
+      "np":["この俺様の最大呪文を食らってくたばりやがれえっ！！　ぎゃーっはっはっは！　てめえはもうお終いだ！　『騒樹荊棘獄』！！"],
+      "npDamage":["あんぎゃーーーーー！！"],
+      "defeat":["ふざけんな！　まだ終わっちゃいねえぞぉおおお！！","がーっ、畜生！　こんなの、ありえねえ！！"],
+      "win":["男が戦うと決めたからにゃあ、万に一つの例外も無く勝たなきゃいけねえんだよ！　敗北に価値はねえ！","俺様は残酷で冷徹で、最高にイカしてるんだ。俺様の前に立った時点でお前の負けは決まっていた……ってな！"]
+    },
+    "condLines":[
+      {"key":"start","who":"other","cond":{"k":"id","v":"arianrhod"},"lines":["処女姉じゃねえか！　楽しもうぜ！","ガキ産んどいて乙女気取ってんじゃねえよ！","……チッ、怒らせすぎたか？","うるせー！！　俺様が反省なんてしてたまるものかよ！！！"]},
+      {"key":"extra","who":"other","cond":{"k":"id","v":"arianrhod"},"lines":["俺様に勝てるつもりかよ、処女姉！","ぎゃーははは！！　俺様の強さは知ってんだろ！！","ここらで諦めやがれ！"]},
+      {"key":"win","who":"other","cond":{"k":"id","v":"arianrhod"},"lines":["さーて、まずはスェウの認知からしてもらうか！","けっけっけ、そんな無防備でいいのかぁ、処女姉！","いいか、アイツは俺様とてめーのガキだ！！","ったく、やりにきぃぜ。おい、立てるか？　心配かけさせんじゃねーや姉ちゃん"]},
+      {"key":"defeat","who":"other","cond":{"k":"id","v":"arianrhod"},"lines":["げぇーっ！？　処女姉に負けるなんてありえねえ！","ちいっとからかい過ぎたか……！？","だーっ！！！　わかったよ、降参だ姉ちゃん！！","っきしょう……処女姉にゃ強く出れる気分じゃねーな、今日は……"]},
+      {"key":"attack","who":"other","cond":{"k":"id","v":"arianrhod"},"lines":["おらぁっ！","超雷撃！","超爆炎！","超暗黒！"]}
+    ],
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":60,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"R","dmg":40,"np":5,"star":0,"eff":[{"k":"multiHit","t":"self","v":3},{"k":"atk","t":"self","v":20,"turns":3,"color":"R"}],"line":["派手に決めてやらあ！　『万術三魔詩』！"]}},
+      {"acts":3,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":2},"post":{"c":"G","dmg":40,"np":0,"star":3}}
+    ],
+    "skills":[
+      {"name":"動物会話","eff":[{"k":"np","t":"self","v":20}],"rank":"B-"},
+      {"name":"原初のルーン","eff":[{"k":"atk","t":"picked","v":20,"turns":1,"times":40,"color":"R"}],"rank":"A","pick":"ally"},
+      {"name":"高速神言","eff":[{"k":"np","t":"self","v":70}],"rank":"B"}
+    ],
+    "ult":{"name":"騒樹荊棘獄","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":250},{"k":"stun","t":"enemy_all","v":0,"turns":1},{"k":"np","t":"self","v":30}],"ruby":"ケルヌンノス・ウッズ"}
+  },
+  {
+    "id":"arianrhod", "name":"アリアンロッド", "cls":"ライダー", "cost":4, "hp":800,
+    "traits":["女性","混沌","中庸","天","神性","人型","イギリス"],
+    "fit":{"face":{"x":50,"y":21,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":14,"z":105},"cut":{"x":0,"y":0,"z":100}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%a5%a2%a5%ea%a5%a2%a5%f3%a5%ed%a5%c3%a5%c9",
+    "lines":{
+      "start":[],
+      "attack":[],
+      "extra":["…寄るな、この阿呆が！”Fflam”ッ！"],
+      "damage":[],
+      "skill":[],
+      "np":["…決めに行く！”Rhedeg”『乙女駆る銀輪戦車ヴァージンライド・シルヴァホイール』！！！"],
+      "npDamage":[],
+      "defeat":[],
+      "win":[]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":15,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":70,"np":20,"star":0},"post":{"c":"B","dmg":90,"np":25,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"呪い","eff":[{"k":"curse","t":"target","v":0,"times":1}],"dmg":90,"np":0,"star":0}},
+      {"acts":3,"pre":{"c":"G","dmg":40,"np":0,"star":3},"post":{"c":"G","dmg":40,"np":0,"star":5}},
+      {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":3},"post":{"c":"G","dmg":50,"np":0,"star":4}}
+    ],
+    "skills":[
+      {"name":"高速神言","eff":[{"k":"np","t":"self","v":70}],"rank":"B"},
+      {"name":"誓約呪術","eff":[{"k":"curse","t":"picked","v":0,"times":3},{"k":"stun","t":"picked","v":0,"turns":1,"chance":4,"cond":{"k":"trait","v":"男性"}}],"rank":"A","pick":"enemy","line":["…”Tynged”！そこから一歩でも動いたら、お前に呪いが降りかかるぞ！"]},
+      {"name":"北天の砦冠","eff":[{"k":"taunt","t":"self","v":0,"turns":1},{"k":"debuffImmune","t":"self","v":0,"turns":1},{"k":"atk","t":"ally_all","v":20,"turns":3}],"rank":"A"}
+    ],
+    "ult":{"name":"乙女駆る銀輪戦車","c":"G","eff":[{"k":"invul","t":"self","v":0,"turns":1},{"k":"dmg","t":"target","v":400}],"ruby":"ヴァージンライド・シルヴァホイール"}
+  },
+  {
+    "id":"tomiko", "name":"日野富子", "cls":"ゲートキーパー", "cost":4, "hp":780,
+    "traits":["女性","混沌","悪","人","人型","日本"],
+    "fit":{"face":{"x":50,"y":17,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":26,"z":105},"cut":{"x":0,"y":11,"z":100}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%c6%fc%cc%ee%c9%d9%bb%d2",
+    "lines":{
+      "start":["荒稼ぎじゃーい！","わわわわたくし前線に出るタイプじゃないんですがー！？"],
+      "attack":["とぅ！","暴落かっこ物理ぃー！","あっはっは！"],
+      "extra":["お布施してあげますよ！"],
+      "damage":["ぁいたぁ！"],
+      "skill":["こうやって稼ぐのです！","くるんくるーん、キラッ☆","あっ！…うっへへへ、臨時収入ですねぇ"],
+      "np":["大原、鞍馬に、粟田に伏見、鳥羽、丹波、ついでに長坂からも！取り立てますよぅ、わたしの、おっかねぇーぃ！『京七口の関』！"],
+      "npDamage":["ぎぃゃあー！？"],
+      "defeat":["殺される感覚は…慣れませんねぇ…","遺産の使い道…しっかり、考えてくださいね……"],
+      "win":["やったったですよ！やったったですよ！","いっえーい！わたくしに逆らうからですよばーかばぁーか！"]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"B","dmg":50,"np":20,"star":0},"post":{"c":"B","dmg":60,"np":25,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":40,"np":15,"star":0},"post":{"c":"B","dmg":50,"np":20,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"G","dmg":60,"np":0,"star":7,"eff":[{"k":"aoe","t":"self","v":0},{"k":"critDown","t":"enemy_all","v":1,"turns":3}]}},
+      {"acts":3,"pre":{"c":"G","dmg":40,"np":0,"star":6},"post":{"c":"G","dmg":50,"np":0,"star":8}},
+      {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":4},"post":{"c":"G","dmg":50,"np":0,"star":6}}
+    ],
+    "skills":[
+      {"name":"黄金律(へそくり)","eff":[{"k":"onAtkNp","t":"self","v":10,"turns":3},{"k":"critRoll","t":"ally_all","v":1,"turns":1}],"rank":"B"},
+      {"name":"無辜の怪物","eff":[{"k":"critRoll","t":"ally_all","v":2,"turns":3},{"k":"regenStar","t":"self","v":3,"turns":3},{"k":"defDown","t":"self","v":20,"turns":3}],"rank":"C"},
+      {"name":"御台一天御計","eff":[{"k":"np","t":"picked","v":40},{"k":"onAtkStar","t":"picked","v":5,"turns":3},{"k":"critRoll","t":"picked","v":2,"turns":3},{"k":"selfDmg","t":"picked","v":100}],"rank":"A","pick":"ally"}
+    ],
+    "ult":{"name":"京七口の関","c":"B","eff":[{"k":"strip","t":"target","v":0},{"k":"atkDown","t":"target","v":50,"turns":5},{"k":"defDown","t":"target","v":40,"turns":5},{"k":"critDown","t":"target","v":2,"turns":5},{"k":"npPowDown","t":"target","v":100,"turns":5},{"k":"np","t":"target","v":-50},{"k":"stun","t":"target","v":0,"turns":1}],"ruby":"ペイメント・ザ・セブン"}
+  },
+  {
+    "id":"himetsuru", "name":"姫鶴一文字", "cls":"セイバー", "cost":4, "hp":600,
+    "traits":["女性","中立","善","人型","日本"],
+    "fit":{"face":{"x":50,"y":18,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":14,"z":105},"cut":{"x":0,"y":7,"z":100}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%c9%b1%c4%e1%b0%ec%ca%b8%bb%fa",
+    "lines":{
+      "start":["…行かせて、頂きます","行きましょう、ご主人様"],
+      "attack":["はぁっ↑！","…せいっ！","やっ、はぁ↓！"],
+      "extra":["我が、双翼よ……！これで、決めます…！"],
+      "damage":["あぁっ…","いたっ…！","嫌ぁ！"],
+      "skill":["嗚呼……","ふ、ふふ…"],
+      "np":["我が翼は二つで一つ、決して一つに定まること無し…。…『真贋双翼』！"],
+      "npDamage":["嗚呼……空が…空が見えます……"],
+      "defeat":["やっぱりこうなるじゃないですかぁ……ぐすん……"],
+      "win":["…やりました！やりましたよ私！…ご主人様！褒めて下さいまし！","…毘沙門天の、加護ぞある……なんて、ふふ"]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":90,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"R","dmg":90,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":70,"np":15,"star":0},"post":{"c":"B","dmg":80,"np":20,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"軍神の白鶴","eff":[{"k":"ignoreDef","t":"self","v":0,"times":1},{"k":"multiHit","t":"self","v":2}],"dmg":60,"np":10,"star":4}},
+      {"acts":3,"pre":{"c":"G","dmg":50,"np":0,"star":4},"post":{"c":"G","dmg":65,"np":0,"star":6}},
+      {"acts":1,"pre":{"c":"G","dmg":50,"np":0,"star":5},"post":{"c":"G","dmg":65,"np":0,"star":7}}
+    ],
+    "skills":[
+      {"name":"魅了","eff":[{"k":"charm","t":"picked","v":0,"turns":1,"chance":4},{"k":"atkDown","t":"picked","v":20,"turns":3},{"k":"actsDown","t":"picked","v":1,"turns":3}],"rank":"C++","pick":"enemy"},
+      {"name":"被虐体質","eff":[{"k":"taunt","t":"self","v":0,"turns":1},{"k":"def","t":"self","v":20,"turns":3},{"k":"onHitNp","t":"self","v":10,"turns":3},{"k":"onHitStar","t":"self","v":3,"turns":3}],"rank":"E"},
+      {"name":"鶴の双翼","eff":[{"k":"onAtkNp","t":"self","v":10,"turns":3},{"k":"onAtkStar","t":"self","v":3,"turns":3},{"k":"onAtkNp","t":"self","v":20,"turns":3,"color":"B"},{"k":"onAtkStar","t":"self","v":6,"turns":3,"color":"G"},{"k":"sureHit","t":"self","v":0,"turns":3},{"k":"np","t":"self","v":25}]}
+    ],
+    "ult":{"name":"真贋双翼","c":"B","eff":[{"k":"sureHit","t":"self","v":0,"turns":3},{"k":"npPow","t":"self","v":50,"turns":3},{"k":"ignoreDef","t":"self","v":0,"turns":1},{"k":"multiHit","t":"self","v":2},{"k":"dmg","t":"target","v":250},{"k":"defDown","t":"target","v":20,"turns":3}],"ruby":"しんがんそうよく"}
   }
 ];
