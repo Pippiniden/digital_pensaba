@@ -36,7 +36,7 @@ function newGame(o={}){
     // evac：退避中（次の相手ターンの間） / zeroNext：前のターンの行動回数が0だった（次の行動回数+1）
     players:[{name:TERMS.player+'1',party:[],stars:0,master:null,spell:null,evac:false,zeroNext:false},{name:TERMS.player+'2',party:[],stars:0,master:null,spell:null,evac:false,zeroNext:false}],
     cur:0, turn:0, actRolled:false, maxActs:{}, alloc:{}, rolled:[], ult:null, target:null,
-    gen:0, pending:null, copy:null, guard:null, hcap:null, mastered:false, ultDone:false, ultNp:null, log:[], winner:null, dealt:[0,0],
+    gen:0, pending:null, copy:null, guard:null, hcap:null, mastered:false, ultDone:false, ultNp:null, log:[], winner:null, dealt:[0,0], dealtO:[0,0],
     // リザルト用の記録：stats＝ユニットごと（uid） / tl＝ターンごとの与ダメージ [P1,P2] / chains＝陣営ごとのチェイン回数 / starsGen＝発生スター合計
     stats:{}, tl:[], chains:[{R:0,B:0,G:0,brave:0},{R:0,B:0,G:0,brave:0}], starsGen:[0,0] };
   FXQ.length=0; for(const k in FXHOLD) delete FXHOLD[k]; FXHIDE.clear(); KO_PEND.length=0; for(const k in KO_BY) delete KO_BY[k]; LAST_KO[0]=LAST_KO[1]=null;
@@ -204,15 +204,16 @@ function gainStars(pid,v){ if(pid===G.cur) G.gen+=v; else G.players[pid].stars+=
 // ---------- リザルト用の記録 ----------
 function st(u){
   const S=G.stats||(G.stats={});
-  return S[u.uid]||(S[u.uid]={dealt:0,taken:0,maxHit:0,kills:0,attacks:0,crits:0,ults:0,skills:0,blocked:0});
+  return S[u.uid]||(S[u.uid]={dealt:0,taken:0,dealtO:0,takenO:0,maxHit:0,kills:0,attacks:0,crits:0,ults:0,skills:0,blocked:0});
 }
 // ダメージの記録。src＝与えた側（なければ毒など）。real＝実際に減ったHP / raw＝ダメージの値 / ko＝これで倒れた
+// 〇O（dealtO / takenO）＝オーバーキル分も含めたダメージ（raw）。リザルトでカッコ書きする用
 function recDmg(src,u,real,raw,ko){
-  st(u).taken+=real;
+  const su=st(u); su.taken+=real; su.takenO+=raw;
   if(src&&src.pid===u.pid) return; // 自傷・味方からのダメージは与ダメージに数えない
-  G.dealt[1-u.pid]+=real;
+  G.dealt[1-u.pid]+=real; (G.dealtO||(G.dealtO=[0,0]))[1-u.pid]+=raw;
   const tl=G.tl||(G.tl=[]), row=tl[G.turn]||(tl[G.turn]=[0,0]); row[1-u.pid]+=real;
-  if(src){ const s=st(src); s.dealt+=real; s.maxHit=Math.max(s.maxHit,raw); if(ko) s.kills++; }
+  if(src){ const s=st(src); s.dealt+=real; s.dealtO+=raw; s.maxHit=Math.max(s.maxHit,raw); if(ko) s.kills++; }
 }
 
 // =====================================================================
