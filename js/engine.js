@@ -964,6 +964,12 @@ function applyMode(cfg){
   Object.assign(G,{mode:cfg.mode, level:cfg.level, cpu:cfg.cpu, speed:cfg.speed||G.speed, phase:'setup'});
   cfg.names.forEach((n,i)=>G.players[i].name=n);
 }
+// 観戦モード：両陣営をおまかせで編成して開始
+function watchStart(){
+  G.setupPid=0; ACTIONS.setupCpu({how:'random'});
+  G.setupPid=1; ACTIONS.setupCpu({how:'same'});
+  G.setupPid=0; G.setupMsg=''; G.phase='init'; startGame();
+}
 // 宝具を使う（picked＝対象を選ぶ宝具で選んだ1体）
 function startUlt(u,picked){
   const uid=u.uid;
@@ -1099,6 +1105,9 @@ const ACTIONS = {
   chooseMode({mode,level,diff,endless}){
     if(G.phase!=='mode') return;
     if(mode==='arcade'){ arcadeStart(diff,endless==='1'||endless===true); return; }
+    if(mode==='watch'){ // 観戦：CPU同士。編成は自動（先手＝ランダム、後手＝同コスト）ですぐ開始
+      applyMode({mode, level:CPU_LEVELS[level]?level:'normal', cpu:[true,true], names:['CPU A','CPU B']}); watchStart(); return;
+    }
     applyMode(mode==='cpu'
       ? {mode, level:CPU_LEVELS[level]?level:'normal', cpu:[false,true], names:['あなた','CPU']}
       : {mode:'pvp', level:'normal', cpu:[false,false], names:mode==='net'?['ホスト','ゲスト']:[TERMS.player+'1',TERMS.player+'2']}); // net＝オンライン対戦（net.js）。進め方はローカル対戦と同じ
@@ -1118,6 +1127,7 @@ const ACTIONS = {
     const keep=same&&picks.every(okU)&&mp.every(okM);
     newGame(keepRule()); applyMode(cfg);
     if(keep){ G.picks=picks; G.mpicks=mp; G.phase='init'; startGame(); }
+    else if(cfg.mode==='watch') watchStart();
   },
   toggleSpeed(){ G.speed = G.speed>=500 ? 250 : G.speed>150 ? 120 : 700; },
   setupToggle({id}){

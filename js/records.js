@@ -15,7 +15,7 @@ const recEmpty = ()=>({v:1, cpu:{}, pvp:{}, arcade:{}, units:{}});
 function recLoad(){ const r=lsGet(REC_KEY,null); return r&&r.v===1?{...recEmpty(),...r}:recEmpty(); }
 function recReset(){ try{ localStorage.removeItem(REC_KEY); }catch(e){} }
 function recordMatch(){
-  if(G.scn||G.winner==null||(typeof netOn==='function'&&netOn())) return; // オンライン対戦は数えない
+  if(G.scn||G.mode==='watch'||G.winner==null||(typeof netOn==='function'&&netOn())) return; // オンライン対戦は数えない
   const R=recLoad(), w=G.winner, cpu=G.mode==='cpu', at=(o,k,d)=>o[k]||(o[k]=d);
   if(G.arcade){ // アーケード：best＝勝ち抜いたステージ数の最高（エンドレスは連勝数）。クリア時は最少コンティニューと最短の合計ターンも残す
     const A=G.arcade, a=at(at(R.arcade,G.rule,{}),A.diff+(A.endless?'+e':''),{battles:0,wins:0,clears:0,best:0,minCont:null,bestTurns:null});
