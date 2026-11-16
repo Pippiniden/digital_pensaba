@@ -493,6 +493,66 @@ function addTo(map,key,w,g,r,extra){ const s=map.get(key)||{...stNew(),turns:0,g
 const rateCell=(w,g,st)=>g?`<b>${pct(w/g)}</b> <span class="sub small">±${st?Math.round(moeX(st)):ci(w/g,g)}</span>`:'-';
 const rowCls=(w,g)=>g?grade(w/g):'';
 
+// ---------- 単体の強さ（味方・相手の強さを差し引いた値） ----------
+// キャラ別の平均勝率は「強い味方と組んだ」「弱い相手に当たった」ぶんも混ざる。そこで全対戦をまとめて
+//   A側が勝つ確率 ＝ σ( A側のキャラの強さの合計 − B側のキャラの強さの合計 )   （σ＝ロジスティック関数。マスターも1人のキャラとして入れる）
+// に当てはめ、キャラごとの強さ b を一度に求める（ロジスティック回帰。チーム戦の Bradley–Terry モデル）。
+// 表示は σ(b)＝「ほかが全員平均的なとき、このキャラ1体の差で勝率が何%になるか」。50%＝平均的（同じ合計コスト同士の対戦ならコスト相応）。
+// - 解き方：ニュートン法。強さの平均は決まらない（全員に同じ数を足しても同じ）ので、弱いリッジ（STR_RIDGE）で0の近くに寄せ、最後にサーヴァント／マスターそれぞれの平均を0にそろえる
+// - ±：対戦カードを1かたまりとしたサンドイッチ分散（カードごとの勝ちやすさの違いを含む。moeX と同じ考え方）
+// - 対戦の選び方（誤差が残るキャラの優先・目標に届いたキャラの確定）の影響を受けない：誰と組み誰と戦ったかを式に入れているので、R.items を全部使ってよい
+const STR_RIDGE=.5;
+function matInv(A){ // n×n の逆行列（掃き出し法）。解けなければ null
+  const n=A.length, M=A.map((r,i)=>[...r,...Array.from({length:n},(_,j)=>i===j?1:0)]);
+  for(let c=0;c<n;c++){
+    let p=c; for(let r=c+1;r<n;r++) if(Math.abs(M[r][c])>Math.abs(M[p][c])) p=r;
+    if(Math.abs(M[p][c])<1e-12) return null;
+    [M[c],M[p]]=[M[p],M[c]];
+    const d=M[c][c]; for(let j=c;j<2*n;j++) M[c][j]/=d;
+    for(let r=0;r<n;r++){ if(r===c) continue; const f=M[r][c]; if(!f) continue; for(let j=c;j<2*n;j++) M[r][j]-=f*M[c][j]; }
+  }
+  return M.map(r=>r.slice(n));
+}
+// items=[{task:{ta,tb}, r}] から強さを求める。戻り値：Map(キー 'u:ID' / 'm:ID' → {b, p:σ(b), moe:±%（丸めない）})。当てはめられないときは null
+function fitStrength(items){
+  const idx=new Map(), keys=[], col=k=>{ let i=idx.get(k); if(i==null){ i=keys.length; idx.set(k,i); keys.push(k); } return i; }, rows=[];
+  for(const {task:t,r} of items){ const g=gOf(r), w=wOf(r); if(!g) continue;
+    const x=new Map(), add=(k,v)=>x.set(k,(x.get(k)||0)+v);
+    t.ta.ids.forEach(id=>add('u:'+id,1)); t.tb.ids.forEach(id=>add('u:'+id,-1)); if(t.ta.m) add('m:'+t.ta.m,1); if(t.tb.m) add('m:'+t.tb.m,-1);
+    const f=[...x].filter(([,v])=>v).map(([k,v])=>[col(k),v]); // 両陣営にいるキャラは打ち消し合うので式に入らない
+    if(f.length) rows.push({f,w,g}); }
+  const n=keys.length; if(n<2||rows.length<n) return null;
+  const b=new Array(n).fill(0), sig=z=>1/(1+Math.exp(-z)), zOf=row=>row.f.reduce((s,[i,v])=>s+v*b[i],0);
+  let Hinv=null;
+  for(let it=0;it<30;it++){
+    const grad=b.map(v=>-STR_RIDGE*v), H=Array.from({length:n},(_,i)=>{ const r=new Array(n).fill(0); r[i]=STR_RIDGE; return r; });
+    for(const row of rows){ const p=sig(zOf(row)), e=row.w-row.g*p, h=row.g*p*(1-p);
+      for(const [i,vi] of row.f){ grad[i]+=vi*e; for(const [j,vj] of row.f) H[i][j]+=h*vi*vj; } }
+    Hinv=matInv(H); if(!Hinv) return null;
+    let mx=0; for(let i=0;i<n;i++){ let d=0; for(let j=0;j<n;j++) d+=Hinv[i][j]*grad[j]; d=Math.max(-2,Math.min(2,d)); b[i]+=d; mx=Math.max(mx,Math.abs(d)); }
+    if(mx<1e-7) break;
+  }
+  // サンドイッチ分散：V = H⁻¹ (Σ s sᵀ) H⁻¹、s＝カードごとの「勝ち数 − 見込み」×キャラの向き。対角だけ要る → Σ (H⁻¹ s)_i²
+  const v=new Array(n).fill(0);
+  for(const row of rows){ const e=row.w-row.g*sig(zOf(row)); for(let i=0;i<n;i++){ let a=0; for(const [j,vj] of row.f) a+=Hinv[i][j]*vj; v[i]+=a*a*e*e; } }
+  const m=rows.length, adj=m>n?m/(m-n):1, out=new Map();
+  for(const g of ['u','m']){ const is=keys.map((k,i)=>k[0]===g?i:-1).filter(i=>i>=0); if(!is.length) continue;
+    const mean=is.reduce((s,i)=>s+b[i],0)/is.length;
+    is.forEach(i=>{ const bb=b[i]-mean, p=sig(bb); out.set(keys[i],{b:bb,p,moe:196*p*(1-p)*Math.sqrt(v[i]*adj)}); }); }
+  return out;
+}
+function strengthHTML(R,unitW,mW){
+  if(!(R.done||R.stopped)) return '<p class="note">「単体の強さ」は実行が終わると表示されます。</p>';
+  const fit=fitStrength(R.items); if(!fit) return '';
+  const tbl=(title,pre,raw,nameOf,costOf)=>{
+    const rows=[...fit.entries()].filter(([k])=>k[0]===pre).map(([k,x])=>({id:k.slice(2),...x})).sort((a,b)=>b.p-a.p); if(!rows.length) return '';
+    return `<div><h3>${title}</h3><div class="tbl"><table class="stats"><thead><tr><th>#</th><th>名前</th><th title="ほかが全員平均的なとき、このキャラ1体の差で勝率が何%になるか（50%＝平均的）">単体の強さ</th><th></th><th title="上の表の、そのキャラを含む編成の平均勝率">平均勝率</th><th title="平均勝率 − 単体の強さ。プラスなら味方や相手に恵まれていたぶん、マイナスなら足を引っぱられていたぶん">差</th></tr></thead><tbody>${rows.map((x,i)=>{
+      const s=raw.get(x.id), rp=s&&s.g?s.w/s.g:null, d=rp==null?null:Math.round((rp-x.p)*100);
+      return `<tr class="${grade(x.p)}"><td class="num">${i+1}</td><td>${esc(nameOf(x.id))} <span class="sub small">C${costOf(x.id)}</span></td><td class="num rate"><b>${pct(x.p)}</b> <span class="sub small">±${Math.round(x.moe)}</span></td><td>${bar(x.p)}</td><td class="num">${rp==null?'-':pct(rp)}</td><td class="num">${d==null?'-':(d>0?'+':'')+d}</td></tr>`; }).join('')}</tbody></table></div></div>`; };
+  return `<div class="grid">${tbl('サーヴァント単体の強さ','u',unitW,id=>uOf(id).name,id=>uOf(id).cost)}${hasMaster()?tbl('マスター単体の強さ','m',mW,id=>mOf(id).name,id=>mOf(id).cost):''}</div>
+    <p class="note">「単体の強さ」は、味方と相手の強さを差し引いたそのキャラだけの強さです。全対戦をまとめて「両陣営のキャラの強さの差で勝敗が決まる」という式に当てはめて求めています。50%が平均的で、${R.opp==='same'?'同じ合計コスト同士の対戦なので「50%＝コスト相応」と読めます。':'相手の範囲が「すべて」なので、コストの高いキャラほど高く出ます。'}組み合わせの相性（特定の味方と組んだときだけ強い、など）は式に入っていないので、平均としての強さです。</p>`;
+}
+
 function resRank(R){
   const teams=new Map(), unitW=new Map(), mW=new Map(), cell=new Map();
   for(const x of R.items){
@@ -522,7 +582,7 @@ function resRank(R){
       <div class="sum"><span class="sub small">対戦数</span><b>${R.items.length}</b></div>${spread?`<div class="sum"><span class="sub small">${spread.split('：')[0]}</span><b style="font-size:16px">${spread.split('：')[1]}</b></div>`:''}</div>
     <div class="grid"><div style="grid-column:1/-1"><h3>編成ランキング</h3>${tbl}</div>
     ${unitTbl('サーヴァント別の平均勝率',unitW,id=>uOf(id).name,id=>uOf(id).cost)}
-    ${hasMaster()?unitTbl('マスター別の平均勝率',mW,id=>mOf(id).name,id=>mOf(id).cost):''}</div>${mx}
+    ${hasMaster()?unitTbl('マスター別の平均勝率',mW,id=>mOf(id).name,id=>mOf(id).cost):''}</div>${strengthHTML(R,unitW,mW)}${mx}
     <p class="note">キャラ別の勝率は、そのキャラを含む編成の勝率を試合数で平均したものです（味方・相手の組み合わせの影響を含みます）。</p>`;
 }
 
