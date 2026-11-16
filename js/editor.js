@@ -535,9 +535,9 @@ function renderForm(){
     <p class="sub small nm">相手や味方・敵の属性・クラス・状態・HP・キャラクターによって、場面ごとに専用のセリフを出します。上にあるものから順に見て、最初に条件を満たしたものを使い、どれも満たさなければ上の通常セリフを使います（スキル・鉛筆の面の専用セリフがあればそちらが優先）。「相手・対象」は、攻撃の対象・攻撃してきた相手・スキルの対象です（戦闘開始は敵の先頭）。</p>
     ${(u.condLines||[]).map((c,i)=>`<div class="subcard condline">
       <div class="row">
-        <label class="mini"><span>場面</span><select data-p="condLines.${i}.key">${Object.entries(LINE_KEYS).map(([k,v])=>opt(k,v,c.key)).join('')}</select></label>
-        <label class="mini"><span>条件を見る人</span><select data-p="condLines.${i}.who" data-act="structural">${Object.entries(LINE_WHO).map(([k,v])=>opt(k,v,c.who)).join('')}</select></label>
-        ${condIn(`condLines.${i}`,c,{},LINE_WHO[c.who||'other'])}
+        <label class="mini"><span>場面</span><select data-p="condLines.${i}.key" data-act="structural">${Object.entries(LINE_KEYS).map(([k,v])=>opt(k,v,c.key)).join('')}</select></label>
+        <label class="mini"><span>条件を見る人</span><select data-p="condLines.${i}.who" data-act="structural">${Object.keys(LINE_WHO).map(k=>opt(k,lineWhoLabel(c.key,k),c.who)).join('')}</select></label>
+        ${condIn(`condLines.${i}`,c,{},lineWhoLabel(c.key,c.who||'other'))}
         <span class="effbtns"><button data-act="clMove" data-i="${i}" data-d="-1" title="上へ">↑</button><button data-act="clMove" data-i="${i}" data-d="1" title="下へ">↓</button><button data-act="clDel" data-i="${i}" title="削除">×</button></span>
       </div>
       <p class="sub small nm clprev">${esc(clPrevText(c))}</p>
