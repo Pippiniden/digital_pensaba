@@ -40,6 +40,7 @@ function scheduleCpu(){
   if(!cpuActing()) return;
   cpuTimer=setTimeout(()=>{
     if(typeof fxBusy==='function' && fxBusy()){ scheduleCpu(); return; } // 演出の再生中は待つ
+    if(G.levels) G.level=G.levels[actor()]; // 観戦：CPUごとの強さ
     const s=cpuDecide(); if(s) act(s[0],s[1]||{});
   }, G.phase==='setup'?500:G.speed);
 }

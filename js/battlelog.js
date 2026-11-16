@@ -15,7 +15,7 @@ const BLOG_META={date:'日時',rule:'ルール',mode:'モード',p0:'プレイ�
 // ---------- 集める（ゲーム専用） ----------
 function blogCollect(){
   const tmp=document.createElement('div'), plain=h=>{ tmp.innerHTML=h; return tmp.textContent; };
-  const mode=G.scn?`シナリオ${G.scn.title?`「${G.scn.title}」`:''}`:G.arcade?arcadeLabel():typeof netOn==='function'&&netOn()?'オンライン対戦':G.mode==='watch'?`観戦（${CPU_LEVELS[G.level].name}）`:G.mode==='cpu'?`CPU戦（${CPU_LEVELS[G.level].name}）`:'2人対戦';
+  const mode=G.scn?`シナリオ${G.scn.title?`「${G.scn.title}」`:''}`:G.arcade?arcadeLabel():typeof netOn==='function'&&netOn()?'オンライン対戦':G.mode==='watch'?`観戦（CPU1:${CPU_LEVELS[G.levels[0]].name} / CPU2:${CPU_LEVELS[G.levels[1]].name}）`:G.mode==='cpu'?`CPU戦（${CPU_LEVELS[G.level].name}）`:'2人対戦';
   const units=[0,1].flatMap(pid=>{ let n=0; return sideUnits(pid).map(u=>{ const d=D(u.def), s=stOf(u);
     return {side:pid,id:u.def,name:d.name,role:u.master?TERMS.player:ORD[n++]||'',status:u.out?(u.master?'瀕死':TERMS.out):`HP ${fmt(u.hp)}/${maxHp(u)}`,dealt:fmt(s.dealt),taken:fmt(s.taken),kills:s.kills}; }); });
   const rows=G.log.map(l=>{ const say=l.cls==='say', d=say&&D(l.u);

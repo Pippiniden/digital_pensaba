@@ -455,9 +455,7 @@ const RTABS = { sum:'概要', unit:`${TERMS.unit}別`, tl:'ダメージ推移', 
 const stOf = u=>(G.stats&&G.stats[u.uid])||{dealt:0,taken:0,maxHit:0,kills:0,attacks:0,crits:0,ults:0,skills:0,blocked:0};
 const sideUnits = pid=>[...G.players[pid].party,...(G.players[pid].master?[G.players[pid].master]:[])];
 // 決着後の「もう一度」：同じ編成ですぐ対戦（data-same）／ 編成からやり直す、の2つに分ける
-const rematchBtns = ()=>G.mode==='watch'
-  ? `<button data-a="rematch" title="新しい編成をランダムに選んで観戦します">別の編成で観戦</button><button class="primary" data-a="rematch" data-same="1" title="同じ編成のまま、もう一度観戦します">同じ編成でもう一度</button>`
-  : `<button data-a="rematch" title="編成（キャラクター選択）からやり直します">キャラクター選択に戻る</button><button class="primary" data-a="rematch" data-same="1" title="おたがい同じ編成のまま、新しい対戦を始めます">同じ編成でもう一度</button>`;
+const rematchBtns = ()=>`<button data-a="rematch" title="編成（キャラクター選択）からやり直します">キャラクター選択に戻る</button><button class="primary" data-a="rematch" data-same="1" title="おたがい同じ編成のまま、新しい対戦を始めます">同じ編成でもう一度</button>`;
 // リザルトの枠と見出し（対戦のリザルト・アーケードの総合リザルト共通）。good＝勝ち（金）／ 負け（銀青）
 // 登場の動きは最初の1回だけ：開いてからの秒数（--el）を渡し、CSS 側でそのぶん animation-delay を戻す（描き直しても続きから再生される）
 function resultOpenHTML(good,cls=''){
@@ -787,7 +785,10 @@ function modeHTML(){
   // タイトル画面は常に表示し、選択（ルール・強さ・設定・チュートリアル）は上に浮かぶパネルで行う
   let panel='';
   if((s==='quick'||s==='watch')&&nav.step==='level'){
-    const lv=CPU_LEVELS[nav.level]?nav.level:'normal', w=s==='watch';
+    const lv=CPU_LEVELS[nav.level]?nav.level:'normal', lv2=CPU_LEVELS[nav.level2]?nav.level2:'normal', w=s==='watch';
+    const lvBtns=(cur,ui)=>Object.entries(CPU_LEVELS).map(([k,l])=>`<button class="gbtn ${k===cur?'p':''}" data-ui="${ui}" data-level="${k}">${esc(l.name)}</button>`).join('');
+    if(w) panel=`${back()}<div class="navstep"><h3>CPU 1 の強さ</h3><div class="levels">${lvBtns(lv,'navLevel')}</div><h3>CPU 2 の強さ</h3><div class="levels">${lvBtns(lv2,'navLevel2')}</div><p class="sub small arcnote">このあと、CPU 1・CPU 2 の編成を選びます。</p><div class="row mt"><button class="gbtn go" data-a="chooseMode" data-mode="watch" data-level="${lv}" data-level2="${lv2}">編成へ</button></div></div>`;
+    else
     panel=`${back()}<div class="navstep"><h3>${w?'両CPUの強さ':'CPUの強さ'}</h3><div class="levels">${Object.entries(CPU_LEVELS).map(([k,l])=>`<button class="gbtn ${k===lv?'p':''}" data-ui="navLevel" data-level="${k}">${esc(l.name)}</button>`).join('')}</div>${w?'<p class="sub small arcnote">編成はランダムに選ばれます（同コスト）。</p>':''}<div class="row mt"><button class="gbtn go" data-a="chooseMode" data-mode="${w?'watch':'cpu'}" data-level="${lv}">${w?'観戦する':'次へ'}</button></div></div>`;
   }else if(s==='arcade'&&nav.step==='kind'){ // アーケード：アーケード（全5戦）かエンドレスか
     const df=ARCADE.diffs[nav.diff]?nav.diff:'normal';
@@ -954,6 +955,7 @@ function uiAct(a,ds){
     case 'navClose': UI.nav={s:'top',step:'rule'}; break;
     case 'navNext': UI.nav.step='level'; break;
     case 'navLevel': UI.nav.level=ds.level; break;
+    case 'navLevel2': UI.nav.level2=ds.level; break;
     case 'navDiff': UI.nav.diff=ds.diff; break;
     case 'navKind': UI.nav.step='kind'; break;
     case 'openTotal': UI.result='total'; break;
