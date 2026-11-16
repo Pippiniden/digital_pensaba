@@ -201,10 +201,55 @@ body[data-screen="battle"] #app{overflow:hidden}
 .mbody{position:relative;width:min(600px,100%);max-height:calc(100vh - 32px);overflow:auto;padding:18px;border-radius:6px;border:1px solid var(--gold);
   background:var(--lattice),linear-gradient(160deg,#16295a,var(--panel) 40%,var(--panel2));box-shadow:var(--frame),0 10px 40px rgba(0,0,0,.6)}
 /* リザルト */
-.result .mbody{width:min(560px,100%);text-align:center}
-.rtitle{margin:0;font:700 34px var(--serif);letter-spacing:.2em;color:var(--gold-hi);text-shadow:0 0 18px rgba(246,227,161,.6)}
-.rsub{margin:4px 0 2px;font:700 18px var(--serif)}
-.rturn{margin:0 0 12px}
+.result .mbody{width:min(560px,100%);text-align:center;overflow-x:hidden}
+/* 見出し（上から差す光・放射状の筋は廃止） */
+.rhead{position:relative;margin:-18px -18px 12px;padding:18px 18px 10px;overflow:hidden;border-bottom:1px solid var(--gold-lo)}
+.rhead>*{position:relative}
+.rkicker{display:flex;align-items:center;justify-content:center;gap:12px;margin:0 0 4px;font:700 11px var(--serif);letter-spacing:.45em;text-indent:.45em;color:var(--gold)}
+.rkicker span{white-space:nowrap}
+.rkicker::before,.rkicker::after{content:'';flex:1 1 0;max-width:90px;height:1px;background:linear-gradient(90deg,transparent,var(--gold))}
+.rkicker::after{scale:-1 1}
+.rtitle{margin:0;font:700 clamp(32px,8vw,54px)/1.15 var(--serif);letter-spacing:.18em;text-indent:.18em;
+  background:linear-gradient(180deg,#fff7d6,var(--gold-hi) 35%,var(--gold) 65%,var(--gold-lo));-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 2px 2px rgba(0,0,0,.9)) drop-shadow(0 0 18px rgba(255,220,150,.45))}
+.rsub{margin:2px 0;font:700 18px var(--serif)}
+.rturn{margin:0}
+.result.rd .rkicker{color:var(--sub)}
+.result.rd .rkicker::before,.result.rd .rkicker::after{background:linear-gradient(90deg,transparent,var(--sub))}
+.result.rd .rtitle{background-image:linear-gradient(180deg,#eef2ff,#a9b6da 50%,#566289);filter:drop-shadow(0 2px 2px rgba(0,0,0,.9))}
+/* 概要のいちばん上：MVP と、与ダメージの比べっこ */
+.rmvp{display:grid;grid-template-columns:76px minmax(0,1fr);gap:12px;align-items:center;margin-bottom:10px;padding:8px 12px 8px 8px;text-align:left;
+  border:1px solid var(--gold);border-radius:4px;background:linear-gradient(100deg,rgba(246,227,161,.2),rgba(6,13,34,.5) 60%)}
+.rmvp-pt{position:relative;width:76px;height:76px;overflow:hidden;border-radius:4px;border:1px solid var(--gold-hi);background:var(--panel2);box-shadow:0 0 14px rgba(246,227,161,.45)}
+.rmvp-tx{min-width:0;display:flex;flex-direction:column;align-items:flex-start;gap:2px}
+.rmvp-tx>small{padding:0 10px;font:700 11px var(--serif);letter-spacing:.3em;text-indent:.3em;color:#1a1206;background:linear-gradient(180deg,var(--gold-hi),var(--gold));clip-path:polygon(6px 0,100% 0,calc(100% - 6px) 100%,0 100%)}
+.rmvp-tx>b{max-width:100%;font:700 clamp(17px,3.4vw,22px) var(--serif);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rmvp-kv{display:flex;flex-wrap:wrap;gap:0 14px;font-size:12px;color:var(--sub)}
+.rmvp-kv b{font:700 16px var(--serif);color:var(--gold-hi)}
+.rvs{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:2px 10px;align-items:center;margin-bottom:10px}
+.rvs>b{font:700 18px var(--serif)}
+.rvs small{grid-column:1/-1;text-align:center;font-size:11px;color:var(--sub)}
+.rvsbar{display:flex;gap:2px;height:8px;overflow:hidden;border-radius:4px;background:rgba(255,255,255,.08)}
+.rvsbar i{min-width:0;height:100%}
+.rrow.hp{grid-template-rows:auto 3px;row-gap:3px}
+.rrow.hp .pimg{grid-row:1/3}
+.rhp{grid-column:2/4;height:3px;border-radius:2px;background:rgba(255,255,255,.1)!important;overflow:hidden}
+.rhp::after{content:'';display:block;width:var(--w);height:100%;background:var(--p0)}
+.rhp.p1bg::after{background:var(--p1)}
+/* 登場（最初の1回だけ）：--el＝リザルトを開いてからの秒数。そのぶん遅れを戻すので、描き直しても途中から続く */
+.result .rtitle{animation:arcPop .5s cubic-bezier(.2,.9,.3,1.2) calc(.05s - var(--el,99s)) both}
+.result .rsub,.result .rturn{animation:rFade .4s ease-out calc(.35s - var(--el,99s)) both}
+.result .rmvp,.result .astages{animation:rUp .45s ease-out calc(.45s - var(--el,99s)) both}
+.result .rvs{animation:rUp .45s ease-out calc(.6s - var(--el,99s)) both}
+.result .rvsbar{animation:rWipe .7s ease-out calc(.75s - var(--el,99s)) both}
+.result .rside{animation:rUp .45s ease-out calc(.7s - var(--el,99s)) both}
+.result .rside+.rside{animation-delay:calc(.8s - var(--el,99s))}
+.result .rhp::after{animation:rBar .6s ease-out calc(1s - var(--el,99s)) both}
+@keyframes rFade{from{opacity:0}}
+@keyframes rUp{from{opacity:0;transform:translateY(14px)}}
+@keyframes rWipe{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0)}}
+@keyframes rBar{from{width:0}}
+@media (prefers-reduced-motion:reduce){.result *,.result *::before,.result *::after{animation:none!important}}
 .rsides{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;text-align:left}
 .rside{padding:8px;border:1px solid rgba(246,227,161,.25);border-radius:4px;background:rgba(6,13,34,.5)}
 .rside.rwin{border-color:var(--gold-hi);box-shadow:0 0 14px rgba(246,227,161,.35)}

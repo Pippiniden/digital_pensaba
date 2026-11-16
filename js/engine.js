@@ -1104,11 +1104,20 @@ const ACTIONS = {
       : {mode:'pvp', level:'normal', cpu:[false,false], names:mode==='net'?['ホスト','ゲスト']:[TERMS.player+'1',TERMS.player+'2']}); // net＝オンライン対戦（net.js）。進め方はローカル対戦と同じ
   },
   scnBattle(spec){ if(spec&&Array.isArray(spec.enemy)) scnBegin(spec); },
-  rematch(){
+  // もう一度。same＝同じ編成のまますぐ対戦（決着後だけ。出目は毎回変わる）／ なし＝編成（キャラクター選択）からやり直す
+  rematch({same}={}){
     if(G.scn){ scnBegin({...G.scn.spec, prev:{picks:G.picks[0].slice(), mpick:G.mpicks[0], rule:G.rule}}); return; } // シナリオ：同じ戦闘に再挑戦
-    if(G.arcade){ const d=G.arcade.diff, en=G.arcade.endless, speed=G.speed; newGame(keepRule()); arcadeStart(d,en); G.speed=speed; return; } // アーケード：同じ難易度で編成からやり直す
-    const cfg={mode:G.mode, level:G.level, cpu:G.cpu, speed:G.speed, names:G.players.map(p=>p.name)};
+    same=!!same&&G.phase==='over';
+    const okU=ids=>ids.length>0&&ids.every(id=>UNITS.some(u=>u.id===id)), okM=id=>!masterRule()||MASTERS.some(m=>m.id===id);
+    if(G.arcade){ // アーケード：同じ難易度で最初から。same は編成を飛ばして STAGE 1 の紹介へ
+      const A=G.arcade, speed=G.speed; newGame(keepRule()); arcadeStart(A.diff,A.endless); G.speed=speed;
+      if(same&&okU(A.picks)&&okM(A.mpick)){ G.picks[0]=A.picks.slice(); G.mpicks[0]=A.mpick; G.arcade.picks=A.picks.slice(); G.arcade.mpick=A.mpick; arcadeStage(); }
+      return;
+    }
+    const cfg={mode:G.mode, level:G.level, cpu:G.cpu, speed:G.speed, names:G.players.map(p=>p.name)}, picks=G.picks.map(p=>p.slice()), mp=G.mpicks.slice();
+    const keep=same&&picks.every(okU)&&mp.every(okM);
     newGame(keepRule()); applyMode(cfg);
+    if(keep){ G.picks=picks; G.mpicks=mp; G.phase='init'; startGame(); }
   },
   toggleSpeed(){ G.speed = G.speed>=500 ? 250 : G.speed>150 ? 120 : 700; },
   setupToggle({id}){

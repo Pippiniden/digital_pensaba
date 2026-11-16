@@ -16,7 +16,7 @@ turn: actRoll → skill → action → target → end → (endPhase → swap tur
 | `action` | ④ Roll the pencil for each allocated action to decide commands. If the face is a `copyRoll` special, `G.copy` waits for the player to click another alive servant (either side); its post-ascension face is rolled and replaces the command | `rollAction` `cardClick` `toTarget` |
 | `target` | ⑤ Choose the attack target (only `taunt` units if any). For an ultimate with no `t:'target'` effect (`ultNoTarget`: AoE or support), `toTargetPhase` sets `G.targetAll` so every enemy is already targeted; clicking an enemy or `resolve` fires it | `cardClick` `resolve` |
 | `end` | After damage resolution. ⑦ Damage over time, star gain, turn swap | `endTurn` |
-| `over` | Game decided. Only `restart` `rematch` `toggleSpeed` `useDefaultData` are accepted | |
+| `over` | Game decided. Only `restart` `rematch` `toggleSpeed` `useDefaultData` are accepted. `rematch` goes back to setup; `rematch {same}` starts a new match at once with the same parties (arcade: same party, from the STAGE 1 intro) | |
 
 Damage resolution (`resolveDamage`) in brief: `resolveCommand` per command in order → three same-color commands trigger a chain (R: damage +30 / B: acting units' NP +20 / G: 10 stars generated) → three actions by the same character trigger a Brave Chain (extra attack). There are no class matchups.
 
