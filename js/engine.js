@@ -30,7 +30,7 @@ let G;
 let NEWGAME_N=0, FX_TAP=null;
 function newGame(o={}){
   NEWGAME_N++; if(FX_TAP) FX_TAP.length=0;
-  G = { phase:'mode', mode:null, rule:o.rule||'team', handicap:o.handicap??true, cpu:[false,false], level:'normal', scn:null, /* シナリオの戦闘中だけ：{spec,title,lock,mlock,pool,cap,pick,loseGo}（scnBegin） */ arcade:null, /* アーケード中だけ：{diff,stage,picks,mpick,leads,results,continues}（arcadeStart） */ speed:(typeof window!=='undefined'&&window.SPEED_PREF)||700, seed:String(Math.random()),
+  G = { phase:'mode', mode:null, rule:o.rule||'team', handicap:o.handicap??true, cpu:[false,false], level:'normal', scn:null, /* シナリオの戦闘中だけ：{spec,title,lock,mlock,pool,cap,pick,loseGo}（scnBegin） */ draft:null, /* ドラフトで編成した試合だけ：{pool,mpool,taken,order,i,done}（draftStart） */ arcade:null, /* アーケード中だけ：{diff,stage,picks,mpick,leads,results,continues}（arcadeStart） */ speed:(typeof window!=='undefined'&&window.SPEED_PREF)||700, seed:String(Math.random()),
     setupPid:0, picks:[[],[]], mpicks:[null,null], setupMsg:'',
     // master：マスタールールのマスター（makeMaster）。spell：令呪 null/'decl'(宣言済み・次のマスターフェイズで使う)/'used'
     // evac：退避中（次の相手ターンの間） / zeroNext：前のターンの行動回数が0だった（次の行動回数+1）
@@ -960,6 +960,44 @@ function scnRandom(only){
   }
   G.picks[0]=best;
 }
+// ---------- ドラフト ----------
+// 流れ：chooseMode(draft) → phase 'draft'（候補から交互に1つずつ取る）→ 全員取り終えたら done → draftGo で対戦
+// G.draft：pool＝候補のサーヴァント / mpool＝候補のマスター / taken＝{id:取った陣営} / order＝取る順（陣営の並び。折り返し式）/ i＝今の番 / done＝取り終えた
+// マスターのいるルールは、最初の1回でマスターを取る。コスト上限は通常の編成と同じ（取れるものがない番は飛ばす）
+const draftTurn = ()=>G.draft&&!G.draft.done?G.draft.order[G.draft.i]:null;
+const draftNeedM = pid=>masterRule()&&!G.mpicks[pid];
+function draftCan(pid,id){
+  const R=G.draft, d=D(id); if(!R||R.done||!d||(pid!==0&&pid!==1)) return false;
+  if(R.mpool.includes(id)) return draftNeedM(pid)&&(R.taken[id]==null||R.mpool.length<2); // マスターが1人しかいないデータでは両方が同じマスター
+  const picks=G.picks[pid], rs=ruleset();
+  return !draftNeedM(pid)&&R.pool.includes(id)&&R.taken[id]==null&&picks.length<rs.partyMax&&(rs.partyMax===1||sumCost(picks)+d.cost+mcost(pid)<=costCap());
+}
+const draftMoves = pid=>G.draft?[...G.draft.mpool,...G.draft.pool].filter(id=>draftCan(pid,id)):[];
+function draftStart(){
+  const rs=ruleset(), team=rs.partyMax>1, mix=a=>{ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+  const n=Math.min(UNITS.length,team?DRAFT.pool.team:DRAFT.pool.solo), need=rs.partyMax*2;
+  // チーム：両方が上限まで編成しやすいように、安い順に need 騎の合計コストが2人分の枠に収まる候補が出るまで引き直す
+  const room=2*(costCap()-(rs.master?(rs.costBonus?rs.costBonus.base:0):0));
+  let pool=[];
+  for(let t=0;t<40;t++){
+    pool=mix(UNITS).slice(0,n);
+    if(!team||pool.map(d=>d.cost).sort((a,b)=>a-b).slice(0,need).reduce((s,c)=>s+c,0)<=room) break;
+  }
+  const first=Math.random()<.5?0:1, per=rs.partyMax+(rs.master?1:0);
+  G.picks=[[],[]]; G.mpicks=[null,null]; G.setupMsg='';
+  G.draft={ pool:pool.map(d=>d.id), mpool:rs.master?mix(MASTERS).slice(0,DRAFT.masters).map(m=>m.id):[], taken:{},
+    order:Array.from({length:per*2},(_,k)=>k%4===0||k%4===3?first:1-first), i:0, done:false };
+  G.phase='draft';
+  draftSkip();
+}
+// 取れるものがない番を飛ばす。最後まで行ったら取り終わり（CPUの側はHPが高い順に並べる）
+function draftSkip(){
+  const R=G.draft;
+  while(R.i<R.order.length&&!draftMoves(R.order[R.i]).length) R.i++;
+  if(R.i<R.order.length) return;
+  R.done=true;
+  [0,1].forEach(pid=>{ if(G.cpu[pid]&&ruleset().partyMax>1) G.picks[pid].sort((a,b)=>D(b).hp-D(a).hp); });
+}
 function applyMode(cfg){
   Object.assign(G,{mode:cfg.mode, level:cfg.level, levels:cfg.levels||null, cpu:cfg.cpu, speed:cfg.speed||G.speed, phase:'setup'});
   cfg.names.forEach((n,i)=>G.players[i].name=n);
@@ -1098,6 +1136,7 @@ const ACTIONS = {
   toggleHandicap(){ if(G.phase==='mode') G.handicap=!G.handicap; },
   chooseMode({mode,level,level2,diff,endless}){
     if(G.phase!=='mode') return;
+    if(mode==='draft'){ applyMode({mode:'cpu', level:CPU_LEVELS[level]?level:'normal', cpu:[false,true], names:['あなた','CPU']}); draftStart(); return; } // ドラフト：編成の代わりに候補を取り合う
     if(mode==='arcade'){ arcadeStart(diff,endless==='1'||endless===true); return; }
     if(mode==='watch'){ const lv=l=>CPU_LEVELS[l]?l:'normal'; applyMode({mode, level:lv(level), levels:[lv(level),lv(level2)], cpu:[true,true], names:['CPU 1','CPU 2']}); return; } // 観戦：編成は人が選ぶ。強さはCPUごと
     applyMode(mode==='cpu'
@@ -1116,9 +1155,10 @@ const ACTIONS = {
       return;
     }
     const cfg={mode:G.mode, level:G.level, levels:G.levels, cpu:G.cpu, speed:G.speed, names:G.players.map(p=>p.name)}, picks=G.picks.map(p=>p.slice()), mp=G.mpicks.slice();
-    const keep=same&&picks.every(okU)&&mp.every(okM);
+    const keep=same&&picks.every(okU)&&mp.every(okM), dr=G.draft;
     newGame(keepRule()); applyMode(cfg);
-    if(keep){ G.picks=picks; G.mpicks=mp; G.phase='init'; startGame(); }
+    if(keep){ G.picks=picks; G.mpicks=mp; G.draft=dr; G.phase='init'; startGame(); }
+    else if(dr) draftStart(); // ドラフト：新しい候補で取り直す
   },
   toggleSpeed(){ G.speed = G.speed>=500 ? 250 : G.speed>150 ? 120 : 700; },
   setupToggle({id}){
@@ -1229,6 +1269,22 @@ const ACTIONS = {
     }
     if(G.setupPid===0){ G.setupPid=1; G.setupMsg=''; } else { G.phase='init'; startGame(); }
   },
+  // ドラフト：候補を1つ取る（マスターのいるルールは最初にマスター）
+  draftPick({id}={}){
+    if(G.phase!=='draft') return;
+    const pid=draftTurn(), R=G.draft; G.setupMsg='';
+    if(!draftCan(pid,id)){ if(pid!=null&&D(id)) G.setupMsg=R.mpool.includes(id)?(draftNeedM(pid)?'すでに取られています':`${TERMS.player}はもう取っています`):draftNeedM(pid)?`先に${TERMS.player}を取ってください`:R.taken[id]!=null?'すでに取られています':`コスト合計が${costCap()}を超えます`; return; }
+    R.taken[id]=pid;
+    if(R.mpool.includes(id)) G.mpicks[pid]=id; else G.picks[pid].push(id);
+    R.i++; draftSkip();
+  },
+  // ドラフト：取り終えたあと、自分の並び順を変える（押したキャラを先頭に）
+  draftLead({id}={}){
+    if(G.phase!=='draft'||!G.draft.done) return;
+    const pid=[0,1].find(p=>!G.cpu[p]&&G.picks[p].includes(id)); if(pid==null) return;
+    const a=G.picks[pid]; a.splice(a.indexOf(id),1); a.unshift(id);
+  },
+  draftGo(){ if(G.phase==='draft'&&G.draft.done&&G.picks.every(p=>p.length)&&(!masterRule()||G.mpicks.every(Boolean))){ G.phase='init'; startGame(); } },
   // アーケード：ステージ紹介から対戦を始める
   arcadeGo(){ if(G.arcade&&G.phase==='stage'){ G.phase='init'; startGame(); } },
   // アーケード：勝ったステージを記録して、次のステージの紹介へ（編成はそのまま）

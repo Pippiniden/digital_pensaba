@@ -7,25 +7,31 @@
      状態 G と、その操作で出た演出イベントをゲストへ送る。ゲストは受け取った G をそのまま表示する（乱数の同期は要らない）
    - データ：ホストのキャラクターデータ（エディタで反映したものも含む）を最初に送り、ゲストは対戦中だけそれを使う（setNetData）
    - ホスト＝プレイヤー0、ゲスト＝プレイヤー1。編成はホスト→ゲストの順（ローカル対戦と同じ流れ）
+   - 再接続：対戦中に切れたら、対戦をそのまま残して「中断」（NET.hold）にする。両方とも操作できなくなり、再接続の窓（netHoldHTML）で
+     もう一度コードを送り合うと、ホストが今の状態を送り直して続きから再開する。ゲストがページを読み込み直したときは「部屋に入る」から入り直せば同じ。
+     ホストが読み込み直したときは、同じタブなら保存した対戦（game-ui.js の saveMatch）から中断の状態で戻る。
+     「タイトルに戻る」で自分から抜けたときだけ、相手側も対戦を終える
    engine.js の act() が netAct / netTapOn / netSync を呼ぶ。画面の状態は UI.net（接続の画面）と UI.netMsg（お知らせ）
    ===================================================================== */
 const NET_VER = 1;                 // 通信の形式が変わったら上げる（違う版同士はつながない）
 const NET_FRAME = 4000;            // 1回に送る文字数（長いメッセージは分けて送る）
 const NET_ICE = [{urls:['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302']}];
 const NET_HIGH = 1<<20;            // 送信待ちがこれ（バイト）を超えたら、減るまで次を送らない
-const NET = { on:false, me:0, pc:null, dc:null, remote:false, ng:null, logSent:0, lastNg:null, buf:'', q:[], tries:0, lastErr:'', sent:0, got:0 };
-const netOn = ()=>NET.on;
-const netMe = ()=>NET.on?NET.me:0;
-// 相手が操作する番（自分は待つ）。編成中も含む
-const netWaiting = ()=>NET.on&&!['mode','over','init','stage'].includes(G.phase)&&actor()!==NET.me;
+// hold＝中断中（接続が切れたが対戦は残している。{msg,diag}）
+const NET = { on:false, hold:null, me:0, pc:null, dc:null, remote:false, ng:null, logSent:0, lastNg:null, buf:'', q:[], tries:0, lastErr:'', sent:0, got:0 };
+const netOn = ()=>NET.on||!!NET.hold; // オンライン対戦の最中（中断中も含む）
+const netMe = ()=>netOn()?NET.me:0;
+// 相手が操作する番（自分は待つ）。編成中も含む。中断中はどちらも操作できない
+const netWaiting = ()=>!!NET.hold||NET.on&&!['mode','over','init','stage'].includes(G.phase)&&actor()!==NET.me;
 // ゲストからは受け付けない操作（部屋の設定・ひとり用のもの）
 const NET_BAN = ['restart','useDefaultData','setRule','toggleHandicap','chooseMode','scnBattle','arcadeGo','arcadeNext','arcadeContinue','toggleSpeed'];
 
 // ---------- engine.js の act() から呼ばれる ----------
 // true を返すと、その操作はここで終わり（エンジンでは実行しない）
 function netAct(type,p){
-  if(!NET.on) return false;
-  if(type==='restart'){ netLeave(); return false; }         // タイトルに戻る＝退出。このあとふつうに newGame する
+  if(!netOn()) return false;
+  if(type==='restart'){ netLeave(); return false; }
+  if(NET.hold) return true;                                 // 中断中：つなぎ直すまで何も進めない         // タイトルに戻る＝退出。このあとふつうに newGame する
   if(NET.me===1){ netSend({t:'a',type,p}); return true; }   // ゲスト：ホストへ送るだけ
   if(NET.remote) return false;                              // ホスト：ゲストから届いた操作を実行中
   return type!=='rematch'&&netWaiting();                    // ホスト：相手の番の操作は捨てる
@@ -91,10 +97,11 @@ function netRecv(data){
   NET.buf+=data.slice(1); if(data[0]!=='F') return;
   let m; try{ m=JSON.parse(NET.buf); }catch(e){ m=null; NET.lastErr='受信データを読めませんでした（'+netErrText(e)+'）'; console.error('[net] parse',e); } NET.buf='';
   if(!m) return;
-  if(m.t==='bye'){ netDrop('相手が退出しました'); return; }
+  if(m.t==='bye'){ if(m.re) netDrop('相手のページが閉じられました（読み込み直し・終了）'); else netDrop('相手が退出しました',true); return; } // re＝ページを閉じた（戻ってくるかもしれない）
   if(NET.me===1){
     if(m.t==='hello'){
-      if(m.v!==NET_VER||!Array.isArray(m.units)||!Array.isArray(m.masters)){ netDrop('ゲームの版が合いません。2人ともページを読み込み直してください'); return; }
+      if(m.v!==NET_VER||!Array.isArray(m.units)||!Array.isArray(m.masters)){ netDrop('ゲームの版が合いません。2人ともページを読み込み直してください',true); return; }
+      NET.hold=null; UI.netMsg=null; UI.netDiag=null;
       setNetData({units:m.units,masters:m.masters}); UI.net=null; UI.nav={s:'top',step:'rule'}; SHOW_IDS=null; render();
     }else if(m.t==='s'&&m.g){ try{ netApply(m); }catch(e){ netFail('受け取った状態を表示できませんでした',e); } }
     return;
@@ -114,14 +121,23 @@ function netCloseConn(){
   try{ if(pc){ pc.onconnectionstatechange=null; pc.close(); } }catch(e){}
 }
 // 自分から抜ける（タイトルに戻る）
-function netLeave(){ if(!NET.on) return; netSend({t:'bye'}); netCloseConn(); setNetData(null); UI.net=null; }
-// 切れた・相手が抜けた：タイトルに戻してお知らせを出す
-function netDrop(msg){
+function netLeave(){ if(!netOn()) return; netSend({t:'bye'}); netCloseConn(); NET.hold=null; setNetData(null); UI.net=null; }
+// 切れた・相手が抜けた。対戦中なら中断にして再接続を待つ（end＝相手が自分から抜けたなど、続けられないとき）。それ以外はタイトルに戻してお知らせを出す
+function netDrop(msg,end){
   const was=NET.on, diag=netDiag(); netCloseConn();
   console.warn('[net]',msg,diag);
-  if(!was){ if(UI.net){ UI.net.busy=false; UI.net.err=msg; UI.net.diag=diag; if(G.phase==='mode') render(); } return; }
-  setNetData(null); newGame(keepRule()); UI.net=null; UI.nav={s:'top',step:'rule'}; SHOW_IDS=null; UI.netMsg=msg; UI.netDiag=diag; render();
+  if(!was){
+    if(NET.hold) UI.net={step:'top'}; // 再接続に失敗：コードを作るところからやり直す
+    if(UI.net){ UI.net.busy=false; UI.net.err=msg; UI.net.diag=diag; if(G.phase==='mode'||NET.hold) render(); }
+    return;
+  }
+  if(!end&&G.phase!=='mode'){ netHold(msg,diag); return; }
+  NET.hold=null; setNetData(null); newGame(keepRule()); UI.net=null; UI.nav={s:'top',step:'rule'}; SHOW_IDS=null; UI.netMsg=msg; UI.netDiag=diag; render();
 }
+// 中断にする：対戦（G）はそのまま、再接続の窓を出す
+function netHold(msg,diag){ NET.hold={msg,diag:diag||''}; UI.net={step:'top'}; UI.netMsg=null; UI.netDiag=null; render(); }
+// ホストがページを読み込み直した：保存してあった対戦（game-ui.js の restoreMatch）を中断の状態で戻す
+function netResumeHost(){ NET.me=0; NET.hold={msg:'ページが読み込み直されたため、接続が切れました',diag:''}; UI.net={step:'top'}; }
 function netWire(dc){
   NET.dc=dc;
   dc.onmessage=e=>netRecv(e.data);
@@ -130,11 +146,13 @@ function netWire(dc){
   dc.onopen=()=>{
     if(NET.dc!==dc) return;
     NET.on=true; clearTimeout(NET.timer);
-    if(NET.me===0){ // ホスト：データを送って編成へ
+    if(NET.me===0){ // ホスト：データを送って編成へ（再接続なら、今の状態を送って続きから）
+      const resume=!!NET.hold; NET.hold=null;
       netSend({t:'hello',v:NET_VER,units:UNITS,masters:MASTERS});
       UI.net=null; UI.nav={s:'top',step:'rule'};
-      act('chooseMode',{mode:'net'});
-    }else if(UI.net){ UI.net.step='joined'; if(G.phase==='mode') render(); }
+      if(resume){ netSync([]); render(); }
+      else act('chooseMode',{mode:'net'});
+    }else if(UI.net){ UI.net.step='joined'; if(G.phase==='mode'||NET.hold) render(); }
   };
 }
 function netNewPc(){
@@ -198,14 +216,18 @@ async function netJoinCode(code){
 
 // ---------- 画面（タイトルの「オンライン対戦」パネル。modeHTML から呼ぶ） ----------
 // UI.net＝{step:'top'|'hostRule'|'host'|'join'|'reply'|'joined', code, inp, err, busy, copied}
+// コードの欄など、接続の画面の部品（タイトルのパネルと再接続の窓で共通）
+const netParts = N=>({
+  err:N.err?`<p class="warn nm">${esc(N.err)}</p>${N.diag?`<p class="sub small netdiag">詳細：${esc(N.diag)}</p>`:''}`:'',
+  out:(label,note)=>`<div class="netbox"><b>${label}</b><textarea class="netcode" readonly data-netout>${esc(N.code||'')}</textarea>
+    <div class="row"><button data-ui="netCopy">${N.copied?'コピーしました':'コードをコピー'}</button></div><small class="sub">${note}</small></div>`,
+  inp:(label,ph)=>`<div class="netbox"><b>${label}</b><textarea class="netcode" data-netin placeholder="${ph}">${esc(N.inp||'')}</textarea></div>`,
+  busy:t=>`<p class="thinking">${t}</p>`,
+});
 function netPanelHTML(rulePick){
   const N=UI.net||(UI.net={step:'top'});
   const bar=`<div class="navbar"><button class="back" data-ui="netBack">戻る</button></div><p class="navtitle">オンライン対戦</p>`;
-  const err=N.err?`<p class="warn nm">${esc(N.err)}</p>${N.diag?`<p class="sub small netdiag">詳細：${esc(N.diag)}</p>`:''}`:'';
-  const out=(label,note)=>`<div class="netbox"><b>${label}</b><textarea class="netcode" readonly data-netout>${esc(N.code||'')}</textarea>
-    <div class="row"><button data-ui="netCopy">${N.copied?'コピーしました':'コードをコピー'}</button></div><small class="sub">${note}</small></div>`;
-  const inp=(label,ph)=>`<div class="netbox"><b>${label}</b><textarea class="netcode" data-netin placeholder="${ph}">${esc(N.inp||'')}</textarea></div>`;
-  const busy=t=>`<p class="thinking">${t}</p>`;
+  const {err,out,inp,busy}=netParts(N);
   if(typeof RTCPeerConnection!=='function') return `${bar}<p class="warn nm">このブラウザはオンライン対戦に対応していません。</p>`;
   switch(N.step){
     case 'hostRule': return `${bar}${rulePick(`<button class="gbtn go" data-ui="netHost" ${N.busy?'disabled':''}>招待コードを作る</button>`)}${N.busy?busy('コードを作成中'):''}${err}`;
@@ -230,16 +252,37 @@ function netPanelHTML(rulePick){
       <button class="gbtn" data-ui="netStep" data-v="join">部屋に入る（ゲスト）</button></div>
     <p class="sub small arcnote">2人のブラウザを直接つないで対戦します。ホストが作った招待コードと、ゲストが作った返信コードを、Discord などで1回ずつ送り合ってください。<br>キャラクターデータはホストのものを使います。</p>${err}</div>`;
 }
+// 再接続の窓（中断中。どの画面でも重ねて出す）。コードの送り合いは最初の接続と同じ：ホストが招待コード → ゲストが返信コード
+function netHoldHTML(){
+  const H=NET.hold, N=UI.net||(UI.net={step:'top'}), host=NET.me===0, {err,out,inp,busy}=netParts(N);
+  const quit=`<button class="ghost" data-a="restart" title="対戦を終えてタイトルに戻ります">対戦をやめる</button>`;
+  let body;
+  if(host) body=N.step==='host'
+    ? `${out('① 招待コード（相手に送る）','このコードを相手に送ってください。相手が作った返信コードを下に貼り付けます。')}
+       ${inp('② 返信コード（相手から受け取る）','相手から届いた返信コードを貼り付け')}${err}${N.busy?busy('接続中'):''}
+       <div class="row mt">${quit}<button class="primary" data-ui="netConnect" ${N.busy?'disabled':''}>接続する</button></div>`
+    : `<p class="sub small">新しい招待コードを作って相手に送ると、続きから再開できます。相手がページを読み込み直した場合は、相手に「オンライン対戦 → 部屋に入る（ゲスト）」から入ってもらってください。</p>${err}${N.busy?busy('コードを作成中'):''}
+       <div class="row mt">${quit}<button class="primary" data-ui="netHost" ${N.busy?'disabled':''}>招待コードを作る</button></div>`;
+  else body=N.step==='reply'||N.step==='joined'
+    ? `${out('② 返信コード（ホストに送る）','このコードをホストに送ってください。ホストが貼り付けると続きから再開します。')}${err}${busy(N.step==='joined'?'つながりました。対戦の状態を受け取っています':'ホストの接続を待っています')}
+       <div class="row mt">${quit}</div>`
+    : `<p class="sub small">ホストに新しい招待コードを作ってもらい、下に貼り付けてください。</p>
+       ${inp('① 招待コード（ホストから受け取る）','ホストから届いた招待コードを貼り付け')}${err}${N.busy?busy('コードを作成中'):''}
+       <div class="row mt">${quit}<button class="primary" data-ui="netJoin" ${N.busy?'disabled':''}>返信コードを作る</button></div>`;
+  return `<div class="modal linkask nethold"><div class="mback"></div><div class="mbody navpanel"><p class="navtitle">対戦を中断しています</p>
+    <div class="navstep netstep"><p class="nm">${esc(H.msg)}。対戦はこのまま残っています。</p>${H.diag?`<p class="sub small netdiag">詳細：${esc(H.diag)}</p>`:''}${body}</div></div></div>`;
+}
 // お知らせ（切断など）。全画面共通の重ね表示（overlaysHTML）
 function netNoticeHTML(){
+  if(NET.hold) return netHoldHTML();
   if(!UI.netMsg) return '';
   return `<div class="modal linkask"><div class="mback" data-ui="netMsgOk"></div><div class="mbody"><p>${esc(UI.netMsg)}</p>${UI.netDiag?`<p class="sub small netdiag">詳細：${esc(UI.netDiag)}</p>`:''}<div class="row"><button class="primary" data-ui="netMsgOk">OK</button></div></div></div>`;
 }
 // uiAct（game-ui.js）から呼ばれる。扱ったら true
 function netUi(a,ds){
   const N=UI.net||(UI.net={step:'top'});
-  const fail=e=>{ console.error('[net]',e); N.busy=false; N.diag=''; N.err=(e&&e.message)||'うまくいきませんでした。もう一度やり直してください'; if(G.phase==='mode') render(); };
-  const redraw=()=>{ if(G.phase==='mode'&&UI.net===N) render(); };
+  const fail=e=>{ console.error('[net]',e); N.busy=false; N.diag=''; N.err=(e&&e.message)||'うまくいきませんでした。もう一度やり直してください'; if(G.phase==='mode'||NET.hold) render(); };
+  const redraw=()=>{ if((G.phase==='mode'||NET.hold)&&UI.net===N) render(); };
   switch(a){
     case 'netMsgOk': UI.netMsg=null; UI.netDiag=null; return true;
     case 'netBack':
@@ -265,6 +308,6 @@ if(typeof document!=='undefined'){
   document.addEventListener('input',e=>{ if(e.target.matches&&e.target.matches('[data-netin]')&&UI.net) UI.net.inp=e.target.value; });
   // コードの欄を押したら全体を選ぶ
   document.addEventListener('focusin',e=>{ if(e.target.matches&&e.target.matches('[data-netout]')) e.target.select(); });
-  // ページを閉じるときは相手に知らせる
-  window.addEventListener('pagehide',()=>{ if(NET.on) netSend({t:'bye'}); });
+  // ページを閉じるときは相手に知らせる（re＝自分から抜けたのではない。相手は中断にして待つ）
+  window.addEventListener('pagehide',()=>{ if(NET.on) netSend({t:'bye',re:1}); });
 }

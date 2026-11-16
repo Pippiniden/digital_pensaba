@@ -455,7 +455,7 @@ const RTABS = { sum:'概要', unit:`${TERMS.unit}別`, tl:'ダメージ推移', 
 const stOf = u=>(G.stats&&G.stats[u.uid])||{dealt:0,taken:0,maxHit:0,kills:0,attacks:0,crits:0,ults:0,skills:0,blocked:0};
 const sideUnits = pid=>[...G.players[pid].party,...(G.players[pid].master?[G.players[pid].master]:[])];
 // 決着後の「もう一度」：同じ編成ですぐ対戦（data-same）／ 編成からやり直す、の2つに分ける
-const rematchBtns = ()=>`<button data-a="rematch" title="編成（キャラクター選択）からやり直します">キャラクター選択に戻る</button><button class="primary" data-a="rematch" data-same="1" title="おたがい同じ編成のまま、新しい対戦を始めます">同じ編成でもう一度</button>`;
+const rematchBtns = ()=>`<button data-a="rematch" title="${G.draft?'新しい候補でドラフトからやり直します':'編成（キャラクター選択）からやり直します'}">${G.draft?'ドラフトし直す':'キャラクター選択に戻る'}</button><button class="primary" data-a="rematch" data-same="1" title="おたがい同じ編成のまま、新しい対戦を始めます">同じ編成でもう一度</button>`;
 // リザルトの枠と見出し（対戦のリザルト・アーケードの総合リザルト共通）。good＝勝ち（金）／ 負け（銀青）
 // 登場の動きは最初の1回だけ：開いてからの秒数（--el）を渡し、CSS 側でそのぶん animation-delay を戻す（描き直しても続きから再生される）
 function resultOpenHTML(good,cls=''){
@@ -596,6 +596,41 @@ function setupHTML(){
     <div class="setbody">
       <div class="rosterwrap">${mr&&!mlock?masterRosterHTML(pid,view):''}${rosterFilterHTML()}<div class="roster">${rosterTilesHTML(view)}</div></div>
       <div class="sdetail">${view?unitDetailHTML(view):''}</div>
+    </div>
+  </div>`;
+}
+
+// ---------- ドラフト（phase 'draft'）：候補を交互に取り合う。編成画面と同じ枠（上：両陣営の枠 / 左：候補 / 右：詳細） ----------
+function draftHTML(){
+  const R=G.draft, rs=ruleset(), turn=draftTurn(), mr=masterRule(), cap=costCap(), solo=rs.partyMax===1, cpuTurn=turn!=null&&isCpu(turn);
+  const ids=[...R.mpool,...R.pool], view=D(UI.setupView)&&ids.includes(UI.setupView)?D(UI.setupView):D(ids.find(id=>R.taken[id]==null)||ids[0]);
+  const side=pid=>{ const picks=G.picks[pid], mp=D(G.mpicks[pid]), mine=R.done&&!isCpu(pid)&&picks.length>1;
+    const slots=Array.from({length:rs.partyMax},(_,i)=>i).map(i=>{ const d=D(picks[i]);
+      return !d?`<div class="slot"><span>${ORD[i]}</span></div>`
+        :mine?`<button class="slot filled" data-a="draftLead" data-id="${esc(d.id)}" data-view="${esc(d.id)}" title="先頭（1st）にする">${unitImg(d,'face','pimg',d.name)}<span>${ORD[i]}</span><b>${esc(d.name)}</b></button>`
+        :`<div class="slot filled">${unitImg(d,'face','pimg',d.name)}<span>${ORD[i]}</span><b>${esc(d.name)}</b></div>`; }).join('')
+      +(!mr?'':mp?`<div class="slot filled mslot">${unitImg(mp,'face','pimg',mp.name)}<span>${TERMS.player}</span><b>${esc(mp.name)}</b></div>`:`<div class="slot mslot"><span>${TERMS.player}</span></div>`);
+    return `<div class="dside${turn===pid?' now':''}"><small><b class="p${pid}">${esc(G.players[pid].name)}</b>${isCpu(pid)?` ・ ${esc(CPU_LEVELS[G.level].name)}`:''}${solo?'':` ・ COST ${sumCost(picks)+mcost(pid)}/${cap}`}</small><div class="slots">${slots}</div></div>`; };
+  const order=R.order.map((pid,i)=>`<i class="p${pid}${R.done||i<R.i?' done':i===R.i?' now':''}">${esc(G.players[pid].name)}</i>`).join('');
+  const msg=R.done?`取り終わりました。${G.picks.some((p,pid)=>!isCpu(pid)&&p.length>1)?'自分の枠を押すと、そのキャラを先頭（1st）にできます。':''}「バトル開始」で対戦します。`
+    :cpuTurn?`${esc(G.players[turn].name)} が選んでいます…`
+    :`<b class="hl">${esc(G.players[turn].name)} の番です。</b>${draftNeedM(turn)?`${TERMS.player}を1人取ってください。`:`${TERMS.unit}を1騎取ってください。`}`;
+  const tile=d=>{ const by=R.taken[d.id], m=R.mpool.includes(d.id), ok=turn!=null&&draftCan(turn,d.id);
+    return `<button class="tile${m?' mtile':''}${by!=null?` taken t${by}`:ok?'':' dim'}${view&&view.id===d.id?' viewing':''}" data-a="draftPick" data-id="${esc(d.id)}" data-view="${esc(d.id)}">
+      ${unitImg(d,'face','pimg',d.name)}${m?'':clsIconTag(d.cls,'pcls')}<span class="tcost">C${d.cost}</span>${by!=null?`<span class="dtag p${by}">${esc(G.players[by].name)}</span>`:''}
+      <span class="tname">${esc(d.name)}<small>${m?'':`${esc(d.cls)} ・ `}HP${d.hp}</small></span>${tinfoHTML(d)}</button>`; };
+  return `<div class="setup draft">
+    <div class="sethead">
+      <div class="settitle"><h2>ドラフト</h2>
+        <p class="sub small nm">${rs.name}ルール：候補から交互に1つずつ取ります（取られた候補は選べません）。${solo?'':`コスト合計${cap}以下${mr?`（${TERMS.player}込み）`:''}・最大${rs.partyMax}騎。`}${mr?`最初に${TERMS.player}を取ります。`:''}${solo?handicapNote(0):''}</p>
+        <div class="dorder" title="取る順番">${order}</div></div>
+      <div class="dsides">${side(0)}<em>VS</em>${side(1)}</div>
+      <div class="setbtns"><button class="back" data-a="restart" data-keepnav="1" title="メニューに戻ります">戻る</button>${R.done?'<button class="primary big" data-a="draftGo">バトル開始</button>':''}</div>
+    </div>
+    <p class="dmsg nm">${msg}${G.setupMsg?` <span class="warn">${G.setupMsg}</span>`:''}</p>
+    <div class="setbody">
+      <div class="rosterwrap"><div class="roster">${mr?`<h4 class="dhead">${TERMS.player}</h4>${R.mpool.map(D).map(tile).join('')}<h4 class="dhead">${TERMS.unit}</h4>`:''}${R.pool.map(D).map(tile).join('')}</div></div>
+      <div class="sdetail">${view?viewDetailHTML(view):''}</div>
     </div>
   </div>`;
 }
@@ -790,6 +825,10 @@ function modeHTML(){
     if(w) panel=`${back()}<div class="navstep"><h3>CPU 1 の強さ</h3><div class="levels">${lvBtns(lv,'navLevel')}</div><h3>CPU 2 の強さ</h3><div class="levels">${lvBtns(lv2,'navLevel2')}</div><p class="sub small arcnote">このあと、CPU 1・CPU 2 の編成を選びます。</p><div class="row mt"><button class="gbtn go" data-a="chooseMode" data-mode="watch" data-level="${lv}" data-level2="${lv2}">編成へ</button></div></div>`;
     else
     panel=`${back()}<div class="navstep"><h3>${w?'両CPUの強さ':'CPUの強さ'}</h3><div class="levels">${Object.entries(CPU_LEVELS).map(([k,l])=>`<button class="gbtn ${k===lv?'p':''}" data-ui="navLevel" data-level="${k}">${esc(l.name)}</button>`).join('')}</div>${w?'<p class="sub small arcnote">編成はランダムに選ばれます（同コスト）。</p>':''}<div class="row mt"><button class="gbtn go" data-a="chooseMode" data-mode="${w?'watch':'cpu'}" data-level="${lv}">${w?'観戦する':'次へ'}</button></div></div>`;
+  }else if(s==='draft'&&nav.step==='level'){ // ドラフト：CPUの強さ
+    const lv=CPU_LEVELS[nav.level]?nav.level:'normal';
+    panel=`${back()}<p class="navtitle">ドラフト</p><div class="navstep"><h3>CPUの強さ</h3><div class="levels">${Object.entries(CPU_LEVELS).map(([k,l])=>`<button class="gbtn ${k===lv?'p':''}" data-ui="navLevel" data-level="${k}">${esc(l.name)}</button>`).join('')}</div>
+      <p class="sub small arcnote">ランダムに出た候補から、CPUと交互に1つずつ取り合って編成します。</p><div class="row mt"><button class="gbtn go" data-a="chooseMode" data-mode="draft" data-level="${lv}">ドラフトへ</button></div></div>`;
   }else if(s==='arcade'&&nav.step==='kind'){ // アーケード：アーケード（全5戦）かエンドレスか
     const df=ARCADE.diffs[nav.diff]?nav.diff:'normal';
     panel=`${back()}<p class="navtitle">アーケード（${esc(ARCADE.diffs[df].name)}）</p><div class="navstep"><h3>モードを選ぶ</h3><div class="levels">
@@ -804,6 +843,7 @@ function modeHTML(){
     panel=`${back()}<p class="navtitle">アーケード</p><div class="navstep"><h3>ルールを選ぶ</h3><div class="rules">${ARCADE.rules.map(k=>`<button class="gbtn ${ar===k?'p':''}" data-a="setRule" data-rule="${k}">${esc(RULESETS[k].name)}</button>`).join('')}</div>
       <p class="sub small arcnote">CPUとの連戦。最初に選んだ編成で最後まで戦います。</p><div class="row mt"><button class="gbtn go" data-ui="navNext">次へ</button></div></div>`;
   }else if(s==='quick') panel=`${back()}<p class="navtitle">クイックバトル</p>${rulePick('<button class="gbtn go" data-ui="navNext">次へ</button>')}`;
+  else if(s==='draft') panel=`${back()}<p class="navtitle">ドラフト</p>${rulePick('<button class="gbtn go" data-ui="navNext">次へ</button>')}`;
   else if(s==='watch') panel=`${back()}<p class="navtitle">観戦</p>${rulePick('<button class="gbtn go" data-ui="navNext">次へ</button>')}`;
   else if(s==='local') panel=`${back()}<p class="navtitle">ローカル対戦</p>${rulePick('<button class="gbtn go" data-a="chooseMode" data-mode="pvp">はじめる</button>')}`;
   else if(s==='tutorial') panel=`${back()}<p class="navtitle">チュートリアル</p>${rulesGuideHTML(false)}${statusGuideHTML(false)}`;
@@ -814,6 +854,7 @@ function modeHTML(){
     <div class="topmenu">
       <button class="gbtn p" data-ui="nav" data-s="quick">クイックバトル</button>
       <button class="gbtn" data-ui="nav" data-s="arcade">アーケード</button>
+      <button class="gbtn" data-ui="nav" data-s="draft">ドラフト</button>
       ${typeof scnAvail==='function'&&scnAvail()?'<button class="gbtn" data-ui="scnList">シナリオ</button>':''}
       <button class="gbtn" data-ui="nav" data-s="local">ローカル対戦</button>
       <button class="gbtn" data-ui="nav" data-s="watch">観戦</button>
@@ -834,12 +875,12 @@ function overlaysHTML(){ return settingsModalHTML()+tutorialModalHTML()+(typeof 
 // ---------- 描画 ----------
 function render(){
   const app=document.querySelector('#app'), hinfo=document.querySelector('#hinfo'), online=typeof netOn==='function'&&netOn(), me=online?netMe():0; // オンラインのゲストは自分（プレイヤー2）を下に出す
-  const screen=G.phase==='mode'?(UI.nav.s==='zukan'?'zukan':'mode'):G.phase==='setup'?'setup':G.phase==='stage'?'stage':'battle';
+  const screen=G.phase==='mode'?(UI.nav.s==='zukan'?'zukan':'mode'):G.phase==='setup'?'setup':G.phase==='draft'?'draft':G.phase==='stage'?'stage':'battle';
   document.body.dataset.screen=screen;
   document.body.dataset.phase=G.phase;
   if(G.phase!=='over'){ UI.result=false; UI.resultShown=false; UI.endReady=false; UI.resultAt=0; }
   if(G.phase!=='master') UI.spellPick=false;
-  if(screen!=='setup'&&screen!=='zukan') UI.sinfo=null;
+  if(screen!=='setup'&&screen!=='zukan'&&screen!=='draft') UI.sinfo=null;
   if(screen!=='stage') UI.stageSeen=null;
   if(screen!=='setup'){ UI.party=false; UI.partyDel=null; }
   if(screen!=='mode'||UI.nav.s!=='records') UI.recAsk=false;
@@ -853,6 +894,7 @@ function render(){
   if(screen==='mode'){ setHTML(app,modeHTML()+overlaysHTML()); hinfo.textContent=''; }
   else if(screen==='zukan'){ setHTML(app,zukanHTML()+(UI.sinfo?sinfoModalHTML():'')+linkModalHTML()+overlaysHTML()); hinfo.textContent='図鑑'; }
   else if(screen==='setup'){ setHTML(app,setupHTML()+(UI.sinfo?sinfoModalHTML():'')+partyModalHTML()+linkModalHTML()+overlaysHTML()); hinfo.textContent=(online?`オンライン対戦（${me?'ゲスト':'ホスト'}） ・ `:'')+(ruleset().partyMax===1?`${ruleset().name}ルール ・ ${TERMS.unit}選択`:'パーティ編成'); }
+  else if(screen==='draft'){ setHTML(app,draftHTML()+(UI.sinfo?sinfoModalHTML():'')+linkModalHTML()+overlaysHTML()); hinfo.textContent=`ドラフト ・ ${ruleset().name}ルール`; }
   else if(screen==='stage'){ setHTML(app,arcadeStageHTML()+overlaysHTML()); hinfo.textContent=arcadeLabel(); }
   else {
     if(UI.detail&&!U(UI.detail)) UI.detail=null;
@@ -875,8 +917,9 @@ function render(){
 const MATCH_KEY='pencilduel.match';
 function saveMatch(){
   try{
-    if(G.phase==='mode'||G.phase==='init'||(typeof netOn==='function'&&netOn())){ if(!MATCH_HOLD) sessionStorage.removeItem(MATCH_KEY); return; } // オンライン対戦は再開できない（つなぎ直しになる）ので保存しない
-    sessionStorage.setItem(MATCH_KEY,JSON.stringify({v:1,src:UNIT_SOURCE,G:{...G,log:G.log.slice(-400)}}));
+    const net=typeof netOn==='function'&&netOn();
+    if(G.phase==='mode'||G.phase==='init'||(net&&netMe()!==0)){ if(!MATCH_HOLD) sessionStorage.removeItem(MATCH_KEY); return; } // オンライン対戦：ゲームを進めているホストだけ保存する（読み込み直したら中断の状態で戻り、つなぎ直す）
+    sessionStorage.setItem(MATCH_KEY,JSON.stringify({v:1,src:UNIT_SOURCE,net,G:{...G,log:G.log.slice(-400)}}));
   }catch(e){}
 }
 // シナリオの戦闘（G.scn）は、シナリオ本体を読み込んだあと scenario.js が restoreMatch(true) で再開する。それまで保存を消さない（MATCH_HOLD）
@@ -889,8 +932,9 @@ function restoreMatch(scn=false){
     const g=s.G, ids=[...g.picks.flat(),...g.players.flatMap(P=>P.party.map(u=>u.def))];
     if(!ids.every(id=>D(id))) return false; // データが変わってキャラがいなければ再開しない
     G=g;
+    if(s.net&&typeof netResumeHost==='function') netResumeHost(); // オンライン対戦のホスト：中断の状態で戻る（net.js）
     if(G.phase==='over'){ UI.endReady=true; UI.resultShown=true; } // 決着の演出は済んだものとして結果ボタンを出す
-    if(G.phase!=='setup') log('（ページが読み込み直されたため、試合の続きから再開しました）','sub');
+    if(G.phase!=='setup'&&G.phase!=='draft') log('（ページが読み込み直されたため、試合の続きから再開しました）','sub');
     return true;
   }catch(e){ return false; }
 }
@@ -979,7 +1023,7 @@ function uiAct(a,ds){
     case 'partyLoad': { const e=partyList().find(x=>partySig(x)===ds.sig); UI.party=false; if(e){ UI.setupView=null; act('setupLoad',{picks:e.picks,mpick:e.mpick}); return; } break; }
     case 'setBottom': UI.bottom=Math.min(BOTTOM_STEPS.length-1,Math.max(0,Number(ds.v)||0)); savePref('pencilduel.bottom',String(UI.bottom)); applyBottom(); break;
     case 'rcost': UI.rcost=ds.v; break;
-    case 'navBack': if(UI.nav.s==='arcade'&&UI.nav.step==='kind') UI.nav.step='level'; else if((UI.nav.s==='quick'||UI.nav.s==='watch'||UI.nav.s==='arcade')&&UI.nav.step==='level') UI.nav.step='rule'; else UI.nav={s:'top',step:'rule'}; break;
+    case 'navBack': if(UI.nav.s==='arcade'&&UI.nav.step==='kind') UI.nav.step='level'; else if(['quick','watch','arcade','draft'].includes(UI.nav.s)&&UI.nav.step==='level') UI.nav.step='rule'; else UI.nav={s:'top',step:'rule'}; break;
     case 'setSpeed': { const v=Number(ds.v)||700; savePref('pencilduel.speed',String(v)); window.SPEED_PREF=v; G.speed=v; break; }
     case 'setNoCanon': {
       savePref(CANON_PREF,ds.v==='0'?'0':'1'); reloadUnits(); SHOW_IDS=null; UI.setupView=null;

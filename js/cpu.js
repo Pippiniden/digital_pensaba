@@ -26,13 +26,28 @@ let CPU_LOOKAHEAD = true;
 // 先読みの試しの最中は true。試しの中の「つよい」は先読みせず脅威度で選ぶ（先読みの入れ子を防ぐ）
 let cpuInRollout = false;
 const isCpu = pid=>!!(G.cpu&&G.cpu[pid]);
-const actor = ()=>G.phase==='setup'?G.setupPid:G.phase==='guard'?1-G.cur:G.cur; // guard＝守る側が選ぶ
+const actor = ()=>G.phase==='draft'?draftTurn():G.phase==='setup'?G.setupPid:G.phase==='guard'?1-G.cur:G.cur; // guard＝守る側が選ぶ
 const cpuActing = ()=>!['mode','setup','over'].includes(G.phase) && isCpu(actor()); // 編成はCPU分も人が選ぶ（おまかせ＝setupCpu）
 const hpR = u=>u.hp/maxHp(u);
 const isActing = u=>G.ult ? G.ult===u.uid : (G.alloc[u.uid]||0)>0;
 function rnd01(s){ // 「よわい」用：同じ局面では同じ答えになる疑似乱数
   let h=2166136261; for(const ch of s+G.seed){ h^=ch.charCodeAt(0); h=Math.imul(h,16777619); }
   return (h>>>0)/4294967296;
+}
+// ドラフト：候補から1つ取る。よわい＝気まぐれ ／ それ以外＝この先も含めて合計コストと人数がいちばん大きくなる取り方（ふつうは少しぶれる）
+function cpuDraft(easy){
+  const pid=draftTurn(), R=G.draft, moves=draftMoves(pid), any=a=>a[Math.floor(Math.random()*a.length)];
+  if(!moves.length) return null;
+  if(easy) return ['draftPick',{id:any(moves)}];
+  const rs=ruleset(), top=(sc,slack)=>{ const s=moves.map(sc), best=Math.max(...s); return moves.filter((_,i)=>s[i]>=best-slack); };
+  if(R.mpool.includes(moves[0])) return ['draftPick',{id:any(rs.partyMax>1?moves:top(id=>D(id).cost,0))}]; // マスター：チームはコスト補正で釣り合うので好み、1騎のルールは高コスト
+  if(rs.partyMax===1) return ['draftPick',{id:any(top(id=>D(id).cost*1000+D(id).hp/10,G.level==='normal'?1000:0))}];
+  // チーム：取ったあとの残り枠を、残っている候補でいちばん高く埋められる合計（＋人数ぶん）で比べる
+  const free=R.pool.filter(id=>R.taken[id]==null), budget=costCap()-mcost(pid)-sumCost(G.picks[pid]), slots=rs.partyMax-G.picks[pid].length;
+  const fill=(ids,room,left)=>{ let best=0; if(left>0) ids.forEach((id,i)=>{ const c=D(id).cost; if(c<=room) best=Math.max(best,c+2+fill(ids.slice(i+1),room-c,left-1)); }); return best; };
+  const score=id=>D(id).cost+2+fill(free.filter(x=>x!==id),budget-D(id).cost,slots-1);
+  const c=top(score,G.level==='normal'?1:0), hp=Math.max(...c.map(id=>D(id).hp));
+  return ['draftPick',{id:G.level==='normal'?any(c):c.find(id=>D(id).hp===hp)}];
 }
 let cpuTimer=null;
 function scheduleCpu(){
@@ -42,11 +57,12 @@ function scheduleCpu(){
     if(typeof fxBusy==='function' && fxBusy()){ scheduleCpu(); return; } // 演出の再生中は待つ
     if(G.levels) G.level=G.levels[actor()]; // 観戦：CPUごとの強さ
     const s=cpuDecide(); if(s) act(s[0],s[1]||{});
-  }, G.phase==='setup'?500:G.speed);
+  }, G.phase==='setup'?500:G.phase==='draft'?900:G.speed);
 }
 function cpuDecide(){
   const easy=G.level==='easy';
   switch(G.phase){
+    case 'draft': return cpuDraft(easy);
     case 'actRoll': return G.actRolled ? ['setAlloc',{alloc:JSON.stringify(cpuAlloc(easy))}] : ['rollActs'];
     case 'skill': {
       if(G.pending) return ['cardClick',{uid:cpuPickTarget(G.pending.uid,G.pending.ult?null:G.pending.si,easy).uid}];
