@@ -56,7 +56,19 @@ function simOpen(){
 }
 function simClose(){ simStop(); simDlg().close(); }
 function simStop(){
-  if(SIM.run){ SIM.run.w.terminate(); SIM.run=null; }
+  if(SIM.run){ SIM.run.ws.forEach(w=>w.terminate()); SIM.run=null; }
+}
+// 並列数：Worker を最大 SIM_WORKERS 本（測定：6本まではほぼ本数どおり速くなり、それ以上はあまり伸びない）
+const SIM_WORKERS = 6, SIM_PART_MIN = 10; // SIM_PART_MIN＝1つの組を分けるときの、1本あたりの最少試合数
+// 分けて回した結果を1つにまとめる：数は足す、味方・相手・コスト別の集計（{g,w}）は中身を足す、それ以外（ID・人数など）は最初のまま
+function simMerge(a,b){
+  if(!a) return b;
+  for(const k in b){ const v=b[k];
+    if(k==='size'||k==='none') continue;
+    if(typeof v==='number') a[k]=(a[k]||0)+v;
+    else if(v&&typeof v==='object') a[k]=simMerge(a[k]||{},v);
+    else if(a[k]==null) a[k]=v; }
+  return a;
 }
 function simStart(){
   if(hasErrors(units)){ toast('エラーがあるため検証できません。右の「検証」を確認してください',true); return; }
@@ -64,22 +76,40 @@ function simStart(){
   if(team&&!job.targets.length){ toast('検証できるキャラがいません',true); return; }
   if(!team&&!pairs.length){ toast(SIM.range==='same'?'同じコストの相手がいません。範囲を「全コスト」にしてください':'対戦できる組み合わせがありません',true); return; }
   simStop();
-  let w;
-  // ?v= でブラウザのキャッシュを避ける（古い sim-worker.js / sim.js が残っていると新しい形式のメッセージを読めない）
-  try{ w=new Worker(`js/sim-worker.js?v=${Date.now()}`); }
-  catch(e){ toast('検証を開始できませんでした（ローカルサーバーで開いてください）',true); return; }
-  const snap=clone(units);
-  SIM.run={w, total:team?job.targets.length:pairs.length, done:0, t0:Date.now()};
+  const snap=clone(units), jobs=team?job.targets:pairs;
+  // 組（キャラ）ごとの試合を、Worker の本数に足りないときは何本かに分ける（選択中の1キャラだけの検証でも並列に回る）。結果は simMerge でまとめる
+  const nW0=Math.max(1,Math.min(SIM_WORKERS,(navigator.hardwareConcurrency||2)-1));
+  const parts=Math.max(1,Math.min(Math.ceil(nW0/jobs.length),Math.floor(SIM.n/SIM_PART_MIN)||1));
+  const queue=[]; jobs.forEach((x,ji)=>{ for(let p=0;p<parts;p++){ const n=Math.floor(SIM.n/parts)+(p<SIM.n%parts?1:0); if(n>0) queue.push({ji,x,n}); } });
+  const left=jobs.map((_,ji)=>queue.filter(t=>t.ji===ji).length), acc=jobs.map(()=>null);
+  const run={ws:[], total:jobs.length, done:0, t0:Date.now()};
+  SIM.run=run;
   SIM.res={rule:SIM.rule, full:SIM.full, target:SIM.target, sel:cur()&&cur().id, range:SIM.range, handicap:SIM.handicap, n:SIM.n, units:snap, excl:units.filter(simExcluded).map(u=>u.name), pairs:[], done:false};
-  w.onmessage=e=>{
-    const m=e.data;
-    if(m.t==='pair'){ SIM.res.pairs.push(m.r); SIM.run.done++; renderSim(); }
-    else if(m.t==='done'){ SIM.res.done=true; SIM.res.ms=Date.now()-SIM.run.t0; simStop(); renderSim(); }
-    else if(m.t==='error'){ simStop(); renderSim(); toast(`検証中にエラー：${m.msg}`,true); }
-  };
-  w.onerror=e=>{ e.preventDefault(); simStop(); renderSim(); toast(`検証を実行できませんでした：${e.message||'Worker の読み込みに失敗'}（ローカルサーバーで開いてください）`,true); };
-  w.postMessage(team?{units:snap, rule:'team', targets:job.targets, pool:job.pool, n:SIM.n, full:SIM.full}
-                    :{units:snap, rule:'simple', pairs, n:SIM.n, handicap:SIM.handicap});
+  const res=SIM.res, fail=msg=>{ if(SIM.run!==run) return; simStop(); renderSim(); toast(msg,true); };
+  let qi=0;
+  const feed=w=>{ const t=queue[qi++]; if(!t){ w.busy=null; return; } w.busy=t;
+    w.postMessage(team?{units:snap, rule:'team', targets:[t.x], pool:job.pool, n:t.n, full:SIM.full}
+                      :{units:snap, rule:'simple', pairs:[t.x], n:t.n, handicap:SIM.handicap}); };
+  const nW=Math.min(nW0,queue.length);
+  for(let i=0;i<nW;i++){
+    let w;
+    // ?v= でブラウザのキャッシュを避ける（古い sim-worker.js / sim.js が残っていると新しい形式のメッセージを読めない）
+    try{ w=new Worker(`js/sim-worker.js?v=${run.t0}`); }
+    catch(e){ fail('検証を開始できませんでした（ローカルサーバーで開いてください）'); return; }
+    run.ws.push(w);
+    w.onmessage=e=>{
+      if(SIM.run!==run) return;
+      const m=e.data, t=w.busy;
+      if(m.t==='pair'){ // 1つの組の分けた分がすべて戻ったら、まとめて結果に入れる（並びは組の順のまま）
+        acc[t.ji]=simMerge(acc[t.ji],m.r);
+        if(--left[t.ji]===0){ acc[t.ji]._i=t.ji; res.pairs.push(acc[t.ji]); res.pairs.sort((a,b)=>a._i-b._i); run.done++; renderSim(); }
+      }
+      else if(m.t==='done'){ if(run.done>=run.total){ res.done=true; res.ms=Date.now()-run.t0; simStop(); renderSim(); } else feed(w); }
+      else if(m.t==='error') fail(`検証中にエラー：${m.msg}`);
+    };
+    w.onerror=e=>{ e.preventDefault(); fail(`検証を実行できませんでした：${e.message||'Worker の読み込みに失敗'}（ローカルサーバーで開いてください）`); };
+    feed(w);
+  }
   renderSim();
 }
 

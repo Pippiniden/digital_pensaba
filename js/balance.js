@@ -6,6 +6,7 @@
    - 検証：rank＝編成の勝率ランキング（各編成が k チームとランダムに対戦） / team＝特定の編成の戦績（相手は全編成か直接対決）
            / master＝マスターの強さ（同じサーヴァント編成のミラーでマスターだけを変えて勝率を見る。マスターのあるルールだけ）
    - 1回の対戦（タスク）＝ simMatchup(rule,A,B,n,…)。タスクを作る plan() と、集計して表にする render*() が中心
+   - 目標の誤差（B.goal）：誤差の幅が目標以下になるまで plan() から周回を重ねる（startRun / goalWorst）。同じ組の結果は B.res.byKey で足し合わせる
    ===================================================================== */
 
 const BSET_KEY='pencilduel.balance';
@@ -14,12 +15,12 @@ const BMEXCL_KEY='pencilduel.simExcludeMaster';
 const BRULES=['team','mteam','simple','master'];
 const BSRC={ public:'公開データ', applied:'ブラウザに反映済み', draft:'エディタの下書き' };
 
-const B={ src:'public', rule:'team', view:'rank', n:10, k:5, level:'hard', filter:'full', opp:'same', handicap:true, sv:9, mcol:{}, cmin:7,
+const B={ src:'public', rule:'team', view:'rank', n:10, k:5, goal:0, level:'hard', filter:'full', opp:'same', handicap:true, sv:9, mcol:{}, cmin:7,
   vs:'pool', A:{ids:[],m:null}, B:{ids:[],m:null},
   excl:new Set(readJSON(BEXCL_KEY)||[]), mexcl:new Set(readJSON(BMEXCL_KEY)||[]),
   data:null, run:null, res:null };
-try{ const s=readJSON(BSET_KEY)||{}; for(const k of ['src','rule','view','n','k','level','filter','opp','handicap','sv','vs','mcol','cmin']) if(k in s) B[k]=s[k]; }catch(e){}
-const saveSet=()=>writeJSON(BSET_KEY,Object.fromEntries(['src','rule','view','n','k','level','filter','opp','handicap','sv','vs','mcol','cmin'].map(k=>[k,B[k]])));
+try{ const s=readJSON(BSET_KEY)||{}; for(const k of ['src','rule','view','n','k','goal','level','filter','opp','handicap','sv','vs','mcol','cmin']) if(k in s) B[k]=s[k]; }catch(e){}
+const saveSet=()=>writeJSON(BSET_KEY,Object.fromEntries(['src','rule','view','n','k','goal','level','filter','opp','handicap','sv','vs','mcol','cmin'].map(k=>[k,B[k]])));
 
 const $=s=>document.querySelector(s);
 const rs=()=>RULESETS[B.rule];
@@ -27,6 +28,8 @@ const hasMaster=()=>!!rs().master;
 const capOf=()=>rs().costCap||RULES.costCap;
 const pct=p=>`${Math.round(p*100)}%`;
 const ci=(p,n)=>Math.round(196*Math.sqrt(p*(1-p)/Math.max(1,n)));
+// 目標の誤差との比較に使う誤差の幅（丸めない）。試合が少ないうちに全勝・全敗で幅が0にならないよう、勝ち2・負け2を足して出す
+const ciX=(w,g)=>{ const p=(w+2)/(g+4); return 196*Math.sqrt(p*(1-p)/(g+4)); };
 const grade=p=>{ const d=Math.abs(p-.5); return d<=.1?'ok':d<=.2?'wrn':'bad'; };
 const bar=p=>`<span class="bar"><i style="width:${p*100}%"></i></span>`;
 let toastTimer=null;
@@ -165,14 +168,48 @@ function planMaster(){
 
 // ---------- 実行（Worker を並列に） ----------
 function stopRun(){ if(B.run){ B.run.workers.forEach(w=>w.terminate()); B.run=null; } }
+// ---------- 目標の誤差（B.goal＝±何ポイント。0＝1周で終わり） ----------
+// 誤差を見る相手：ランキング＝サーヴァント別（とマスター別）の平均勝率 ／ 特定の編成＝その編成の勝率 ／ マスターの強さ＝マスター別の勝率。
+// 全員の誤差の幅が目標以下になるまで、対戦の組を作り直して（plan()。相手の抽選もやり直す）周回を重ねる。上限 GOAL_MAX_ROUNDS 周
+const GOAL_MAX_ROUNDS=200, GOAL_CHECK=20;
+const maxWorkers=()=>Math.max(1,Math.min(6,(navigator.hardwareConcurrency||2)-1));
+const goalCopies=len=>Math.max(1,Math.ceil(maxWorkers()/Math.max(1,len))); // 組が Worker の本数より少ないとき、1周で同じ組を回す本数
+const goalNeed=g=>Math.ceil((98/g)**2); // 勝率50%付近で ±g ポイントにするのに要る試合数
+// 対戦の組（tasks）から、誤差を見る相手ごとの「1周あたりの試合数」を数える
+function goalSubjects(tasks,view,each){
+  const m=new Map(), add=(k,v)=>m.set(k,(m.get(k)||0)+v);
+  tasks.forEach((t,i)=>{ const g=each(t,i); if(!g) return;
+    if(view==='team') add('team',g);
+    else if(view==='master'){ add('m:'+t.tag.mi,g); add('m:'+t.tag.mj,g); }
+    else for(const tm of [t.ta,t.tb]){ tm.ids.forEach(id=>add('u:'+id,g)); if(tm.m) add('m:'+tm.m,g); } });
+  return m;
+}
+// いまの結果で、いちばん誤差の幅が広い相手 {v:幅, name}。need＝誤差を見る相手の一覧（まだ1試合もしていない相手がいれば未到達）
+function goalWorst(R,need){
+  const st=new Map(), add=(k,w,g)=>{ const x=st.get(k)||{w:0,g:0}; x.w+=w; x.g+=g; st.set(k,x); };
+  for(const {task:t,r} of R.items){ const g=gOf(r), w=wOf(r); if(!g) continue;
+    if(R.view==='team') add('team',w,g);
+    else if(R.view==='master'){ add('m:'+t.tag.mi,w,g); add('m:'+t.tag.mj,g-w,g); }
+    else for(const [tm,ww] of [[t.ta,w],[t.tb,g-w]]){ tm.ids.forEach(id=>add('u:'+id,ww,g)); if(tm.m) add('m:'+tm.m,ww,g); } }
+  let worst={v:0,name:''};
+  for(const [k,x] of st){ const v=ciX(x.w,x.g); if(v>worst.v) worst={v,name:k==='team'?'検証する編成':k[0]==='u'?uOf(k.slice(2)).name:mOf(k.slice(2)).name}; }
+  if(need) for(const k of need) if(!st.has(k)) return {v:Infinity,name:''};
+  return st.size?worst:{v:Infinity,name:''};
+}
+// 同じ組の結果を足し合わせる（周回を重ねたぶん）
+function mergeRes(a,b){ for(const k in b){ if(typeof b[k]==='number'&&k!=='aN') a[k]=(a[k]||0)+b[k]; else if(a[k]==null) a[k]=b[k]; } return a; }
 function startRun(){
   const p=plan(); if(p.err){ toast(p.err,true); return; }
   stopRun();
-  const nW=Math.max(1,Math.min(6,(navigator.hardwareConcurrency||2)-1,p.tasks.length));
-  const tasks=p.tasks.map((t,i)=>({...t,id:i,sw:Math.random()})).sort((a,b)=>a.sw-b.sw);
-  const run={workers:[],queue:tasks.slice(),done:0,total:tasks.length,t0:Date.now(),byId:new Map(tasks.map(t=>[t.id,t]))};
+  const goal=Number(B.goal)||0, copies=goal?goalCopies(p.tasks.length):1;
+  const nW=Math.max(1,Math.min(maxWorkers(),p.tasks.length*copies));
+  let nextId=0;
+  // 目標の誤差つきで組が少ないとき（直接対決など）は、同じ組を何本かに分けて並列に回す（結果は同じ組として足し合わせる）
+  const mk=ts=>Array.from({length:goal?goalCopies(ts.length):1},()=>ts).flat().map(t=>({...t,id:nextId++,sw:Math.random()})).sort((a,b)=>a.sw-b.sw);
+  const tasks=mk(p.tasks);
+  const run={workers:[],queue:tasks.slice(),done:0,total:tasks.length,t0:Date.now(),byId:new Map(tasks.map(t=>[t.id,t])),round:1,rdone:0,rtotal:tasks.length,goal,worst:null,need:goal?[...goalSubjects(p.tasks,B.view,()=>1).keys()]:null};
   B.run=run;
-  B.res={view:B.view,rule:B.rule,src:B.src,n:B.n,k:B.k,filter:B.filter,opp:B.opp,level:B.level,handicap:useHandicap()&&B.view!=='master',vs:B.vs,mcol:{...B.mcol},cmin:B.cmin,
+  B.res={goal,rounds:1,byKey:new Map(),view:B.view,rule:B.rule,src:B.src,n:B.n,k:B.k,filter:B.filter,opp:B.opp,level:B.level,handicap:useHandicap()&&B.view!=='master',vs:B.vs,mcol:{...B.mcol},cmin:B.cmin,
     data:B.data,items:[],done:false,teams:p.teams,excl:eu().length<B.data.units.length||em().length<B.data.masters.length};
   const hcap=B.res.handicap, feed=w=>{ const t=run.queue.pop(); if(!t) return;
     w.postMessage({t:'task',id:t.id,rule:B.rule,A:{ids:t.ta.ids,m:t.ta.m},B:{ids:t.tb.ids,m:t.tb.m},n:B.n,handicap:hcap,level:B.level}); };
@@ -185,7 +222,21 @@ function startRun(){
       if(B.run!==run) return;
       const m=e.data;
       if(m.t==='ready') feed(w);
-      else if(m.t==='res'){ run.done++; B.res.items.push({task:run.byId.get(m.id),r:m.r}); schedule(); if(run.done>=run.total) finish(); else feed(w); }
+      else if(m.t==='res'){
+        const R=B.res, t=run.byId.get(m.id), key=t.ta.key+'|'+t.tb.key, it=R.byKey.get(key);
+        if(it) mergeRes(it.r,m.r); else{ const x={task:t,r:m.r}; R.byKey.set(key,x); R.items.push(x); } // 前の周と同じ組は足し合わせる
+        run.done++; run.rdone++; schedule();
+        const end=run.rdone>=run.rtotal;
+        // 目標の誤差：周の途中でも、届いた時点で止める（組は毎周ランダムな順に回すので、途中で止めても偏らない）。確かめるのは GOAL_CHECK 対戦ごと
+        if(goal&&(end||run.done%GOAL_CHECK===0)){ run.worst=goalWorst(R,run.need); R.worst=run.worst; if(run.worst.v<=goal){ R.hit=true; finish(); return; } }
+        if(!end){ feed(w); return; }
+        // 1周ぶんが終わった：目標の誤差に届いていなければ、組を作り直してもう1周
+        if(!goal||run.round>=GOAL_MAX_ROUNDS){ R.hit=!goal; finish(); return; }
+        const p2=plan(); if(p2.err||!p2.tasks.length){ finish(); return; }
+        const ts=mk(p2.tasks); ts.forEach(x=>run.byId.set(x.id,x));
+        run.queue=ts.slice(); run.total+=ts.length; run.round++; run.rdone=0; run.rtotal=ts.length; R.rounds=run.round;
+        run.workers.forEach(feed);
+      }
       else if(m.t==='error') fail(m.msg);
     };
     w.onerror=e=>{ e.preventDefault(); fail(`${e.message||'Worker の読み込みに失敗'}（ローカルサーバーで開いてください）`); };
@@ -205,7 +256,10 @@ function renderCtl(){
   const d=B.data, dis=B.run?'disabled':'', m=hasMaster(), team=rs().partyMax>1;
   const views=[['rank','編成の勝率ランキング'],['team','特定の編成の戦績'],...(m?[['master','マスターの強さ']]:[])];
   if(!views.some(v=>v[0]===B.view)) B.view='rank';
-  const p=plan(), games=p.tasks.length*B.n;
+  const p=plan(), goal=Number(B.goal)||0, copies=goal?goalCopies(p.tasks.length):1, games=p.tasks.length*B.n*copies;
+  // 目標の誤差があるとき：いちばん試合数が少ない相手が必要な試合数に届くまでの周回数（見込み）
+  const least=goal&&!p.err?Math.min(...goalSubjects(p.tasks,B.view,()=>B.n*copies).values()):0, rounds=least?Math.min(GOAL_MAX_ROUNDS,goalNeed(goal)/least):1;
+  const goalWho={rank:hasMaster()?'サーヴァント別・マスター別の平均勝率':'サーヴァント別の平均勝率',team:'検証する編成の勝率',master:'マスター別の勝率'}[B.view];
   const src=Object.entries(BSRC).map(([k,l])=>{
     const dd=k===B.src?d:null;
     const desc={public:'js/units.js・js/masters.js（今ゲームで公開しているデータ）',applied:'エディタの「ゲームに反映」でこのブラウザに保存したデータ',draft:'エディタで編集中の下書き（自動保存されたもの）'}[k];
@@ -231,7 +285,8 @@ function renderCtl(){
           sel('opp',[['same','同じ合計コスト'],['all','すべて']],B.opp,'相手の範囲')+
           sel('k',[[3,'3チーム'],[5,'5チーム'],[10,'10チーム'],[20,'20チーム'],[50,'50チーム'],[0,'すべて']],B.k,B.view==='rank'?'1編成あたりの相手':'相手の数（ランダム抽出）'):''}
         ${B.view==='master'?sel('sv',[[3,'3'],[6,'6'],[9,'9'],[20,'20'],[0,'すべて']],B.sv,'マスターの組ごとのサーヴァント編成数'):''}
-        ${sel('n',[[10,'10試合'],[20,'20試合'],[50,'50試合'],[100,'100試合'],[300,'300試合']],B.n,'1対戦あたり')}
+        ${sel('n',[[10,'10試合'],[20,'20試合'],[50,'50試合'],[100,'100試合'],[300,'300試合']],B.n,Number(B.goal)?'1対戦あたり（1周ぶん）':'1対戦あたり')}
+        ${sel('goal',[[0,'指定しない（1周で終わる）'],[5,'±5%'],[3,'±3%'],[2,'±2%'],[1,'±1%']],B.goal,'目標の誤差（届くまで繰り返す）')}
         ${sel('level',[['normal','ふつう'],['hard','つよい（先読みなし・速い）'],['hard+','つよい（先読みあり・遅い）']],B.level,'CPUの強さ')}
         ${rs().handicapAsc&&B.view!=='master'?`<label class="chk"><input type="checkbox" data-s="handicap" ${B.handicap?'checked':''} ${dis}>ハンデ戦（${hcapRuleText(rs()).replace(/。$/,'')}）</label>`:''}
       </div>
@@ -242,10 +297,12 @@ function renderCtl(){
     </section>
     <section class="card"><div class="runbar">
       ${B.run?`<button class="danger" data-b="stop">中止</button>`:`<button class="primary" data-b="run" ${p.err?'disabled':''}>検証を実行</button>`}
-      <span class="est">${p.err?`<span class="bad">${esc(p.err)}</span>`:`${p.tasks.length}対戦 × ${B.n}試合 ＝ <b>${games.toLocaleString()}試合</b>${p.teams&&B.view!=='master'?`（対象の編成 ${p.teams}）`:''}　目安 ${etaText(games)}${p.skip&&p.skip.length?` <span class="bad small">（条件に合う編成がなく除外：${p.skip.length}組）</span>`:''}`}</span></div>
+      <span class="est">${p.err?`<span class="bad">${esc(p.err)}</span>`:`${p.tasks.length}対戦 × ${B.n*copies}試合 ＝ <b>${games.toLocaleString()}試合</b>${goal?` → 目標まで 約<b>${Math.round(games*rounds).toLocaleString()}試合</b>（約${rounds<10?rounds.toFixed(1):Math.round(rounds)}周）`:''}${p.teams&&B.view!=='master'?`（対象の編成 ${p.teams}）`:''}　目安 ${etaText(Math.round(games*rounds))}${p.skip&&p.skip.length?` <span class="bad small">（条件に合う編成がなく除外：${p.skip.length}組）</span>`:''}`}</span></div>
+      ${goal?`<p class="note">${goalWho}の誤差がすべて <b>±${goal}%</b> 以下になったら止まります（1人あたり約${goalNeed(goal).toLocaleString()}試合が目安。上限${GOAL_MAX_ROUNDS}周）。周の途中でも届いた時点で止まり、足りなければ対戦の組（相手の抽選）を作り直して次の周に進みます。調整の前後を比べるときは、前後とも同じ目標で回してください（差の誤差は約1.4倍になります）。</p>`:''}
       <p class="note">同じ条件でも結果は少しぶれます（±は95%の誤差の幅）。ブラウザのタブを開いたままにしてください。</p></section>`;
 }
-function etaText(games){ const s=games/(250*Math.max(1,Math.min(6,(navigator.hardwareConcurrency||2)-1))); return s<90?`${Math.max(1,Math.round(s))}秒`:`${Math.round(s/60)}分`; }
+// 目安の時間：1本あたり毎秒250試合ほど。先読みありのチーム戦は1試合が約40倍かかる（実測：6本で毎秒25試合ほど。1対1は攻撃対象が1体で先読みが走らないので変わらない）
+function etaText(games){ const slow=B.level==='hard+'&&rs().partyMax>1?40:1, s=games*slow/(250*Math.max(1,Math.min(6,(navigator.hardwareConcurrency||2)-1))); return s<90?`${Math.max(1,Math.round(s))}秒`:`${Math.round(s/60)}分`; }
 
 function builderHTML(key,label){
   const T=B[key], max=rs().partyMax, cap=capOf(), U=eu(), dis=B.run?'disabled':'';
@@ -278,6 +335,11 @@ function exclHTML(){
 function renderProg(){
   const r=B.run; if(!r){ $('#prog').innerHTML=''; return; }
   const el=(Date.now()-r.t0)/1000, eta=r.done?el/r.done*(r.total-r.done):0;
+  if(r.goal){ // 目標の誤差つき：周回数と、いちばん広い誤差
+    const w=r.worst, wt=w&&isFinite(w.v)?`いちばん広い誤差 ±${w.v.toFixed(1)}%（${esc(w.name)}） → 目標 ±${r.goal}%`:`目標 ±${r.goal}%`;
+    $('#prog').innerHTML=`<div class="progbar"><i style="width:${r.rdone/r.rtotal*100}%"></i><span>${r.round}周目：${r.rdone} / ${r.rtotal} 対戦　${wt}（経過${el<90?Math.round(el)+'秒':Math.round(el/60)+'分'}）</span></div>`;
+    return;
+  }
   $('#prog').innerHTML=`<div class="progbar"><i style="width:${r.done/r.total*100}%"></i><span>${r.done} / ${r.total} 対戦${r.done?`（残り約${eta<90?Math.round(eta)+'秒':Math.round(eta/60)+'分'}）`:''}</span></div>`;
 }
 
@@ -286,10 +348,11 @@ function renderRes(){
   const R=B.res; if(!R){ $('#res').innerHTML='<section class="card"><p class="sub small nm">条件を選んで「検証を実行」を押してください。</p></section>'; return; }
   if(!R.items.length){ $('#res').innerHTML='<section class="card"><p class="sub small nm">集計中…</p></section>'; return; }
   const errs=R.items.reduce((s,x)=>s+x.r.errors,0), msg=(R.items.find(x=>x.r.errMsg)||{r:{}}).r.errMsg;
-  const cond=[`${RULESETS[R.rule].name}`,`データ：${BSRC[R.src]}`,`1対戦${R.n}試合`,`CPU：${R.level==='hard+'?'つよい（先読みあり）':R.level==='hard'?'つよい（先読みなし）':'ふつう'}`,
+  const cond=[`${RULESETS[R.rule].name}`,`データ：${BSRC[R.src]}`,R.goal?`1対戦${R.n}試合ずつ・${R.rounds}周目まで（計${R.items.reduce((s,x)=>s+x.r.n,0).toLocaleString()}試合）`:`1対戦${R.n}試合`,
+    ...(R.goal?[R.done?(R.hit?`目標 ±${R.goal}% に到達（いちばん広い誤差 ±${R.worst.v.toFixed(1)}%）`:`目標 ±${R.goal}% に未到達（上限${GOAL_MAX_ROUNDS}周。いちばん広い誤差 ±${R.worst&&isFinite(R.worst.v)?R.worst.v.toFixed(1):'-'}%）`):`目標 ±${R.goal}%`]:[]),`CPU：${R.level==='hard+'?'つよい（先読みあり）':R.level==='hard'?'つよい（先読みなし）':'ふつう'}`,
     ...(Object.keys(R.mcol||{}).length?[`色特化マスターあり（${R.cmin}面以上）`]:[]),
     ...(RULESETS[R.rule].handicapAsc&&R.view!=='master'?[`ハンデ${R.handicap?'あり':'なし'}`]:[]),...(R.excl?['除外あり']:[]),
-    R.done?`${(R.ms/1000).toFixed(1)}秒`:'実行中'].join(' ／ ');
+    R.done?`${(R.ms/1000).toFixed(1)}秒`:R.stopped?'中止（途中までの結果）':'実行中'].join(' ／ ');
   const body=R.view==='master'?resMaster(R):R.view==='team'?resTeam(R):resRank(R);
   $('#res').innerHTML=`<section class="card"><h2>結果 <small class="sub">${esc(cond)}</small></h2>${body}
     ${errs?`<p class="bad small">⚠ ${errs}試合でエラーが起きました：${esc(msg||'')}</p>`:''}
@@ -308,11 +371,11 @@ function resRank(R){
       const s=addTo(teams,tm.key,ww,g,r); s.t=tm;
       tm.ids.forEach(id=>addTo(unitW,id,ww,g,r)); if(tm.m) addTo(mW,tm.m,ww,g,r);
     }
-    cell.set(t.ta.key+'|'+t.tb.key,w/g); cell.set(t.tb.key+'|'+t.ta.key,(g-w)/g);
+    for(const [k,ww] of [[t.ta.key+'|'+t.tb.key,w],[t.tb.key+'|'+t.ta.key,g-w]]){ const c=cell.get(k)||{w:0,g:0}; c.w+=ww; c.g+=g; cell.set(k,c); }
   }
   const rows=[...teams.values()].sort((a,b)=>b.w/b.g-a.w/a.g);
   const tbl=`<div class="tbl"><table class="stats"><thead><tr><th>#</th><th>編成</th><th>勝率</th><th></th><th>対戦数</th><th>平均ターン</th></tr></thead><tbody>${rows.map((s,i)=>
-    `<tr class="${rowCls(s.w,s.g)}"><td class="num">${i+1}</td><td class="nm2">${teamHTML(s.t)}</td><td class="num rate">${rateCell(s.w,s.g)}</td><td>${bar(s.w/s.g)}</td><td class="num">${s.g}</td><td class="num">${(s.turns/s.games/Math.max(1,R.n)).toFixed(1)}</td></tr>`).join('')}</tbody></table></div>`;
+    `<tr class="${rowCls(s.w,s.g)}"><td class="num">${i+1}</td><td class="nm2">${teamHTML(s.t)}</td><td class="num rate">${rateCell(s.w,s.g)}</td><td>${bar(s.w/s.g)}</td><td class="num">${s.g}</td><td class="num">${(s.turns/Math.max(1,s.g)).toFixed(1)}</td></tr>`).join('')}</tbody></table></div>`;
   const unitTbl=(title,map,nameOf,costOf)=>{
     const rs2=[...map.entries()].sort((a,b)=>b[1].w/b[1].g-a[1].w/a[1].g);
     return `<div><h3>${title}</h3><div class="tbl"><table class="stats"><thead><tr><th>#</th><th>名前</th><th>勝率</th><th></th><th>採用した編成</th></tr></thead><tbody>${rs2.map(([id,s],i)=>
@@ -321,7 +384,7 @@ function resRank(R){
   if(rs().partyMax===1&&!hasMaster()&&rows.length<=24){ // シンプルルール：キャラ同士の勝率表
     const ks=rows.map(s=>s.t).sort((a,b)=>a.cost-b.cost||uOf(a.ids[0]).name.localeCompare(uOf(b.ids[0]).name));
     mx=`<h3>勝率表（行のキャラから見た勝率 %）</h3><div class="tbl"><table class="mx"><thead><tr><th></th>${ks.map(t=>`<th title="${esc(teamName(t))}"><span class="vert">${esc(uOf(t.ids[0]).name)}</span><span class="sub small">C${t.cost}</span></th>`).join('')}</tr></thead><tbody>${ks.map(a=>`<tr><th class="rh">${esc(uOf(a.ids[0]).name)} <span class="sub small">C${a.cost}</span></th>${ks.map(b=>{
-      if(a===b) return '<td class="self">—</td>'; const p=cell.get(a.key+'|'+b.key); if(p==null) return '<td class="none"></td>';
+      if(a===b) return '<td class="self">—</td>'; const c=cell.get(a.key+'|'+b.key); if(!c) return '<td class="none"></td>'; const p=c.w/c.g;
       return `<td class="hm" style="--p:${p}" title="${esc(teamName(a))} vs ${esc(teamName(b))}：${pct(p)}">${Math.round(p*100)}</td>`; }).join('')}</tr>`).join('')}</tbody></table></div>`;
   }
   const spread=rows.length>1?`勝率の幅：${pct(rows[rows.length-1].w/rows[rows.length-1].g)}〜${pct(rows[0].w/rows[0].g)}`:'';
@@ -370,7 +433,7 @@ function resMaster(R){
   }
   const rows=[...ms.entries()].sort((a,b)=>b[1].w/b[1].g-a[1].w/a[1].g), ids=rows.map(x=>x[0]);
   const tbl=`<div class="tbl"><table class="stats"><thead><tr><th>#</th><th>マスター</th><th>コスト</th><th>勝率</th><th></th><th>試合数</th><th>平均ターン</th></tr></thead><tbody>${rows.map(([id,s],i)=>
-    `<tr class="${rowCls(s.w,s.g)}"><td class="num">${i+1}</td><td>${esc(mOf(id).name)}${R.mcol&&R.mcol[id]?` <span class="tag">${TERMS[R.mcol[id]]}特化</span>`:''}</td><td class="num">${mOf(id).cost}</td><td class="num rate">${rateCell(s.w,s.g)}</td><td>${bar(s.w/s.g)}</td><td class="num">${s.g}</td><td class="num">${(s.turns/s.games/Math.max(1,R.n)).toFixed(1)}</td></tr>`).join('')}</tbody></table></div>`;
+    `<tr class="${rowCls(s.w,s.g)}"><td class="num">${i+1}</td><td>${esc(mOf(id).name)}${R.mcol&&R.mcol[id]?` <span class="tag">${TERMS[R.mcol[id]]}特化</span>`:''}</td><td class="num">${mOf(id).cost}</td><td class="num rate">${rateCell(s.w,s.g)}</td><td>${bar(s.w/s.g)}</td><td class="num">${s.g}</td><td class="num">${(s.turns/Math.max(1,s.g)).toFixed(1)}</td></tr>`).join('')}</tbody></table></div>`;
   const mx=`<div class="tbl"><table class="mx"><thead><tr><th></th>${ids.map(id=>`<th title="${esc(mOf(id).name)}"><span class="vert">${esc(mOf(id).name)}</span></th>`).join('')}</tr></thead><tbody>${ids.map(a=>`<tr><th class="rh">${esc(mOf(a).name)}</th>${ids.map(b=>{
     if(a===b) return '<td class="self">—</td>'; const c=cell.get(a+'|'+b); if(!c||!c.g) return '<td class="none"></td>'; const p=c.w/c.g;
     return `<td class="hm" style="--p:${p}" title="${esc(mOf(a).name)} vs ${esc(mOf(b).name)}：${pct(p)}">${Math.round(p*100)}</td>`; }).join('')}</tr>`).join('')}</tbody></table></div>`;
@@ -397,7 +460,7 @@ document.addEventListener('click',e=>{
     case 'reload': setSrc(B.src); toast('ブラウザのデータを読み直しました'); break;
     case 'set': { const v=d.v; B[d.k]=v; if(d.k==='rule'||d.k==='view'){ B.A={ids:[],m:null}; B.B={ids:[],m:null}; } saveSet(); break; }
     case 'run': startRun(); return;
-    case 'stop': stopRun(); renderProg(); break;
+    case 'stop': stopRun(); if(B.res&&!B.res.done) B.res.stopped=true; renderProg(); renderRes(); break;
     case 'bld': { const T=B[d.k], i=T.ids.indexOf(d.id); if(i>=0) T.ids.splice(i,1); else if(rs().partyMax===1) T.ids=[d.id]; else T.ids.push(d.id); break; }
     case 'bldClear': B[d.k]={ids:[],m:null}; break;
     case 'bldRandom': { // 上限に収まるランダムな編成（マスター込み）
@@ -418,7 +481,7 @@ document.addEventListener('change',e=>{
   if(k==='bm') B[el.dataset.k].m=el.value||null;
   else if(k.startsWith('mcol:')){ const id=k.slice(5); if(el.value) B.mcol[id]=el.value; else delete B.mcol[id]; }
   else if(el.type==='checkbox') B[k]=el.checked;
-  else B[k]=['n','k','sv','cmin'].includes(k)?Number(el.value):el.value;
+  else B[k]=['n','k','sv','cmin','goal'].includes(k)?Number(el.value):el.value;
   saveSet();
   const open=document.querySelector('details.excl')&&document.querySelector('details.excl').open;
   renderCtl(); if(open){ const x=document.querySelector('details.excl'); if(x) x.open=true; }
