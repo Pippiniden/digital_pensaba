@@ -15,12 +15,12 @@ const BMEXCL_KEY='pencilduel.simExcludeMaster';
 const BRULES=['team','mteam','simple','master'];
 const BSRC={ public:'公開データ', applied:'ブラウザに反映済み', draft:'エディタの下書き' };
 
-const B={ src:'public', rule:'team', view:'rank', n:10, k:5, goal:0, level:'hard', filter:'full', opp:'same', handicap:true, sv:9, mcol:{}, cmin:7,
+const B={ src:'public', rule:'team', view:'rank', n:10, k:5, goal:0, detail:true, bg:true, level:'hard', filter:'full', opp:'same', handicap:true, sv:9, mcol:{}, cmin:7,
   vs:'pool', A:{ids:[],m:null}, B:{ids:[],m:null},
   excl:new Set(readJSON(BEXCL_KEY)||[]), mexcl:new Set(readJSON(BMEXCL_KEY)||[]),
   data:null, run:null, res:null };
-try{ const s=readJSON(BSET_KEY)||{}; for(const k of ['src','rule','view','n','k','goal','level','filter','opp','handicap','sv','vs','mcol','cmin']) if(k in s) B[k]=s[k]; }catch(e){}
-const saveSet=()=>writeJSON(BSET_KEY,Object.fromEntries(['src','rule','view','n','k','goal','level','filter','opp','handicap','sv','vs','mcol','cmin'].map(k=>[k,B[k]])));
+try{ const s=readJSON(BSET_KEY)||{}; for(const k of ['src','rule','view','n','k','goal','detail','bg','level','filter','opp','handicap','sv','vs','mcol','cmin']) if(k in s) B[k]=s[k]; }catch(e){}
+const saveSet=()=>writeJSON(BSET_KEY,Object.fromEntries(['src','rule','view','n','k','goal','detail','bg','level','filter','opp','handicap','sv','vs','mcol','cmin'].map(k=>[k,B[k]])));
 
 const $=s=>document.querySelector(s);
 const rs=()=>RULESETS[B.rule];
@@ -167,7 +167,29 @@ function planMaster(){
 }
 
 // ---------- 実行（Worker を並列に） ----------
-function stopRun(){ if(B.run){ B.run.workers.forEach(w=>w.terminate()); B.run=null; } }
+function stopRun(){ if(B.run){ B.run.workers.forEach(w=>w.terminate()); B.run=null; keepAwake(false); } }
+// ---------- 裏でも回し続ける ----------
+// 対戦は Worker が回し、結果の受け取りもタイマーではなくメッセージなので、タブを裏にしても進む。
+// ただしブラウザは長く裏にあるタブを止める（凍結・破棄）ことがあるので、実行中だけ ①Web Lock を持つ ②ほぼ無音の音を鳴らし続ける（B.bg がオンのとき）。
+// どちらも「実行」ボタンを押した操作の中で始める（音は操作なしでは鳴らせない）。進み具合はタブの題名にも出す
+const KEEP={ctx:null,osc:null,release:null}, BASE_TITLE=document.title;
+function keepAwake(on){
+  if(!on){
+    if(KEEP.release){ KEEP.release(); KEEP.release=null; }
+    try{ if(KEEP.osc) KEEP.osc.stop(); if(KEEP.ctx) KEEP.ctx.close(); }catch(e){}
+    KEEP.osc=KEEP.ctx=null; return;
+  }
+  if(!B.bg||KEEP.release) return;
+  KEEP.release=()=>{};
+  try{ if(navigator.locks) navigator.locks.request('pencil-balance-run',()=>new Promise(res=>{ KEEP.release=res; })); }catch(e){}
+  try{
+    const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return;
+    const ctx=new AC(), osc=ctx.createOscillator(), gain=ctx.createGain();
+    osc.frequency.value=40; gain.gain.value=.0008; // 聞こえない大きさ（完全な0だとブラウザが「鳴っていない」と見なすことがある）
+    osc.connect(gain); gain.connect(ctx.destination); osc.start(); KEEP.ctx=ctx; KEEP.osc=osc;
+  }catch(e){}
+}
+const setTitle=t=>{ document.title=t?`${t} – ${BASE_TITLE}`:BASE_TITLE; };
 // ---------- 勝率の集計と誤差の幅 ----------
 // 同じ対戦カード（2編成の組）の試合は勝ちやすさが共通なので、独立した試合として数えると誤差の幅が狭く出すぎる
 // （実測：1カード10試合だと、ばらつきは独立と見なしたときの約2.4倍）。そこでカード1つを1かたまりとして、かたまりごとの勝ち数のばらつきから幅を出す。
@@ -189,6 +211,7 @@ const cred=(x,k)=>!(x.skip&&x.skip.has(k));
 // （出番の少ないキャラ＝色特化マスターなど＝を待って、もう収まったキャラの対戦を回し続けないため）。
 // その周の対戦を使い切っても届かなければ、組を作り直して（plan()。相手の抽選もやり直す）誤差が残っている相手の対戦だけを足す。上限 GOAL_MAX_ROUNDS 周
 const GOAL_MAX_ROUNDS=2000, GOAL_CHECK=20;
+const DETAIL_MAX=150000; // 解析用の記録を残す試合数の上限（これを超えたぶんは集計だけして記録しない）。3対3だと1試合6行＝90万行で、表計算ソフトの上限（約104万行）に収まる。CSV は1試合あたり約0.8KB
 const GOAL_RHO=.16; // 見込み用：カードごとの勝ちやすさの違いの大きさ（実測の割り増し 2.4倍 ÷ 9）
 let GOAL_PRIORITY=true; // false＝優先せず完全にランダムな順で回す（比較用）
 const maxWorkers=()=>Math.max(1,Math.min(6,(navigator.hardwareConcurrency||2)-1));
@@ -235,7 +258,7 @@ function startRun(){
   const nW=Math.max(1,Math.min(maxWorkers(),run.queue.length));
   B.run=run;
   B.res={goal,rounds:1,byKey:new Map(),view,rule:B.rule,src:B.src,n:B.n,k:B.k,filter:B.filter,opp:B.opp,level:B.level,handicap:useHandicap()&&B.view!=='master',vs:B.vs,mcol:{...B.mcol},cmin:B.cmin,
-    data:B.data,items:[],done:false,teams:p.teams,excl:eu().length<B.data.units.length||em().length<B.data.masters.length};
+    data:B.data,items:[],log:B.detail?[]:null,logGames:0,done:false,teams:p.teams,excl:eu().length<B.data.units.length||em().length<B.data.masters.length};
   const R=B.res, hcap=R.handicap;
   // 次に回す対戦。目標つきで誤差の状況が分かっていれば、誤差が広い相手の対戦から。なければランダムな順のまま
   const next=()=>{
@@ -244,7 +267,7 @@ function startRun(){
     return null;
   };
   const feed=w=>{ const t=next(); if(!t){ w.idle=true; return false; } t.taken=true; w.idle=false; run.inflight++;
-    w.postMessage({t:'task',id:t.id,rule:B.rule,A:{ids:t.ta.ids,m:t.ta.m},B:{ids:t.tb.ids,m:t.tb.m},n:B.n,handicap:hcap,level:B.level}); return true; };
+    w.postMessage({t:'task',id:t.id,rule:B.rule,A:{ids:t.ta.ids,m:t.ta.m},B:{ids:t.tb.ids,m:t.tb.m},n:B.n,handicap:hcap,level:B.level,detail:!!R.log&&R.logGames<DETAIL_MAX}); return true; };
   // 誤差の状況を確かめる：目標に届いた相手は reached に入れて成績を確定する（以降の試合は数えない。出番の少ない相手との対戦ばかりが後から混ざって勝率がずれるのを防ぐ）。
   // lag＝まだ届いていない相手（誤差が広い順。試合がまだない相手が先頭）。全員届いたら true
   const look=()=>{
@@ -272,6 +295,8 @@ function startRun(){
       const m=e.data;
       if(m.t==='ready') feed(w);
       else if(m.t==='res'){
+        // 解析用の1試合ごとの記録は別に貯める（集計の足し合わせには混ぜない）
+        if(m.r.games){ if(R.log){ R.log.push({task:run.byId.get(m.id),games:m.r.games}); R.logGames+=m.r.games.length; } delete m.r.games; }
         // すでに目標に届いた相手には数えない（skip）。同じ組・同じ skip の結果は足し合わせる
         const t=run.byId.get(m.id), skip=goal&&run.reached.size?taskSubs(t,view).filter(k=>run.reached.has(k)).sort():[];
         const key=t.ta.key+'|'+t.tb.key+(skip.length?'#'+skip.join(','):''), it=R.byKey.get(key);
@@ -290,9 +315,10 @@ function startRun(){
     w.onerror=e=>{ e.preventDefault(); fail(`${e.message||'Worker の読み込みに失敗'}（ローカルサーバーで開いてください）`); };
     w.postMessage({t:'init',units:B.data.units,masters:B.data.masters});
   }
+  keepAwake(true);
   renderProg(); renderRes(); renderCtl();
 }
-function finish(){ B.res.ms=Date.now()-B.run.t0; B.res.done=true; stopRun(); renderProg(); renderRes(); renderCtl(); }
+function finish(){ B.res.ms=Date.now()-B.run.t0; B.res.done=true; stopRun(); renderProg(); renderRes(); renderCtl(); setTitle('✔ 完了'); }
 let pending=false;
 function schedule(){ if(pending) return; pending=true; setTimeout(()=>{ pending=false; renderProg(); renderRes(); },250); }
 
@@ -336,6 +362,8 @@ function renderCtl(){
         ${sel('level',[['normal','ふつう'],['hard','つよい（先読みなし・速い）'],['hard+','つよい（先読みあり・遅い）']],B.level,'CPUの強さ')}
         ${rs().handicapAsc&&B.view!=='master'?`<label class="chk"><input type="checkbox" data-s="handicap" ${B.handicap?'checked':''} ${dis}>ハンデ戦（${hcapRuleText(rs()).replace(/。$/,'')}）</label>`:''}
       </div>
+      <div class="opts"><label class="chk"><input type="checkbox" data-s="detail" ${B.detail?'checked':''} ${dis}>解析用のデータを記録する（実行後に「キャラ別の内訳」と CSV 出力が使えます）</label>
+        <label class="chk"><input type="checkbox" data-s="bg" ${B.bg?'checked':''} ${dis}>タブを裏にしても回し続ける（実行中だけ、聞こえない大きさの音を鳴らします）</label></div>
       ${needTeam?`<div class="seg">${[['pool','全編成と対戦'],['duel','2つの編成の直接対決']].map(([v,l])=>`<button class="${B.vs===v?'on':''}" data-b="set" data-k="vs" data-v="${v}" ${dis}>${l}</button>`).join('')}</div>
         ${builderHTML('A',B.vs==='duel'?'チームA':'検証する編成')}${B.vs==='duel'?builderHTML('B','チームB'):''}`:''}
       ${m&&team?mcolHTML():''}
@@ -380,6 +408,7 @@ function exclHTML(){
 
 function renderProg(){
   const r=B.run; if(!r){ $('#prog').innerHTML=''; return; }
+  setTitle(r.goal?`${r.need.length-(r.lag?r.left:r.need.length)}/${r.need.length} 検証中`:`${Math.round(r.done/Math.max(1,r.total)*100)}% 検証中`);
   const el=(Date.now()-r.t0)/1000, eta=r.done?el/r.done*(r.total-r.done):0;
   if(r.goal){ // 目標の誤差つき：届いた人数と、いちばん広い誤差
     const w=r.worst, n=r.need.length, left=r.lag?r.left:n, wt=w&&isFinite(w.v)?`いちばん広い誤差 ±${w.v.toFixed(1)}%（${esc(w.name)}）`:'';
@@ -400,9 +429,63 @@ function renderRes(){
     ...(RULESETS[R.rule].handicapAsc&&R.view!=='master'?[`ハンデ${R.handicap?'あり':'なし'}`]:[]),...(R.excl?['除外あり']:[]),
     R.done?`${(R.ms/1000).toFixed(1)}秒`:R.stopped?'中止（途中までの結果）':'実行中'].join(' ／ ');
   const body=R.view==='master'?resMaster(R):R.view==='team'?resTeam(R):resRank(R);
-  $('#res').innerHTML=`<section class="card"><h2>結果 <small class="sub">${esc(cond)}</small></h2>${body}
+  $('#res').innerHTML=`<section class="card"><h2>結果 <small class="sub">${esc(cond)}</small></h2>${body}${R.log&&R.log.length&&(R.done||R.stopped)?resDetail(R):''}
     ${errs?`<p class="bad small">⚠ ${errs}試合でエラーが起きました：${esc(msg||'')}</p>`:''}
     <p class="note">色は勝率の目安です（50%が互角）：<span class="ok">40〜60%</span> ／ <span class="wrn">30〜70%</span> ／ <span class="bad">それより外</span>。±は95%の誤差の幅です（対戦カードごとの勝ちやすさの違いを含めて計算しています）。</p></section>`;
+}
+// ---------- 解析用のデータ（1試合ごとの記録 R.log）：キャラ別の内訳と CSV ----------
+// 記録の形は sim.js の simMatchup(…,detail)：games=[{w:Aの勝ち1/負け0/引分null, f:Aが先攻なら1, t:ターン数, u:[Aのキャラ, Bのキャラ], c:[Aのチェイン, Bのチェイン]}]
+// キャラ1体の記録は DET の順の配列（sim.js の SIM_UCOLS と同じ並び）
+const DET={id:0,dealt:1,taken:2,maxHit:3,kills:4,attacks:5,crits:6,ults:7,skills:8,blocked:9,ascT:10,koT:11,hp:12};
+// 記録を1行ずつたどる：fn({task, g, side:0=A/1=B, tm:その側の編成, op:相手の編成, win:1/0/.5, first, u:キャラの記録, slot, team:その側のキャラ全員, chain})
+function eachDetail(R,fn){
+  let gi=0;
+  for(const {task,games} of R.log) for(const g of games){ gi++;
+    for(const side of [0,1]){ const tm=side?task.tb:task.ta, op=side?task.ta:task.tb, win=g.w==null?.5:(side?1-g.w:g.w), first=side?1-g.f:g.f;
+      g.u[side].forEach((u,slot)=>fn({task,g,gi,side,tm,op,win,first,u,slot,team:g.u[side],chain:g.c[side]})); } }
+}
+function resDetail(R){
+  const m=new Map();
+  eachDetail(R,x=>{ const u=x.u, id=u[DET.id]; let a=m.get(id);
+    if(!a) m.set(id,a={n:0,w:0,dealt:0,share:0,taken:0,kills:0,attacks:0,crits:0,ults:0,ultsW:0,ultsL:0,nW:0,nL:0,skills:0,blocked:0,asc:0,ascT:0,ko:0,koT:0,first:0,firstW:0});
+    const tot=x.team.reduce((s,v)=>s+v[DET.dealt],0);
+    a.n++; a.w+=x.win; a.dealt+=u[DET.dealt]; a.share+=tot?u[DET.dealt]/tot:0; a.taken+=u[DET.taken]; a.kills+=u[DET.kills]; a.attacks+=u[DET.attacks]; a.crits+=u[DET.crits];
+    a.ults+=u[DET.ults]; a.skills+=u[DET.skills]; a.blocked+=u[DET.blocked];
+    if(x.win===1){ a.nW++; a.ultsW+=u[DET.ults]; } else if(x.win===0){ a.nL++; a.ultsL+=u[DET.ults]; }
+    if(u[DET.ascT]!=null){ a.asc++; a.ascT+=u[DET.ascT]; } if(u[DET.koT]!=null){ a.ko++; a.koT+=u[DET.koT]; }
+    if(x.first){ a.first++; a.firstW+=x.win; } });
+  const rows=[...m.entries()].sort((a,b)=>b[1].w/b[1].n-a[1].w/a[1].n), f1=v=>v.toFixed(1), f2=v=>v.toFixed(2), solo=RULESETS[R.rule].partyMax===1;
+  const th=(t,tip)=>`<th title="${tip}">${t}</th>`;
+  return `<h3>キャラ別の内訳（解析用の記録 ${R.logGames.toLocaleString()}試合ぶん）</h3>
+    <div class="row"><button class="small" data-b="csv">CSV を保存（1キャラ1行）</button><span class="sub small">表計算ソフトで開けます（${(R.logGames*RULESETS[R.rule].partyMax*2).toLocaleString()}行）。列の説明は表の見出しにマウスを乗せると出ます。</span></div>
+    <div class="tbl mt"><table class="stats"><thead><tr><th>#</th><th>名前</th>${th('勝率','このキャラがいた側が勝った割合（記録した全試合。目標の誤差つきの実行では、上の表と少し違うことがあります）')}${th('先攻時','このキャラの側が先攻だった試合の勝率')}
+      ${th('与ダメ','1試合あたりの与ダメージ')}${solo?'':th('チーム内','味方全員の与ダメージに占める割合')}${th('被ダメ','1試合あたりの被ダメージ')}${th('撃破','1試合あたりに倒した数')}${th('クリ率','攻撃のうちクリティカルになった割合')}
+      ${th('宝具','1試合あたりの宝具の回数')}${th('勝ち｜負け','勝った試合と負けた試合それぞれの、1試合あたりの宝具の回数')}${th('スキル','1試合あたりのスキルの回数')}${th('防いだ','1試合あたりに回避・無敵などで攻撃を防いだ回数')}
+      ${th('再臨','再臨できた試合の割合と、再臨した平均ターン')}${th(TERMS.out,'戦闘不能になった試合の割合と、その平均ターン')}</tr></thead><tbody>${rows.map(([id,a],i)=>{ const n=a.n;
+      return `<tr class="${grade(a.w/n)}"><td class="num">${i+1}</td><td>${esc(uOf(id).name)} <span class="sub small">C${uOf(id).cost}</span></td><td class="num rate"><b>${pct(a.w/n)}</b></td><td class="num">${a.first?pct(a.firstW/a.first):'-'}</td>
+        <td class="num">${Math.round(a.dealt/n)}</td>${solo?'':`<td class="num">${pct(a.share/n)}</td>`}<td class="num">${Math.round(a.taken/n)}</td><td class="num">${f2(a.kills/n)}</td><td class="num">${a.attacks?pct(a.crits/a.attacks):'-'}</td>
+        <td class="num">${f2(a.ults/n)}</td><td class="num">${a.nW?f2(a.ultsW/a.nW):'-'}｜${a.nL?f2(a.ultsL/a.nL):'-'}</td><td class="num">${f2(a.skills/n)}</td><td class="num">${f2(a.blocked/n)}</td>
+        <td class="num">${pct(a.asc/n)} <span class="sub small">${a.asc?f1(a.ascT/a.asc)+'T':''}</span></td><td class="num">${pct(a.ko/n)} <span class="sub small">${a.ko?f1(a.koT/a.ko)+'T':''}</span></td></tr>`; }).join('')}</tbody></table></div>
+    <p class="note">数字は「そのキャラがいた試合」の平均です。強さの理由の手がかりで、原因そのものではありません（強い味方と組んだぶんも混ざります）。</p>`;
+}
+// CSV：1試合の1キャラを1行に（Excel で文字化けしないよう BOM つき UTF-8）
+function detailCSV(R){
+  const q=v=>{ v=v==null?'':String(v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; };
+  const names=t=>t.ids.map(id=>uOf(id).name).join('・'), lv=R.level==='hard+'?'つよい（先読みあり）':R.level==='hard'?'つよい（先読みなし）':'ふつう';
+  const head=['試合番号','ルール','CPU','ターン数','勝ち','先攻','側','キャラID','キャラ名','コスト','並び順','味方の編成','味方のマスター','相手の編成','相手のマスター',
+    '与ダメージ','チームの与ダメージ','被ダメージ','最大ダメージ','撃破数','攻撃回数','クリティカル回数','宝具回数','スキル回数','防いだ回数','再臨したターン','戦闘不能になったターン','残りHP',
+    'チェインBuster','チェインArts','チェインQuick','ブレイブチェイン'];
+  const out=[head.join(',')];
+  eachDetail(R,x=>{ const u=x.u, d=uOf(u[DET.id]);
+    out.push([x.gi,RULESETS[R.rule].name,lv,x.g.t,x.win,x.first,x.side?'B':'A',u[DET.id],d.name,d.cost,x.slot+1,names(x.tm),x.tm.m?mOf(x.tm.m).name:'',names(x.op),x.op.m?mOf(x.op.m).name:'',
+      u[DET.dealt],x.team.reduce((s,v)=>s+v[DET.dealt],0),u[DET.taken],u[DET.maxHit],u[DET.kills],u[DET.attacks],u[DET.crits],u[DET.ults],u[DET.skills],u[DET.blocked],u[DET.ascT],u[DET.koT],u[DET.hp],...x.chain].map(q).join(',')); });
+  return '\ufeff'+out.join('\r\n');
+}
+function saveCSV(){
+  const R=B.res; if(!R||!R.log||!R.log.length) return;
+  const d=new Date(), p=n=>String(n).padStart(2,'0'), name=`pensaba-${R.rule}-${R.view}-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.csv`;
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([detailCSV(R)],{type:'text/csv'})); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),10000);
+  toast(`${name} を保存しました`);
 }
 const gOf=r=>r.n-r.errors, wOf=r=>r.win+r.draw/2;
 function addTo(map,key,w,g,r,extra){ const s=map.get(key)||{...stNew(),turns:0,games:0,x:extra}; stAdd(s,w,g); s.turns+=r.turns; s.games++; map.set(key,s); return s; }
@@ -504,11 +587,12 @@ document.addEventListener('click',e=>{
   const b=e.target.closest('[data-b]'); if(!b||b.disabled) return;
   const a=b.dataset.b, d=b.dataset;
   switch(a){
-    case 'src': setSrc(d.v); B.res=null; break;
+    case 'src': setSrc(d.v); B.res=null; setTitle(''); break;
     case 'reload': setSrc(B.src); toast('ブラウザのデータを読み直しました'); break;
     case 'set': { const v=d.v; B[d.k]=v; if(d.k==='rule'||d.k==='view'){ B.A={ids:[],m:null}; B.B={ids:[],m:null}; } saveSet(); break; }
     case 'run': startRun(); return;
-    case 'stop': stopRun(); if(B.res&&!B.res.done) B.res.stopped=true; renderProg(); renderRes(); break;
+    case 'csv': saveCSV(); return;
+    case 'stop': stopRun(); setTitle('中止'); if(B.res&&!B.res.done) B.res.stopped=true; renderProg(); renderRes(); break;
     case 'bld': { const T=B[d.k], i=T.ids.indexOf(d.id); if(i>=0) T.ids.splice(i,1); else if(rs().partyMax===1) T.ids=[d.id]; else T.ids.push(d.id); break; }
     case 'bldClear': B[d.k]={ids:[],m:null}; break;
     case 'bldRandom': { // 上限に収まるランダムな編成（マスター込み）
