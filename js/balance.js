@@ -6,7 +6,7 @@
    - 検証：rank＝編成の勝率ランキング（各編成が k チームとランダムに対戦） / team＝特定の編成の戦績（相手は全編成か直接対決）
            / master＝マスターの強さ（同じサーヴァント編成のミラーでマスターだけを変えて勝率を見る。マスターのあるルールだけ）
    - 1回の対戦（タスク）＝ simMatchup(rule,A,B,n,…)。タスクを作る plan() と、集計して表にする render*() が中心
-   - 目標の誤差（B.goal）：誤差の幅が目標以下になるまで plan() から周回を重ねる（startRun / goalWorst）。同じ組の結果は B.res.byKey で足し合わせる
+   - 目標の誤差（B.goal）：全員の誤差の幅が目標以下になるまで回す。誤差が残っている相手の対戦を優先する（startRun / goalState）。同じ組の結果は B.res.byKey で足し合わせる
    ===================================================================== */
 
 const BSET_KEY='pencilduel.balance';
@@ -170,49 +170,74 @@ function planMaster(){
 function stopRun(){ if(B.run){ B.run.workers.forEach(w=>w.terminate()); B.run=null; } }
 // ---------- 目標の誤差（B.goal＝±何ポイント。0＝1周で終わり） ----------
 // 誤差を見る相手：ランキング＝サーヴァント別（とマスター別）の平均勝率 ／ 特定の編成＝その編成の勝率 ／ マスターの強さ＝マスター別の勝率。
-// 全員の誤差の幅が目標以下になるまで、対戦の組を作り直して（plan()。相手の抽選もやり直す）周回を重ねる。上限 GOAL_MAX_ROUNDS 周
-const GOAL_MAX_ROUNDS=200, GOAL_CHECK=20;
+// 全員の誤差の幅が目標以下になるまで回す。回す順は完全なランダムではなく「まだ誤差が残っている相手が出る対戦」を、誤差が広い相手から優先する
+// （出番の少ないキャラ＝色特化マスターなど＝を待って、もう収まったキャラの対戦を回し続けないため）。
+// その周の対戦を使い切っても届かなければ、組を作り直して（plan()。相手の抽選もやり直す）誤差が残っている相手の対戦だけを足す。上限 GOAL_MAX_ROUNDS 周
+const GOAL_MAX_ROUNDS=400, GOAL_CHECK=20;
+let GOAL_PRIORITY=true; // false＝優先せず完全にランダムな順で回す（比較用）
 const maxWorkers=()=>Math.max(1,Math.min(6,(navigator.hardwareConcurrency||2)-1));
-const goalCopies=len=>Math.max(1,Math.ceil(maxWorkers()/Math.max(1,len))); // 組が Worker の本数より少ないとき、1周で同じ組を回す本数
+const goalCopies=len=>Math.max(1,Math.ceil(maxWorkers()/Math.max(1,len))); // 組が Worker の本数より少ないとき、同じ組を回す本数
 const goalNeed=g=>Math.ceil((98/g)**2); // 勝率50%付近で ±g ポイントにするのに要る試合数
-// 対戦の組（tasks）から、誤差を見る相手ごとの「1周あたりの試合数」を数える
-function goalSubjects(tasks,view,each){
-  const m=new Map(), add=(k,v)=>m.set(k,(m.get(k)||0)+v);
-  tasks.forEach((t,i)=>{ const g=each(t,i); if(!g) return;
-    if(view==='team') add('team',g);
-    else if(view==='master'){ add('m:'+t.tag.mi,g); add('m:'+t.tag.mj,g); }
-    else for(const tm of [t.ta,t.tb]){ tm.ids.forEach(id=>add('u:'+id,g)); if(tm.m) add('m:'+tm.m,g); } });
-  return m;
+// 対戦1つが関わる「誤差を見る相手」のキー（u:サーヴァントID / m:マスターID / team）
+function taskSubs(t,view){
+  if(view==='team') return ['team'];
+  if(view==='master') return ['m:'+t.tag.mi,'m:'+t.tag.mj];
+  const out=[]; for(const tm of [t.ta,t.tb]){ tm.ids.forEach(id=>out.push('u:'+id)); if(tm.m) out.push('m:'+tm.m); } return [...new Set(out)];
 }
-// いまの結果で、いちばん誤差の幅が広い相手 {v:幅, name}。need＝誤差を見る相手の一覧（まだ1試合もしていない相手がいれば未到達）
-function goalWorst(R,need){
+const subName=k=>k==='team'?'検証する編成':k[0]==='u'?uOf(k.slice(2)).name:mOf(k.slice(2)).name;
+// 目標までの試合数の見込み：全員が goalNeed 試合ずつ要る。1試合で進む人数（両陣営のサーヴァント／マスター）で割る
+function goalEst(tasks,view,goal){
+  const keys=new Set(); tasks.forEach(t=>taskSubs(t,view).forEach(k=>keys.add(k)));
+  const nu=[...keys].filter(k=>k[0]==='u').length, nm=[...keys].filter(k=>k[0]==='m').length, need=goalNeed(goal);
+  return view==='team'?need:Math.ceil(Math.max(need*nu/(2*rs().partyMax),need*nm/2));
+}
+// いまの結果での誤差の状況：{worst:{v,name}, lag:[誤差が目標より広い相手のキー。広い順], total:相手の数}。need＝誤差を見る相手の一覧（まだ試合がない相手は最優先）
+function goalState(R,need,goal){
   const st=new Map(), add=(k,w,g)=>{ const x=st.get(k)||{w:0,g:0}; x.w+=w; x.g+=g; st.set(k,x); };
   for(const {task:t,r} of R.items){ const g=gOf(r), w=wOf(r); if(!g) continue;
     if(R.view==='team') add('team',w,g);
     else if(R.view==='master'){ add('m:'+t.tag.mi,w,g); add('m:'+t.tag.mj,g-w,g); }
     else for(const [tm,ww] of [[t.ta,w],[t.tb,g-w]]){ tm.ids.forEach(id=>add('u:'+id,ww,g)); if(tm.m) add('m:'+tm.m,ww,g); } }
-  let worst={v:0,name:''};
-  for(const [k,x] of st){ const v=ciX(x.w,x.g); if(v>worst.v) worst={v,name:k==='team'?'検証する編成':k[0]==='u'?uOf(k.slice(2)).name:mOf(k.slice(2)).name}; }
-  if(need) for(const k of need) if(!st.has(k)) return {v:Infinity,name:''};
-  return st.size?worst:{v:Infinity,name:''};
+  const all=need.map(k=>{ const x=st.get(k); return {k,v:x?ciX(x.w,x.g):Infinity}; }).sort((a,b)=>b.v-a.v);
+  return {worst:{v:all.length?all[0].v:Infinity,name:all.length?subName(all[0].k):''}, lag:all.filter(x=>x.v>goal).map(x=>x.k), total:all.length};
 }
 // 同じ組の結果を足し合わせる（周回を重ねたぶん）
 function mergeRes(a,b){ for(const k in b){ if(typeof b[k]==='number'&&k!=='aN') a[k]=(a[k]||0)+b[k]; else if(a[k]==null) a[k]=b[k]; } return a; }
 function startRun(){
   const p=plan(); if(p.err){ toast(p.err,true); return; }
   stopRun();
-  const goal=Number(B.goal)||0, copies=goal?goalCopies(p.tasks.length):1;
-  const nW=Math.max(1,Math.min(maxWorkers(),p.tasks.length*copies));
+  const goal=Number(B.goal)||0, view=B.view;
   let nextId=0;
   // 目標の誤差つきで組が少ないとき（直接対決など）は、同じ組を何本かに分けて並列に回す（結果は同じ組として足し合わせる）
   const mk=ts=>Array.from({length:goal?goalCopies(ts.length):1},()=>ts).flat().map(t=>({...t,id:nextId++,sw:Math.random()})).sort((a,b)=>a.sw-b.sw);
-  const tasks=mk(p.tasks);
-  const run={workers:[],queue:tasks.slice(),done:0,total:tasks.length,t0:Date.now(),byId:new Map(tasks.map(t=>[t.id,t])),round:1,rdone:0,rtotal:tasks.length,goal,worst:null,need:goal?[...goalSubjects(p.tasks,B.view,()=>1).keys()]:null};
+  const run={workers:[],queue:[],bySub:null,done:0,total:0,games:0,inflight:0,t0:Date.now(),byId:new Map(),round:1,goal,worst:null,lag:null,
+    need:goal?[...new Set(p.tasks.flatMap(t=>taskSubs(t,view)))]:null};
+  // その周の対戦を積む。目標つきのときは「相手ごとの対戦の山」（bySub）も作る
+  const load=ts=>{ ts.forEach(t=>run.byId.set(t.id,t)); run.queue=ts.slice(); run.total+=ts.length;
+    if(goal){ run.bySub=new Map(); ts.forEach(t=>taskSubs(t,view).forEach(k=>{ let a=run.bySub.get(k); if(!a) run.bySub.set(k,a=[]); a.push(t); })); } };
+  load(mk(p.tasks));
+  const nW=Math.max(1,Math.min(maxWorkers(),run.queue.length));
   B.run=run;
-  B.res={goal,rounds:1,byKey:new Map(),view:B.view,rule:B.rule,src:B.src,n:B.n,k:B.k,filter:B.filter,opp:B.opp,level:B.level,handicap:useHandicap()&&B.view!=='master',vs:B.vs,mcol:{...B.mcol},cmin:B.cmin,
+  B.res={goal,rounds:1,byKey:new Map(),view,rule:B.rule,src:B.src,n:B.n,k:B.k,filter:B.filter,opp:B.opp,level:B.level,handicap:useHandicap()&&B.view!=='master',vs:B.vs,mcol:{...B.mcol},cmin:B.cmin,
     data:B.data,items:[],done:false,teams:p.teams,excl:eu().length<B.data.units.length||em().length<B.data.masters.length};
-  const hcap=B.res.handicap, feed=w=>{ const t=run.queue.pop(); if(!t) return;
-    w.postMessage({t:'task',id:t.id,rule:B.rule,A:{ids:t.ta.ids,m:t.ta.m},B:{ids:t.tb.ids,m:t.tb.m},n:B.n,handicap:hcap,level:B.level}); };
+  const R=B.res, hcap=R.handicap;
+  // 次に回す対戦。目標つきで誤差の状況が分かっていれば、誤差が広い相手の対戦から。なければランダムな順のまま
+  const next=()=>{
+    if(goal&&run.lag&&GOAL_PRIORITY){ for(const k of run.lag){ const a=run.bySub.get(k); while(a&&a.length){ const t=a.pop(); if(!t.taken) return t; } } return null; }
+    while(run.queue.length){ const t=run.queue.pop(); if(!t.taken) return t; }
+    return null;
+  };
+  const feed=w=>{ const t=next(); if(!t){ w.idle=true; return false; } t.taken=true; w.idle=false; run.inflight++;
+    w.postMessage({t:'task',id:t.id,rule:B.rule,A:{ids:t.ta.ids,m:t.ta.m},B:{ids:t.tb.ids,m:t.tb.m},n:B.n,handicap:hcap,level:B.level}); return true; };
+  const look=()=>{ const g=goalState(R,run.need,goal); run.worst=R.worst=g.worst; run.lag=g.lag; run.left=g.lag.length; R.left=g.lag.length; R.subjects=g.total; return !g.lag.length; };
+  // 回せる対戦がなくなった：目標つきなら、誤差が残っている相手の対戦だけを作り直して足す
+  const nextRound=()=>{
+    if(!goal){ R.hit=true; finish(); return; }
+    if(run.round>=GOAL_MAX_ROUNDS){ R.hit=false; finish(); return; }
+    const p2=plan(), lag=new Set(run.lag), ts=p2.err?[]:p2.tasks.filter(t=>!GOAL_PRIORITY||taskSubs(t,view).some(k=>lag.has(k)));
+    if(!ts.length){ R.hit=false; finish(); return; }
+    run.round++; R.rounds=run.round; load(mk(ts)); run.workers.forEach(feed);
+  };
   const fail=msg=>{ stopRun(); renderProg(); toast(`検証中にエラー：${msg}`,true); };
   for(let i=0;i<nW;i++){
     let w;
@@ -223,19 +248,16 @@ function startRun(){
       const m=e.data;
       if(m.t==='ready') feed(w);
       else if(m.t==='res'){
-        const R=B.res, t=run.byId.get(m.id), key=t.ta.key+'|'+t.tb.key, it=R.byKey.get(key);
+        const t=run.byId.get(m.id), key=t.ta.key+'|'+t.tb.key, it=R.byKey.get(key);
         if(it) mergeRes(it.r,m.r); else{ const x={task:t,r:m.r}; R.byKey.set(key,x); R.items.push(x); } // 前の周と同じ組は足し合わせる
-        run.done++; run.rdone++; schedule();
-        const end=run.rdone>=run.rtotal;
-        // 目標の誤差：周の途中でも、届いた時点で止める（組は毎周ランダムな順に回すので、途中で止めても偏らない）。確かめるのは GOAL_CHECK 対戦ごと
-        if(goal&&(end||run.done%GOAL_CHECK===0)){ run.worst=goalWorst(R,run.need); R.worst=run.worst; if(run.worst.v<=goal){ R.hit=true; finish(); return; } }
-        if(!end){ feed(w); return; }
-        // 1周ぶんが終わった：目標の誤差に届いていなければ、組を作り直してもう1周
-        if(!goal||run.round>=GOAL_MAX_ROUNDS){ R.hit=!goal; finish(); return; }
-        const p2=plan(); if(p2.err||!p2.tasks.length){ finish(); return; }
-        const ts=mk(p2.tasks); ts.forEach(x=>run.byId.set(x.id,x));
-        run.queue=ts.slice(); run.total+=ts.length; run.round++; run.rdone=0; run.rtotal=ts.length; R.rounds=run.round;
-        run.workers.forEach(feed);
+        run.done++; run.inflight--; run.games+=m.r.n; schedule();
+        // 目標の誤差：GOAL_CHECK 対戦ごとに確かめ、全員が届いた時点で止める
+        if(goal&&run.done%GOAL_CHECK===0&&look()){ R.hit=true; finish(); return; }
+        if(!feed(w)){
+          if(goal&&look()){ R.hit=true; finish(); return; } // 回せる対戦がない：最新の状況で確かめ直す
+          if(!feed(w)&&run.inflight===0){ nextRound(); return; }
+        }
+        run.workers.forEach(x=>{ if(x.idle) feed(x); });
       }
       else if(m.t==='error') fail(m.msg);
     };
@@ -256,9 +278,7 @@ function renderCtl(){
   const d=B.data, dis=B.run?'disabled':'', m=hasMaster(), team=rs().partyMax>1;
   const views=[['rank','編成の勝率ランキング'],['team','特定の編成の戦績'],...(m?[['master','マスターの強さ']]:[])];
   if(!views.some(v=>v[0]===B.view)) B.view='rank';
-  const p=plan(), goal=Number(B.goal)||0, copies=goal?goalCopies(p.tasks.length):1, games=p.tasks.length*B.n*copies;
-  // 目標の誤差があるとき：いちばん試合数が少ない相手が必要な試合数に届くまでの周回数（見込み）
-  const least=goal&&!p.err?Math.min(...goalSubjects(p.tasks,B.view,()=>B.n*copies).values()):0, rounds=least?Math.min(GOAL_MAX_ROUNDS,goalNeed(goal)/least):1;
+  const p=plan(), goal=Number(B.goal)||0, games=p.tasks.length*B.n, est=goal&&!p.err?goalEst(p.tasks,B.view,goal):0;
   const goalWho={rank:hasMaster()?'サーヴァント別・マスター別の平均勝率':'サーヴァント別の平均勝率',team:'検証する編成の勝率',master:'マスター別の勝率'}[B.view];
   const src=Object.entries(BSRC).map(([k,l])=>{
     const dd=k===B.src?d:null;
@@ -297,8 +317,8 @@ function renderCtl(){
     </section>
     <section class="card"><div class="runbar">
       ${B.run?`<button class="danger" data-b="stop">中止</button>`:`<button class="primary" data-b="run" ${p.err?'disabled':''}>検証を実行</button>`}
-      <span class="est">${p.err?`<span class="bad">${esc(p.err)}</span>`:`${p.tasks.length}対戦 × ${B.n*copies}試合 ＝ <b>${games.toLocaleString()}試合</b>${goal?` → 目標まで 約<b>${Math.round(games*rounds).toLocaleString()}試合</b>（約${rounds<10?rounds.toFixed(1):Math.round(rounds)}周）`:''}${p.teams&&B.view!=='master'?`（対象の編成 ${p.teams}）`:''}　目安 ${etaText(Math.round(games*rounds))}${p.skip&&p.skip.length?` <span class="bad small">（条件に合う編成がなく除外：${p.skip.length}組）</span>`:''}`}</span></div>
-      ${goal?`<p class="note">${goalWho}の誤差がすべて <b>±${goal}%</b> 以下になったら止まります（1人あたり約${goalNeed(goal).toLocaleString()}試合が目安。上限${GOAL_MAX_ROUNDS}周）。周の途中でも届いた時点で止まり、足りなければ対戦の組（相手の抽選）を作り直して次の周に進みます。調整の前後を比べるときは、前後とも同じ目標で回してください（差の誤差は約1.4倍になります）。</p>`:''}
+      <span class="est">${p.err?`<span class="bad">${esc(p.err)}</span>`:`${p.tasks.length}対戦 × ${B.n}試合 ＝ <b>${games.toLocaleString()}試合</b>${goal?` → 目標まで 約<b>${est.toLocaleString()}試合</b>`:''}${p.teams&&B.view!=='master'?`（対象の編成 ${p.teams}）`:''}　目安 ${etaText(goal?est:games)}${p.skip&&p.skip.length?` <span class="bad small">（条件に合う編成がなく除外：${p.skip.length}組）</span>`:''}`}</span></div>
+      ${goal?`<p class="note">${goalWho}の誤差がすべて <b>±${goal}%</b> 以下になったら止まります（1人あたり約${goalNeed(goal).toLocaleString()}試合が目安）。まだ誤差が残っているキャラが出る対戦を優先して回すので、出番の少ないキャラ（色特化マスターなど）を待って回し続けることはありません。そのぶん、ほかのキャラの勝率には出番の少ないキャラとの対戦が少し多めに混ざります。調整の前後を比べるときは、前後とも同じ目標で回してください（差の誤差は約1.4倍になります）。</p>`:''}
       <p class="note">同じ条件でも結果は少しぶれます（±は95%の誤差の幅）。ブラウザのタブを開いたままにしてください。</p></section>`;
 }
 // 目安の時間：1本あたり毎秒250試合ほど。先読みありのチーム戦は1試合が約40倍かかる（実測：6本で毎秒25試合ほど。1対1は攻撃対象が1体で先読みが走らないので変わらない）
@@ -335,9 +355,9 @@ function exclHTML(){
 function renderProg(){
   const r=B.run; if(!r){ $('#prog').innerHTML=''; return; }
   const el=(Date.now()-r.t0)/1000, eta=r.done?el/r.done*(r.total-r.done):0;
-  if(r.goal){ // 目標の誤差つき：周回数と、いちばん広い誤差
-    const w=r.worst, wt=w&&isFinite(w.v)?`いちばん広い誤差 ±${w.v.toFixed(1)}%（${esc(w.name)}） → 目標 ±${r.goal}%`:`目標 ±${r.goal}%`;
-    $('#prog').innerHTML=`<div class="progbar"><i style="width:${r.rdone/r.rtotal*100}%"></i><span>${r.round}周目：${r.rdone} / ${r.rtotal} 対戦　${wt}（経過${el<90?Math.round(el)+'秒':Math.round(el/60)+'分'}）</span></div>`;
+  if(r.goal){ // 目標の誤差つき：届いた人数と、いちばん広い誤差
+    const w=r.worst, n=r.need.length, left=r.lag?r.left:n, wt=w&&isFinite(w.v)?`いちばん広い誤差 ±${w.v.toFixed(1)}%（${esc(w.name)}）`:'';
+    $('#prog').innerHTML=`<div class="progbar"><i style="width:${(n-left)/Math.max(1,n)*100}%"></i><span>目標 ±${r.goal}% に到達 ${n-left} / ${n}　${r.games.toLocaleString()}試合　${wt}（経過${el<90?Math.round(el)+'秒':Math.round(el/60)+'分'}）</span></div>`;
     return;
   }
   $('#prog').innerHTML=`<div class="progbar"><i style="width:${r.done/r.total*100}%"></i><span>${r.done} / ${r.total} 対戦${r.done?`（残り約${eta<90?Math.round(eta)+'秒':Math.round(eta/60)+'分'}）`:''}</span></div>`;
@@ -348,8 +368,8 @@ function renderRes(){
   const R=B.res; if(!R){ $('#res').innerHTML='<section class="card"><p class="sub small nm">条件を選んで「検証を実行」を押してください。</p></section>'; return; }
   if(!R.items.length){ $('#res').innerHTML='<section class="card"><p class="sub small nm">集計中…</p></section>'; return; }
   const errs=R.items.reduce((s,x)=>s+x.r.errors,0), msg=(R.items.find(x=>x.r.errMsg)||{r:{}}).r.errMsg;
-  const cond=[`${RULESETS[R.rule].name}`,`データ：${BSRC[R.src]}`,R.goal?`1対戦${R.n}試合ずつ・${R.rounds}周目まで（計${R.items.reduce((s,x)=>s+x.r.n,0).toLocaleString()}試合）`:`1対戦${R.n}試合`,
-    ...(R.goal?[R.done?(R.hit?`目標 ±${R.goal}% に到達（いちばん広い誤差 ±${R.worst.v.toFixed(1)}%）`:`目標 ±${R.goal}% に未到達（上限${GOAL_MAX_ROUNDS}周。いちばん広い誤差 ±${R.worst&&isFinite(R.worst.v)?R.worst.v.toFixed(1):'-'}%）`):`目標 ±${R.goal}%`]:[]),`CPU：${R.level==='hard+'?'つよい（先読みあり）':R.level==='hard'?'つよい（先読みなし）':'ふつう'}`,
+  const cond=[`${RULESETS[R.rule].name}`,`データ：${BSRC[R.src]}`,R.goal?`1対戦${R.n}試合ずつ・計${R.items.reduce((s,x)=>s+x.r.n,0).toLocaleString()}試合`:`1対戦${R.n}試合`,
+    ...(R.goal?[R.done?(R.hit?`目標 ±${R.goal}% に到達（いちばん広い誤差 ±${R.worst.v.toFixed(1)}%）`:`目標 ±${R.goal}% に未到達（あと${R.left||0}人。いちばん広い誤差 ±${R.worst&&isFinite(R.worst.v)?R.worst.v.toFixed(1):'-'}%）`):`目標 ±${R.goal}%`]:[]),`CPU：${R.level==='hard+'?'つよい（先読みあり）':R.level==='hard'?'つよい（先読みなし）':'ふつう'}`,
     ...(Object.keys(R.mcol||{}).length?[`色特化マスターあり（${R.cmin}面以上）`]:[]),
     ...(RULESETS[R.rule].handicapAsc&&R.view!=='master'?[`ハンデ${R.handicap?'あり':'なし'}`]:[]),...(R.excl?['除外あり']:[]),
     R.done?`${(R.ms/1000).toFixed(1)}秒`:R.stopped?'中止（途中までの結果）':'実行中'].join(' ／ ');
