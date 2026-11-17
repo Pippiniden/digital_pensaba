@@ -250,3 +250,9 @@ label.mini.chk{cursor:pointer}
 #diffdlg .drm{opacity:.7} #diffdlg .dad{color:#bff0c0}
 #diffdlg .dfoot{margin-top:10px}
 #impdlg .impbtns{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+/* 基準値（js/unit-ref.js）：入力欄の近くに小さく出す参考値 */
+.uref{font-size:10px;color:var(--sub);opacity:.75;line-height:1.3;font-weight:400}.uref:empty{display:none}
+label.mini.hasref{display:inline-grid;grid-template-columns:auto auto;justify-content:start;align-self:flex-start;gap:1px 4px}label.mini.hasref .uref{grid-column:1/-1}
+.cmded>.uref,.subcard>.uref{display:block}
+.refsum{display:flex;flex-wrap:wrap;gap:4px 18px;margin-top:8px;font-size:12px;color:var(--sub)}.refsum:empty{display:none}
+.refsum b{color:var(--ink);font-weight:600}.refsum .uref{margin-left:6px}

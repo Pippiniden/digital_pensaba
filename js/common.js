@@ -127,6 +127,7 @@ function normalizeUnit(u){
   const condLines=(Array.isArray(u.condLines)?u.condLines:[]).map(normCondLine).filter(Boolean);
   return { id:String(u.id||''), name:String(u.name||''), cls:normClass(u.cls), traits:normTraits(u.traits), cost:num(u.cost), hp:num(u.hp,100),
     ...(u.wip?{wip:true}:{}), // 制作中：js 書き出し（units.js）に含めない
+    ...(typeof u.memo==='string'&&u.memo.trim()?{memo:u.memo}:{}), // メモ：エディタ用の覚え書き（ゲーム中では使わない）
     fit:normFit(u.fit), ...(normLink(u.link)?{link:normLink(u.link)}:{}), lines, ...(condLines.length?{condLines}:{}), faces, skills, ult:Object.assign({name:String(ult.name||''), c:String(ult.c||'R'), eff:(ult.eff||[]).map(normEff)}, String(ult.ruby||'').trim()?{ruby:String(ult.ruby).trim()}:{}, Number.isInteger(ult.br)&&ult.br>=0?{br:ult.br}:{}, PICKS[ult.pick]&&ult.pick?{pick:ult.pick}:{}) };
 }
 // 条件つきセリフ：{key:LINE_KEYS のキー, who:LINE_WHO のキー, cond:Cond, lines:string[]}。上にあるものから順に見て、最初に条件を満たしたものを使う。不正なら null
@@ -268,6 +269,7 @@ function normalizeMaster(m){
   const ln=m.lines||{};
   return { id:String(m.id||''), name:String(m.name||''), cls:TERMS.player, traits:[], cost:num(m.cost), hp:num(m.hp,100), master:true,
     ...(m.wip?{wip:true}:{}), // 制作中：js 書き出し（masters.js）に含めない
+    ...(typeof m.memo==='string'&&m.memo.trim()?{memo:m.memo}:{}), // メモ：エディタ用の覚え書き（ゲーム中では使わない）
     ...(normLink(m.link)?{link:normLink(m.link)}:{}),
     fit:normFit(m.fit), lines:Object.fromEntries(Object.keys(MASTER_LINE_KEYS).map(k=>[k,strList(ln[k])])), faces, spells };
 }
@@ -390,6 +392,7 @@ function mastersToJS(ms){
     `    "id":${j(m.id)}, "name":${j(m.name)}, "cost":${m.cost}, "hp":${m.hp},`,
     ...(fitIsDef(m.fit,'face')?[]:[`    "fit":${j({face:m.fit.face})},`]),
     ...(m.link?[`    "link":${j(m.link)},`]:[]),
+    ...(m.memo?[`    "memo":${j(m.memo)},`]:[]),
     ...(Object.keys(MASTER_LINE_KEYS).some(k=>m.lines[k].length)?[`    "lines":${j(Object.fromEntries(Object.keys(MASTER_LINE_KEYS).map(k=>[k,m.lines[k]])))},`]:[]),
     '    "faces":[',
     m.faces.map(f=>`      ${j({label:f.label,eff:f.eff,...(f.line?{line:f.line}:{})})}`).join(',\n'),
@@ -443,6 +446,7 @@ function unitsToJS(units){
     ...(u.traits&&u.traits.length?[`    "traits":${j(u.traits)},`]:[]),
     ...(['face','card','np','cut'].every(k=>fitIsDef(u.fit,k))?[]:[`    "fit":${j(u.fit)},`]),
     ...(u.link?[`    "link":${j(u.link)},`]:[]),
+    ...(u.memo?[`    "memo":${j(u.memo)},`]:[]),
     '    "lines":{',
     Object.keys(LINE_KEYS).map(k=>`      ${j(k)}:${j(u.lines[k])}`).join(',\n'),
     ...(u.condLines&&u.condLines.length?['    },',`    "condLines":[`,u.condLines.map(c=>`      ${j(c)}`).join(',\n'),'    ],']:['    },']),
