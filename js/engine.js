@@ -301,11 +301,11 @@ function applyEffects(src,effs,picked,o={}){
     let oe=o; // 状態コピー：コピー元（from）を1体に決めて applyOne へ渡す
     if(FX[e.k]&&FX[e.k].copy){
       const fu=resolveTargets(src,e.from||'self',picked)[0];
-      if(!fu){ log(`${nm(src)}：コピー元がいないため「${FX[e.k].name}」は効果なし`,'sub'); continue; }
+      if(!fu){ log(`${nm(src)}：コピー元がいないため「${fxName(e)}」は効果なし`,'sub'); continue; }
       oe={...o,from:fu};
     }
     resolveTargets(src,e.t,picked).forEach(t=>{
-      if(condAtApply(e)&&!condOk(e.cond,t)){ log(`${nm(t)}：条件（${condText(e.cond)}）を満たさないため「${FX[e.k].name}」は効果なし`,'sub'); return; }
+      if(condAtApply(e)&&!condOk(e.cond,t)){ log(`${nm(t)}：条件（${condText(e.cond)}）を満たさないため「${fxName(e)}」は効果なし`,'sub'); return; }
       // 弱体耐性ダウン：対象が受ける弱体（確率つきのみ）の判定ロールをN+xにする
       const rd=(FX[e.k]&&FX[e.k].buff===false&&e.chance)?mods(t,'debuffResDown'):null;
       const useRd=!!(rd&&rd.list.length);
@@ -327,14 +327,14 @@ function changeStars(pid,v){
   log(`${esc(P.name)}：${TERMS.star}${Math.abs(v)}個${v>=0?'獲得':'消失'}`, v>=0?'':'bad');
 }
 // 強化無効・弱体無効で防がれたら true（防いだ効果に回数があれば1減らす）
-function immuneTo(t,k){
+function immuneTo(t,k,e0){
   const b=FX[k].buff;
   let guard=b===true?'buffImmune':b===false?'debuffImmune':null;
   // 種類指定つき（vs）は、その効果だけ防ぐ。指定なしはすべて防ぐ
   const matches=x=>x.k===guard&&(!x.vs||x.vs===k);
   if(FX[k].mental&&!t.fx.some(matches)&&t.fx.some(x=>x.k==='mentalImmune')) guard='mentalImmune';
   const g=guard&&t.fx.find(guard==='mentalImmune'?(x=>x.k===guard):matches); if(!g) return false;
-  consume(t,[g]); log(`${nm(t)}は${FX[guard].name}で「${FX[k].name}」を防いだ`,'sub');
+  consume(t,[g]); log(`${nm(t)}は${FX[guard].name}で「${e0?fxName(e0):FX[k].name}」を防いだ`,'sub');
   return true;
 }
 // 戦闘不能：ルール上はその場で倒れるが、画面で暗くするのは一連の攻撃が終わってから（flushKo）
@@ -374,7 +374,7 @@ const FX_CAP=60; // 1体に付けられる状態の数の上限（コピーの�
 function applyOne(src,t,e,o={}){ applyOne0(src,t,e,o); syncU(t); }
 function applyOne0(src,t,e,o={}){
   if(t.master&&mTeam()&&FX[e.k].buff===false){ log(`${nm(t)}は${TERMS.unit}に守られていて弱体を受けない`,'sub'); return; } // マスターチーム：マスターは弱体を受けない
-  if(!e.sure&&immuneTo(t,e.k)) return; // sure＝強化無効・弱体無効で防がれない
+  if(!e.sure&&immuneTo(t,e.k,e)) return; // sure＝強化無効・弱体無効で防がれない
   { // 即時効果への無効（強化解除・即死・NP減少・スター消失）。NP減少・スター消失は敵からのものだけ防ぐ
     const hostile=src&&src.pid!==t.pid;
     const gk=e.k==='strip'?'stripImmune':e.k==='instantDeath'?'deathImmune':e.k==='np'&&e.v<0&&hostile?'npDownImmune':e.k==='starLoss'&&hostile?'starLossImmune':null;
@@ -843,7 +843,7 @@ function beginTurn(){
   ALLM().forEach(u=>{
     u.fx.forEach(e=>{ if(e.owner===G.cur && e.turns!=null) e.turns--; });
     const ex=u.fx.filter(e=>e.turns!=null&&e.turns<=0);
-    if(ex.length){ u.fx=u.fx.filter(e=>!ex.includes(e)); clampHp(u); syncU(u); log(`${nm(u)}の ${ex.map(e=>FX[e.k].name).join('・')} が終了`,'sub'); }
+    if(ex.length){ u.fx=u.fx.filter(e=>!ex.includes(e)); clampHp(u); syncU(u); log(`${nm(u)}の ${ex.map(fxName).join('・')} が終了`,'sub'); }
   });
 }
 // ターン開始時○○：手番側の生存サーヴァントに付いているものが発動（スターはこのターンの手持ちに加わる）

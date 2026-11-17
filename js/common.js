@@ -579,6 +579,8 @@ function cmdCardHTML(d,c,opt={}){
 }
 
 // ---------- 表示用の文字列 ----------
+// ログ用の効果名：値つきの名前（ダメージ無効は「x」に効果量を入れる）
+const fxName=e=>e.k==='nullUnder'&&e.v!=null?FX.nullUnder.name.replace('x',e.v):FX[e.k].name;
 function fxText(e){
   const col=e.color?`(${TERMS[e.color]})`:'';
   let s;

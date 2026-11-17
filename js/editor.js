@@ -283,12 +283,17 @@ const SEG={name:'名前',ruby:'ルビ',cls:'クラス',cost:'コスト',hp:'HP',
   pre:'再臨前',post:'再臨後',acts:'行動数',c:'色',dmg:'ダメージ',np:'NP',star:'スター',label:'名前',line:'専用セリフ',pick:'対象の選び方',br:'改行位置',
   k:'種類',t:'対象',v:'値',turns:'ターン',times:'回数',chance:'確率',color:'色指定',trait:'属性指定',at:'タイミング',max:'最大HP',text:'説明文',cond:'条件',sure:'解除・無効不可',vs:'対象の状態',from:'コピー元',noExtra:'エクストラなし',
   key:'場面',who:'誰',face:'顔',card:'カード',cut:'カットインの立ち絵',x:'横',y:'縦',z:'拡大',master:'マスター'};
-function pathLabel(p,m){
-  const out=[];
+// roots＝[下書き側, 比較先側]（スキル名・効果の種類を引くため）。どちらか見つかったほうを使う
+function pathLabel(p,m,roots){
+  const out=[], at=n=>{ for(const r of roots||[]){ const v=getPath(r,p.slice(0,n).join('.')); if(v) return v; } return null; };
   for(let i=0;i<p.length;i++){
     const s=p[i], n=p[i+1];
     const idx={faces:m?'補助':'鉛筆',skills:'スキル',spells:'令呪',eff:'効果',condLines:'条件つきセリフ'}[s];
-    if(idx&&/^\d+$/.test(n)){ out.push(`${idx}${+n+1}${s==='faces'?'面':''}`); i++; continue; }
+    if(idx&&/^\d+$/.test(n)){
+      const o=at(i+2); let extra='';
+      if(o&&(s==='skills'||s==='spells')&&o.name) extra=`「${o.name}」`;
+      else if(o&&s==='eff'&&o.k&&FX[o.k]) extra=`（${FX[o.k].name.replace(/\(x以下\)/,'')}）`;
+      out.push(`${idx}${+n+1}${s==='faces'?'面':''}${extra}`); i++; continue; }
     if(p[i-1]==='lines'){ out.push((m?MASTER_LINE_KEYS:LINE_KEYS)[s]||s); continue; }
     if(p[i-1]==='fit'&&s==='np'){ out.push('カットインの顔'); continue; }
     out.push(SEG[s]??s);
@@ -307,14 +312,15 @@ function valText(v,p,m){
   const s=typeof v==='string'?`「${v}」`:JSON.stringify(v);
   return s.length>80?s.slice(0,80)+'…':s;
 }
-function diffItemHTML(x,m){
-  const lab=`<span class="dlab">${esc(pathLabel(x.p,m))}</span>`;
+function diffItemHTML(x,m,roots){
+  const lab=`<span class="dlab">${esc(pathLabel(x.p,m,roots))}</span>`;
   if(x.lines){
     const rm=x.a.filter(s=>!x.b.includes(s)), ad=x.b.filter(s=>!x.a.includes(s));
     const ls=[...rm.map(s=>`<li class="drm">− ${esc(s)}</li>`),...ad.map(s=>`<li class="dad">＋ ${esc(s)}</li>`)];
     return `<li>${lab}${ls.length?`<ul class="dlines">${ls.join('')}</ul>`:' <span class="sub">並び順の変更</span>'}</li>`;
   }
-  return `<li>${lab} <span class="dold">${esc(valText(x.a,x.p,m))}</span> → <span class="dnew">${esc(valText(x.b,x.p,m))}</span></li>`;
+  const dl=typeof x.a==='number'&&typeof x.b==='number'?(()=>{ const d=Math.round((x.b-x.a)*100)/100; return ` <span class="ddelta ${d>0?'up':'down'}">(${d>0?'+':''}${d})</span>`; })():'';
+  return `<li>${lab} <span class="dold">${esc(valText(x.a,x.p,m))}</span> → <span class="dnew">${esc(valText(x.b,x.p,m))}</span>${dl}</li>`;
 }
 let diffVs='game'; // 比較先：game＝ゲームで使っているデータ / file＝js/units.js（反映済みデータを使っているときだけ選べる）
 function renderDiff(){
@@ -337,11 +343,13 @@ function renderDiff(){
   const nmOf=r=>esc((r.d||r.g).name||r.id);
   const rows=d.rows.map(r=>{
     const n=newer(r), take=r.kind==='add'?'':`<button class="small" data-act="diffTake" data-id="${esc(r.id)}" data-vs="${vsFile?'file':'game'}" title="この${un}を${esc(gName)}の内容で置き換えます">${r.kind==='del'?'下書きに戻す':`${esc(gName)}の内容にする`}</button>`;
-    const body=r.kind==='chg'?`<ul class="ditems">${r.diffs.slice(0,40).map(x=>diffItemHTML(x,m)).join('')}${r.diffs.length>40?`<li class="sub">…ほか${r.diffs.length-40}項目</li>`:''}</ul>`
+    const body=r.kind==='chg'?`<ul class="ditems">${r.diffs.slice(0,40).map(x=>diffItemHTML(x,m,[r.d,r.g])).join('')}${r.diffs.length>40?`<li class="sub">…ほか${r.diffs.length-40}項目</li>`:''}</ul>`
       :`<p class="sub nm">${r.kind==='add'?`${esc(gName)}にはいない${un}です（下書きで追加）`:`下書きにはいない${un}です（下書きで削除）`}</p>`;
     return `<div class="drow"><div class="dhead"><b>${nmOf(r)}</b><span class="sub small">${esc(r.id)}</span><span class="dkind ${r.kind}">${DIFF_KIND[r.kind]}</span><span class="dnewer ${n.c}">${esc(n.t)}</span><span class="grow"></span>${take}</div>${body}</div>`;
   }).join('');
-  dlg.innerHTML=`<h3>未反映の変更（${m?TERMS.player:TERMS.unit}）</h3>
+  const cnt=['chg','add','del'].map(k=>[k,d.rows.filter(r=>r.kind===k).length]).filter(([,n])=>n).map(([k,n])=>`${DIFF_KIND[k]}${n}${un}`).join('・');
+  dlg.innerHTML=`<h3>${vsFile?'標準データとの差分':'未反映の変更'}（${m?TERMS.player:TERMS.unit}）</h3>
+    ${cnt?`<p class="dsum">${esc(cnt)}　<span class="sub small">${vsFile?`標準データ＝${file}。左の取り消し線が標準、右が編集中の値です`:''}</span></p>`:''}
     ${custom?`<div class="row dvs"><span class="sub">比較先：</span>${[['game','ゲームで使用中（反映済みデータ）'],['file',file]].map(([v,l])=>`<button class="small ${diffVs===v?'on':''}" data-act="diffVs" data-v="${v}">${esc(l)}</button>`).join('')}</div>`:''}
     <table class="dtimes"><tr><th>編集中の下書き</th><td>最終編集 ${fmtAt(lastEd)}</td></tr>
       <tr><th>${esc(gName)}</th><td>${gAtText}${vsFile?'':`<br><span class="sub small">ゲームはこのデータを使っています（${file} は使われていません）</span>`}</td></tr></table>
@@ -1022,7 +1030,7 @@ document.addEventListener('click',e=>{
       const t=masterTpl(u.cost); u.hp=t.hp; u.faces=t.faces.map((f,i)=>({...f,...(u.faces[i]&&u.faces[i].line?{line:u.faces[i].line}:{})}));
       full(); toast(`コスト${u.cost}のテンプレを適用しました`); break; }
     case 'roll': doRoll(); break;
-    case 'diffOpen': { checkFile(isM()?'masters':'units',true); renderDiff(); const dl=document.querySelector('#diffdlg'); if(!dl.open) dl.showModal(); break; }
+    case 'diffOpen': { if(b.dataset.vs) diffVs=b.dataset.vs==='file'?'file':'game'; checkFile(isM()?'masters':'units',true); renderDiff(); const dl=document.querySelector('#diffdlg'); if(!dl.open) dl.showModal(); break; }
     case 'diffClose': document.querySelector('#diffdlg').close(); break;
     case 'diffVs': diffVs=b.dataset.v==='file'?'file':'game'; renderDiff(); break;
     case 'reloadPage': location.reload(); break;
