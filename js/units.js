@@ -908,7 +908,7 @@ const DEFAULT_UNITS = [
     "ult":{"name":"全ての騎士たちの歌","c":"B","eff":[{"k":"np","t":"picked","v":60},{"k":"npPow","t":"picked","v":80,"turns":2}],"ruby":"ヴィーダ","pick":"other"}
   },
   {
-    "id":"vercingetorix", "name":"ウェルキンゲトリクス", "cls":"セイバー", "cost":4, "hp":890,
+    "id":"vercingetorix", "name":"ウェルキンゲトリクス", "cls":"セイバー", "cost":4, "hp":900,
     "traits":["男性","中立","中庸","人","人型","王","フランス"],
     "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":0,"z":105},"cut":{"x":0,"y":10,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%a6%a5%a7%a5%eb%a5%ad%a5%f3%a5%b2%a5%c8%a5%ea%a5%af%a5%b9",
@@ -1166,7 +1166,7 @@ const DEFAULT_UNITS = [
     "ult":{"name":"信仰はかくも容易く崩れ去る","c":"B","eff":[{"k":"critRoll","t":"self","v":3,"turns":1},{"k":"copyBuff","t":"self","v":0,"from":"target"},{"k":"copyRoll","t":"self","v":0},{"k":"copyRoll","t":"self","v":0},{"k":"copyRoll","t":"self","v":0}],"ruby":"しゅへのうらぎり","pick":"any"}
   },
   {
-    "id":"logistilla", "name":"ロジェスティラ", "cls":"キャスター", "cost":4, "hp":620,
+    "id":"logistilla", "name":"ロジェスティラ", "cls":"キャスター", "cost":4, "hp":680,
     "traits":["女性","秩序","善","フランス","地","人型"],
     "fit":{"face":{"x":50,"y":12,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":8,"z":87},"cut":{"x":0,"y":6,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%ed%a5%b8%a5%a7%a5%b9%a5%c6%a5%a3%a5%e9",
@@ -1185,16 +1185,16 @@ const DEFAULT_UNITS = [
       {"acts":1,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":90,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
       {"acts":1,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
-      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"真・恐慌呼び起こせし魔笛","eff":[{"k":"curse","t":"enemy_all","v":0,"times":1,"chance":2},{"k":"evade","t":"self","v":0,"turns":3,"times":3}],"dmg":0,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"真・恐慌呼び起こせし魔笛","eff":[{"k":"curse","t":"enemy_all","v":0,"times":1,"chance":2},{"k":"evade","t":"self","v":0,"turns":3,"times":2}],"dmg":0,"np":0,"star":0}},
       {"acts":3,"pre":{"c":"B","dmg":50,"np":10,"star":0},"post":{"c":"B","dmg":60,"np":15,"star":0}},
       {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":4},"post":{"c":"G","dmg":40,"np":0,"star":6}}
     ],
     "skills":[
       {"name":"沈着冷静","eff":[{"k":"np","t":"self","v":30},{"k":"mentalImmune","t":"self","v":0,"turns":3},{"k":"heal","t":"self","v":100}],"rank":"B","line":["心を鎮めます"]},
-      {"name":"英雄指導","eff":[{"k":"atk","t":"picked","v":20,"turns":3},{"k":"npPow","t":"picked","v":60,"turns":1},{"k":"sureHit","t":"picked","v":0,"turns":1},{"k":"np","t":"self","v":20}],"rank":"C","pick":"ally","line":["サポートをいたしましょう"]},
+      {"name":"英雄指導","eff":[{"k":"atk","t":"picked","v":20,"turns":3},{"k":"npPow","t":"picked","v":60,"turns":1},{"k":"sureHit","t":"picked","v":0,"turns":1},{"k":"np","t":"picked","v":20}],"rank":"C","pick":"ally","line":["サポートをいたしましょう"]},
       {"name":"常春の妖精たち","eff":[{"k":"atk","t":"picked","v":20,"turns":3},{"k":"onAtkNp","t":"picked","v":10,"turns":3},{"k":"critRoll","t":"picked","v":1,"turns":1},{"k":"pierce","t":"picked","v":0,"turns":1},{"k":"debuffImmune","t":"picked","v":0,"turns":3},{"k":"heal","t":"picked","v":100}],"rank":"B","pick":"ally","line":["みんな、よろしくお願いします","仲良くしてくださいね"]}
     ],
-    "ult":{"name":"清浄たる常春庭園","c":"B","eff":[{"k":"def","t":"ally_all","v":30,"turns":3},{"k":"cleanse","t":"self","v":0},{"k":"heal","t":"ally_all","v":150},{"k":"onAtkNp","t":"ally_all","v":10,"turns":3},{"k":"nullUnder","t":"ally_all","v":60,"turns":3}],"ruby":"ラ・プランタン・エテルネル"}
+    "ult":{"name":"清浄たる常春庭園","c":"B","eff":[{"k":"def","t":"ally_all","v":30,"turns":3},{"k":"cleanse","t":"self","v":0},{"k":"heal","t":"ally_all","v":120},{"k":"onAtkNp","t":"ally_all","v":5,"turns":3},{"k":"nullUnder","t":"ally_all","v":60,"turns":3}],"ruby":"ラ・プランタン・エテルネル"}
   },
   {
     "id":"odysseiya", "name":"オデュッセウス", "cls":"グラップラー", "cost":3, "hp":520,
@@ -1324,7 +1324,7 @@ const DEFAULT_UNITS = [
     "ult":{"name":"花の如き死化粧","c":"B","eff":[{"k":"atk","t":"ally_other","v":20,"turns":3},{"k":"def","t":"ally_other","v":20,"turns":3},{"k":"star","t":"master","v":15},{"k":"selfDmg","t":"self","v":20,"max":true}],"ruby":"エレガンス・メンズノンノ"}
   },
   {
-    "id":"gwydion", "name":"グウィディオン", "cls":"キャスター", "cost":4, "hp":650,
+    "id":"gwydion", "name":"グウィディオン", "cls":"キャスター", "cost":4, "hp":740,
     "traits":["男性","混沌","悪","天","イギリス"],
     "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":8,"z":100},"np":{"x":50,"y":4,"z":105},"cut":{"x":-1,"y":0,"z":90}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%b0%a5%a6%a5%a3%a5%c7%a5%a3%a5%aa%a5%f3",
@@ -1348,14 +1348,14 @@ const DEFAULT_UNITS = [
     ],
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
-      {"acts":2,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
       {"acts":1,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
-      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"R","dmg":40,"np":5,"star":0,"eff":[{"k":"multiHit","t":"self","v":3},{"k":"atk","t":"self","v":20,"turns":3,"color":"R"}],"line":["派手に決めてやらあ！　『万術三魔詩』！"]}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"R","dmg":45,"np":5,"star":0,"eff":[{"k":"multiHit","t":"self","v":3},{"k":"atk","t":"self","v":20,"turns":3,"color":"R"}],"line":["派手に決めてやらあ！　『万術三魔詩』！"]}},
       {"acts":3,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
       {"acts":1,"pre":{"c":"G","dmg":20,"np":0,"star":1},"post":{"c":"G","dmg":30,"np":0,"star":2}}
     ],
     "skills":[
-      {"name":"動物会話","eff":[{"k":"np","t":"self","v":20},{"k":"critRoll","t":"self","v":1,"turns":3}],"rank":"B-"},
+      {"name":"動物会話","eff":[{"k":"np","t":"self","v":30},{"k":"actsUp","t":"self","v":1,"turns":1}],"rank":"B-"},
       {"name":"原初のルーン","eff":[{"k":"atk","t":"picked","v":40,"turns":1,"color":"R"},{"k":"np","t":"picked","v":20}],"rank":"A","pick":"ally"},
       {"name":"高速神言","eff":[{"k":"np","t":"self","v":70}],"rank":"B"}
     ],
@@ -1474,7 +1474,7 @@ const DEFAULT_UNITS = [
       {"acts":1,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
       {"acts":1,"pre":{"c":"B","dmg":40,"np":10,"star":0},"post":{"c":"B","dmg":50,"np":15,"star":0}},
-      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"ぬったくり","eff":[{"k":"aoe","t":"self","v":0},{"k":"strip","t":"target","v":0,"vs":"evade"}],"dmg":30,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"ぬったくり","eff":[{"k":"sureHit","t":"self","v":0,"times":1},{"k":"aoe","t":"self","v":0},{"k":"strip","t":"target","v":0,"vs":"evade"}],"dmg":30,"np":0,"star":0}},
       {"acts":3,"pre":{"c":"G","dmg":30,"np":0,"star":4},"post":{"c":"G","dmg":40,"np":0,"star":6}},
       {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":3},"post":{"c":"G","dmg":40,"np":0,"star":5}}
     ],
@@ -1486,7 +1486,7 @@ const DEFAULT_UNITS = [
     "ult":{"name":"独想芸術","c":"R","eff":[{"k":"sureHit","t":"self","v":0,"turns":1},{"k":"dmg","t":"target","v":250},{"k":"defDown","t":"target","v":30,"turns":3},{"k":"atkDown","t":"target","v":30,"turns":3,"color":"R"},{"k":"starDown","t":"target","v":4,"turns":3},{"k":"npGainDown","t":"target","v":15,"turns":3}],"ruby":"ザバーニーヤ"}
   },
   {
-    "id":"liza", "name":"謝肉祭の魔女リザ", "cls":"キャスター", "cost":4, "hp":650,
+    "id":"liza", "name":"謝肉祭の魔女リザ", "cls":"キャスター", "cost":4, "hp":620,
     "traits":["女性","混沌","中庸","地","人型","魔性","妖精"],
     "link":"https://seesaawiki.jp/kagemiya/d/%BC%D5%C6%F9%BA%D7%A4%CE%CB%E2%BD%F7%A5%EA%A5%B6",
     "lines":{
@@ -1501,18 +1501,18 @@ const DEFAULT_UNITS = [
       "win":["はぁ...はぁ...","無様ね。次の仮装の題材にしてあげる"]
     },
     "faces":[
-      {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
-      {"acts":2,"pre":{"c":"B","dmg":60,"np":15,"star":0},"post":{"c":"B","dmg":70,"np":20,"star":0}},
-      {"acts":1,"pre":{"c":"B","dmg":60,"np":10,"star":0},"post":{"c":"B","dmg":60,"np":15,"star":0}},
-      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"R","dmg":30,"np":0,"star":0}},
-      {"acts":3,"pre":{"c":"B","dmg":50,"np":10,"star":0},"post":{"c":"B","dmg":60,"np":15,"star":0}},
-      {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":4},"post":{"c":"G","dmg":50,"np":0,"star":6}}
+      {"acts":1,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":70,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":50,"np":10,"star":0},"post":{"c":"B","dmg":70,"np":15,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"B","dmg":60,"np":10,"star":0,"eff":[{"k":"burn","t":"target","v":20,"turns":3}]}},
+      {"acts":3,"pre":{"c":"B","dmg":40,"np":10,"star":0},"post":{"c":"B","dmg":60,"np":15,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":4},"post":{"c":"G","dmg":40,"np":0,"star":6}}
     ],
     "skills":[
       {"name":"飛びなさい、我が卑しき豚","eff":[{"k":"def","t":"self","v":20,"times":12,"sure":true},{"k":"cleanse","t":"self","v":0}],"rank":"A"},
-      {"name":"ご馳走するわ、筆舌し難き大厄災","eff":[{"k":"np","t":"self","v":20},{"k":"debuffUp","t":"self","v":1,"turns":3},{"k":"def","t":"self","v":20,"turns":3},{"k":"onAtkStar","t":"self","v":6,"turns":3}],"rank":"E~A+","line":["隠し味は、魔女の灰","御馳走の材料になりたいようね"]},
-      {"name":"喰らいなさい、貪食の洞窟竜","eff":[{"k":"strip","t":"enemy_all","v":0},{"k":"defDown","t":"enemy_all","v":30,"turns":3,"chance":3},{"k":"burn","t":"enemy_all","v":20,"turns":3,"chance":3},{"k":"heal","t":"ally_all","v":100,"chance":4},{"k":"np","t":"self","v":20,"chance":4}],"rank":"-"}
+      {"name":"ご馳走するわ、筆舌し難き大厄災","eff":[{"k":"np","t":"self","v":20},{"k":"debuffUp","t":"self","v":1,"turns":3},{"k":"def","t":"self","v":20,"turns":3},{"k":"onAtkStar","t":"self","v":4,"turns":3}],"rank":"E~A+","line":["隠し味は、魔女の灰","御馳走の材料になりたいようね"]},
+      {"name":"喰らいなさい、貪食の洞窟竜","eff":[{"k":"strip","t":"enemy_all","v":0},{"k":"defDown","t":"enemy_all","v":20,"turns":3,"chance":3},{"k":"burn","t":"enemy_all","v":20,"turns":3,"chance":3},{"k":"heal","t":"ally_all","v":80,"chance":4},{"k":"np","t":"self","v":20,"chance":4}],"rank":"-"}
     ],
-    "ult":{"name":"目醒めなさい、幽けし夜の謝肉祭","c":"B","eff":[{"k":"npPow","t":"self","v":30,"turns":1,"chance":3},{"k":"npPow","t":"self","v":30,"turns":1,"chance":3},{"k":"npPow","t":"self","v":30,"turns":1,"chance":3},{"k":"dmg","t":"target","v":250},{"k":"heal","t":"ally_all","v":120}],"ruby":"シュローヴタイド・クレントヴァニエ","br":7}
+    "ult":{"name":"目醒めなさい、幽けし夜の謝肉祭","c":"B","eff":[{"k":"npPow","t":"self","v":10,"turns":1,"chance":3},{"k":"npPow","t":"self","v":20,"turns":1,"chance":3},{"k":"npPow","t":"self","v":30,"turns":1,"chance":3},{"k":"atkTrait","t":"self","v":50,"turns":1,"trait":"人"},{"k":"dmg","t":"enemy_all","v":170},{"k":"heal","t":"ally_all","v":100}],"ruby":"シュローヴタイド・クレントヴァニエ","br":7}
   }
 ];
