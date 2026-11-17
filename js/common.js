@@ -222,7 +222,7 @@ function checkEffs(effs,ctx,where,add){
   effs.forEach((e,ei)=>{
     const w=`${where}・効果${ei+1}`;
     if(!FX[e.k]) return add('error',`${w}：効果の種類が不正です`);
-    if(!fxOnlyIn(e.k,ctx)) add('error',`${w}：「${FX[e.k].name}」は${[].concat(FX[e.k].only).map(c=>({ult:TERMS.ult,special:'特殊行動',master:TERMS.player}[c])).join('・')}でのみ使えます`);
+    if(!fxOnlyIn(e.k,ctx)) add('error',`${w}：「${FX[e.k].name}」は${[].concat(FX[e.k].only).map(c=>({skill:'スキル',ult:TERMS.ult,special:'特殊行動',master:TERMS.player}[c])).join('・')}でのみ使えます`);
     if(e.color&&!FX[e.k].color) add('warn',`${w}：この効果では色の指定は使われません`);
     if(!FX[e.k].noTgt&&!TGT_BY_CTX[ctx].includes(e.t)) add('error',`${w}：ここでは「${TARGETS[e.t]||e.t}」を対象にできません`);
     if(FX[e.k].copy){
@@ -626,6 +626,7 @@ function fxText(e){
     case 'npGainDown': s=`${TERMS.gauge}獲得量ダウン(-${e.v}${e.all?'・すべての獲得':'・攻撃時'})`; break;
     case 'starDown': s=`${TERMS.star}発生数ダウン(-${e.v})`; break;
     case 'cardConv': s=`カード変換→${e.color?TERMS[e.color]:'(色未指定)'}`; break;
+    case 'cardConvPick': s='カード変換→Buster/Arts/Quickから選ぶ'; break;
     case 'buffExtend': s=`強化の効果時間+${e.v}T`; break;
     case 'skillCharge': s=`使用済みスキル${e.v}個を再使用可能に`; break;
     case 'np': s=`${TERMS.gauge}${e.v>=0?'+':''}${e.v}%`; break;

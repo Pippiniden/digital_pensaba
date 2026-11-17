@@ -163,7 +163,10 @@ function skillPickOk(user,s,u){
   return true;
 }
 const skillCands = (user,s)=>ALL().filter(u=>skillPickOk(user,s,u));
-function pickValid(u){ const s=pendingSkill(); return !!s&&skillPickOk(U(G.pending.uid),s,u); }
+function pickValid(u){ const s=pendingSkill(); return !!s&&!G.pending.colorPick&&skillPickOk(U(G.pending.uid),s,u); }
+// 使用時に色を選ぶカード変換（cardConvPick）：選んだ色の cardConv に置き換える
+const hasColorPick = s=>!!s&&!!s.eff&&s.eff.some(e=>e.k==='cardConvPick');
+const withPickedColor = (effs,c)=>effs.map(e=>e.k==='cardConvPick'?{...e,k:'cardConv',color:c}:e);
 // スキルを今使えるか（対象を選ぶスキルは、選べる相手がいること。例：1騎だけのときの「自分以外の味方」）
 function skillUsable(u,si){
   const s=D(u.def).skills[si];
@@ -1029,9 +1032,10 @@ function startUlt(u,picked){
   G.ult=uid; G.ultPick=picked?picked.uid:null; G.ultNp=u.np; u.np=0; syncU(u);
   log(`${nm(u)}が${TERMS.ult}「${esc(D(u.def).ult.name)}」を使用${picked?`（対象：${nm(picked)}）`:''}（このターンの行動になります）`,'good');
 }
-function doSkill(u,si,picked){
-  const s=D(u.def).skills[si];
-  log(`${nm(u)} スキル「${esc(s.name)}」`);
+function doSkill(u,si,picked,color){
+  const s0=D(u.def).skills[si];
+  const s=color&&hasColorPick(s0)?{...s0,eff:withPickedColor(s0.eff,color)}:s0;
+  log(`${nm(u)} スキル「${esc(s.name)}」${color&&hasColorPick(s0)?`（カード変換：${TERMS[color]}）`:''}`);
   // 使ったスキルの名前と効果を中央に出す（選んだ対象があれば名前も）
   // 全体にかかるスキルは「→ 全体」（味方全体・敵全体）と出す。説明文があればその文章
   fxEmit({t:'skill',uid:u.uid,si,name:s.name,picked:picked?D(picked.def).name:allLabel(s.eff),
@@ -1481,8 +1485,16 @@ const ACTIONS = {
   useSkill({uid,si}){
     si=Number(si); const u=U(uid), s=D(u.def).skills[si];
     if(G.phase!=='skill'||G.pending||!u||u.pid!==G.cur||!skillUsable(u,si)) return;
+    if(hasColorPick(s)){ G.pending={uid,si,colorPick:true,color:null}; return; } // 先に色を選ぶ（対象を選ぶスキルはそのあと）
     if(s.pick){ G.pending={uid,si}; return; }
     doSkill(u,si,null);
+  },
+  // カード変換の色を選ぶ（c＝R:Buster / B:Arts / G:Quick）
+  skillColor({c}){
+    const p=G.pending; if(G.phase!=='skill'||!p||p.ult||!p.colorPick||!['R','B','G'].includes(c)) return;
+    const u=U(p.uid), s=D(u.def).skills[p.si];
+    if(s.pick){ G.pending={uid:p.uid,si:p.si,color:c}; return; }
+    G.pending=null; doSkill(u,p.si,null,c);
   },
   cancelPick(){ G.pending=null; if(!(G.spellPick&&G.spellPick.sup)) G.spellPick=null; }, // 補助のロール後は取り消せない
   useUlt({uid}){
@@ -1530,7 +1542,7 @@ const ACTIONS = {
       if(sp.sup) ACTIONS.masterSupportPick({uid}); else if(sp.use) ACTIONS.masterSpellUse({i:sp.i,uid}); else ACTIONS.masterSpell({i:sp.i,uid,now:sp.now});
       return;
     }
-    if(G.pending){ if(pickValid(u)){ const p=G.pending; G.pending=null; if(p.ult) startUlt(U(p.uid),u); else doSkill(U(p.uid),p.si,u); } return; }
+    if(G.pending){ if(pickValid(u)){ const p=G.pending; G.pending=null; if(p.ult) startUlt(U(p.uid),u); else doSkill(U(p.uid),p.si,u,p.color); } return; }
     if(G.phase==='target' && G.targetAll){ if(u.pid!==G.cur&&!u.out&&!isCpu(G.cur)) resolveDamage(); return; } // 全体宝具：敵を押すと発動
     if(G.phase==='target' && targetCandidates().includes(u)){
       if(G.target===uid && !isCpu(G.cur)) ACTIONS.resolve(); // 選択中の相手をもう一度押すと確定
