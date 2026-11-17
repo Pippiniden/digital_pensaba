@@ -129,6 +129,15 @@ header button.on,.logtools button.on{color:var(--gold-hi);border-color:var(--gol
 .mhead{border-radius:var(--btn-r);background:rgba(6,13,34,.6);box-shadow:none}
 .mhead:hover{border-color:var(--gold);box-shadow:none}
 .slot{border-radius:var(--btn-r)}
+/* 編成枠の中：本体は枠なし（絵そのものが押せる）。×・◀ は暗い小さな角ボタン */
+.sbody{border:0;border-radius:0;background:none;box-shadow:none}
+.sbody:hover:not(:disabled){box-shadow:none}
+.sx,.smv{font-size:11px;line-height:1;color:var(--gold-hi);border-color:var(--gold-lo);border-radius:0 0 0 var(--btn-r);background:rgba(6,13,34,.88);box-shadow:none}
+.smv{border-radius:0 0 var(--btn-r) 0;font-size:9px}
+/* おまかせの ▾：隣のボタンにつなげる */
+.omenu>button:first-child:not(:last-child){border-top-right-radius:0;border-bottom-right-radius:0}
+.omore{padding:6px 9px;margin-left:-1px;border-top-left-radius:0;border-bottom-left-radius:0}
+.omore.on{color:var(--gold-hi);border-color:var(--gold)}
 /* 戦闘中の案内：狭い枠なので、2つ以上並ぶボタンは少し詰める（決着後の3つが1行に収まる） */
 .prompt .row button:not(.big){padding:5px 11px;font-size:12.5px}
 .prompt .row{flex-wrap:wrap}

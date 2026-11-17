@@ -1176,6 +1176,21 @@ const ACTIONS = {
     if(sumCost(picks)+d.cost+mcost(pid)>costCap()){ G.setupMsg=`コスト合計が${costCap()}を超えます${masterRule()?`（${TERMS.player}込み）`:''}`; return; }
     picks.push(id);
   },
+  // 編成の順番を1つ前へ（1st / 2nd / 3rd の入れ替え）。シナリオの固定メンバーは動かさない
+  setupMove({id}){
+    if(G.phase!=='setup') return;
+    const picks=G.picks[G.setupPid], i=picks.indexOf(id); G.setupMsg='';
+    if(i<1) return;
+    if(G.scn&&(G.scn.lock.includes(id)||G.scn.lock.includes(picks[i-1]))){ G.setupMsg='固定メンバーは変えられません'; return; }
+    [picks[i-1],picks[i]]=[picks[i],picks[i-1]];
+  },
+  // 編成をすべて外す（シナリオの固定メンバー・固定マスターは残す）
+  setupClear(){
+    if(G.phase!=='setup') return;
+    const pid=G.setupPid, S=G.scn; G.setupMsg='';
+    G.picks[pid]=S?G.picks[pid].filter(id=>S.lock.includes(id)):[];
+    if(!S||!S.mlock) G.mpicks[pid]=null;
+  },
   // 保存した編成（records.js の編成リスト）を呼び出す。今のルール・データで使えるものだけ
   setupLoad({picks,mpick}={}){
     if(G.phase!=='setup'||G.scn) return;
