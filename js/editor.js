@@ -278,7 +278,7 @@ function diffLists(draft,game){
   return {rows,order};
 }
 // 項目名（例：スキル2 › 効果1 › 値）
-const SEG={name:'名前',ruby:'ルビ',cls:'クラス',cost:'コスト',hp:'HP',traits:'属性',link:'リンク',wip:'制作中',fit:'画像の位置',lines:'セリフ',ult:TERMS.ult,
+const SEG={name:'名前',ruby:'ルビ',cls:'クラス',cost:'コスト',hp:'HP',traits:'属性',link:'リンク',memo:'メモ',wip:'制作中',fit:'画像の位置',lines:'セリフ',ult:TERMS.ult,
   pre:'再臨前',post:'再臨後',acts:'行動数',c:'色',dmg:'ダメージ',np:'NP',star:'スター',label:'名前',line:'専用セリフ',pick:'対象の選び方',br:'改行位置',
   k:'種類',t:'対象',v:'値',turns:'ターン',times:'回数',chance:'確率',color:'色指定',trait:'属性指定',at:'タイミング',max:'最大HP',text:'説明文',cond:'条件',sure:'解除・無効不可',vs:'対象の状態',from:'コピー元',noExtra:'エクストラなし',
   key:'場面',who:'誰',face:'顔',card:'カード',cut:'カットインの立ち絵',x:'横',y:'縦',z:'拡大',master:'マスター'};
@@ -412,6 +412,7 @@ function renderMasterForm(el){
       <label>コスト<input type="number" min="0" data-p="cost" data-t="num" value="${m.cost}"><small data-mprev="atk">攻撃：相手${TERMS.player}へ${m.cost*ma.master}・相手${TERMS.unit}へ${m.cost*ma.svt}（マスタールール）</small></label>
       <label>HP<input type="number" min="1" step="5" data-p="hp" data-t="num" value="${m.hp}"><small>0になると自軍${TERMS.unit}がこの値のダメージを受ける</small></label>
       <label class="wide">キャラクター設定のリンク（任意）<input type="url" data-p="link" data-t="optstr" value="${esc(m.link||'')}" placeholder="https://…"></label>
+      ${memoIn(m)}
     </div>
     <div class="row tplrow"><button class="small" data-act="applyMTpl">このコストのテンプレを適用</button>
       <small class="sub">HPと補助の6面を、コスト${m.cost}の標準値（HP＝コスト×100・4番は強め・ほかはコストと同じ数の面）に置き換えます（令呪・セリフは変えません）</small></div>
@@ -479,7 +480,9 @@ function renderMasterSide(el){
 
 // ---------- 編集フォーム ----------
 const opt=(v,label,c)=>`<option value="${esc(v)}" ${String(v)===String(c??'')?'selected':''}>${esc(label)}</option>`;
-const numIn=(p,v,label)=>`<label class="mini"><span>${label}</span><input type="number" data-p="${p}" data-t="num" value="${v}"></label>`;
+// ref：基準値（unitRefText の種類）を入力欄の下に小さく出す
+const numIn=(p,v,label,ref)=>`<label class="mini${ref?' hasref':''}"><span>${label}</span><input type="number" data-p="${p}" data-t="num" value="${v}">${ref?`<small class="uref" data-uref="${ref}" data-rp="${p}"></small>`:''}</label>`;
+const memoIn=d=>`<label class="wide">メモ（ゲーム中では使いません）<textarea data-p="memo" data-t="optstr" rows="${Math.max(2,String(d.memo||'').split(String.fromCharCode(10)).length)}" placeholder="調整の意図や、あとで直したいところなど">${esc(d.memo||'')}</textarea></label>`;
 const optNum=(p,v,label)=>`<label class="mini"><span>${label}</span><input type="number" min="0" data-p="${p}" data-t="optnum" value="${v??''}" placeholder="-"></label>`;
 
 function renderForm(){
@@ -496,11 +499,12 @@ function renderForm(){
         <small>一覧から選ぶか、オリジナルのクラス名を入力（相性はなし）</small>
         <datalist id="classlist">${CLASSES.map(c=>`<option value="${esc(c)}">${CLASSES_BASIC.includes(c)?'基本':'エクストラ'}</option>`).join('')}</datalist></label>
       <label>コスト<input type="number" min="0" max="${RULES.costCap}" data-p="cost" data-t="num" value="${u.cost}"></label>
-      <label>HP<input type="number" min="1" step="5" data-p="hp" data-t="num" value="${u.hp}"></label>
+      <label>HP<input type="number" min="1" step="5" data-p="hp" data-t="num" value="${u.hp}"><small class="uref" data-uref="hp"></small></label>
       <label class="wide">属性（複数可）<input data-p="traits" data-t="tags" value="${esc((u.traits||[]).join('、'))}" placeholder="例：竜、騎乗、王、人型">
         <small>読点・カンマ・空白で区切る。特攻・特防の判定に使います${allTraits().length?`（使用中：${esc(allTraits().join('・'))}）`:''}</small></label>
       <label class="wide">キャラクター設定のリンク（任意）<input type="url" data-p="link" data-t="optstr" value="${esc(u.link||'')}" placeholder="https://…">
         <small>http(s) のURL。ゲームのキャラクター詳細に「キャラクター設定」リンクが出ます（別タブで開く）</small></label>
+      ${memoIn(u)}
     </div>
     <div class="row tplrow"><label>カード構成テンプレ
       <select id="tplsel">${CARD_TPL_KEYS.map(k=>opt(k,k,tplKey)).join('')}</select></label>
@@ -558,6 +562,7 @@ function renderForm(){
         ${cmdEd(`faces.${i}.post`,f.post,false)}
       </div>`).join('')}
     </div>
+    <div class="refsum" data-uref="sum"></div>
   </section>
   <section class="sec"><h2>スキル</h2>${u.skills.map(skillEd).join('')}</section>
   ${traitDatalist()}
@@ -570,11 +575,51 @@ function renderForm(){
         <label>対象の選び方<select data-p="ult.pick" data-t="optstr" data-act="structural">${Object.entries(PICKS).map(([k,v])=>opt(k,v,u.ult.pick||'')).join('')}</select></label>
       </div>
       ${effList('ult.eff',u.ult.eff,'ult','ult')}
+      <small class="uref" data-uref="ult"></small>
       <div class="preview" data-prev="ult">${esc(effsText(u.ult.eff,u.ult.pick))}</div>
     </div>
     ${cutinEdHTML(u)}
   </section>`;
   ctUpdate(true);
+  refUpdate();
+}
+// ---------- 基準値（js/unit-ref.js の UNIT_REF）：入力欄の近くに小さく出す参考値。警告はしない ----------
+const refRange = r=>r[0]==null?`～${r[1]}`:r[1]==null?`${r[0]}～`:`${r[0]}～${r[1]}`;
+const refNp = (u,post)=>{ const n=u.faces.filter(f=>(post?f.post:f.pre).c==='B').length, ks=Object.keys(UNIT_REF.np).map(Number); return n?UNIT_REF.np[Math.min(n,Math.max(...ks))]:null; }; // Arts の枚数に合う行
+// kind：hp / dmg（再臨前のコマンドのダメージ）/ np（Arts の獲得NP）/ asc（霊基再臨面の再臨後＝4番の面）。path＝コマンドの場所（faces.<面>.pre など）
+function unitRefText(u,kind,path){
+  const R=UNIT_REF, c=u.cost, post=/\.post$/.test(path||''), cmd=path?getPath(u,path):null;
+  if(kind==='hp') return R.hp[c]?`基準 ${refRange(R.hp[c])}`:'';
+  if(kind==='dmg'){ const r=cmd&&R.dmg[cmd.c]&&R.dmg[cmd.c][c]; return r?`基準 ${refRange(r)}`:''; }
+  if(kind==='np'){ const r=refNp(u,post); return r?`基準 ${refRange(post?r.post:r.pre)}`:''; }
+  if(kind==='ult'){ const a=R.ult&&R.ult.all[c], o=R.ult&&R.ult.one[c]; return a||o?`基準（追加効果のない威力${TERMS.ult}） ${[a&&`${TARGETS.enemy_all} ${a}`,o&&`敵単体 ${o}`].filter(Boolean).join('／')}`:''; }
+  if(kind==='asc'){ const d=R.ascFace.dmg[c]; return d?'基準 '+Object.entries(R.ascFace.kinds).map(([k,v])=>`${d[k]}+${v.name}`).join('／'):''; }
+  return '';
+}
+// 6面の下に出す合計：通常合計攻撃力・再臨後合計攻撃力（霊基再臨面を除く5面）・NP合計・スター合計
+function unitRefSumHTML(u){
+  const R=UNIT_REF, c=u.cost, fs=u.faces.filter(f=>f.pre.c!=='ASC'), sum=(a,k)=>a.reduce((s,x)=>s+(x[k]||0),0);
+  const pre=sum(fs.map(f=>f.pre),'dmg'), post=sum(fs.map(f=>f.post),'dmg'), all=p=>u.faces.map(f=>f[p]);
+  const nPre=refNp(u,false), nPost=refNp(u,true), plus=c>=R.star.plusCost?R.star.plus:[0,0], star=v=>plus[1]?`${v+plus[0]}～${v+plus[1]}`:v;
+  const item=(label,val,ref,tip)=>`<span class="refitem"${tip?` title="${esc(tip)}"`:''}>${label} <b>${val}</b>${ref?`<small class="uref">基準 ${esc(String(ref))}</small>`:''}</span>`;
+  const noAsc=`${TERMS.ascFull}面を除いた面のダメージの合計`;
+  return [
+    item('通常合計攻撃力',pre,R.total[c]&&refRange(R.total[c]),noAsc),
+    item(`${TERMS.asc}後合計攻撃力`,post,R.postAdd[c]!=null&&`${pre+R.postAdd[c]}（通常+${R.postAdd[c]}）`,noAsc),
+    item(`${TERMS.gauge}合計`,`${sum(all('pre'),'np')}%`,nPre&&`最大${nPre.preMax}%`),
+    item(`${TERMS.asc}後${TERMS.gauge}合計`,`${sum(all('post'),'np')}%`,nPost&&`最大${nPost.postMax}%`),
+    item(`${TERMS.star}合計`,sum(all('pre'),'star'),R.hp[c]&&`${star(R.star.pre)}前後`),
+    item(`${TERMS.asc}後${TERMS.star}合計`,sum(all('post'),'star'),R.hp[c]&&`${star(R.star.post)}前後`),
+  ].join('');
+}
+function refUpdate(){
+  const u=cur(); if(!u||isM()||typeof UNIT_REF==='undefined') return;
+  document.querySelectorAll('[data-uref]').forEach(el=>{
+    const k=el.dataset.uref;
+    if(k==='sum'){ el.innerHTML=unitRefSumHTML(u); return; }
+    el.textContent=unitRefText(u,k,(el.dataset.rp||'').replace(/\.(dmg|np)$/,''));
+    if(k==='asc') el.title=Object.values(UNIT_REF.ascFace.kinds).map(v=>`${v.name}：${v.ex}`).join(String.fromCharCode(10));
+  });
 }
 // ---------- 宝具カットイン（改行位置・顔アップ位置・プレビュー・注意） ----------
 // 中身は ctUpdate が入れる（名前やルビの入力中もフォーカスを保ったまま更新するため）
@@ -630,9 +675,11 @@ function cmdEd(path,c,isPre){
   const label=t=>t==='ASC'?`${TERMS.ascFull}面`:t==='W'?`${TERMS.W}（白）`:TERMS[t];
   const select=`<select class="ctype" data-act="cmdType" data-path="${path}" aria-label="コマンドの種類">${types.map(t=>opt(t,label(t),c.c)).join('')}</select>`;
   let body='';
-  if(['R','B','G'].includes(c.c)) body=`<div class="cmdnums">${numIn(path+'.dmg',c.dmg,'ダメージ')}${numIn(path+'.np',c.np,TERMS.gauge)}${numIn(path+'.star',c.star,'★')}</div>${effList(path+'.eff',c.eff||[],'special','cmd')}`;
+  // 基準値：再臨前のコマンドはダメージの幅、Arts は獲得NPの幅、霊基再臨面の再臨後（4番の面）は効果の強さごとのダメージ
+  const ascPost=!isPre&&(getPath(cur(),path.replace(/post$/,'pre'))||{}).c==='ASC', ascRef=ascPost?`<small class="uref" data-uref="asc" data-rp="${path}"></small>`:'';
+  if(['R','B','G'].includes(c.c)) body=`<div class="cmdnums">${numIn(path+'.dmg',c.dmg,'ダメージ',isPre?'dmg':'')}${numIn(path+'.np',c.np,TERMS.gauge,c.c==='B'&&!ascPost?'np':'')}${numIn(path+'.star',c.star,'★')}</div>${ascRef}${effList(path+'.eff',c.eff||[],'special','cmd')}`;
   else if(c.c==='W') body=`<input data-p="${path}.label" value="${esc(c.label)}" placeholder="特殊行動の名前">
-    <div class="cmdnums">${numIn(path+'.dmg',c.dmg||0,'ダメージ')}${numIn(path+'.np',c.np,TERMS.gauge)}${numIn(path+'.star',c.star,'★')}</div>
+    <div class="cmdnums">${numIn(path+'.dmg',c.dmg||0,'ダメージ')}${numIn(path+'.np',c.np,TERMS.gauge)}${numIn(path+'.star',c.star,'★')}</div>${ascRef}
     <p class="sub small nm">ダメージを入れると無属性の攻撃になります（チェインには数えません）。</p>${effList(path+'.eff',c.eff,'special','W')}`;
   else if(c.c==='ASC') body=`<span class="sub small">出たら${TERMS.ascFull}する（1行動として数える）</span>`;
   // 面の専用セリフ（攻撃のときの吹き出し。効果だけの特殊行動・霊基再臨面は、書いたときだけ出す）
@@ -750,6 +797,7 @@ function updatePreviews(){
   document.querySelectorAll('[data-prev="ult"]').forEach(el=>el.textContent=effsText(u.ult.eff,u.ult.pick));
   if(u.ult.br>0&&u.ult.br>=[...u.ult.name].length) delete u.ult.br; // 名前を短くして改行位置が無効になったら自動に戻す
   ctUpdate();
+  refUpdate();
   document.querySelectorAll('[data-fitout]').forEach(el=>{ const [k,a]=el.dataset.fitout.split('.'); el.textContent=`${u.fit[k][a]}%`; });
   document.querySelectorAll('[data-linecount]').forEach(el=>el.textContent=`${u.lines[el.dataset.linecount].length}件`);
   document.querySelectorAll('[data-clsprev] img').forEach(im=>{ const src=classIcon(u.cls); if(im.getAttribute('src')!==src){ im.onerror=()=>{ im.onerror=null; im.src=CLASS_ICON_EXTRA; }; im.src=src; } });

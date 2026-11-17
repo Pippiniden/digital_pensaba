@@ -25,6 +25,7 @@ Read this first. It is a slim map; details live in `docs/agents/` and are read *
 | `js/records.js` | Player records (`recordMatch()` called from `win()`; 戦績 panel, reset) and saved parties (編成リスト on the setup screen). localStorage only, never in `G` |
 | `js/game-ui.js` | Game screens (mode / setup / battle / result / zukan), `render()`, click handling |
 | `js/editor.js`, `js/sim.js`, `js/editor-sim.js` | Editor UI; headless balance sim core; editor's balance dialog |
+| `js/unit-ref.js` | **Servant baseline values** (`UNIT_REF`: HP / per-card damage / totals / 4th face / NP / stars / plain-damage ultimate power (`ult.all` AoE, `ult.one` single) per cost). Editor-only data file; the editor prints them in small text next to the inputs (`unitRefText` / `unitRefSumHTML` / `refUpdate` in editor.js). Reference only — never a warning or validation |
 | `js/scenario-core.js`, `js/scenario.js`, `css/scenario.css` | **Scenario mode** (sound novel + battles): shared format / validation / storage; player (`SCN`, `#scn`) → `docs/agents/scenario.md` |
 | `scenario-editor.html`, `js/scenario-editor.js`, `css/scenario-editor.css` | Scenario editor (exports one JSON) |
 | `scenarios/` | `index.js` (`SCENARIO_FILES` list), scenario JSON files, `assets/` (images / audio not embedded in the JSON) |
@@ -34,6 +35,7 @@ Read this first. It is a slim map; details live in `docs/agents/` and are read *
 | `manifest.webmanifest`, `sw.js` | PWA (stale-while-revalidate, cache `pensaba-duel-v2`) |
 | `tools/check.js` | Headless check (`node tools/check.js`): CPU-vs-CPU games through `act()` for every ruleset + draft; reports hangs / exceptions / `NaN`. `tools/sim/` = old one-off balance experiments |
 | `tools/cpu-audit.js` | CPU decision audit (`node tools/cpu-audit.js`): CPU-vs-CPU games, counts odd decisions (ultimates fully blocked by evade / invul, attack buffs given to a unit that does not attack, unused skills…). `--vs HEAD` (or `--vs copy-of-cpu.js`) plays the working `js/cpu.js` against that version and prints the win rate; `--set "DANGER_K=.7"` overrides cpu.js tuning variables for the run |
+| `tools/ref-check.js` | Baseline check (`node tools/ref-check.js`): builds test servants straight from `UNIT_REF` (cost 1–5 × B3 / B2A2 / B2Q2 / A3 / A2Q2 / Q3, same skills) and prints 3v3 win rates per cost / card mix / party make-up (target 50% ± 3%). `--set "hp.3=[600,700]"` tries other values without editing the file; `--list` prints the test servants; `-e ult` sweeps single-target / AoE ultimate power to find the single-target value that matches the AoE baseline |
 | `presets/original/` | Not loaded by the game; frozen canon data copy |
 | `docs/` | `agents/` detail docs, `ui-design.md`, `*-sample.html` stand-alone tuning samples (not loaded by the game) |
 
@@ -41,7 +43,7 @@ Read this first. It is a slim map; details live in `docs/agents/` and are read *
 
 ```
 Game   (index.html) : rules → units → masters → common → engine → cpu → cutin → fx → guide → records → net → game-ui   (+ css/cutin.css)
-Editor (editor.html): rules → units → masters → common → cutin → editor → sim → editor-sim   (+ css/cutin.css)
+Editor (editor.html): rules → units → masters → common → unit-ref → cutin → editor → sim → editor-sim   (+ css/cutin.css)
 Worker (sim-worker.js / balance-worker.js, importScripts): rules → units → masters → common → engine → cpu → sim
 Balance page (balance.html): rules → units → masters → common → balance
 Scenario: game adds (after game-ui / tapfx) scenarios/index.js → scenario-core → scenario; scenario-editor.html: rules → units → masters → common → cpu → scenario-core → scenario-editor
@@ -96,6 +98,7 @@ Scenario: game adds (after game-ui / tapfx) scenarios/index.js → scenario-core
 | Records / saved parties / move hints | `js/records.js` (`recordMatch`, `recordsBodyHTML`, `partyModalHTML`; load goes through `act('setupLoad')`); hints = `hintHTML` / `hintText` in game-ui.js (asks `cpuDecide()` at level `hard`; setting `pencilduel.hint`) |
 | Scenario command / playback / editor | `SCN_CMDS` + `scnNormCmd` + `validateScenario` (scenario-core.js) → `scnRun` (scenario.js) → `cmdFields` (scenario-editor.js); battle hand-off `scnBegin` / `scnRandom` (engine.js) |
 | Cut-in look | `cutin.css` + `cutin.js` (try in `docs/cutin-np-sample.html` first) |
+| Servant baseline values shown in the editor | `UNIT_REF` in `js/unit-ref.js` (numbers only); then `node tools/ref-check.js` to see whether the costs still balance |
 | Editor form / validation | `editor.js` (`renderForm`/`effRow`), `validateUnits`/`checkEffs` in `common.js` |
 | Balance testing | `simGame` in `sim.js`; dialog `editor-sim.js`; lab `balance.html` (needs http, not `file://`) |
 
