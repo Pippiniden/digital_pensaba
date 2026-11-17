@@ -274,11 +274,15 @@ body[data-screen="battle"] #app{overflow:hidden}
 .settitle h2{margin:0;font-size:19px}
 .slots{display:flex;gap:6px}
 .slot{position:relative;width:62px;height:82px;padding:0;display:grid;place-items:center;overflow:hidden;border-radius:4px;border:1px dashed var(--gold-lo);background:rgba(6,13,34,.5);box-shadow:none}
-.slot>span{position:absolute;top:2px;left:0;right:0;z-index:2;text-align:center;font:700 10px var(--serif);color:var(--gold-hi);text-shadow:0 1px 2px #000}
+.slot>span,.sbody>span{position:absolute;top:2px;left:0;right:0;z-index:2;text-align:center;font:700 10px var(--serif);color:var(--gold-hi);text-shadow:0 1px 2px #000}
 .slot:not(.filled)>span{position:static;color:var(--sub)}
 .slot.filled{border:1px solid var(--gold)}
-.slot.filled>b{position:absolute;left:0;right:0;bottom:0;z-index:2;font-size:9.5px;line-height:1.2;padding:8px 2px 3px;background:linear-gradient(transparent,rgba(6,13,34,.95));overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
-.slot.filled:hover{filter:brightness(.7)}
+.slot.filled b{position:absolute;left:0;right:0;bottom:0;z-index:2;font-size:9.5px;line-height:1.2;padding:8px 2px 3px;background:linear-gradient(transparent,rgba(6,13,34,.95));overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+/* 埋まった枠：本体（.sbody＝詳細を見る）の上に、×（外す・右上）と ◀（1つ前へ・左上）を重ねる */
+.sbody{position:absolute;inset:0;width:100%;height:100%;padding:0;display:block;overflow:hidden}
+.sbody:hover{filter:brightness(1.15)}
+.sx,.smv{position:absolute;top:0;z-index:3;width:20px;height:20px;padding:0}
+.sx{right:0}.smv{left:0}
 .costm{display:grid;grid-template-columns:auto auto auto;align-items:baseline;gap:2px 6px;min-width:120px}
 .costm span{font:700 11px var(--serif);color:var(--sub);letter-spacing:.1em}
 .costm b{font:700 24px var(--serif);color:var(--gold-hi)}
@@ -286,7 +290,13 @@ body[data-screen="battle"] #app{overflow:hidden}
 .costm .bar{grid-column:1/-1;height:6px}
 .costm .bar i{background:linear-gradient(90deg,var(--gold),var(--gold-hi))}
 .setbtns{display:flex;gap:8px}
-.setbtns.wide{grid-column:1/-1;flex-wrap:wrap;justify-content:flex-end} /* マスター系はボタンが多いので次の行に回して折り返す */
+/* おまかせ：ボタン＋▾（コスト指定など残りの選択肢を下に開く） */
+.omenu{position:relative;display:flex}
+.opanel{position:absolute;top:calc(100% + 6px);right:0;z-index:16;display:flex;flex-direction:column;gap:6px;min-width:220px;padding:10px;border-radius:6px;border:1px solid var(--gold);
+  background:var(--lattice),linear-gradient(180deg,#16295a,var(--panel2));box-shadow:var(--frame),var(--shadow)}
+.opanel button{white-space:nowrap}
+.orow{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;color:var(--sub)}
+.orow select{font:inherit;font-size:13px;color:var(--ink);padding:4px 8px;border-radius:4px;border:1px solid var(--gold-lo);background:#0d1a40}
 .setbody{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:12px}
 .rosterwrap{min-height:0;min-width:0;display:flex;flex-direction:column;gap:8px}
 .rfilter{flex:none;display:flex;flex-direction:column;gap:6px;padding:8px 10px;border-radius:6px;border:1px solid var(--gold-lo);background:rgba(6,13,34,.6)}
@@ -299,7 +309,7 @@ body[data-screen="battle"] #app{overflow:hidden}
 .rok{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;cursor:pointer}
 .rcount{margin-left:auto}
 .rempty{grid-column:1/-1;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-.roster{flex:1;min-height:0;overflow:auto;grid-auto-rows:max-content;display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;align-content:start;padding:4px 6px 4px 2px}
+.roster{flex:1;min-height:200px;overflow:auto;grid-auto-rows:max-content;display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;align-content:start;padding:4px 6px 4px 2px}
 .tile{position:relative;display:block;width:100%;aspect-ratio:3/4;padding:0;overflow:hidden;border-radius:5px;border:1px solid var(--gold);background:var(--panel2);box-shadow:var(--frame);text-align:left;transition:transform .12s,box-shadow .12s}
 .tile:hover:not(:disabled),.tile.viewing{transform:translateY(-3px);border-color:var(--gold-hi);box-shadow:var(--frame),0 0 16px rgba(127,166,255,.45)}
 .tile.sel{outline:2px solid var(--gold-hi);outline-offset:2px;box-shadow:var(--frame),0 0 18px rgba(246,227,161,.55)}
@@ -307,6 +317,7 @@ body[data-screen="battle"] #app{overflow:hidden}
 .tile .pcls{width:28px;height:28px}
 .tcost{position:absolute;top:6px;right:6px;z-index:2;font:700 11px var(--serif);color:var(--gold-hi);padding:0 5px;background:rgba(6,13,34,.8);border:1px solid var(--gold-lo);border-radius:2px}
 .tile.sel .tcost{display:none}
+.tcost.over{color:#ff9a8f;border-color:var(--r)}
 .tname{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:22px 8px 6px;font-size:12.5px;font-weight:700;color:#fff;background:linear-gradient(transparent,rgba(6,13,34,.96) 45%);line-height:1.3}
 .tname small{display:block;font-size:10.5px;font-weight:400;color:var(--sub)}
 .sdetail{min-height:0;overflow:auto;padding:14px 16px;border-radius:6px;border:1px solid var(--gold);background:var(--lattice),linear-gradient(160deg,#16295a,var(--panel) 40%,var(--panel2));box-shadow:var(--frame),var(--shadow)}
@@ -554,7 +565,8 @@ body[data-screen="mode"] #app{position:relative} /* 背景（position:fixed）�
   body.game:not([data-screen="battle"]) #app{overflow:visible}
   .setup{height:auto}
   .setbody{grid-template-columns:minmax(0,1fr)}
-  .roster{overflow:visible;flex:none}
+  .roster{overflow:visible;flex:none;min-height:0}
+  .mroster{flex:none}
   .mroster .mtiles{max-height:none;overflow:visible} /* 後ろで定義した .mtiles より優先させる */
 }
 @media (max-width:860px){
@@ -686,11 +698,11 @@ body[data-screen="mode"] #app{position:relative} /* 背景（position:fixed）�
 .mchip.hit{animation:none}
 .mopts{justify-content:center}
 .mopts button{white-space:nowrap}
-.mroster{flex:none;min-width:0;display:flex;flex-direction:column;gap:6px;margin-bottom:6px}
+.mroster{flex:0 1 auto;min-height:0;min-width:0;display:flex;flex-direction:column;gap:6px;margin-bottom:6px}
 .mroster h4{margin:0;font:700 13px var(--serif);color:var(--gold-hi)}
 /* マスター一覧もサーヴァント一覧（.roster）と同じタイルの並び */
-.mtiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));grid-auto-rows:max-content;align-content:start;gap:12px;padding:4px 6px 6px 2px;flex:none;
-  max-height:34vh;overflow-y:auto} /* 画面に収める表示（PC）では、サーヴァント一覧の場所を残すため高さを抑えて中でスクロール */
+.mtiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));grid-auto-rows:max-content;align-content:start;gap:12px;padding:4px 6px 6px 2px;flex:0 1 auto;min-height:0;
+  max-height:34vh;overflow-y:auto} /* 画面に収める表示（PC）では、サーヴァント一覧の場所（.roster の min-height）を残すため、高さを抑え、足りなければさらに縮んで中でスクロール */
 .slot.mslot{margin-left:10px}
 .mhead{display:flex;align-items:center;gap:8px;width:100%;padding:6px 10px;text-align:left;font:700 13px var(--serif);color:var(--gold-hi);
   border:1px solid var(--gold-lo);border-radius:5px;background:rgba(6,13,34,.6)}
@@ -713,6 +725,38 @@ body[data-screen="mode"] #app{position:relative} /* 背景（position:fixed）�
   .mtiles{grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
   .mhead .mhint{display:none}
   .roster{grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
+}
+/* 編成画面の固定バー：ページごとスクロールする画面（狭い・低い）では、編成枠・コスト・決定・警告を下に固定する */
+.setdock{display:none}
+@media (max-width:860px), (max-height:620px){
+  .setdock{display:flex;flex-direction:column;gap:4px;position:fixed;left:0;right:0;bottom:0;z-index:15;
+    padding:6px 10px calc(6px + var(--bot,0px) + env(safe-area-inset-bottom,0px));border-top:1px solid var(--gold);
+    background:var(--lattice),linear-gradient(180deg,#16295a,var(--panel2));box-shadow:0 -6px 18px rgba(0,0,0,.55)}
+  .lock .setdock{pointer-events:none}
+  .setdock .warn{margin:0;font-size:12.5px;font-weight:700}
+  .dockrow{display:flex;align-items:center;gap:8px}
+  .setdock .slots{flex-wrap:nowrap;gap:4px;min-width:0}
+  .setdock .slot{width:50px;height:64px;flex:none}
+  .setdock .slot.mslot{margin-left:4px}
+  .setdock .slot.filled b{display:none}
+  .setdock .sbody>span{top:auto;bottom:1px} /* 上は ×・◀ が使うので、1st / 2nd … は下に出す */
+  .dcost{margin-left:auto;display:flex;align-items:baseline;gap:4px;white-space:nowrap}
+  .dcost span{font:700 10px var(--serif);color:var(--sub);letter-spacing:.1em}
+  .dcost b{font:700 20px var(--serif);color:var(--gold-hi)}
+  .dcost small{color:var(--sub)}
+  .dockrow>button{flex:none;margin-left:auto}
+  .dcost+button{margin-left:0}
+  /* 上の見出しからは、固定バーと重なるもの（枠・コスト・決定・警告）を外す */
+  .setup:not(.draft):not(.zukan){padding-bottom:calc(108px +var(--bot,0px) + env(safe-area-inset-bottom,0px))}
+  .setup:not(.draft)>.sethead>.slots,.setup:not(.draft)>.sethead>.costm,.setup:not(.draft)>.sethead [data-a="setupConfirm"],.setup>.warn{display:none}
+}
+@media (max-width:860px){
+  .setup .sdetail{display:none} /* 狭い画面では、詳細は ⓘ・編成枠を押して出すウィンドウで見る（図鑑・ドラフトと同じ） */
+  .tile .tinfo{width:30px;height:30px;font-size:15px} /* 指で押しやすい大きさに */
+  .tile .tname{padding-right:40px}
+  .rcls{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none} /* クラスの絞り込みは1行にして横に送る */
+  .rchip{flex:none}
+  .opanel{left:0;right:auto}
 }
 @media (max-width:640px){
   .mchip .mlab,.mchip .pfx,.mchip .mtag:not(.evac):not(.dead){display:none}
@@ -742,7 +786,8 @@ body[data-screen="mode"] #app{position:relative} /* 背景（position:fixed）�
 .rtable tbody th{text-align:left;font-weight:700;max-width:12em;overflow:hidden;text-overflow:ellipsis}
 .rtable tr.out{opacity:.6}
 .rtable td.top{color:var(--gold-hi);font-weight:700}
-.rnote{margin:6px 0 0}
+.rnote{margin:6px 0 0;opacity:.7}
+.ovk{margin-left:3px;font-weight:400;opacity:.65}
 .p0bg{background:var(--p0)}.p1bg{background:var(--p1)}
 .tllegend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;margin-bottom:6px}
 .tllegend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}

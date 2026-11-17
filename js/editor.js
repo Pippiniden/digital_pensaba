@@ -99,7 +99,7 @@ function newEff(ctx,path){
 }
 // ---------- 効果の種類を変えたときの自動設定（値・対象・ターン） ----------
 // 値の目安（なければ20）。FX_VAL_MASTER＝マスターの補助・令呪で別の値を使うもの
-const FX_VAL = { atk:20, atkDown:10, atkPct:20, atkPctDown:20, def:10, defDown:10, critPow:30, critMult:200, guts:100, critRoll:1, debuffUp:1, buffUp:1, debuffDown:1, debuffResDown:1, buffDown:1, critDown:1, starDown:2, nullUnder:30,
+const FX_VAL = { atk:20, atkDown:10, atkPct:20, atkPctDown:20, def:10, defDown:10, critPow:30, critMult:200, guts:100, critRoll:1, debuffUp:1, buffUp:1, debuffDown:1, debuffResDown:1, buffDown:1, critDown:1, starDown:2, npGainDown:5, nullUnder:30,
   onAtkStar:3, onAtkNp:10, actsUp:1, actsDown:1, regenHp:20, regenNp:5, regenStar:2, atkVs:50, atkTrait:50, defTrait:50, counter:20, onHitNp:10, hitNpUp:10, onHitStar:3,
   maxHp:100, poison:20, burn:20, drain:20, heal:100, np:20, star:5, starLoss:5, buffExtend:1, skillCharge:1, dmg:200, selfDmg:20, npPow:80, npPowDown:50, multiHit:2 };
 const FX_VAL_MASTER = { heal:30, dmg:50, star:5 };
@@ -152,6 +152,7 @@ function fixEff(e){
   if(e.k==='star'&&e.t==='self') e.t='master';
   if(!f.maxOk) delete e.max;
   if(f.inst||f.noTgt||!e.sure) delete e.sure;
+  if(!f.allOpt) delete e.all;
   if(e.k!=='desc') delete e.text;
   else if(e.text==null) e.text='';
   if(f.noTgt){ e.t=e.t==='svt'?'svt':'self'; delete e.chance; delete e.at; delete e.cond; } // 対象・確率・タイミングを使わない効果
@@ -278,16 +279,21 @@ function diffLists(draft,game){
   return {rows,order};
 }
 // 項目名（例：スキル2 › 効果1 › 値）
-const SEG={name:'名前',ruby:'ルビ',cls:'クラス',cost:'コスト',hp:'HP',traits:'属性',link:'リンク',wip:'制作中',fit:'画像の位置',lines:'セリフ',ult:TERMS.ult,
+const SEG={name:'名前',ruby:'ルビ',cls:'クラス',cost:'コスト',hp:'HP',traits:'属性',link:'リンク',memo:'メモ',wip:'制作中',fit:'画像の位置',lines:'セリフ',ult:TERMS.ult,
   pre:'再臨前',post:'再臨後',acts:'行動数',c:'色',dmg:'ダメージ',np:'NP',star:'スター',label:'名前',line:'専用セリフ',pick:'対象の選び方',br:'改行位置',
   k:'種類',t:'対象',v:'値',turns:'ターン',times:'回数',chance:'確率',color:'色指定',trait:'属性指定',at:'タイミング',max:'最大HP',text:'説明文',cond:'条件',sure:'解除・無効不可',vs:'対象の状態',from:'コピー元',noExtra:'エクストラなし',
   key:'場面',who:'誰',face:'顔',card:'カード',cut:'カットインの立ち絵',x:'横',y:'縦',z:'拡大',master:'マスター'};
-function pathLabel(p,m){
-  const out=[];
+// roots＝[下書き側, 比較先側]（スキル名・効果の種類を引くため）。どちらか見つかったほうを使う
+function pathLabel(p,m,roots){
+  const out=[], at=n=>{ for(const r of roots||[]){ const v=getPath(r,p.slice(0,n).join('.')); if(v) return v; } return null; };
   for(let i=0;i<p.length;i++){
     const s=p[i], n=p[i+1];
     const idx={faces:m?'補助':'鉛筆',skills:'スキル',spells:'令呪',eff:'効果',condLines:'条件つきセリフ'}[s];
-    if(idx&&/^\d+$/.test(n)){ out.push(`${idx}${+n+1}${s==='faces'?'面':''}`); i++; continue; }
+    if(idx&&/^\d+$/.test(n)){
+      const o=at(i+2); let extra='';
+      if(o&&(s==='skills'||s==='spells')&&o.name) extra=`「${o.name}」`;
+      else if(o&&s==='eff'&&o.k&&FX[o.k]) extra=`（${FX[o.k].name.replace(/\(x以下\)/,'')}）`;
+      out.push(`${idx}${+n+1}${s==='faces'?'面':''}${extra}`); i++; continue; }
     if(p[i-1]==='lines'){ out.push((m?MASTER_LINE_KEYS:LINE_KEYS)[s]||s); continue; }
     if(p[i-1]==='fit'&&s==='np'){ out.push('カットインの顔'); continue; }
     out.push(SEG[s]??s);
@@ -306,18 +312,35 @@ function valText(v,p,m){
   const s=typeof v==='string'?`「${v}」`:JSON.stringify(v);
   return s.length>80?s.slice(0,80)+'…':s;
 }
-function diffItemHTML(x,m){
-  const lab=`<span class="dlab">${esc(pathLabel(x.p,m))}</span>`;
+function diffItemHTML(x,m,roots){
+  const lab=`<span class="dlab">${esc(pathLabel(x.p,m,roots))}</span>`;
   if(x.lines){
     const rm=x.a.filter(s=>!x.b.includes(s)), ad=x.b.filter(s=>!x.a.includes(s));
     const ls=[...rm.map(s=>`<li class="drm">− ${esc(s)}</li>`),...ad.map(s=>`<li class="dad">＋ ${esc(s)}</li>`)];
     return `<li>${lab}${ls.length?`<ul class="dlines">${ls.join('')}</ul>`:' <span class="sub">並び順の変更</span>'}</li>`;
   }
-  return `<li>${lab} <span class="dold">${esc(valText(x.a,x.p,m))}</span> → <span class="dnew">${esc(valText(x.b,x.p,m))}</span></li>`;
+  const dl=typeof x.a==='number'&&typeof x.b==='number'?(()=>{ const d=Math.round((x.b-x.a)*100)/100; return ` <span class="ddelta ${d>0?'up':'down'}">(${d>0?'+':''}${d})</span>`; })():'';
+  return `<li>${lab} <span class="dold">${esc(valText(x.a,x.p,m))}</span> → <span class="dnew">${esc(valText(x.b,x.p,m))}</span>${dl}</li>`;
+}
+let lastDiff=null;
+// 差分を更新履歴の Markdown にする
+function diffMarkdown(){
+  const {d,m,vsFile,gName,file}=lastDiff, noun=m?TERMS.player:TERMS.unit, dt=new Date(), p=n=>String(n).padStart(2,'0');
+  const out=[`# 更新履歴（${noun}）`,'',`${dt.getFullYear()}-${p(dt.getMonth()+1)}-${p(dt.getDate())} 時点。${vsFile?'標準データ':gName}（${file}）と編集中データの差分です。`,''];
+  const sec=(title,rows,f)=>{ if(!rows.length) return; out.push(`## ${title}`,''); rows.forEach(r=>out.push(...f(r),'')); };
+  sec('変更',d.rows.filter(r=>r.kind==='chg'),r=>[`### ${r.d.name||r.id}（${r.id}）`,...r.diffs.map(x=>{
+    const lab=pathLabel(x.p,m,[r.d,r.g]);
+    if(x.lines){ const rm=x.a.filter(s=>!x.b.includes(s)), ad=x.b.filter(s=>!x.a.includes(s)); return `- ${lab}：${[...rm.map(s=>`−「${s}」`),...ad.map(s=>`＋「${s}」`)].join(' ')||'並び順の変更'}`; }
+    const dl=typeof x.a==='number'&&typeof x.b==='number'?`（${x.b-x.a>0?'+':''}${Math.round((x.b-x.a)*100)/100}）`:'';
+    return `- ${lab}：${valText(x.a,x.p,m)} → ${valText(x.b,x.p,m)}${dl}`; })]);
+  sec('追加',d.rows.filter(r=>r.kind==='add'),r=>[`- ${r.d.name||r.id}（${r.id}）`]);
+  sec('削除',d.rows.filter(r=>r.kind==='del'),r=>[`- ${r.g.name||r.id}（${r.id}）`]);
+  if(!d.rows.length) out.push(d.order?'並び順だけが違います。':'違いはありません。','');
+  return out.join('\n');
 }
 let diffVs='game'; // 比較先：game＝ゲームで使っているデータ / file＝js/units.js（反映済みデータを使っているときだけ選べる）
 function renderDiff(){
-  const dlg=document.querySelector('#diffdlg'), k=isM()?'masters':'units', m=isM(), un=m?'人':'体';
+  const dlg=document.querySelector('#diffdlg'), k=isM()?'masters':'units', m=isM(), un=m?TERMS.player:TERMS.unit;
   const applied=m?loadMasters(units):loadUnits(), custom=applied.source==='custom', fi=FILE_INFO[k]&&FILE_INFO[k]!=='pending'?FILE_INFO[k]:null;
   const vsFile=!custom||diffVs==='file';
   const game=vsFile?(m?(typeof DEFAULT_MASTERS!=='undefined'?DEFAULT_MASTERS:[]).map(normalizeMaster):normalizeUnits(DEFAULT_UNITS)):(m?applied.masters:applied.units);
@@ -336,11 +359,14 @@ function renderDiff(){
   const nmOf=r=>esc((r.d||r.g).name||r.id);
   const rows=d.rows.map(r=>{
     const n=newer(r), take=r.kind==='add'?'':`<button class="small" data-act="diffTake" data-id="${esc(r.id)}" data-vs="${vsFile?'file':'game'}" title="この${un}を${esc(gName)}の内容で置き換えます">${r.kind==='del'?'下書きに戻す':`${esc(gName)}の内容にする`}</button>`;
-    const body=r.kind==='chg'?`<ul class="ditems">${r.diffs.slice(0,40).map(x=>diffItemHTML(x,m)).join('')}${r.diffs.length>40?`<li class="sub">…ほか${r.diffs.length-40}項目</li>`:''}</ul>`
+    const body=r.kind==='chg'?`<ul class="ditems">${r.diffs.slice(0,40).map(x=>diffItemHTML(x,m,[r.d,r.g])).join('')}${r.diffs.length>40?`<li class="sub">…ほか${r.diffs.length-40}項目</li>`:''}</ul>`
       :`<p class="sub nm">${r.kind==='add'?`${esc(gName)}にはいない${un}です（下書きで追加）`:`下書きにはいない${un}です（下書きで削除）`}</p>`;
     return `<div class="drow"><div class="dhead"><b>${nmOf(r)}</b><span class="sub small">${esc(r.id)}</span><span class="dkind ${r.kind}">${DIFF_KIND[r.kind]}</span><span class="dnewer ${n.c}">${esc(n.t)}</span><span class="grow"></span>${take}</div>${body}</div>`;
   }).join('');
-  dlg.innerHTML=`<h3>未反映の変更（${m?TERMS.player:TERMS.unit}）</h3>
+  const cnt=['chg','add','del'].map(k=>[k,d.rows.filter(r=>r.kind===k).length]).filter(([,n])=>n).map(([k,n])=>`${DIFF_KIND[k]}${n}`).join('・');
+  lastDiff={d,m,vsFile,gName,file};
+  dlg.innerHTML=`<h3>${vsFile?'標準データとの差分':'未反映の変更'}（${m?TERMS.player:TERMS.unit}）</h3>
+    ${cnt?`<p class="dsum">${esc(cnt)}　<span class="sub small">${vsFile?`標準データ＝${file}。左の取り消し線が標準、右が編集中の値です`:''}</span></p>`:''}
     ${custom?`<div class="row dvs"><span class="sub">比較先：</span>${[['game','ゲームで使用中（反映済みデータ）'],['file',file]].map(([v,l])=>`<button class="small ${diffVs===v?'on':''}" data-act="diffVs" data-v="${v}">${esc(l)}</button>`).join('')}</div>`:''}
     <table class="dtimes"><tr><th>編集中の下書き</th><td>最終編集 ${fmtAt(lastEd)}</td></tr>
       <tr><th>${esc(gName)}</th><td>${gAtText}${vsFile?'':`<br><span class="sub small">ゲームはこのデータを使っています（${file} は使われていません）</span>`}</td></tr></table>
@@ -348,7 +374,7 @@ function renderDiff(){
     ${vsFile&&fi&&fi.stale?`<p class="dstale">⚠ ${file} はこのページを開いた後に書き換わっています。この比較は開いた時点の内容です。<button class="small" data-act="reloadPage">再読み込み</button></p>`:''}
     <p class="sub small nm">日時はキャラごとの「下書きを最後に編集した時刻」と、${vsFile?`${file} のファイル更新日時（ファイル全体で1つ）`:'「ゲームに反映」した時刻'}を比べています。編集記録はこの機能を入れた後の編集からです。</p>
     ${rows||(d.order?`<p>並び順だけが違います。</p>`:`<p class="ok">違いはありません。</p>`)}
-    <div class="row dfoot"><span class="grow"></span><button data-act="diffClose">閉じる</button></div>`;
+    <div class="row dfoot"><span class="grow"></span><button data-act="diffMd" title="この差分を更新履歴として .md で保存">.md で書き出し</button><button data-act="diffClose">閉じる</button></div>`;
 }
 
 // 制作中トグル：ONの間は js の書き出し（units.js / masters.js）に含めない。ゲームへの反映・JSON書き出しには含まれる
@@ -412,6 +438,7 @@ function renderMasterForm(el){
       <label>コスト<input type="number" min="0" data-p="cost" data-t="num" value="${m.cost}"><small data-mprev="atk">攻撃：相手${TERMS.player}へ${m.cost*ma.master}・相手${TERMS.unit}へ${m.cost*ma.svt}（マスタールール）</small></label>
       <label>HP<input type="number" min="1" step="5" data-p="hp" data-t="num" value="${m.hp}"><small>0になると自軍${TERMS.unit}がこの値のダメージを受ける</small></label>
       <label class="wide">キャラクター設定のリンク（任意）<input type="url" data-p="link" data-t="optstr" value="${esc(m.link||'')}" placeholder="https://…"></label>
+      ${memoIn(m)}
     </div>
     <div class="row tplrow"><button class="small" data-act="applyMTpl">このコストのテンプレを適用</button>
       <small class="sub">HPと補助の6面を、コスト${m.cost}の標準値（HP＝コスト×100・4番は強め・ほかはコストと同じ数の面）に置き換えます（令呪・セリフは変えません）</small></div>
@@ -479,7 +506,9 @@ function renderMasterSide(el){
 
 // ---------- 編集フォーム ----------
 const opt=(v,label,c)=>`<option value="${esc(v)}" ${String(v)===String(c??'')?'selected':''}>${esc(label)}</option>`;
-const numIn=(p,v,label)=>`<label class="mini"><span>${label}</span><input type="number" data-p="${p}" data-t="num" value="${v}"></label>`;
+// ref：基準値（unitRefText の種類）を入力欄の下に小さく出す
+const numIn=(p,v,label,ref)=>`<label class="mini${ref?' hasref':''}"><span>${label}</span><input type="number" data-p="${p}" data-t="num" value="${v}">${ref?`<small class="uref" data-uref="${ref}" data-rp="${p}"></small>`:''}</label>`;
+const memoIn=d=>`<label class="wide">メモ（ゲーム中では使いません）<textarea data-p="memo" data-t="optstr" rows="${Math.max(2,String(d.memo||'').split(String.fromCharCode(10)).length)}" placeholder="調整の意図や、あとで直したいところなど">${esc(d.memo||'')}</textarea></label>`;
 const optNum=(p,v,label)=>`<label class="mini"><span>${label}</span><input type="number" min="0" data-p="${p}" data-t="optnum" value="${v??''}" placeholder="-"></label>`;
 
 function renderForm(){
@@ -496,11 +525,12 @@ function renderForm(){
         <small>一覧から選ぶか、オリジナルのクラス名を入力（相性はなし）</small>
         <datalist id="classlist">${CLASSES.map(c=>`<option value="${esc(c)}">${CLASSES_BASIC.includes(c)?'基本':'エクストラ'}</option>`).join('')}</datalist></label>
       <label>コスト<input type="number" min="0" max="${RULES.costCap}" data-p="cost" data-t="num" value="${u.cost}"></label>
-      <label>HP<input type="number" min="1" step="5" data-p="hp" data-t="num" value="${u.hp}"></label>
+      <label>HP<input type="number" min="1" step="5" data-p="hp" data-t="num" value="${u.hp}"><small class="uref" data-uref="hp"></small></label>
       <label class="wide">属性（複数可）<input data-p="traits" data-t="tags" value="${esc((u.traits||[]).join('、'))}" placeholder="例：竜、騎乗、王、人型">
         <small>読点・カンマ・空白で区切る。特攻・特防の判定に使います${allTraits().length?`（使用中：${esc(allTraits().join('・'))}）`:''}</small></label>
       <label class="wide">キャラクター設定のリンク（任意）<input type="url" data-p="link" data-t="optstr" value="${esc(u.link||'')}" placeholder="https://…">
         <small>http(s) のURL。ゲームのキャラクター詳細に「キャラクター設定」リンクが出ます（別タブで開く）</small></label>
+      ${memoIn(u)}
     </div>
     <div class="row tplrow"><label>カード構成テンプレ
       <select id="tplsel">${CARD_TPL_KEYS.map(k=>opt(k,k,tplKey)).join('')}</select></label>
@@ -558,6 +588,7 @@ function renderForm(){
         ${cmdEd(`faces.${i}.post`,f.post,false)}
       </div>`).join('')}
     </div>
+    <div class="refsum" data-uref="sum"></div>
   </section>
   <section class="sec"><h2>スキル</h2>${u.skills.map(skillEd).join('')}</section>
   ${traitDatalist()}
@@ -570,11 +601,51 @@ function renderForm(){
         <label>対象の選び方<select data-p="ult.pick" data-t="optstr" data-act="structural">${Object.entries(PICKS).map(([k,v])=>opt(k,v,u.ult.pick||'')).join('')}</select></label>
       </div>
       ${effList('ult.eff',u.ult.eff,'ult','ult')}
+      <small class="uref" data-uref="ult"></small>
       <div class="preview" data-prev="ult">${esc(effsText(u.ult.eff,u.ult.pick))}</div>
     </div>
     ${cutinEdHTML(u)}
   </section>`;
   ctUpdate(true);
+  refUpdate();
+}
+// ---------- 基準値（js/unit-ref.js の UNIT_REF）：入力欄の近くに小さく出す参考値。警告はしない ----------
+const refRange = r=>r[0]==null?`～${r[1]}`:r[1]==null?`${r[0]}～`:`${r[0]}～${r[1]}`;
+const refNp = (u,post)=>{ const n=u.faces.filter(f=>(post?f.post:f.pre).c==='B').length, ks=Object.keys(UNIT_REF.np).map(Number); return n?UNIT_REF.np[Math.min(n,Math.max(...ks))]:null; }; // Arts の枚数に合う行
+// kind：hp / dmg（再臨前のコマンドのダメージ）/ np（Arts の獲得NP）/ asc（霊基再臨面の再臨後＝4番の面）。path＝コマンドの場所（faces.<面>.pre など）
+function unitRefText(u,kind,path){
+  const R=UNIT_REF, c=u.cost, post=/\.post$/.test(path||''), cmd=path?getPath(u,path):null;
+  if(kind==='hp') return R.hp[c]?`基準 ${refRange(R.hp[c])}`:'';
+  if(kind==='dmg'){ const r=cmd&&R.dmg[cmd.c]&&R.dmg[cmd.c][c]; return r?`基準 ${refRange(r)}`:''; }
+  if(kind==='np'){ const r=refNp(u,post); return r?`基準 ${refRange(post?r.post:r.pre)}`:''; }
+  if(kind==='ult'){ const a=R.ult&&R.ult.all[c], o=R.ult&&R.ult.one[c]; return a||o?`基準（追加効果のない威力${TERMS.ult}） ${[a&&`${TARGETS.enemy_all} ${a}`,o&&`敵単体 ${o}`].filter(Boolean).join('／')}`:''; }
+  if(kind==='asc'){ const d=R.ascFace.dmg[c]; return d?'基準 '+Object.entries(R.ascFace.kinds).map(([k,v])=>`${d[k]}+${v.name}`).join('／'):''; }
+  return '';
+}
+// 6面の下に出す合計：通常合計攻撃力・再臨後合計攻撃力（霊基再臨面を除く5面）・NP合計・スター合計
+function unitRefSumHTML(u){
+  const R=UNIT_REF, c=u.cost, fs=u.faces.filter(f=>f.pre.c!=='ASC'), sum=(a,k)=>a.reduce((s,x)=>s+(x[k]||0),0);
+  const pre=sum(fs.map(f=>f.pre),'dmg'), post=sum(fs.map(f=>f.post),'dmg'), all=p=>u.faces.map(f=>f[p]);
+  const nPre=refNp(u,false), nPost=refNp(u,true), plus=c>=R.star.plusCost?R.star.plus:[0,0], star=v=>plus[1]?`${v+plus[0]}～${v+plus[1]}`:v;
+  const item=(label,val,ref,tip)=>`<span class="refitem"${tip?` title="${esc(tip)}"`:''}>${label} <b>${val}</b>${ref?`<small class="uref">基準 ${esc(String(ref))}</small>`:''}</span>`;
+  const noAsc=`${TERMS.ascFull}面を除いた面のダメージの合計`;
+  return [
+    item('通常合計攻撃力',pre,R.total[c]&&refRange(R.total[c]),noAsc),
+    item(`${TERMS.asc}後合計攻撃力`,post,R.postAdd[c]!=null&&`${pre+R.postAdd[c]}（通常+${R.postAdd[c]}）`,noAsc),
+    item(`${TERMS.gauge}合計`,`${sum(all('pre'),'np')}%`,nPre&&`最大${nPre.preMax}%`),
+    item(`${TERMS.asc}後${TERMS.gauge}合計`,`${sum(all('post'),'np')}%`,nPost&&`最大${nPost.postMax}%`),
+    item(`${TERMS.star}合計`,sum(all('pre'),'star'),R.hp[c]&&`${star(R.star.pre)}前後`),
+    item(`${TERMS.asc}後${TERMS.star}合計`,sum(all('post'),'star'),R.hp[c]&&`${star(R.star.post)}前後`),
+  ].join('');
+}
+function refUpdate(){
+  const u=cur(); if(!u||isM()||typeof UNIT_REF==='undefined') return;
+  document.querySelectorAll('[data-uref]').forEach(el=>{
+    const k=el.dataset.uref;
+    if(k==='sum'){ el.innerHTML=unitRefSumHTML(u); return; }
+    el.textContent=unitRefText(u,k,(el.dataset.rp||'').replace(/\.(dmg|np)$/,''));
+    if(k==='asc') el.title=Object.values(UNIT_REF.ascFace.kinds).map(v=>`${v.name}：${v.ex}`).join(String.fromCharCode(10));
+  });
 }
 // ---------- 宝具カットイン（改行位置・顔アップ位置・プレビュー・注意） ----------
 // 中身は ctUpdate が入れる（名前やルビの入力中もフォーカスを保ったまま更新するため）
@@ -630,9 +701,11 @@ function cmdEd(path,c,isPre){
   const label=t=>t==='ASC'?`${TERMS.ascFull}面`:t==='W'?`${TERMS.W}（白）`:TERMS[t];
   const select=`<select class="ctype" data-act="cmdType" data-path="${path}" aria-label="コマンドの種類">${types.map(t=>opt(t,label(t),c.c)).join('')}</select>`;
   let body='';
-  if(['R','B','G'].includes(c.c)) body=`<div class="cmdnums">${numIn(path+'.dmg',c.dmg,'ダメージ')}${numIn(path+'.np',c.np,TERMS.gauge)}${numIn(path+'.star',c.star,'★')}</div>${effList(path+'.eff',c.eff||[],'special','cmd')}`;
+  // 基準値：再臨前のコマンドはダメージの幅、Arts は獲得NPの幅、霊基再臨面の再臨後（4番の面）は効果の強さごとのダメージ
+  const ascPost=!isPre&&(getPath(cur(),path.replace(/post$/,'pre'))||{}).c==='ASC', ascRef=ascPost?`<small class="uref" data-uref="asc" data-rp="${path}"></small>`:'';
+  if(['R','B','G'].includes(c.c)) body=`<div class="cmdnums">${numIn(path+'.dmg',c.dmg,'ダメージ',isPre?'dmg':'')}${numIn(path+'.np',c.np,TERMS.gauge,c.c==='B'&&!ascPost?'np':'')}${numIn(path+'.star',c.star,'★')}</div>${ascRef}${effList(path+'.eff',c.eff||[],'special','cmd')}`;
   else if(c.c==='W') body=`<input data-p="${path}.label" value="${esc(c.label)}" placeholder="特殊行動の名前">
-    <div class="cmdnums">${numIn(path+'.dmg',c.dmg||0,'ダメージ')}${numIn(path+'.np',c.np,TERMS.gauge)}${numIn(path+'.star',c.star,'★')}</div>
+    <div class="cmdnums">${numIn(path+'.dmg',c.dmg||0,'ダメージ')}${numIn(path+'.np',c.np,TERMS.gauge)}${numIn(path+'.star',c.star,'★')}</div>${ascRef}
     <p class="sub small nm">ダメージを入れると無属性の攻撃になります（チェインには数えません）。</p>${effList(path+'.eff',c.eff,'special','W')}`;
   else if(c.c==='ASC') body=`<span class="sub small">出たら${TERMS.ascFull}する（1行動として数える）</span>`;
   // 面の専用セリフ（攻撃のときの吹き出し。効果だけの特殊行動・霊基再臨面は、書いたときだけ出す）
@@ -715,6 +788,7 @@ function effRow(path,j,e,ctx,n,atKind){
     ${f.noTgt?'':`<label class="mini"><span>確率</span><select data-p="${p}.chance" data-t="optnum">${opt('','必ず',e.chance??'')}${[1,2,3,4,5].map(k=>opt(k,`ロール${k}以下`,e.chance)).join('')}</select></label>`}
     ${f.noTgt?'':condIn(p,e,f)}
     ${f.inst||f.noTgt?'':`<label class="mini chk" title="強化無効・弱体無効で付与を防がれず、強化解除・弱体解除でも消えません。ターンや回数が尽きれば切れます"><input type="checkbox" data-p="${p}.sure" data-t="bool" ${e.sure?'checked':''}><span>解除・無効不可</span></label>`}
+    ${f.allOpt?`<label class="mini chk" title="チェックなし：攻撃で得るNP（コマンド・攻撃時NP・チェイン）だけ減らします。チェックあり：スキル・ターン開始時・被ダメージ時のNP獲得も減らします"><input type="checkbox" data-p="${p}.all" data-t="bool" ${e.all?'checked':''}><span>スキル・毎ターンなども含む</span></label>`:''}
     ${f.noTgt?'':effAtSel(p,e,atKind)}
     <span class="effops">
       <button data-act="effMove" data-path="${path}" data-i="${j}" data-d="-1" ${j?'':'disabled'} title="上へ">↑</button>
@@ -750,6 +824,7 @@ function updatePreviews(){
   document.querySelectorAll('[data-prev="ult"]').forEach(el=>el.textContent=effsText(u.ult.eff,u.ult.pick));
   if(u.ult.br>0&&u.ult.br>=[...u.ult.name].length) delete u.ult.br; // 名前を短くして改行位置が無効になったら自動に戻す
   ctUpdate();
+  refUpdate();
   document.querySelectorAll('[data-fitout]').forEach(el=>{ const [k,a]=el.dataset.fitout.split('.'); el.textContent=`${u.fit[k][a]}%`; });
   document.querySelectorAll('[data-linecount]').forEach(el=>el.textContent=`${u.lines[el.dataset.linecount].length}件`);
   document.querySelectorAll('[data-clsprev] img').forEach(im=>{ const src=classIcon(u.cls); if(im.getAttribute('src')!==src){ im.onerror=()=>{ im.onerror=null; im.src=CLASS_ICON_EXTRA; }; im.src=src; } });
@@ -972,7 +1047,8 @@ document.addEventListener('click',e=>{
       const t=masterTpl(u.cost); u.hp=t.hp; u.faces=t.faces.map((f,i)=>({...f,...(u.faces[i]&&u.faces[i].line?{line:u.faces[i].line}:{})}));
       full(); toast(`コスト${u.cost}のテンプレを適用しました`); break; }
     case 'roll': doRoll(); break;
-    case 'diffOpen': { checkFile(isM()?'masters':'units',true); renderDiff(); const dl=document.querySelector('#diffdlg'); if(!dl.open) dl.showModal(); break; }
+    case 'diffOpen': { if(b.dataset.vs) diffVs=b.dataset.vs==='file'?'file':'game'; checkFile(isM()?'masters':'units',true); renderDiff(); const dl=document.querySelector('#diffdlg'); if(!dl.open) dl.showModal(); break; }
+    case 'diffMd': if(lastDiff) downloadText(`update-log-${isM()?'masters':'units'}.md`,diffMarkdown(),'text/markdown'); break;
     case 'diffClose': document.querySelector('#diffdlg').close(); break;
     case 'diffVs': diffVs=b.dataset.v==='file'?'file':'game'; renderDiff(); break;
     case 'reloadPage': location.reload(); break;

@@ -82,6 +82,7 @@ function normEff(e){
   if(EFF_AT[e.at]) o.at=e.at; // 攻撃の前/後（未指定なら既定のタイミング。rules.js の EFF_AT）
   if(e.max&&FX[o.k]&&FX[o.k].maxOk) o.max=true; // 値＝対象の最大HP（軽減不可）
   if(e.sure&&FX[o.k]&&!FX[o.k].inst&&!FX[o.k].noTgt) o.sure=true; // 持続効果のみ：強化無効・弱体無効・解除の影響を受けない（ターン・回数では切れる）
+  if(e.all&&FX[o.k]&&FX[o.k].allOpt) o.all=true; // NP獲得量ダウン：攻撃以外（スキル・ターン開始時・被弾時）の獲得も減らす
   const tx=String(e.text??'').trim(); if(tx&&o.k==='desc') o.text=tx; // 説明文
   return o;
 }
@@ -127,6 +128,7 @@ function normalizeUnit(u){
   const condLines=(Array.isArray(u.condLines)?u.condLines:[]).map(normCondLine).filter(Boolean);
   return { id:String(u.id||''), name:String(u.name||''), cls:normClass(u.cls), traits:normTraits(u.traits), cost:num(u.cost), hp:num(u.hp,100),
     ...(u.wip?{wip:true}:{}), // 制作中：js 書き出し（units.js）に含めない
+    ...(typeof u.memo==='string'&&u.memo.trim()?{memo:u.memo}:{}), // メモ：エディタ用の覚え書き（ゲーム中では使わない）
     fit:normFit(u.fit), ...(normLink(u.link)?{link:normLink(u.link)}:{}), lines, ...(condLines.length?{condLines}:{}), faces, skills, ult:Object.assign({name:String(ult.name||''), c:String(ult.c||'R'), eff:(ult.eff||[]).map(normEff)}, String(ult.ruby||'').trim()?{ruby:String(ult.ruby).trim()}:{}, Number.isInteger(ult.br)&&ult.br>=0?{br:ult.br}:{}, PICKS[ult.pick]&&ult.pick?{pick:ult.pick}:{}) };
 }
 // 条件つきセリフ：{key:LINE_KEYS のキー, who:LINE_WHO のキー, cond:Cond, lines:string[]}。上にあるものから順に見て、最初に条件を満たしたものを使う。不正なら null
@@ -220,7 +222,7 @@ function checkEffs(effs,ctx,where,add){
   effs.forEach((e,ei)=>{
     const w=`${where}・効果${ei+1}`;
     if(!FX[e.k]) return add('error',`${w}：効果の種類が不正です`);
-    if(!fxOnlyIn(e.k,ctx)) add('error',`${w}：「${FX[e.k].name}」は${[].concat(FX[e.k].only).map(c=>({ult:TERMS.ult,special:'特殊行動',master:TERMS.player}[c])).join('・')}でのみ使えます`);
+    if(!fxOnlyIn(e.k,ctx)) add('error',`${w}：「${FX[e.k].name}」は${[].concat(FX[e.k].only).map(c=>({skill:'スキル',ult:TERMS.ult,special:'特殊行動',master:TERMS.player}[c])).join('・')}でのみ使えます`);
     if(e.color&&!FX[e.k].color) add('warn',`${w}：この効果では色の指定は使われません`);
     if(!FX[e.k].noTgt&&!TGT_BY_CTX[ctx].includes(e.t)) add('error',`${w}：ここでは「${TARGETS[e.t]||e.t}」を対象にできません`);
     if(FX[e.k].copy){
@@ -268,6 +270,7 @@ function normalizeMaster(m){
   const ln=m.lines||{};
   return { id:String(m.id||''), name:String(m.name||''), cls:TERMS.player, traits:[], cost:num(m.cost), hp:num(m.hp,100), master:true,
     ...(m.wip?{wip:true}:{}), // 制作中：js 書き出し（masters.js）に含めない
+    ...(typeof m.memo==='string'&&m.memo.trim()?{memo:m.memo}:{}), // メモ：エディタ用の覚え書き（ゲーム中では使わない）
     ...(normLink(m.link)?{link:normLink(m.link)}:{}),
     fit:normFit(m.fit), lines:Object.fromEntries(Object.keys(MASTER_LINE_KEYS).map(k=>[k,strList(ln[k])])), faces, spells };
 }
@@ -390,6 +393,7 @@ function mastersToJS(ms){
     `    "id":${j(m.id)}, "name":${j(m.name)}, "cost":${m.cost}, "hp":${m.hp},`,
     ...(fitIsDef(m.fit,'face')?[]:[`    "fit":${j({face:m.fit.face})},`]),
     ...(m.link?[`    "link":${j(m.link)},`]:[]),
+    ...(m.memo?[`    "memo":${j(m.memo)},`]:[]),
     ...(Object.keys(MASTER_LINE_KEYS).some(k=>m.lines[k].length)?[`    "lines":${j(Object.fromEntries(Object.keys(MASTER_LINE_KEYS).map(k=>[k,m.lines[k]])))},`]:[]),
     '    "faces":[',
     m.faces.map(f=>`      ${j({label:f.label,eff:f.eff,...(f.line?{line:f.line}:{})})}`).join(',\n'),
@@ -443,6 +447,7 @@ function unitsToJS(units){
     ...(u.traits&&u.traits.length?[`    "traits":${j(u.traits)},`]:[]),
     ...(['face','card','np','cut'].every(k=>fitIsDef(u.fit,k))?[]:[`    "fit":${j(u.fit)},`]),
     ...(u.link?[`    "link":${j(u.link)},`]:[]),
+    ...(u.memo?[`    "memo":${j(u.memo)},`]:[]),
     '    "lines":{',
     Object.keys(LINE_KEYS).map(k=>`      ${j(k)}:${j(u.lines[k])}`).join(',\n'),
     ...(u.condLines&&u.condLines.length?['    },',`    "condLines":[`,u.condLines.map(c=>`      ${j(c)}`).join(',\n'),'    ],']:['    },']),
@@ -574,6 +579,8 @@ function cmdCardHTML(d,c,opt={}){
 }
 
 // ---------- 表示用の文字列 ----------
+// ログ用の効果名：値つきの名前（ダメージ無効は「x」に効果量を入れる）
+const fxName=e=>e.k==='nullUnder'&&e.v!=null?FX.nullUnder.name.replace('x',e.v):FX[e.k].name;
 function fxText(e){
   const col=e.color?`(${TERMS[e.color]})`:'';
   let s;
@@ -618,8 +625,10 @@ function fxText(e){
     case 'onHitStar': s=`被ダメージ時${TERMS.star}${e.v}個獲得`; break;
     case 'maxHp': s=`最大HP+${e.v}`; break;
     case 'critDown': s=`クリティカル率ダウン(Lv-${e.v})`; break;
+    case 'npGainDown': s=`${TERMS.gauge}獲得量ダウン(-${e.v}${e.all?'・すべての獲得':'・攻撃時'})`; break;
     case 'starDown': s=`${TERMS.star}発生数ダウン(-${e.v})`; break;
     case 'cardConv': s=`カード変換→${e.color?TERMS[e.color]:'(色未指定)'}`; break;
+    case 'cardConvPick': s='カード変換→Buster/Arts/Quickから選ぶ'; break;
     case 'buffExtend': s=`強化の効果時間+${e.v}T`; break;
     case 'skillCharge': s=`使用済みスキル${e.v}個を再使用可能に`; break;
     case 'np': s=`${TERMS.gauge}${e.v>=0?'+':''}${e.v}%`; break;

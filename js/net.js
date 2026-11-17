@@ -148,7 +148,8 @@ function netWire(dc){
     NET.on=true; clearTimeout(NET.timer);
     if(NET.me===0){ // ホスト：データを送って編成へ（再接続なら、今の状態を送って続きから）
       const resume=!!NET.hold; NET.hold=null;
-      netSend({t:'hello',v:NET_VER,units:UNITS,masters:MASTERS});
+      const noMemo=a=>a.map(({memo,...x})=>x); // メモ（エディタ用の覚え書き）は相手に送らない
+      netSend({t:'hello',v:NET_VER,units:noMemo(UNITS),masters:noMemo(MASTERS)});
       UI.net=null; UI.nav={s:'top',step:'rule'};
       if(resume){ netSync([]); render(); }
       else act('chooseMode',{mode:'net'});

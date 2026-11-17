@@ -266,6 +266,7 @@ const FX = {
   onHitStar:{name:'被ダメージ時スター獲得',buff:true,val:true}, // 自分のマスターがスターx個獲得
   maxHp:{name:'最大HP+',buff:true,val:true},                 // 最大HP+x（付与時にHPもx増える。切れたら最大HPまで下がる）
   cardConv:{name:'カード変換',buff:true,color:true},          // 行動決定で出たコマンド(R/B/G)を color の色に変える（1回変えるごとに回数を1消費）
+  cardConvPick:{name:'カード変換（使用時に色を選ぶ）',buff:true,only:'skill'}, // スキル使用時に Buster/Arts/Quick を選び、その色の cardConv を付ける（付いたあとは cardConv と同じ）
   // 弱体
   buffImmune:{name:'強化無効',buff:false},                   // 強化効果を受けない
   // 即時効果への無効（強化として付く。防ぐたびに回数を1消費）
@@ -283,6 +284,7 @@ const FX = {
   drain:{name:'HP減少',buff:false,val:true,perm:true},      // ターン終了時に値ぶんの弱体ダメージ。重複する（合計）。永続でよい
   sealSkill:{name:'スキル封印',buff:false}, sealUlt:{name:'宝具封印',buff:false},
   critDown:{name:'クリティカル率ダウン',buff:false,val:true},
+  npGainDown:{name:'NP獲得量ダウン',buff:false,val:true,allOpt:true}, // 攻撃で得るNP（コマンド・攻撃時NP・チェイン）が1回ごとに x 減る（0未満にはならない）。all なら スキル・ターン開始時・被弾時などの獲得も対象
   starDown:{name:'スター発生数ダウン',buff:false,val:true},          // 攻撃1回で発生するスターが x 個減る
   debuffResDown:{name:'弱体耐性ダウン',buff:false,val:true},   // 自分が受ける確率つきの弱体の判定ロールをN+xにする（「必ず」の弱体には効かない）
   debuffDown:{name:'弱体成功率ダウン',buff:false,val:true},   // 自分が敵に付ける弱体の判定ロールをN-xにする。「必ず」の弱体もロール6以下の判定になる
@@ -331,10 +333,10 @@ const COND_KINDS = { trait:'属性', fx:'状態', hpBelow:'HP○%以下', hpAbov
 const LINE_WHO = { other:'相手・対象', self:'自分', ally:'味方のだれか', enemy:'敵のだれか' };
 ['atk','atkDown','atkPct','atkPctDown','def','defDown'].forEach(k=>{ if(FX[k]) FX[k].condUse=true; });
 const FX_GROUPS = [
-  ['攻撃強化', ['atk','atkPct','npPow','atkVs','atkTrait','ignoreDef','sureHit','pierce','critPow','critMult','critRoll','debuffUp','buffUp','cardConv','onAtkStar','onAtkNp','aoeNormal']],
+  ['攻撃強化', ['atk','atkPct','npPow','atkVs','atkTrait','ignoreDef','sureHit','pierce','critPow','critMult','critRoll','debuffUp','buffUp','cardConv','cardConvPick','onAtkStar','onAtkNp','aoeNormal']],
   ['防御・耐性', ['def','defTrait','evade','invul','guts','taunt','nullUnder','counter','maxHp','debuffImmune','mentalImmune','deathImmune','stripImmune','npDownImmune','starLossImmune']],
   ['継続・ターン', ['actsUp','regenHp','regenNp','regenStar','onHitNp','hitNpUp','onHitStar']],
-  ['弱体', ['atkDown','atkPctDown','npPowDown','defDown','critDown','starDown','debuffDown','debuffResDown','buffDown','poison','burn','spread','drain','curse','hitNpSeal','stun','charm','fear','actsDown','sealSkill','sealUlt','healBlock','buffImmune']],
+  ['弱体', ['atkDown','atkPctDown','npPowDown','defDown','critDown','starDown','npGainDown','debuffDown','debuffResDown','buffDown','poison','burn','spread','drain','curse','hitNpSeal','stun','charm','fear','actsDown','sealSkill','sealUlt','healBlock','buffImmune']],
   ['回復・即時', ['heal','np','star','starLoss','cleanse','cleanseMental','strip','buffExtend','skillCharge','copyBuff','copyDebuff']],
   ['攻撃・特殊', ['dmg','multiHit','aoe','selfDmg','instantDeath','copyRoll']],
   ['表示', ['desc']],

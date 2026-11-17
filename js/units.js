@@ -370,9 +370,9 @@ const DEFAULT_UNITS = [
     "skills":[
       {"name":"被虐体質","eff":[{"k":"taunt","t":"self","v":0,"turns":1},{"k":"def","t":"self","v":20,"turns":1}],"rank":"B"},
       {"name":"己が栄光のためでなく","eff":[{"k":"critRoll","t":"self","v":2,"turns":3},{"k":"evade","t":"self","v":0,"turns":5,"times":2}]},
-      {"name":"精霊の加護","eff":[{"k":"atk","t":"self","v":30,"turns":3},{"k":"critPow","t":"self","v":50,"turns":3},{"k":"critDown","t":"self","v":1,"turns":3},{"k":"starDown","t":"self","v":3,"turns":3}],"rank":"B-"}
+      {"name":"精霊の加護","eff":[{"k":"atk","t":"self","v":30,"turns":3},{"k":"critPow","t":"self","v":30,"turns":3},{"k":"critDown","t":"self","v":1,"turns":3},{"k":"starDown","t":"self","v":3,"turns":3}],"rank":"B-"}
     ],
-    "ult":{"name":"無毀なる湖光","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":350},{"k":"def","t":"self","v":40,"turns":1}],"ruby":"アロンダイト"}
+    "ult":{"name":"無毀なる湖光","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":300},{"k":"def","t":"self","v":40,"turns":1}],"ruby":"アロンダイト"}
   },
   {
     "id":"connla", "name":"コンラ", "cls":"アーチャー", "cost":3, "hp":550,
@@ -528,7 +528,7 @@ const DEFAULT_UNITS = [
       {"acts":1,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":80,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"R","dmg":60,"np":0,"star":0},"post":{"c":"R","dmg":80,"np":0,"star":0}},
       {"acts":1,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
-      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"不治の魔刃","eff":[{"k":"healBlock","t":"target","v":0,"turns":2}],"dmg":60,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"不治の魔刃","eff":[{"k":"healBlock","t":"target","v":0,"turns":2}],"dmg":90,"np":0,"star":0}},
       {"acts":3,"pre":{"c":"B","dmg":40,"np":15,"star":0},"post":{"c":"B","dmg":50,"np":20,"star":0}},
       {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":2},"post":{"c":"G","dmg":30,"np":0,"star":4}}
     ],
@@ -607,7 +607,7 @@ const DEFAULT_UNITS = [
     "ult":{"name":"四天招雷・天綱恢々","c":"R","eff":[{"k":"onAtkStar","t":"self","v":3,"turns":3,"at":"pre"},{"k":"dmg","t":"enemy_all","v":450}]}
   },
   {
-    "id":"lucan", "name":"ルーカン", "cls":"サーヴァント", "cost":1, "hp":300,
+    "id":"lucan", "name":"ルーカン", "cls":"サーヴァント", "cost":2, "hp":350,
     "traits":["女性","秩序","中庸","地","人型","円卓の騎士"],
     "fit":{"face":{"x":50,"y":6,"z":100},"card":{"x":50,"y":12,"z":107},"np":{"x":50,"y":14,"z":84},"cut":{"x":0,"y":0,"z":91}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%eb%a1%bc%a5%ab%a5%f3",
@@ -628,19 +628,19 @@ const DEFAULT_UNITS = [
       {"key":"start","who":"other","cond":{"k":"id","v":"ahotoria"},"lines":["……私の仕えた偉大なる王と一緒にしたくありません"]}
     ],
     "faces":[
-      {"acts":1,"pre":{"c":"R","dmg":30,"np":0,"star":0},"post":{"c":"R","dmg":40,"np":0,"star":0}},
-      {"acts":2,"pre":{"c":"B","dmg":20,"np":15,"star":0},"post":{"c":"B","dmg":30,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"R","dmg":50,"np":0,"star":0},"post":{"c":"R","dmg":60,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"B","dmg":30,"np":15,"star":0},"post":{"c":"B","dmg":40,"np":20,"star":0}},
       {"acts":1,"pre":{"c":"B","dmg":20,"np":15,"star":0},"post":{"c":"B","dmg":30,"np":20,"star":0}},
-      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"給仕","eff":[{"k":"heal","t":"ally_all","v":20}],"dmg":0,"np":0,"star":0,"line":["上等なワインを用意いたしました"]}},
-      {"acts":3,"pre":{"c":"B","dmg":20,"np":15,"star":0},"post":{"c":"B","dmg":30,"np":20,"star":0}},
-      {"acts":1,"pre":{"c":"G","dmg":10,"np":0,"star":2},"post":{"c":"G","dmg":20,"np":0,"star":4}}
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"給仕","eff":[{"k":"heal","t":"ally_all","v":30},{"k":"star","t":"master","v":6}],"dmg":0,"np":0,"star":0}},
+      {"acts":3,"pre":{"c":"B","dmg":20,"np":10,"star":0},"post":{"c":"B","dmg":30,"np":15,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":20,"np":0,"star":4},"post":{"c":"G","dmg":30,"np":0,"star":6}}
     ],
     "skills":[
       {"name":"円卓の忠実なる従者","eff":[{"k":"np","t":"ally_all","v":10},{"k":"regenStar","t":"self","v":2,"turns":3}],"rank":"A"},
-      {"name":"戦闘続行","eff":[{"k":"guts","t":"self","v":80,"turns":5}],"rank":"C"},
-      {"name":"執事モード","eff":[{"k":"evade","t":"self","v":0,"times":3}]}
+      {"name":"戦闘続行","eff":[{"k":"guts","t":"self","v":120,"turns":5}],"rank":"C"},
+      {"name":"執事モード","eff":[{"k":"evade","t":"self","v":0,"times":3},{"k":"np","t":"picked","v":10},{"k":"aoeNormal","t":"picked","v":0,"times":1}],"pick":"ally"}
     ],
-    "ult":{"name":"玲瓏興宴の給仕","c":"B","eff":[{"k":"heal","t":"ally_all","v":100},{"k":"def","t":"ally_all","v":10,"turns":3},{"k":"np","t":"ally_other","v":10},{"k":"atkDown","t":"enemy_all","v":10,"turns":3}],"ruby":"ビー・アワー・ゲスト"}
+    "ult":{"name":"玲瓏興宴の給仕","c":"B","eff":[{"k":"heal","t":"ally_all","v":100},{"k":"def","t":"ally_all","v":20,"turns":3},{"k":"np","t":"ally_other","v":10},{"k":"atkDown","t":"enemy_all","v":20,"turns":3}],"ruby":"ビー・アワー・ゲスト"}
   },
   {
     "id":"almeida", "name":"アルメイダ", "cls":"ランサー", "cost":2, "hp":450,
@@ -674,7 +674,7 @@ const DEFAULT_UNITS = [
     "ult":{"name":"護国の石窯","c":"R","eff":[{"k":"dmg","t":"target","v":300},{"k":"defDown","t":"target","v":20,"turns":3},{"k":"burn","t":"target","v":20,"turns":3}],"ruby":"クリメイション・ブレッド"}
   },
   {
-    "id":"tezcatlipoca", "name":"テスカトリポカ", "cls":"バーサーカー", "cost":5, "hp":820,
+    "id":"tezcatlipoca", "name":"テスカトリポカ", "cls":"バーサーカー", "cost":5, "hp":860,
     "traits":["男性","混沌","悪","天","人型","神性","魔性"],
     "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":8,"z":105},"cut":{"x":0,"y":4,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%c6%a5%b9%a5%ab%a5%c8%a5%ea%a5%dd%a5%ab",
@@ -836,7 +836,7 @@ const DEFAULT_UNITS = [
       {"name":"精神分離・機体人心","eff":[{"k":"atk","t":"self","v":20,"turns":1},{"k":"mentalImmune","t":"self","v":0,"turns":3}],"rank":"A"},
       {"name":"十大化身","eff":[{"k":"atk","t":"self","v":10,"turns":3},{"k":"def","t":"self","v":10,"turns":3},{"k":"pierce","t":"self","v":0,"turns":1},{"k":"onAtkNp","t":"self","v":10,"turns":3},{"k":"regenHp","t":"self","v":40,"turns":3},{"k":"guts","t":"self","v":80,"turns":3}],"rank":"A+"}
     ],
-    "ult":{"name":"終極よ、最果てを廻れ","c":"B","eff":[{"k":"atkTrait","t":"self","v":50,"turns":3,"trait":"悪","at":"pre"},{"k":"dmg","t":"enemy_all","v":400}],"ruby":"クリタ・ユガ"}
+    "ult":{"name":"終極よ、最果てを廻れ","c":"B","eff":[{"k":"atkTrait","t":"self","v":80,"turns":3,"trait":"悪","at":"pre"},{"k":"dmg","t":"enemy_all","v":300}],"ruby":"クリタ・ユガ"}
   },
   {
     "id":"lamorak", "name":"ラモラック", "cls":"シールダー", "cost":3, "hp":550,
@@ -877,7 +877,7 @@ const DEFAULT_UNITS = [
     "ult":{"name":"赤い盾","c":"R","eff":[{"k":"dmg","t":"target","v":300},{"k":"invul","t":"self","v":0,"turns":1},{"k":"cleanse","t":"ally_all","v":0}],"ruby":"レッドシールド"}
   },
   {
-    "id":"guillaume", "name":"ギヨーム9世", "cls":"キャスター", "cost":3, "hp":520,
+    "id":"guillaume", "name":"ギヨーム9世", "cls":"キャスター", "cost":3, "hp":550,
     "traits":["男性","混沌","善","人","人型","フランス"],
     "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":0,"z":105},"cut":{"x":0,"y":12,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%ae%a5%e8%a1%bc%a5%e09%c0%a4",
@@ -896,16 +896,16 @@ const DEFAULT_UNITS = [
       {"acts":1,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":90,"np":0,"star":0}},
       {"acts":1,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
-      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"NP上昇","eff":[{"k":"np","t":"self","v":20},{"k":"np","t":"ally_all","v":5}],"dmg":0,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"R","dmg":110,"np":0,"star":0}},
       {"acts":3,"pre":{"c":"B","dmg":40,"np":10,"star":0},"post":{"c":"B","dmg":50,"np":15,"star":0}},
       {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":4},"post":{"c":"G","dmg":40,"np":0,"star":6}}
     ],
     "skills":[
       {"name":"陣地作成(奏)","eff":[{"k":"evade","t":"ally_all","v":0,"times":1},{"k":"heal","t":"ally_all","v":100},{"k":"deathImmune","t":"ally_all","v":0,"times":1}],"rank":"A"},
       {"name":"道具作成","eff":[{"k":"cleanse","t":"ally_other","v":0},{"k":"stripImmune","t":"ally_other","v":0,"times":1}],"rank":"A"},
-      {"name":"自己保存","eff":[{"k":"invul","t":"self","v":0,"turns":1},{"k":"np","t":"self","v":40}],"rank":"C"}
+      {"name":"自己保存","eff":[{"k":"invul","t":"self","v":0,"turns":1},{"k":"np","t":"self","v":50}],"rank":"C"}
     ],
-    "ult":{"name":"全ての騎士たちの歌","c":"B","eff":[{"k":"np","t":"ally_all","v":50},{"k":"npPow","t":"picked","v":80,"turns":2}],"ruby":"ヴィーダ","pick":"other"}
+    "ult":{"name":"全ての騎士たちの歌","c":"B","eff":[{"k":"np","t":"picked","v":60},{"k":"npPow","t":"picked","v":80,"turns":2}],"ruby":"ヴィーダ","pick":"other"}
   },
   {
     "id":"vercingetorix", "name":"ウェルキンゲトリクス", "cls":"セイバー", "cost":4, "hp":890,
@@ -926,10 +926,10 @@ const DEFAULT_UNITS = [
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
-      {"acts":1,"pre":{"c":"B","dmg":60,"np":15,"star":0},"post":{"c":"B","dmg":70,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":60,"np":15,"star":0},"post":{"c":"B","dmg":80,"np":20,"star":0}},
       {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"破壊工作","eff":[{"k":"atkDown","t":"enemy_all","v":20,"turns":3},{"k":"defDown","t":"target","v":20,"turns":3}],"dmg":0,"np":0,"star":0}},
-      {"acts":3,"pre":{"c":"B","dmg":60,"np":10,"star":0},"post":{"c":"B","dmg":70,"np":15,"star":0}},
-      {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":4},"post":{"c":"G","dmg":50,"np":0,"star":6}}
+      {"acts":3,"pre":{"c":"B","dmg":60,"np":15,"star":0},"post":{"c":"B","dmg":70,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":4},"post":{"c":"G","dmg":60,"np":0,"star":6}}
     ],
     "skills":[
       {"name":"始まりの英雄","eff":[{"k":"atk","t":"ally_all","v":30,"turns":3},{"k":"atk","t":"ally_all","v":20,"turns":3,"cond":{"k":"trait","v":"フランス","self":true}},{"k":"critRoll","t":"self","v":1,"turns":3},{"k":"star","t":"master","v":7}],"rank":"A"},
@@ -1083,16 +1083,16 @@ const DEFAULT_UNITS = [
       "win":["オールC[ｷｬｯﾄ]。ふん、三流の冒険譚だったにゃ"]
     },
     "faces":[
-      {"acts":1,"pre":{"c":"R","dmg":25,"np":0,"star":0},"post":{"c":"R","dmg":45,"np":0,"star":0}},
-      {"acts":2,"pre":{"c":"R","dmg":25,"np":0,"star":0},"post":{"c":"R","dmg":45,"np":0,"star":0}},
-      {"acts":1,"pre":{"c":"R","dmg":25,"np":0,"star":0},"post":{"c":"R","dmg":45,"np":0,"star":0}},
-      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"ツメトギ","eff":[{"k":"multiHit","t":"self","v":10},{"k":"atk","t":"self","v":10,"turns":3},{"k":"selfDmg","t":"self","v":25}],"dmg":2,"np":0,"star":0}},
-      {"acts":3,"pre":{"c":"B","dmg":25,"np":20,"star":0,"eff":[{"k":"atkDown","t":"ally_all","v":10,"turns":3}]},"post":{"c":"B","dmg":40,"np":25,"star":0}},
+      {"acts":1,"pre":{"c":"R","dmg":25,"np":0,"star":0},"post":{"c":"R","dmg":40,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"R","dmg":25,"np":0,"star":0},"post":{"c":"R","dmg":40,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"R","dmg":25,"np":0,"star":0},"post":{"c":"R","dmg":40,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"ツメトギ","eff":[{"k":"multiHit","t":"self","v":10},{"k":"atk","t":"self","v":10,"turns":3},{"k":"selfDmg","t":"self","v":25}],"dmg":1,"np":0,"star":0}},
+      {"acts":3,"pre":{"c":"B","dmg":25,"np":20,"star":0,"eff":[{"k":"atkDown","t":"ally_all","v":10,"turns":3}]},"post":{"c":"B","dmg":35,"np":25,"star":0}},
       {"acts":1,"pre":{"c":"G","dmg":25,"np":0,"star":4,"eff":[{"k":"curse","t":"ally_all","v":0,"times":1}]},"post":{"c":"G","dmg":30,"np":0,"star":6}}
     ],
     "skills":[
       {"name":"カリスマ","eff":[{"k":"atk","t":"ally_all","v":30,"turns":3,"chance":3},{"k":"defDown","t":"ally_all","v":10,"turns":3}],"rank":"C"},
-      {"name":"加虐体質","eff":[{"k":"atk","t":"self","v":25,"turns":3,"chance":2},{"k":"critPow","t":"self","v":30,"turns":3,"chance":2},{"k":"defDown","t":"self","v":10,"turns":3},{"k":"atk","t":"enemy_all","v":15,"turns":3}],"rank":"C"},
+      {"name":"加虐体質","eff":[{"k":"atk","t":"self","v":25,"turns":3,"chance":2},{"k":"critPow","t":"self","v":30,"turns":3,"chance":2},{"k":"defDown","t":"self","v":20,"turns":3},{"k":"atk","t":"enemy_all","v":15,"turns":3}],"rank":"C"},
       {"name":"天空神の寵愛","eff":[{"k":"guts","t":"self","v":250,"turns":3,"chance":3},{"k":"cleanse","t":"self","v":0,"chance":3},{"k":"instantDeath","t":"self","v":0,"chance":1}],"rank":"C"}
     ],
     "ult":{"name":"天機破綻す猫屋敷","c":"R","eff":[{"k":"atkDown","t":"enemy_all","v":40,"turns":3},{"k":"instantDeath","t":"self","v":0,"chance":2}],"ruby":"シルシュ・アンシャル・キャットエディション"}
@@ -1190,14 +1190,14 @@ const DEFAULT_UNITS = [
       {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":4},"post":{"c":"G","dmg":40,"np":0,"star":6}}
     ],
     "skills":[
-      {"name":"沈着冷静","eff":[{"k":"np","t":"self","v":20},{"k":"mentalImmune","t":"self","v":0,"turns":3}],"rank":"B","line":["心を鎮めます"]},
-      {"name":"英雄指導","eff":[{"k":"atk","t":"picked","v":20,"turns":3},{"k":"npPow","t":"picked","v":60,"turns":1},{"k":"sureHit","t":"picked","v":0,"turns":1}],"rank":"C","pick":"ally","line":["サポートをいたしましょう"]},
+      {"name":"沈着冷静","eff":[{"k":"np","t":"self","v":30},{"k":"mentalImmune","t":"self","v":0,"turns":3},{"k":"heal","t":"self","v":100}],"rank":"B","line":["心を鎮めます"]},
+      {"name":"英雄指導","eff":[{"k":"atk","t":"picked","v":20,"turns":3},{"k":"npPow","t":"picked","v":60,"turns":1},{"k":"sureHit","t":"picked","v":0,"turns":1},{"k":"np","t":"self","v":20}],"rank":"C","pick":"ally","line":["サポートをいたしましょう"]},
       {"name":"常春の妖精たち","eff":[{"k":"atk","t":"picked","v":20,"turns":3},{"k":"onAtkNp","t":"picked","v":10,"turns":3},{"k":"critRoll","t":"picked","v":1,"turns":1},{"k":"pierce","t":"picked","v":0,"turns":1},{"k":"debuffImmune","t":"picked","v":0,"turns":3},{"k":"heal","t":"picked","v":100}],"rank":"B","pick":"ally","line":["みんな、よろしくお願いします","仲良くしてくださいね"]}
     ],
-    "ult":{"name":"清浄たる常春庭園","c":"B","eff":[{"k":"def","t":"ally_all","v":30,"turns":3},{"k":"nullUnder","t":"ally_all","v":60,"turns":3},{"k":"heal","t":"ally_all","v":150},{"k":"onAtkNp","t":"ally_all","v":10,"turns":3}],"ruby":"ラ・プランタン・エテルネル"}
+    "ult":{"name":"清浄たる常春庭園","c":"B","eff":[{"k":"def","t":"ally_all","v":30,"turns":3},{"k":"cleanse","t":"self","v":0},{"k":"heal","t":"ally_all","v":150},{"k":"onAtkNp","t":"ally_all","v":10,"turns":3},{"k":"nullUnder","t":"ally_all","v":60,"turns":3}],"ruby":"ラ・プランタン・エテルネル"}
   },
   {
-    "id":"odysseiya", "name":"オデュッセウス", "cls":"グラップラー", "cost":3, "hp":460,
+    "id":"odysseiya", "name":"オデュッセウス", "cls":"グラップラー", "cost":3, "hp":520,
     "traits":["女性","混沌","善","地","ギリシャ","王"],
     "fit":{"face":{"x":50,"y":10,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":14,"z":98},"cut":{"x":0,"y":0,"z":88}},
     "lines":{
@@ -1209,7 +1209,7 @@ const DEFAULT_UNITS = [
       "np":["見えたぞ、水の一雫！　『青銅流星拳』！"],
       "npDamage":["身体の傷は勇気の証だ……！"],
       "defeat":["認めるよ……ボクの負けだ……","テンカウント……","ボ、ボクのコスモよ……奇跡を、起こ……"],
-      "win":["いえーい、金メダルだ！","このボクに力任せの技は通じない。もはやこれは常識！","相手が勝ち誇った時、そいつは既に敗北している！","キミは今、伝説の中にいる！"]
+      "win":["いえーい、金メダルだ！","このボクに力任せの技は通じない。もはやこれは常識！","相手が勝ち誇った時、そいつは既に敗北している！","キミは今、伝説の中にいる！","これが、オデュッ星矢だ！"]
     },
     "condLines":[
       {"key":"start","who":"other","cond":{"k":"id","v":"odysseus"},"lines":["近接戦ならボクが相手でも負けはしない！"]},
@@ -1217,10 +1217,10 @@ const DEFAULT_UNITS = [
     ],
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":60,"np":0,"star":0},"post":{"c":"R","dmg":80,"np":0,"star":0}},
-      {"acts":2,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":25,"np":10,"star":0,"eff":[{"k":"multiHit","t":"self","v":2}]}},
-      {"acts":1,"pre":{"c":"B","dmg":40,"np":10,"star":0},"post":{"c":"B","dmg":25,"np":10,"star":0,"eff":[{"k":"multiHit","t":"self","v":2}]}},
+      {"acts":2,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":35,"np":15,"star":0,"eff":[{"k":"multiHit","t":"self","v":2}]}},
+      {"acts":1,"pre":{"c":"B","dmg":40,"np":10,"star":0},"post":{"c":"B","dmg":30,"np":10,"star":0,"eff":[{"k":"multiHit","t":"self","v":2}]}},
       {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"特殊行動","eff":[{"k":"evade","t":"self","v":0,"turns":1},{"k":"counter","t":"self","v":30,"turns":1}],"dmg":0,"np":0,"star":0}},
-      {"acts":3,"pre":{"c":"B","dmg":20,"np":10,"star":0},"post":{"c":"B","dmg":20,"np":10,"star":0,"eff":[{"k":"multiHit","t":"self","v":2}]}},
+      {"acts":3,"pre":{"c":"B","dmg":20,"np":10,"star":0},"post":{"c":"B","dmg":30,"np":15,"star":0,"eff":[{"k":"multiHit","t":"self","v":2}]}},
       {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":4},"post":{"c":"G","dmg":40,"np":0,"star":6}}
     ],
     "skills":[
@@ -1324,7 +1324,7 @@ const DEFAULT_UNITS = [
     "ult":{"name":"花の如き死化粧","c":"B","eff":[{"k":"atk","t":"ally_other","v":20,"turns":3},{"k":"def","t":"ally_other","v":20,"turns":3},{"k":"star","t":"master","v":15},{"k":"selfDmg","t":"self","v":20,"max":true}],"ruby":"エレガンス・メンズノンノ"}
   },
   {
-    "id":"gwydion", "name":"グウィディオン", "cls":"キャスター", "cost":4, "hp":690,
+    "id":"gwydion", "name":"グウィディオン", "cls":"キャスター", "cost":4, "hp":650,
     "traits":["男性","混沌","悪","天","イギリス"],
     "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":8,"z":100},"np":{"x":50,"y":4,"z":105},"cut":{"x":-1,"y":0,"z":90}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%b0%a5%a6%a5%a3%a5%c7%a5%a3%a5%aa%a5%f3",
@@ -1348,21 +1348,21 @@ const DEFAULT_UNITS = [
     ],
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
-      {"acts":2,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
-      {"acts":1,"pre":{"c":"B","dmg":60,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
+      {"acts":2,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
       {"acts":2,"pre":{"c":"ASC"},"post":{"c":"R","dmg":40,"np":5,"star":0,"eff":[{"k":"multiHit","t":"self","v":3},{"k":"atk","t":"self","v":20,"turns":3,"color":"R"}],"line":["派手に決めてやらあ！　『万術三魔詩』！"]}},
       {"acts":3,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
-      {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":2},"post":{"c":"G","dmg":40,"np":0,"star":3}}
+      {"acts":1,"pre":{"c":"G","dmg":20,"np":0,"star":1},"post":{"c":"G","dmg":30,"np":0,"star":2}}
     ],
     "skills":[
-      {"name":"動物会話","eff":[{"k":"np","t":"self","v":20}],"rank":"B-"},
+      {"name":"動物会話","eff":[{"k":"np","t":"self","v":20},{"k":"critRoll","t":"self","v":1,"turns":3}],"rank":"B-"},
       {"name":"原初のルーン","eff":[{"k":"atk","t":"picked","v":40,"turns":1,"color":"R"},{"k":"np","t":"picked","v":20}],"rank":"A","pick":"ally"},
       {"name":"高速神言","eff":[{"k":"np","t":"self","v":70}],"rank":"B"}
     ],
-    "ult":{"name":"騒樹荊棘獄","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":250},{"k":"stun","t":"enemy_all","v":0,"turns":1,"chance":2},{"k":"np","t":"self","v":30}],"ruby":"ケルヌンノス・ウッズ"}
+    "ult":{"name":"騒樹荊棘獄","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":240},{"k":"stun","t":"enemy_all","v":0,"turns":1,"chance":2},{"k":"np","t":"self","v":30}],"ruby":"ケルヌンノス・ウッズ"}
   },
   {
-    "id":"arianrhod", "name":"アリアンロッド", "cls":"ライダー", "cost":4, "hp":800,
+    "id":"arianrhod", "name":"アリアンロッド", "cls":"ライダー", "cost":4, "hp":830,
     "traits":["女性","混沌","中庸","天","神性","人型","イギリス"],
     "fit":{"face":{"x":50,"y":21,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":14,"z":105},"cut":{"x":0,"y":0,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%a2%a5%ea%a5%a2%a5%f3%a5%ed%a5%c3%a5%c9",
@@ -1393,7 +1393,7 @@ const DEFAULT_UNITS = [
     "ult":{"name":"乙女駆る銀輪戦車","c":"G","eff":[{"k":"invul","t":"self","v":0,"turns":1},{"k":"dmg","t":"target","v":400}],"ruby":"ヴァージンライド・シルヴァホイール"}
   },
   {
-    "id":"tomiko", "name":"日野富子", "cls":"ゲートキーパー", "cost":4, "hp":780,
+    "id":"tomiko", "name":"日野富子", "cls":"ゲートキーパー", "cost":4, "hp":800,
     "traits":["女性","混沌","悪","人","人型","日本"],
     "fit":{"face":{"x":50,"y":17,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":26,"z":105},"cut":{"x":0,"y":11,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%c6%fc%cc%ee%c9%d9%bb%d2",
@@ -1410,18 +1410,18 @@ const DEFAULT_UNITS = [
     },
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
-      {"acts":2,"pre":{"c":"B","dmg":50,"np":20,"star":0},"post":{"c":"B","dmg":60,"np":25,"star":0}},
-      {"acts":1,"pre":{"c":"B","dmg":40,"np":15,"star":0},"post":{"c":"B","dmg":50,"np":20,"star":0}},
+      {"acts":2,"pre":{"c":"B","dmg":50,"np":20,"star":0},"post":{"c":"B","dmg":70,"np":25,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":40,"np":15,"star":0},"post":{"c":"B","dmg":70,"np":20,"star":0}},
       {"acts":2,"pre":{"c":"ASC"},"post":{"c":"G","dmg":60,"np":0,"star":7,"eff":[{"k":"aoe","t":"self","v":0},{"k":"critDown","t":"enemy_all","v":1,"turns":3}]}},
-      {"acts":3,"pre":{"c":"G","dmg":40,"np":0,"star":6},"post":{"c":"G","dmg":50,"np":0,"star":8}},
+      {"acts":3,"pre":{"c":"G","dmg":40,"np":0,"star":6},"post":{"c":"G","dmg":60,"np":0,"star":8}},
       {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":4},"post":{"c":"G","dmg":50,"np":0,"star":6}}
     ],
     "skills":[
-      {"name":"黄金律(へそくり)","eff":[{"k":"onAtkNp","t":"self","v":10,"turns":3},{"k":"critRoll","t":"ally_all","v":1,"turns":1}],"rank":"B"},
-      {"name":"無辜の怪物","eff":[{"k":"critRoll","t":"ally_all","v":2,"turns":3},{"k":"regenStar","t":"self","v":3,"turns":3},{"k":"defDown","t":"self","v":20,"turns":3}],"rank":"C"},
-      {"name":"御台一天御計","eff":[{"k":"np","t":"picked","v":40},{"k":"onAtkStar","t":"picked","v":5,"turns":3},{"k":"critRoll","t":"picked","v":2,"turns":3},{"k":"selfDmg","t":"picked","v":100}],"rank":"A","pick":"ally"}
+      {"name":"黄金律(へそくり)","eff":[{"k":"onAtkNp","t":"self","v":10,"turns":3},{"k":"regenStar","t":"self","v":6,"turns":3},{"k":"critRoll","t":"ally_all","v":1,"turns":1}],"rank":"B"},
+      {"name":"無辜の怪物","eff":[{"k":"critRoll","t":"ally_all","v":2,"turns":3},{"k":"regenStar","t":"self","v":9,"turns":3},{"k":"defDown","t":"self","v":20,"turns":3}],"rank":"C"},
+      {"name":"御台一天御計","eff":[{"k":"np","t":"picked","v":50},{"k":"onAtkStar","t":"picked","v":5,"turns":3},{"k":"critRoll","t":"picked","v":2,"turns":3},{"k":"selfDmg","t":"picked","v":100},{"k":"regenStar","t":"self","v":6,"turns":3}],"rank":"A","pick":"ally"}
     ],
-    "ult":{"name":"京七口の関","c":"B","eff":[{"k":"strip","t":"target","v":0},{"k":"atkDown","t":"target","v":50,"turns":5},{"k":"defDown","t":"target","v":40,"turns":5},{"k":"critDown","t":"target","v":2,"turns":5},{"k":"npPowDown","t":"target","v":100,"turns":5},{"k":"np","t":"target","v":-50},{"k":"stun","t":"target","v":0,"turns":1}],"ruby":"ペイメント・ザ・セブン"}
+    "ult":{"name":"京七口の関","c":"B","eff":[{"k":"strip","t":"target","v":0},{"k":"atkDown","t":"target","v":50,"turns":5},{"k":"defDown","t":"target","v":40,"turns":5},{"k":"critDown","t":"target","v":2,"turns":5},{"k":"npPowDown","t":"target","v":100,"turns":5},{"k":"np","t":"target","v":-50},{"k":"stun","t":"target","v":0,"turns":1,"chance":4}],"ruby":"ペイメント・ザ・セブン"}
   },
   {
     "id":"himetsuru", "name":"姫鶴一文字", "cls":"セイバー", "cost":4, "hp":600,
@@ -1453,5 +1453,66 @@ const DEFAULT_UNITS = [
       {"name":"鶴の双翼","eff":[{"k":"onAtkNp","t":"self","v":10,"turns":3},{"k":"onAtkStar","t":"self","v":3,"turns":3},{"k":"onAtkNp","t":"self","v":20,"turns":3,"color":"B"},{"k":"onAtkStar","t":"self","v":6,"turns":3,"color":"G"},{"k":"sureHit","t":"self","v":0,"turns":3},{"k":"np","t":"self","v":25}]}
     ],
     "ult":{"name":"真贋双翼","c":"B","eff":[{"k":"sureHit","t":"self","v":0,"turns":3},{"k":"npPow","t":"self","v":50,"turns":3},{"k":"ignoreDef","t":"self","v":0,"turns":1},{"k":"multiHit","t":"self","v":2},{"k":"dmg","t":"target","v":250},{"k":"defDown","t":"target","v":20,"turns":3}],"ruby":"しんがんそうよく"}
+  },
+  {
+    "id":"saishoku", "name":" 彩蝕のハサン", "cls":"アサシン", "cost":3, "hp":550,
+    "traits":["男性","中立","悪","中東","人","獣"],
+    "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":0,"z":105},"cut":{"x":0,"y":10,"z":100}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%ba%cc%bf%aa%a4%ce%a5%cf%a5%b5%a5%f3",
+    "lines":{
+      "start":["あんたの血は何色かねぇ？"],
+      "attack":["見えているぞ？あんたの色が！！"],
+      "extra":["芸術は、暗殺だ！！"],
+      "damage":["ぐえっ！絵の具が溢れたじゃねえか！！"],
+      "skill":["これがオレの色彩だ！"],
+      "np":["理外の色にて識を穢す。是、彩蝕の絶技なり───獄彩に眩め。『独想芸術』！！"],
+      "npDamage":["ぐおおおお！！"],
+      "defeat":["か、はは...赤一色とは、芸がない...","画材が切れちまった！"],
+      "win":["あんたらの死にざま、闘いざまは見事だった！敬意を持って描かせて貰うぜ"]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":40,"np":10,"star":0},"post":{"c":"B","dmg":50,"np":15,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"ぬったくり","eff":[{"k":"aoe","t":"self","v":0},{"k":"strip","t":"target","v":0,"vs":"evade"}],"dmg":30,"np":0,"star":0}},
+      {"acts":3,"pre":{"c":"G","dmg":30,"np":0,"star":4},"post":{"c":"G","dmg":40,"np":0,"star":6}},
+      {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":3},"post":{"c":"G","dmg":40,"np":0,"star":5}}
+    ],
+    "skills":[
+      {"name":"絵画美術(騙し絵)","eff":[{"k":"evade","t":"ally_all","v":0,"turns":3,"times":1},{"k":"critPow","t":"ally_all","v":20,"turns":3},{"k":"critDown","t":"enemy_all","v":1,"turns":3}],"rank":"B+"},
+      {"name":"極彩識","eff":[{"k":"atk","t":"self","v":20,"turns":3},{"k":"onAtkNp","t":"self","v":10,"turns":3,"color":"R"},{"k":"onAtkStar","t":"self","v":4,"turns":3,"color":"B"},{"k":"atk","t":"self","v":40,"turns":3,"color":"G"}],"rank":"B"},
+      {"name":"多彩なる蜥蜴","eff":[{"k":"cardConvPick","t":"picked","v":0,"turns":1},{"k":"np","t":"self","v":30}],"rank":"A","pick":"ally","line":["自分を塗って、景色に溶け込む！"]}
+    ],
+    "ult":{"name":"独想芸術","c":"R","eff":[{"k":"sureHit","t":"self","v":0,"turns":1},{"k":"dmg","t":"target","v":250},{"k":"defDown","t":"target","v":30,"turns":3},{"k":"atkDown","t":"target","v":30,"turns":3,"color":"R"},{"k":"starDown","t":"target","v":4,"turns":3},{"k":"npGainDown","t":"target","v":15,"turns":3}],"ruby":"ザバーニーヤ"}
+  },
+  {
+    "id":"liza", "name":"謝肉祭の魔女リザ", "cls":"キャスター", "cost":4, "hp":650,
+    "traits":["女性","混沌","中庸","地","人型","魔性","妖精"],
+    "link":"https://seesaawiki.jp/kagemiya/d/%BC%D5%C6%F9%BA%D7%A4%CE%CB%E2%BD%F7%A5%EA%A5%B6",
+    "lines":{
+      "start":["不快な視線...そんなに死にたいのかしら？"],
+      "attack":["死になさい、豚","鐘を鳴らしなさい、クレント！","嵐を堪能させてあげる"],
+      "extra":["黙ってなさい、焼豚"],
+      "damage":["きゃっ...殺すわ"],
+      "skill":["夜の祭は、深く、浅く","豚になりたいの？"],
+      "np":["冬の終わり、春の兆し、夜のあわい、魔女の祝い。全ては一夜の夢、せいぜい楽しみなさい...『目醒めなさい、幽けし夜の謝肉祭』","カーニバルが始まるか否かは、全ては魔女の機嫌次第...そうね、今宵は...最高の悪夢を見せてあげる。世界の目を眩ませる仮装の群れにて、溺れなさい。『目醒めなさい、幽けし夜の謝肉祭』！"],
+      "npDamage":["黙ってなさい...！"],
+      "defeat":["終わらないお祭りはない...とはいえ、不完全燃焼ね...屈辱だわ...","...ﾁｯ"],
+      "win":["はぁ...はぁ...","無様ね。次の仮装の題材にしてあげる"]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"B","dmg":60,"np":15,"star":0},"post":{"c":"B","dmg":70,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":60,"np":10,"star":0},"post":{"c":"B","dmg":60,"np":15,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"R","dmg":30,"np":0,"star":0}},
+      {"acts":3,"pre":{"c":"B","dmg":50,"np":10,"star":0},"post":{"c":"B","dmg":60,"np":15,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":4},"post":{"c":"G","dmg":50,"np":0,"star":6}}
+    ],
+    "skills":[
+      {"name":"飛びなさい、我が卑しき豚","eff":[{"k":"def","t":"self","v":20,"times":12,"sure":true},{"k":"cleanse","t":"self","v":0}],"rank":"A"},
+      {"name":"ご馳走するわ、筆舌し難き大厄災","eff":[{"k":"np","t":"self","v":20},{"k":"debuffUp","t":"self","v":1,"turns":3},{"k":"def","t":"self","v":20,"turns":3},{"k":"onAtkStar","t":"self","v":6,"turns":3}],"rank":"E~A+","line":["隠し味は、魔女の灰","御馳走の材料になりたいようね"]},
+      {"name":"喰らいなさい、貪食の洞窟竜","eff":[{"k":"strip","t":"enemy_all","v":0},{"k":"defDown","t":"enemy_all","v":30,"turns":3,"chance":3},{"k":"burn","t":"enemy_all","v":20,"turns":3,"chance":3},{"k":"heal","t":"ally_all","v":100,"chance":4},{"k":"np","t":"self","v":20,"chance":4}],"rank":"-"}
+    ],
+    "ult":{"name":"目醒めなさい、幽けし夜の謝肉祭","c":"B","eff":[{"k":"npPow","t":"self","v":30,"turns":1,"chance":3},{"k":"npPow","t":"self","v":30,"turns":1,"chance":3},{"k":"npPow","t":"self","v":30,"turns":1,"chance":3},{"k":"dmg","t":"target","v":250},{"k":"heal","t":"ally_all","v":120}],"ruby":"シュローヴタイド・クレントヴァニエ","br":7}
   }
 ];
