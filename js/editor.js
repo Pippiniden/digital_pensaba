@@ -322,9 +322,25 @@ function diffItemHTML(x,m,roots){
   const dl=typeof x.a==='number'&&typeof x.b==='number'?(()=>{ const d=Math.round((x.b-x.a)*100)/100; return ` <span class="ddelta ${d>0?'up':'down'}">(${d>0?'+':''}${d})</span>`; })():'';
   return `<li>${lab} <span class="dold">${esc(valText(x.a,x.p,m))}</span> → <span class="dnew">${esc(valText(x.b,x.p,m))}</span>${dl}</li>`;
 }
+let lastDiff=null;
+// 差分を更新履歴の Markdown にする
+function diffMarkdown(){
+  const {d,m,vsFile,gName,file}=lastDiff, noun=m?TERMS.player:TERMS.unit, dt=new Date(), p=n=>String(n).padStart(2,'0');
+  const out=[`# 更新履歴（${noun}）`,'',`${dt.getFullYear()}-${p(dt.getMonth()+1)}-${p(dt.getDate())} 時点。${vsFile?'標準データ':gName}（${file}）と編集中データの差分です。`,''];
+  const sec=(title,rows,f)=>{ if(!rows.length) return; out.push(`## ${title}`,''); rows.forEach(r=>out.push(...f(r),'')); };
+  sec('変更',d.rows.filter(r=>r.kind==='chg'),r=>[`### ${r.d.name||r.id}（${r.id}）`,...r.diffs.map(x=>{
+    const lab=pathLabel(x.p,m,[r.d,r.g]);
+    if(x.lines){ const rm=x.a.filter(s=>!x.b.includes(s)), ad=x.b.filter(s=>!x.a.includes(s)); return `- ${lab}：${[...rm.map(s=>`−「${s}」`),...ad.map(s=>`＋「${s}」`)].join(' ')||'並び順の変更'}`; }
+    const dl=typeof x.a==='number'&&typeof x.b==='number'?`（${x.b-x.a>0?'+':''}${Math.round((x.b-x.a)*100)/100}）`:'';
+    return `- ${lab}：${valText(x.a,x.p,m)} → ${valText(x.b,x.p,m)}${dl}`; })]);
+  sec('追加',d.rows.filter(r=>r.kind==='add'),r=>[`- ${r.d.name||r.id}（${r.id}）`]);
+  sec('削除',d.rows.filter(r=>r.kind==='del'),r=>[`- ${r.g.name||r.id}（${r.id}）`]);
+  if(!d.rows.length) out.push(d.order?'並び順だけが違います。':'違いはありません。','');
+  return out.join('\n');
+}
 let diffVs='game'; // 比較先：game＝ゲームで使っているデータ / file＝js/units.js（反映済みデータを使っているときだけ選べる）
 function renderDiff(){
-  const dlg=document.querySelector('#diffdlg'), k=isM()?'masters':'units', m=isM(), un=m?'人':'体';
+  const dlg=document.querySelector('#diffdlg'), k=isM()?'masters':'units', m=isM(), un=m?TERMS.player:TERMS.unit;
   const applied=m?loadMasters(units):loadUnits(), custom=applied.source==='custom', fi=FILE_INFO[k]&&FILE_INFO[k]!=='pending'?FILE_INFO[k]:null;
   const vsFile=!custom||diffVs==='file';
   const game=vsFile?(m?(typeof DEFAULT_MASTERS!=='undefined'?DEFAULT_MASTERS:[]).map(normalizeMaster):normalizeUnits(DEFAULT_UNITS)):(m?applied.masters:applied.units);
@@ -347,7 +363,8 @@ function renderDiff(){
       :`<p class="sub nm">${r.kind==='add'?`${esc(gName)}にはいない${un}です（下書きで追加）`:`下書きにはいない${un}です（下書きで削除）`}</p>`;
     return `<div class="drow"><div class="dhead"><b>${nmOf(r)}</b><span class="sub small">${esc(r.id)}</span><span class="dkind ${r.kind}">${DIFF_KIND[r.kind]}</span><span class="dnewer ${n.c}">${esc(n.t)}</span><span class="grow"></span>${take}</div>${body}</div>`;
   }).join('');
-  const cnt=['chg','add','del'].map(k=>[k,d.rows.filter(r=>r.kind===k).length]).filter(([,n])=>n).map(([k,n])=>`${DIFF_KIND[k]}${n}${un}`).join('・');
+  const cnt=['chg','add','del'].map(k=>[k,d.rows.filter(r=>r.kind===k).length]).filter(([,n])=>n).map(([k,n])=>`${DIFF_KIND[k]}${n}`).join('・');
+  lastDiff={d,m,vsFile,gName,file};
   dlg.innerHTML=`<h3>${vsFile?'標準データとの差分':'未反映の変更'}（${m?TERMS.player:TERMS.unit}）</h3>
     ${cnt?`<p class="dsum">${esc(cnt)}　<span class="sub small">${vsFile?`標準データ＝${file}。左の取り消し線が標準、右が編集中の値です`:''}</span></p>`:''}
     ${custom?`<div class="row dvs"><span class="sub">比較先：</span>${[['game','ゲームで使用中（反映済みデータ）'],['file',file]].map(([v,l])=>`<button class="small ${diffVs===v?'on':''}" data-act="diffVs" data-v="${v}">${esc(l)}</button>`).join('')}</div>`:''}
@@ -357,7 +374,7 @@ function renderDiff(){
     ${vsFile&&fi&&fi.stale?`<p class="dstale">⚠ ${file} はこのページを開いた後に書き換わっています。この比較は開いた時点の内容です。<button class="small" data-act="reloadPage">再読み込み</button></p>`:''}
     <p class="sub small nm">日時はキャラごとの「下書きを最後に編集した時刻」と、${vsFile?`${file} のファイル更新日時（ファイル全体で1つ）`:'「ゲームに反映」した時刻'}を比べています。編集記録はこの機能を入れた後の編集からです。</p>
     ${rows||(d.order?`<p>並び順だけが違います。</p>`:`<p class="ok">違いはありません。</p>`)}
-    <div class="row dfoot"><span class="grow"></span><button data-act="diffClose">閉じる</button></div>`;
+    <div class="row dfoot"><span class="grow"></span><button data-act="diffMd" title="この差分を更新履歴として .md で保存">.md で書き出し</button><button data-act="diffClose">閉じる</button></div>`;
 }
 
 // 制作中トグル：ONの間は js の書き出し（units.js / masters.js）に含めない。ゲームへの反映・JSON書き出しには含まれる
@@ -1031,6 +1048,7 @@ document.addEventListener('click',e=>{
       full(); toast(`コスト${u.cost}のテンプレを適用しました`); break; }
     case 'roll': doRoll(); break;
     case 'diffOpen': { if(b.dataset.vs) diffVs=b.dataset.vs==='file'?'file':'game'; checkFile(isM()?'masters':'units',true); renderDiff(); const dl=document.querySelector('#diffdlg'); if(!dl.open) dl.showModal(); break; }
+    case 'diffMd': if(lastDiff) downloadText(`update-log-${isM()?'masters':'units'}.md`,diffMarkdown(),'text/markdown'); break;
     case 'diffClose': document.querySelector('#diffdlg').close(); break;
     case 'diffVs': diffVs=b.dataset.v==='file'?'file':'game'; renderDiff(); break;
     case 'reloadPage': location.reload(); break;
