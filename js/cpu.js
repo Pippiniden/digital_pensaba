@@ -59,12 +59,20 @@ function scheduleCpu(){
     const s=cpuDecide(); if(s) act(s[0],s[1]||{});
   }, G.phase==='setup'?500:G.phase==='draft'?900:G.speed);
 }
+// カード変換（使用時に選ぶ）の色：そのユニットに乗っている色指定の強化（攻撃+・NP獲得・スター発生・クリティカル威力）が一番多い色。同点は Buster。弱い設定ではランダム
+function cpuPickColor(u,easy){
+  const cols=['R','B','G'];
+  if(easy) return cols[Math.floor(rnd01()*3)];
+  const sc=c=>u.fx.filter(e=>e.color===c&&FX[e.k]&&FX[e.k].buff===true).reduce((s,e)=>s+(e.v||1),0);
+  return cols.map(c=>[c,sc(c)]).sort((a,b)=>b[1]-a[1])[0][0];
+}
 function cpuDecide(){
   const easy=G.level==='easy';
   switch(G.phase){
     case 'draft': return cpuDraft(easy);
     case 'actRoll': return G.actRolled ? ['setAlloc',{alloc:JSON.stringify(cpuAlloc(easy))}] : ['rollActs'];
     case 'skill': {
+      if(G.pending&&G.pending.colorPick) return ['skillColor',{c:cpuPickColor(U(G.pending.uid),easy)}];
       if(G.pending) return ['cardClick',{uid:cpuPickTarget(G.pending.uid,G.pending.ult?null:G.pending.si,easy).uid}];
       let m=null;
       if(!G.ult&&!G.ultDone){ const u=cpuUltUser(); if(u) m=['useUlt',{uid:u.uid}]; }
@@ -538,7 +546,7 @@ function cpuEffScore(u,effs,picked,si){
       case 'buffDown': sc+=foes.length?1.5:-1; break;
       case 'critMult': sc+=acting&&!G.ult&&critLevel(stars)>=3?3:0; break;
       case 'healBlock': sc+=foes.some(t=>hpR(t)<.7||t.fx.some(x=>x.k==='regenHp'))?2:1; break;
-      case 'cardConv': sc+=acting?1.5:.5; break;
+      case 'cardConv': case 'cardConvPick': sc+=acting?1.5:.5; break;
       case 'buffExtend': sc+=ts.some(t=>t.fx.some(x=>FX[x.k].buff===true&&x.turns!=null))?2:0; break;
       case 'skillCharge': sc+=ts.some(t=>t.used.some((x,i)=>x&&!(t===u&&i===si)))?3:-1; break;
       case 'cleanse': sc+=ts.some(t=>t.fx.some(x=>e.vs?x.k===e.vs:FX[x.k].buff===false))?2:0; break;
