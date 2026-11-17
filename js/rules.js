@@ -283,6 +283,7 @@ const FX = {
   drain:{name:'HP減少',buff:false,val:true,perm:true},      // ターン終了時に値ぶんの弱体ダメージ。重複する（合計）。永続でよい
   sealSkill:{name:'スキル封印',buff:false}, sealUlt:{name:'宝具封印',buff:false},
   critDown:{name:'クリティカル率ダウン',buff:false,val:true},
+  npGainDown:{name:'NP獲得量ダウン',buff:false,val:true,allOpt:true}, // 攻撃で得るNP（コマンド・攻撃時NP・チェイン）が1回ごとに x 減る（0未満にはならない）。all なら スキル・ターン開始時・被弾時などの獲得も対象
   starDown:{name:'スター発生数ダウン',buff:false,val:true},          // 攻撃1回で発生するスターが x 個減る
   debuffResDown:{name:'弱体耐性ダウン',buff:false,val:true},   // 自分が受ける確率つきの弱体の判定ロールをN+xにする（「必ず」の弱体には効かない）
   debuffDown:{name:'弱体成功率ダウン',buff:false,val:true},   // 自分が敵に付ける弱体の判定ロールをN-xにする。「必ず」の弱体もロール6以下の判定になる
@@ -334,7 +335,7 @@ const FX_GROUPS = [
   ['攻撃強化', ['atk','atkPct','npPow','atkVs','atkTrait','ignoreDef','sureHit','pierce','critPow','critMult','critRoll','debuffUp','buffUp','cardConv','onAtkStar','onAtkNp','aoeNormal']],
   ['防御・耐性', ['def','defTrait','evade','invul','guts','taunt','nullUnder','counter','maxHp','debuffImmune','mentalImmune','deathImmune','stripImmune','npDownImmune','starLossImmune']],
   ['継続・ターン', ['actsUp','regenHp','regenNp','regenStar','onHitNp','hitNpUp','onHitStar']],
-  ['弱体', ['atkDown','atkPctDown','npPowDown','defDown','critDown','starDown','debuffDown','debuffResDown','buffDown','poison','burn','spread','drain','curse','hitNpSeal','stun','charm','fear','actsDown','sealSkill','sealUlt','healBlock','buffImmune']],
+  ['弱体', ['atkDown','atkPctDown','npPowDown','defDown','critDown','starDown','npGainDown','debuffDown','debuffResDown','buffDown','poison','burn','spread','drain','curse','hitNpSeal','stun','charm','fear','actsDown','sealSkill','sealUlt','healBlock','buffImmune']],
   ['回復・即時', ['heal','np','star','starLoss','cleanse','cleanseMental','strip','buffExtend','skillCharge','copyBuff','copyDebuff']],
   ['攻撃・特殊', ['dmg','multiHit','aoe','selfDmg','instantDeath','copyRoll']],
   ['表示', ['desc']],

@@ -99,7 +99,7 @@ function newEff(ctx,path){
 }
 // ---------- 効果の種類を変えたときの自動設定（値・対象・ターン） ----------
 // 値の目安（なければ20）。FX_VAL_MASTER＝マスターの補助・令呪で別の値を使うもの
-const FX_VAL = { atk:20, atkDown:10, atkPct:20, atkPctDown:20, def:10, defDown:10, critPow:30, critMult:200, guts:100, critRoll:1, debuffUp:1, buffUp:1, debuffDown:1, debuffResDown:1, buffDown:1, critDown:1, starDown:2, nullUnder:30,
+const FX_VAL = { atk:20, atkDown:10, atkPct:20, atkPctDown:20, def:10, defDown:10, critPow:30, critMult:200, guts:100, critRoll:1, debuffUp:1, buffUp:1, debuffDown:1, debuffResDown:1, buffDown:1, critDown:1, starDown:2, npGainDown:5, nullUnder:30,
   onAtkStar:3, onAtkNp:10, actsUp:1, actsDown:1, regenHp:20, regenNp:5, regenStar:2, atkVs:50, atkTrait:50, defTrait:50, counter:20, onHitNp:10, hitNpUp:10, onHitStar:3,
   maxHp:100, poison:20, burn:20, drain:20, heal:100, np:20, star:5, starLoss:5, buffExtend:1, skillCharge:1, dmg:200, selfDmg:20, npPow:80, npPowDown:50, multiHit:2 };
 const FX_VAL_MASTER = { heal:30, dmg:50, star:5 };
@@ -152,6 +152,7 @@ function fixEff(e){
   if(e.k==='star'&&e.t==='self') e.t='master';
   if(!f.maxOk) delete e.max;
   if(f.inst||f.noTgt||!e.sure) delete e.sure;
+  if(!f.allOpt) delete e.all;
   if(e.k!=='desc') delete e.text;
   else if(e.text==null) e.text='';
   if(f.noTgt){ e.t=e.t==='svt'?'svt':'self'; delete e.chance; delete e.at; delete e.cond; } // 対象・確率・タイミングを使わない効果
@@ -762,6 +763,7 @@ function effRow(path,j,e,ctx,n,atKind){
     ${f.noTgt?'':`<label class="mini"><span>確率</span><select data-p="${p}.chance" data-t="optnum">${opt('','必ず',e.chance??'')}${[1,2,3,4,5].map(k=>opt(k,`ロール${k}以下`,e.chance)).join('')}</select></label>`}
     ${f.noTgt?'':condIn(p,e,f)}
     ${f.inst||f.noTgt?'':`<label class="mini chk" title="強化無効・弱体無効で付与を防がれず、強化解除・弱体解除でも消えません。ターンや回数が尽きれば切れます"><input type="checkbox" data-p="${p}.sure" data-t="bool" ${e.sure?'checked':''}><span>解除・無効不可</span></label>`}
+    ${f.allOpt?`<label class="mini chk" title="チェックなし：攻撃で得るNP（コマンド・攻撃時NP・チェイン）だけ減らします。チェックあり：スキル・ターン開始時・被ダメージ時のNP獲得も減らします"><input type="checkbox" data-p="${p}.all" data-t="bool" ${e.all?'checked':''}><span>スキル・毎ターンなども含む</span></label>`:''}
     ${f.noTgt?'':effAtSel(p,e,atKind)}
     <span class="effops">
       <button data-act="effMove" data-path="${path}" data-i="${j}" data-d="-1" ${j?'':'disabled'} title="上へ">↑</button>

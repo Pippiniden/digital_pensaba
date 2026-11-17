@@ -82,6 +82,7 @@ function normEff(e){
   if(EFF_AT[e.at]) o.at=e.at; // 攻撃の前/後（未指定なら既定のタイミング。rules.js の EFF_AT）
   if(e.max&&FX[o.k]&&FX[o.k].maxOk) o.max=true; // 値＝対象の最大HP（軽減不可）
   if(e.sure&&FX[o.k]&&!FX[o.k].inst&&!FX[o.k].noTgt) o.sure=true; // 持続効果のみ：強化無効・弱体無効・解除の影響を受けない（ターン・回数では切れる）
+  if(e.all&&FX[o.k]&&FX[o.k].allOpt) o.all=true; // NP獲得量ダウン：攻撃以外（スキル・ターン開始時・被弾時）の獲得も減らす
   const tx=String(e.text??'').trim(); if(tx&&o.k==='desc') o.text=tx; // 説明文
   return o;
 }
@@ -622,6 +623,7 @@ function fxText(e){
     case 'onHitStar': s=`被ダメージ時${TERMS.star}${e.v}個獲得`; break;
     case 'maxHp': s=`最大HP+${e.v}`; break;
     case 'critDown': s=`クリティカル率ダウン(Lv-${e.v})`; break;
+    case 'npGainDown': s=`${TERMS.gauge}獲得量ダウン(-${e.v}${e.all?'・すべての獲得':'・攻撃時'})`; break;
     case 'starDown': s=`${TERMS.star}発生数ダウン(-${e.v})`; break;
     case 'cardConv': s=`カード変換→${e.color?TERMS[e.color]:'(色未指定)'}`; break;
     case 'buffExtend': s=`強化の効果時間+${e.v}T`; break;

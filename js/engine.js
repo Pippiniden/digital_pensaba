@@ -195,7 +195,15 @@ function consume(u,list){
 // 被弾時にNPが増えなくなる弱体（呪い・被弾NP上昇封印）。回数があるものを先に使う
 const npSealFx = u=>u.fx.find(e=>e.k==='curse')||u.fx.find(e=>e.k==='hitNpSeal'&&e.times!=null)||u.fx.find(e=>e.k==='hitNpSeal');
 const dotVal = e=>e.v||RULES.dot; // 毒・やけどの値（0は旧データなので RULES.dot）
-function addNp(u,v){ if(!u.out) u.np=Math.max(0,Math.min(RULES.gaugeMax,u.np+v)); }
+// src：'atk'＝攻撃で得るNP（コマンド・攻撃時NP・チェイン）/ 'other'＝スキル・ターン開始時・被弾時など。NP獲得量ダウンは増える分から引く（0未満にはしない。all なら other も対象）
+function addNp(u,v,src){
+  if(u.out) return;
+  if(v>0&&src){
+    const l=u.fx.filter(e=>e.k==='npGainDown'&&(src==='atk'||e.all)), cut=l.reduce((s,e)=>s+e.v,0);
+    if(cut>0){ v=Math.max(0,v-cut); consume(u,l); }
+  }
+  u.np=Math.max(0,Math.min(RULES.gaugeMax,u.np+v));
+}
 // 最大HP（定義のHP＋最大HP+の合計）。最大HP+が切れたら HP を最大値まで下げる（1未満にはしない）
 const maxHp = u=>D(u.def).hp+mods(u,'maxHp').sum+(costBonus(u)?costBonus(u).hp:0)+(hasHcap(u)?(G.hcap.hp||0):0);
 function clampHp(u){ if(!u.out&&u.hp>maxHp(u)) u.hp=Math.max(1,maxHp(u)); }
@@ -373,7 +381,7 @@ function applyOne0(src,t,e,o={}){
   switch(e.k){
     case 'heal': if(has(t,'healBlock')){ log(`${nm(t)}は回復無効でHPが回復しない`,'sub'); return; }
       t.hp=Math.min(maxHp(t),t.hp+e.v); log(`${nm(t)} HP${e.v}回復`,'good'); return;
-    case 'np': addNp(t,e.v); log(`${nm(t)} ${TERMS.gauge}${e.v>=0?'+':''}${e.v}%`); return;
+    case 'np': addNp(t,e.v,'other'); log(`${nm(t)} ${TERMS.gauge}${e.v>=0?'+':''}${e.v}%`); return;
     case 'star': changeStars(t.pid,e.v); return;
     case 'starLoss': changeStars(t.pid,-e.v); return;
     case 'cleanse': { // vs 指定ならその弱体だけ解除
@@ -415,7 +423,7 @@ function applyOne0(src,t,e,o={}){
       log(`${nm(t)}が${nm(fu)}の${nmv}状態（${list.length}個）をコピー`, want?'good':'bad');
       list.forEach(x=>{
         const c={k:x.k,t:e.t,v:x.v};
-        ['color','turns','times','vs','trait','cond'].forEach(p=>{ if(x[p]!=null) c[p]=x[p]; });
+        ['color','turns','times','vs','trait','cond','all'].forEach(p=>{ if(x[p]!=null) c[p]=x[p]; });
         if(!t.out) applyOne0(src,t,c,{});
       });
       return;
@@ -468,7 +476,7 @@ function dealDamage(u,dmg,isHit,o={}){
     // 被ダメージ時○○ はここではなく、攻撃対象になったターンの終了フェイズ（hitEffects）で発動する
     const c=npSealFx(u);
     if(c){ consume(u,[c]); log(`${nm(u)}は${FX[c.k].name}で${TERMS.gauge}が増えない`,'sub'); }
-    else{ const hu=mods(u,'hitNpUp'); addNp(u,npRate(u,RULES.gaugeOnHit+hu.sum)); if(hu.list.length) consume(u,hu.list); } // 被弾時NP獲得量アップ（回避・無敵で防いだ攻撃はここに来ない）
+    else{ const hu=mods(u,'hitNpUp'); addNp(u,npRate(u,RULES.gaugeOnHit+hu.sum),'other'); if(hu.list.length) consume(u,hu.list); } // 被弾時NP獲得量アップ（回避・無敵で防いだ攻撃はここに来ない）
     // 反撃：攻撃側へ固定ダメージ（補正・無敵・回避・クリティカルの影響なし、NPは増えない）
     const ct=mods(u,'counter'), a=o.att;
     if(ct.sum&&a&&!a.out){
@@ -525,7 +533,7 @@ function dmgMods(att,tgt,color){
 }
 // スター発生数ダウン(starDown)：1回の攻撃で発生するスターの合計から x 個引く（0未満にはしない）。返り値＝まだ引き切れていない分
 function gainNpStar(att,cmd,mult){
-  if(cmd.np) addNp(att,npRate(att,cmd.np*mult));
+  if(cmd.np) addNp(att,npRate(att,cmd.np*mult),'atk');
   let cut=mods(att,'starDown').sum;
   if(cmd.star){ const v=cmd.star*mult, g=Math.max(0,v-cut); cut=Math.max(0,cut-v); G.gen+=g; }
   return cut;
@@ -623,7 +631,7 @@ function attackHit(att,cmd,tgt,o,lab){
   if(!o.extra&&!o.noGain){
     const s=mods(att,'onAtkStar',cmd.c), p=mods(att,'onAtkNp',cmd.c);
     if(s.sum){ const g=Math.max(0,s.sum-starCut); G.gen+=g; log(`${n} 攻撃時効果：${TERMS.star}${g}個発生`,'sub'); }
-    if(p.sum){ addNp(att,npRate(att,p.sum)); log(`${n} 攻撃時効果：${TERMS.gauge}+${p.sum}%`,'sub'); }
+    if(p.sum){ addNp(att,npRate(att,p.sum),'atk'); log(`${n} 攻撃時効果：${TERMS.gauge}+${p.sum}%`,'sub'); }
     consume(att,[...s.list,...p.list]);
   }
 }
@@ -689,7 +697,7 @@ function ultCopyRolls(u,tgt,picked,n,noExtra){
   if(chain){ log(`${TERMS[chain]}チェイン発生！`,'good'); fxEmit({t:'banner',title:`${TERMS[chain]} Chain`,col:chain}); chainsOf(u.pid)[chain]++; }
   cmds.forEach((cmd,ri)=>{ if(!u.out) resolveCommand(u,cmd,t,{chain,ri}); });
   if(u.out) return;
-  if(chain==='B'){ addNp(u,npRate(u,RULES.chainB)); syncU(u); log(`チェインボーナス：${nm(u)}の${TERMS.gauge}+${RULES.chainB}%`); }
+  if(chain==='B'){ addNp(u,npRate(u,RULES.chainB),'atk'); syncU(u); log(`チェインボーナス：${nm(u)}の${TERMS.gauge}+${RULES.chainB}%`); }
   if(chain==='G'){ gainStars(u.pid,RULES.chainG); log(`チェインボーナス：${TERMS.star}${RULES.chainG}個発生`); }
   if(three&&!noExtra){ // ブレイブチェイン（copyRoll に「エクストラなし」があれば行わない）：宝具の持ち主のカードでエクストラアタック
     const f=roll(), face=D(u.def).faces[f];
@@ -756,7 +764,7 @@ function resolveDamage(){
     const chain = acts.length===3 && ['R','B','G'].includes(cols[0]) && cols.every(c=>c===cols[0]) ? cols[0] : null;
     if(chain){ log(`${TERMS[chain]}チェイン発生！`,'good'); fxEmit({t:'banner',title:`${TERMS[chain]} Chain`,col:chain}); chainsOf(G.cur)[chain]++; }
     acts.forEach((a,ri)=>{ if(!U(a.uid).out) resolveCommand(U(a.uid),a.cmd,tgt,{chain,ri}); }); // 反撃で倒れたら残りの行動はしない
-    if(chain==='B'){ [...new Set(acts.map(a=>a.uid))].map(U).forEach(u=>{ addNp(u,npRate(u,RULES.chainB)); syncU(u); }); log(`チェインボーナス：行動${TERMS.unit}の${TERMS.gauge}+${RULES.chainB}%`); }
+    if(chain==='B'){ [...new Set(acts.map(a=>a.uid))].map(U).forEach(u=>{ addNp(u,npRate(u,RULES.chainB),'atk'); syncU(u); }); log(`チェインボーナス：行動${TERMS.unit}の${TERMS.gauge}+${RULES.chainB}%`); }
     if(chain==='G'){ G.gen+=RULES.chainG; log(`チェインボーナス：${TERMS.star}${RULES.chainG}個発生`); }
     // 7. ブレイブチェイン
     if(acts.length===3 && acts.every(a=>a.uid===acts[0].uid) && !U(acts[0].uid).out){
@@ -841,7 +849,7 @@ function turnStartEffects(){
     const h=mods(u,'regenHp').sum, n=mods(u,'regenNp').sum, s=mods(u,'regenStar').sum;
     if(h&&has(u,'healBlock')) log(`${nm(u)}は回復無効でターン開始時に回復しない`,'sub');
     else if(h&&u.hp<maxHp(u)){ const v=Math.min(h,maxHp(u)-u.hp); u.hp+=v; log(`${nm(u)} ターン開始時：HP${v}回復`,'good'); fxEmit({t:'pop',uid:u.uid,text:`HP+${v}`,cls:'heal'}); }
-    if(n){ addNp(u,n); log(`${nm(u)} ターン開始時：${TERMS.gauge}+${n}%`,'good'); }
+    if(n){ addNp(u,n,'other'); log(`${nm(u)} ターン開始時：${TERMS.gauge}+${n}%`,'good'); }
     syncU(u);
     if(s){ G.players[G.cur].stars+=s; log(`${nm(u)} ターン開始時：${TERMS.star}${s}個獲得`,'good'); }
   });
@@ -855,7 +863,7 @@ function hitEffects(){
     if(hn.sum){
       const c=npSealFx(u);
       if(c){ consume(u,[c]); log(`${nm(u)}は${FX[c.k].name}で被ダメージ時の${TERMS.gauge}が増えない`,'sub'); }
-      else { addNp(u,hn.sum); log(`${nm(u)} 被ダメージ時：${TERMS.gauge}+${hn.sum}%`,'good'); }
+      else { addNp(u,hn.sum,'other'); log(`${nm(u)} 被ダメージ時：${TERMS.gauge}+${hn.sum}%`,'good'); }
       consume(u,hn.list);
     }
     if(hs.sum){ gainStars(u.pid,hs.sum); log(`${nm(u)} 被ダメージ時：${TERMS.star}${hs.sum}個獲得`,'good'); consume(u,hs.list); }

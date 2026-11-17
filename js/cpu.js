@@ -524,6 +524,7 @@ function cpuEffScore(u,effs,picked,si){
       case 'atkTrait': sc+=acting&&traitsOf(cpuPredictTarget()).includes(e.trait)?3:0; break; // 殴る予定の相手（cpuPredictTarget）がその属性のときだけ使う
       case 'defTrait': sc+=ts.some(t=>t.pid===u.pid&&hpR(t)<.8)&&enemies.some(x=>traitsOf(x).includes(e.trait))?2.5:.5; break;
       case 'critDown': sc+=foes.length?1.5:-1; break;
+      case 'npGainDown': sc+=foes.length?1.5:-1; break;
       case 'starDown': sc+=foes.length?1:-1; break;
       case 'debuffUp': sc+=acting?1:0; break;
       case 'copyBuff': case 'copyDebuff': { // コピー元に強化（弱体）があり、対象が味方（弱体は敵）なら価値あり
