@@ -327,7 +327,7 @@ const FX = {
 const VS_KINDS = { atkVs:false, debuffImmune:false, buffImmune:true, cleanse:false, strip:true };
 const vsOk = (k,vs)=>k in VS_KINDS && !!FX[vs] && FX[vs].buff===VS_KINDS[k];
 const COND_KINDS = { trait:'属性', fx:'状態', hpBelow:'HP○%以下', hpAbove:'HP○%以上', npFull:'NP満タン', cls:'クラス', id:'キャラクター（ID）' };
-// 条件つきセリフ（condLines）で条件を見る相手：other＝その場面の相手（攻撃の対象・攻撃してきた相手・スキルの対象）/ self＝自分 / ally＝自分以外の味方のだれか / enemy＝敵のだれか
+// 条件つきセリフ（condLines）で条件を見る相手：other＝その場面の相手（攻撃の対象・攻撃してきた相手・スキルの対象。敗退＝とどめを刺した相手 / 勝利＝最後に倒した相手）/ self＝自分 / ally＝自分以外の味方のだれか / enemy＝敵のだれか
 const LINE_WHO = { other:'相手・対象', self:'自分', ally:'味方のだれか', enemy:'敵のだれか' };
 ['atk','atkDown','atkPct','atkPctDown','def','defDown'].forEach(k=>{ if(FX[k]) FX[k].condUse=true; });
 const FX_GROUPS = [

@@ -36,10 +36,10 @@ function newGame(o={}){
     // evac：退避中（次の相手ターンの間） / zeroNext：前のターンの行動回数が0だった（次の行動回数+1）
     players:[{name:TERMS.player+'1',party:[],stars:0,master:null,spell:null,evac:false,zeroNext:false},{name:TERMS.player+'2',party:[],stars:0,master:null,spell:null,evac:false,zeroNext:false}],
     cur:0, turn:0, actRolled:false, maxActs:{}, alloc:{}, rolled:[], ult:null, target:null,
-    gen:0, pending:null, copy:null, guard:null, hcap:null, mastered:false, ultDone:false, ultNp:null, log:[], winner:null, dealt:[0,0],
+    gen:0, pending:null, copy:null, guard:null, hcap:null, mastered:false, ultDone:false, ultNp:null, log:[], winner:null, dealt:[0,0], dealtO:[0,0],
     // リザルト用の記録：stats＝ユニットごと（uid） / tl＝ターンごとの与ダメージ [P1,P2] / chains＝陣営ごとのチェイン回数 / starsGen＝発生スター合計
     stats:{}, tl:[], chains:[{R:0,B:0,G:0,brave:0},{R:0,B:0,G:0,brave:0}], starsGen:[0,0] };
-  FXQ.length=0; for(const k in FXHOLD) delete FXHOLD[k]; FXHIDE.clear(); KO_PEND.length=0;
+  FXQ.length=0; for(const k in FXHOLD) delete FXHOLD[k]; FXHIDE.clear(); KO_PEND.length=0; for(const k in KO_BY) delete KO_BY[k]; LAST_KO[0]=LAST_KO[1]=null;
   if(typeof fxClear==='function') fxClear(); // 画面に残っている演出（吹き出し・帯・カットインなど）も消す
 }
 
@@ -204,15 +204,16 @@ function gainStars(pid,v){ if(pid===G.cur) G.gen+=v; else G.players[pid].stars+=
 // ---------- リザルト用の記録 ----------
 function st(u){
   const S=G.stats||(G.stats={});
-  return S[u.uid]||(S[u.uid]={dealt:0,taken:0,maxHit:0,kills:0,attacks:0,crits:0,ults:0,skills:0,blocked:0});
+  return S[u.uid]||(S[u.uid]={dealt:0,taken:0,dealtO:0,takenO:0,maxHit:0,kills:0,attacks:0,crits:0,ults:0,skills:0,blocked:0});
 }
 // ダメージの記録。src＝与えた側（なければ毒など）。real＝実際に減ったHP / raw＝ダメージの値 / ko＝これで倒れた
+// 〇O（dealtO / takenO）＝オーバーキル分も含めたダメージ（raw）。リザルトでカッコ書きする用
 function recDmg(src,u,real,raw,ko){
-  st(u).taken+=real;
+  const su=st(u); su.taken+=real; su.takenO+=raw;
   if(src&&src.pid===u.pid) return; // 自傷・味方からのダメージは与ダメージに数えない
-  G.dealt[1-u.pid]+=real;
+  G.dealt[1-u.pid]+=real; (G.dealtO||(G.dealtO=[0,0]))[1-u.pid]+=raw;
   const tl=G.tl||(G.tl=[]), row=tl[G.turn]||(tl[G.turn]=[0,0]); row[1-u.pid]+=real;
-  if(src){ const s=st(src); s.dealt+=real; s.maxHit=Math.max(s.maxHit,raw); if(ko) s.kills++; }
+  if(src){ const s=st(src); s.dealt+=real; s.dealtO+=raw; s.maxHit=Math.max(s.maxHit,raw); if(ko) s.kills++; }
 }
 
 // =====================================================================
@@ -327,14 +328,18 @@ function immuneTo(t,k){
 }
 // 戦闘不能：ルール上はその場で倒れるが、画面で暗くするのは一連の攻撃が終わってから（flushKo）
 const KO_PEND=[];
-function retreat(u){ u.hp=0; u.out=true; u.fx=[]; log(`${nm(u)} ${TERMS.out}`,'bad'); KO_PEND.push(u.uid); }
+// 倒した相手の記録（条件つきセリフの「敗退」「勝利」で who:'other' が見る相手）
+// KO_BY：uid→とどめを刺した側（ダメージ・反撃・即死の与え手。継続ダメージ・マスター瀕死の巻き添え・自傷は null） / LAST_KO：陣営ごとの、最後に倒れたユニット
+const KO_BY={}, LAST_KO=[null,null];
+const markKiller=(u,by)=>{ KO_BY[u.uid]=by&&by!==u?by:null; };
+function retreat(u){ u.hp=0; u.out=true; u.fx=[]; LAST_KO[u.pid]=u; log(`${nm(u)} ${TERMS.out}`,'bad'); KO_PEND.push(u.uid); }
 // 攻撃・スキル・終了フェイズの処理が終わったところで呼ぶ：戦闘不能の演出とセリフをまとめて出す
 function flushKo(){
   settleGuts();
   if(!KO_PEND.length) return;
   const uids=KO_PEND.splice(0);
   fxEmit({t:'ko',uids});
-  uids.forEach(uid=>say(U(uid),'defeat'));
+  uids.forEach(uid=>{ say(U(uid),'defeat',{other:KO_BY[uid]||null}); delete KO_BY[uid]; });
 }
 // ガッツ：HPが0になっても、その一連の攻撃（ダメージフェイズ・スキル・終了フェイズなど）が終わるまではHP0のまま踏みとどまる。
 // その間に攻撃されてもオーバーキルにはならない。終わったところ（flushKo）で、ガッツの値までHPが戻る
@@ -394,7 +399,7 @@ function applyOne0(src,t,e,o={}){
       log(`${nm(t)}に即死効果`,'bad');
       const g=has(t,'guts');
       fxEmit({t:'dmg',uid:t.uid,text:FX.instantDeath.name,hp0:t.hp,hp:0,out:!g});
-      t.hp=0; if(!gutsHold(t)) retreat(t); return;
+      t.hp=0; markKiller(t,src); if(!gutsHold(t)) retreat(t); return;
     }
     case 'selfDmg': { const v=effVal(e,t); log(`${nm(t)} ${FX.selfDmg.name} <b>${fmt(v)}</b>${e.max?'（最大HP・軽減不可）':''}`,'bad'); dealDamage(t,v,false,{src:t}); return; }
     case 'copyBuff': case 'copyDebuff': { // コピー元（o.from）の強化／弱体を、同じ値・残り時間で対象に付ける（付与は1つずつ無効判定・上書きルールに従う）
@@ -458,7 +463,7 @@ function dealDamage(u,dmg,isHit,o={}){
   fxEmit({t:'dmg',uid:u.uid,v:fmt(dmg),crit:!!o.crit,np:!!o.np,hp0,hp:hp1,out:ko&&!g});
   recDmg(o.att||o.src,u,Math.min(dmg,Math.max(0,hp0)),dmg,ko&&!g&&hp0>0);
   u.hp=hp1;
-  if(ko){ if(!gutsHold(u)){ retreat(u); return; } } // ガッツ：一連の攻撃が終わるまでHP0で踏みとどまる
+  if(ko){ markKiller(u,o.att||o.src); if(!gutsHold(u)){ retreat(u); return; } } // ガッツ：一連の攻撃が終わるまでHP0で踏みとどまる
   if(isHit){
     // 被ダメージ時○○ はここではなく、攻撃対象になったターンの終了フェイズ（hitEffects）で発動する
     const c=npSealFx(u);
@@ -480,6 +485,7 @@ function masterHit(m,dmg,o={}){
   recDmg(o.att||o.src,m,Math.min(dmg,hp0),dmg,hp1<=0&&hp0>0);
   m.hp=hp1;
   if(hp1>0) return;
+  markKiller(m,o.att||o.src);
   m.out=true; m.fx=[];
   const full=D(m.def).hp;
   log(`${nm(m)} 瀕死！ ${TERMS.unit}が${TERMS.player}の最大HP分（${full}）のダメージを受ける`,'bad');
@@ -889,7 +895,7 @@ function checkWin(){
 function win(pid){ const first=G.winner==null; G.winner=pid; G.phase='over';
   if(first&&typeof recordMatch==='function'&&!(typeof cpuInRollout!=='undefined'&&cpuInRollout)) recordMatch(); // 戦績（records.js。ゲーム画面だけ）
   log(`${esc(G.players[pid].name)} の勝利！`,'good');
-  phaseFx(G.mode==='cpu'?(pid===0?'VICTORY':'DEFEAT'):'WINNER',G.mode==='cpu'?'':`${G.players[pid].name}の勝利`,{big:true,pid,end:true}); const w=alive(pid)[0]; if(w) say(w,'win'); }
+  phaseFx(G.mode==='cpu'?(pid===0?'VICTORY':'DEFEAT'):'WINNER',G.mode==='cpu'?'':`${G.players[pid].name}の勝利`,{big:true,pid,end:true}); const w=alive(pid)[0]; if(w) say(w,'win',{other:LAST_KO[1-pid]||null}); }
 // ---------- アーケード（CPUと連戦。ARCADE＝rules.js） ----------
 // 流れ：chooseMode(arcade) → 編成（プレイヤーだけ）→ phase 'stage'（ステージ紹介）→ arcadeGo で対戦 → 勝ったら arcadeNext で次の 'stage' …
 // G.arcade：diff＝難易度 / stage＝今のステージ（0始まり）/ picks・mpick＝プレイヤーの編成（全ステージ共通）/ leads＝これまでの相手の先頭 / results＝終わったステージの記録

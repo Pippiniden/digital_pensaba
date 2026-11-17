@@ -33,6 +33,7 @@ Read this first. It is a slim map; details live in `docs/agents/` and are read *
 | `img/units/{id}.webp` (+ `{id}_card.webp`) | Character images by id (not data); other assets in `img/classes`, `img/placeholder`, `img/ui`, `img/pwa` |
 | `manifest.webmanifest`, `sw.js` | PWA (stale-while-revalidate, cache `pensaba-duel-v2`) |
 | `tools/check.js` | Headless check (`node tools/check.js`): CPU-vs-CPU games through `act()` for every ruleset + draft; reports hangs / exceptions / `NaN`. `tools/sim/` = old one-off balance experiments |
+| `tools/cpu-audit.js` | CPU decision audit (`node tools/cpu-audit.js`): CPU-vs-CPU games, counts odd decisions (ultimates fully blocked by evade / invul, attack buffs given to a unit that does not attack, unused skills…). `--vs HEAD` (or `--vs copy-of-cpu.js`) plays the working `js/cpu.js` against that version and prints the win rate; `--set "DANGER_K=.7"` overrides cpu.js tuning variables for the run |
 | `presets/original/` | Not loaded by the game; frozen canon data copy |
 | `docs/` | `agents/` detail docs, `ui-design.md`, `*-sample.html` stand-alone tuning samples (not loaded by the game) |
 
@@ -87,7 +88,7 @@ Scenario: game adds (after game-ui / tapfx) scenarios/index.js → scenario-core
 | Turn flow / phases | `ACTIONS`, `beginTurn`/`endPhase`/`toTargetPhase`; UI `promptHTML`/`stageHTML`/`ctlHTML`; update `cpuDecide` |
 | New ACTION | `ACTIONS` + `data-a` button; `cpuDecide`; add to `NET_BAN` (net.js) if the online guest must not send it; allow-list in `act()` if usable after game over; `FREE_ACTIONS` if pressable on CPU's turn |
 | Damage / crit / chains | `resolveCommand`, `resolveUlt`, `resolveDamage`, `dmgMods` |
-| CPU strength | `js/cpu.js` (`CPU_LEVELS`) |
+| CPU strength | `js/cpu.js` (`CPU_LEVELS`). Judge a change with `node tools/cpu-audit.js` (odd-decision counts before / after) and `--vs HEAD` (win rate) |
 | Draft pool size / flow | `DRAFT` (rules.js); `draftStart` / `draftCan` / `draftSkip` + `draftPick` / `draftLead` / `draftGo` (engine.js); `cpuDraft` (cpu.js); `draftHTML` (game-ui.js) |
 | Arcade stages / difficulty | `ARCADE` (rules.js); flow `arcadeStage`/`arcadeRec`/`arcadeNext`/`arcadeContinue` (engine.js); screens `arcadeStageHTML`/`arcadeTotalHTML` (game-ui.js), `.arc*`/`.astage` (game.css) |
 | Screens / layout | `game-ui.js` + `game.css` |

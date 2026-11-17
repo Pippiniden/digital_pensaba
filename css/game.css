@@ -786,7 +786,8 @@ body[data-screen="mode"] #app{position:relative} /* 背景（position:fixed）�
 .rtable tbody th{text-align:left;font-weight:700;max-width:12em;overflow:hidden;text-overflow:ellipsis}
 .rtable tr.out{opacity:.6}
 .rtable td.top{color:var(--gold-hi);font-weight:700}
-.rnote{margin:6px 0 0}
+.rnote{margin:6px 0 0;opacity:.7}
+.ovk{margin-left:3px;font-weight:400;opacity:.65}
 .p0bg{background:var(--p0)}.p1bg{background:var(--p1)}
 .tllegend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;margin-bottom:6px}
 .tllegend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}

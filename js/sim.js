@@ -16,7 +16,9 @@ const SIM_STEP_LIMIT = 30000; // 念のための無限ループ止め
 
 // picks=[[id..],[id..]] で1試合。結果は陣営0 視点
 // mpicks=[マスターID|null, ...]（マスターのあるルールだけ）、level=CPUの強さ（省略時 SIM_LEVEL）
-function simGame(picks,rule,handicap,mpicks,level){
+// detail=true なら、解析用にキャラごとの記録（SIM_UCOLS の順の配列）とチェイン回数も返す（units[陣営][並び順]、chains[陣営]=[R,B,G,ブレイブ]）
+const SIM_UCOLS=['id','dealt','taken','maxHit','kills','attacks','crits','ults','skills','blocked','ascT','koT','hp'];
+function simGame(picks,rule,handicap,mpicks,level,detail){
   newGame({rule, handicap});
   const look=level===SIM_LEVEL_LOOK;
   if(typeof CPU_LOOKAHEAD!=='undefined') CPU_LOOKAHEAD=look; // 'hard+' だけ先読みあり。それ以外は先読みなし
@@ -24,14 +26,20 @@ function simGame(picks,rule,handicap,mpicks,level){
   G.picks=picks.map(p=>p.slice()); if(mpicks) G.mpicks=mpicks.slice(); G.phase='init';
   startGame();
   const first=G.cur; let steps=0;
+  const ascT={}, koT={}, mark=()=>G.players.forEach(P=>P.party.forEach(u=>{ if(u.asc&&ascT[u.uid]==null) ascT[u.uid]=G.turn; if(u.out&&koT[u.uid]==null) koT[u.uid]=G.turn; })); // 再臨・戦闘不能になったターン（開始時から再臨済みは1）
+  if(detail) mark();
   while(G.phase!=='over' && G.turn<=SIM_TURN_LIMIT && steps++<SIM_STEP_LIMIT){
     const s=cpuDecide(); if(!s) break;
     ACTIONS[s[0]](s[1]||{});
     FXQ.length=0; FXHIDE.clear(); // 演出は使わないので溜めない
     if(G.log.length>400) G.log.length=0;
+    if(detail) mark();
   }
   const asc=[0,1].map(p=>G.players[p].party[0].asc);
-  return { winner:G.phase==='over'?G.winner:null, turns:G.turn, first, asc, dealt:G.dealt.slice(),
+  const S=u=>(G.stats&&G.stats[u.uid])||{};
+  const extra=detail?{ units:G.players.map(P=>P.party.map(u=>[u.def,S(u).dealt||0,S(u).taken||0,S(u).maxHit||0,S(u).kills||0,S(u).attacks||0,S(u).crits||0,S(u).ults||0,S(u).skills||0,S(u).blocked||0,ascT[u.uid]??null,koT[u.uid]??null,Math.max(0,u.hp)])),
+    chains:[0,1].map(p=>{ const c=(G.chains&&G.chains[p])||{}; return [c.R||0,c.B||0,c.G||0,c.brave||0]; }) }:null;
+  return { ...extra, winner:G.phase==='over'?G.winner:null, turns:G.turn, first, asc, dealt:G.dealt.slice(),
     out0:G.players[0].party.map(u=>u.out), out1:G.players[1].party.map(u=>u.out) };
 }
 const simErr = (r,e)=>{ r.errors++; r.errMsg=r.errMsg||String(e&&e.message||e); };
@@ -102,13 +110,15 @@ function simTeam(t,n,pool,full){
 
 // ---------- 指定した2つの編成の対戦（バランス検証ページ balance.html 用） ----------
 // A,B = {ids:[サーヴァントID...], m:マスターID|null}。n試合（半分ずつ陣営を入れ替える）。結果は A 視点
-function simMatchup(rule,A,B,n,handicap,level){
+// detail=true なら r.games に1試合ごとの記録を入れる：{w:Aの勝ち1/負け0/引分null, f:Aが先攻なら1, t:ターン数, u:[Aのキャラ記録, Bのキャラ記録], c:[Aのチェイン, Bのチェイン]}
+function simMatchup(rule,A,B,n,handicap,level,detail){
   const r={n,win:0,lose:0,draw:0,turns:0,firstWin:0,firstGames:0,dealtA:0,dealtB:0,aOut:0,aN:A.ids.length,errors:0};
   for(let i=0;i<n;i++){
     const sw=i%2===1, P=sw?[B,A]:[A,B];
     let g;
-    try{ g=simGame(P.map(x=>x.ids),rule,handicap,P.map(x=>x.m||null),level); }catch(e){ simErr(r,e); continue; }
+    try{ g=simGame(P.map(x=>x.ids),rule,handicap,P.map(x=>x.m||null),level,detail); }catch(e){ simErr(r,e); continue; }
     const me=sw?1:0, w=g.winner===null?null:(g.winner===me?0:1);
+    if(detail) (r.games||(r.games=[])).push({w:w===null?null:1-w, f:g.first===me?1:0, t:g.turns, u:[g.units[me],g.units[1-me]], c:[g.chains[me],g.chains[1-me]]});
     if(w===0) r.win++; else if(w===1) r.lose++; else r.draw++;
     if(g.first===me){ r.firstGames++; if(w===0) r.firstWin++; }
     r.turns+=g.turns; r.dealtA+=g.dealt[me]; r.dealtB+=g.dealt[1-me];

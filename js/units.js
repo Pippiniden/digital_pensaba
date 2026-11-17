@@ -1324,7 +1324,7 @@ const DEFAULT_UNITS = [
     "ult":{"name":"花の如き死化粧","c":"B","eff":[{"k":"atk","t":"ally_other","v":20,"turns":3},{"k":"def","t":"ally_other","v":20,"turns":3},{"k":"star","t":"master","v":15},{"k":"selfDmg","t":"self","v":20,"max":true}],"ruby":"エレガンス・メンズノンノ"}
   },
   {
-    "id":"gwydion", "name":"グウィディオン", "cls":"キャスター", "cost":4, "hp":660,
+    "id":"gwydion", "name":"グウィディオン", "cls":"キャスター", "cost":4, "hp":690,
     "traits":["男性","混沌","悪","天","イギリス"],
     "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":8,"z":100},"np":{"x":50,"y":4,"z":105},"cut":{"x":-1,"y":0,"z":90}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%b0%a5%a6%a5%a3%a5%c7%a5%a3%a5%aa%a5%f3",
@@ -1356,10 +1356,10 @@ const DEFAULT_UNITS = [
     ],
     "skills":[
       {"name":"動物会話","eff":[{"k":"np","t":"self","v":20}],"rank":"B-"},
-      {"name":"原初のルーン","eff":[{"k":"atk","t":"picked","v":20,"turns":1,"times":40,"color":"R"}],"rank":"A","pick":"ally"},
+      {"name":"原初のルーン","eff":[{"k":"atk","t":"picked","v":40,"turns":1,"color":"R"},{"k":"np","t":"picked","v":20}],"rank":"A","pick":"ally"},
       {"name":"高速神言","eff":[{"k":"np","t":"self","v":70}],"rank":"B"}
     ],
-    "ult":{"name":"騒樹荊棘獄","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":250},{"k":"stun","t":"enemy_all","v":0,"turns":1},{"k":"np","t":"self","v":30}],"ruby":"ケルヌンノス・ウッズ"}
+    "ult":{"name":"騒樹荊棘獄","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":250},{"k":"stun","t":"enemy_all","v":0,"turns":1,"chance":2},{"k":"np","t":"self","v":30}],"ruby":"ケルヌンノス・ウッズ"}
   },
   {
     "id":"arianrhod", "name":"アリアンロッド", "cls":"ライダー", "cost":4, "hp":800,

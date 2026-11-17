@@ -452,7 +452,9 @@ function detailModalHTML(){
 // ---------- リザルト（決着後） ----------
 // タブ（UI.rtab）：概要 / サーヴァント別の成績 / ターンごとのダメージ推移 / バトルログ
 const RTABS = { sum:'概要', unit:`${TERMS.unit}別`, tl:'ダメージ推移', log:'バトルログ' };
-const stOf = u=>(G.stats&&G.stats[u.uid])||{dealt:0,taken:0,maxHit:0,kills:0,attacks:0,crits:0,ults:0,skills:0,blocked:0};
+const stOf = u=>(G.stats&&G.stats[u.uid])||{dealt:0,taken:0,dealtO:0,takenO:0,maxHit:0,kills:0,attacks:0,crits:0,ults:0,skills:0,blocked:0};
+// 実ダメージ（オーバーキル除く）にオーバーキル込みの値をカッコで添える。同じ値でも常に併記する
+const ovk = (a,b)=>`${fmt(a)}<small class="ovk">(${fmt(b==null?a:b)})</small>`;
 const sideUnits = pid=>[...G.players[pid].party,...(G.players[pid].master?[G.players[pid].master]:[])];
 // 決着後の「もう一度」：同じ編成ですぐ対戦（data-same）／ 編成からやり直す、の2つに分ける
 const rematchBtns = ()=>`<button data-a="rematch" title="${G.draft?'新しい候補でドラフトからやり直します':'編成（キャラクター選択）からやり直します'}">${G.draft?'ドラフトし直す':'キャラクター選択に戻る'}</button><button class="primary" data-a="rematch" data-same="1" title="おたがい同じ編成のまま、新しい対戦を始めます">同じ編成でもう一度</button>`;
@@ -485,25 +487,25 @@ function resultSumHTML(){
       return `<div class="rrow hp ${u.out?'out':''}">${unitImg(d,'face','pimg',d.name)}<b>${esc(d.name)}${u===mvp&&stOf(u).dealt?' <em class="mvp">MVP</em>':''}</b><span>${u.out?(u.master?'瀕死':TERMS.out):`HP ${fmt(u.hp)}<small>/${maxHp(u)}</small>`}</span><i class="rhp p${pid}bg" style="--w:${u.out?0:pctOf(u.hp,maxHp(u)).toFixed(1)}%"></i></div>`; }).join('');
     const kv=(k,v,c='')=>`<div class="${c}"><span>${k}</span><b>${v}</b></div>`;
     return `<div class="rside ${pid===w?'rwin':''}"><h4><span class="p${pid}">${esc(P.name)}</span>${pid===w?'<em>WIN</em>':''}</h4>${rows}
-      <div class="rkv">${kv('与えたダメージ',fmt(G.dealt[pid]))}${kv('受けたダメージ',fmt(sum('taken')))}${kv('最大ダメージ',fmt(Math.max(0,...us.map(u=>stOf(u).maxHit))))}
+      <div class="rkv">${kv('与えたダメージ',ovk(G.dealt[pid],(G.dealtO||[])[pid]))}${kv('受けたダメージ',ovk(sum('taken'),sum('takenO')))}${kv('最大ダメージ',fmt(Math.max(0,...us.map(u=>stOf(u).maxHit))))}
         ${kv('撃破',sum('kills'))}${kv('クリティカル',sum('crits'))}${kv(TERMS.ult,`${sum('ults')}回`)}${kv('スキル',`${sum('skills')}回`)}${kv('無効化した攻撃',sum('blocked'))}
         ${kv('ブレイブチェイン',ch.brave||0)}${kv(`発生${TERMS.star}`,(G.starsGen||[])[pid]||0)}${kv('チェイン',`${TERMS.R} ${ch.R||0} ・ ${TERMS.B} ${ch.B||0} ・ ${TERMS.G} ${ch.G||0}`,'wide')}</div></div>`; };
   // いちばん上：MVP（大きい顔と成績）と、両陣営の与ダメージを比べる帯
   const ms=mvp&&stOf(mvp), md=mvp&&D(mvp.def);
   const mvpBox=ms&&ms.dealt?`<div class="rmvp"><div class="rmvp-pt">${unitImg(md,'face','pimg',md.name)}</div><div class="rmvp-tx"><small>MVP</small><b>${esc(md.name)}</b>
-    <div class="rmvp-kv"><span>与ダメージ <b>${fmt(ms.dealt)}</b></span><span>最大 <b>${fmt(ms.maxHit)}</b></span><span>撃破 <b>${ms.kills}</b></span></div></div></div>`:'';
+    <div class="rmvp-kv"><span>与ダメージ <b>${ovk(ms.dealt,ms.dealtO)}</b></span><span>最大 <b>${fmt(ms.maxHit)}</b></span><span>撃破 <b>${ms.kills}</b></span></div></div></div>`:'';
   const d0=G.dealt[0]||0, d1=G.dealt[1]||0;
-  const vs=d0+d1>0?`<div class="rvs"><small>与えたダメージ</small><b class="p0">${fmt(d0)}</b><div class="rvsbar"><i class="p0bg" style="flex-grow:${d0}"></i><i class="p1bg" style="flex-grow:${d1}"></i></div><b class="p1">${fmt(d1)}</b></div>`:'';
-  return `${mvpBox}${vs}<div class="rsides">${side(0)}${side(1)}</div>`;
+  const vs=d0+d1>0?`<div class="rvs"><small>与えたダメージ</small><b class="p0">${ovk(d0,(G.dealtO||[])[0])}</b><div class="rvsbar"><i class="p0bg" style="flex-grow:${d0}"></i><i class="p1bg" style="flex-grow:${d1}"></i></div><b class="p1">${ovk(d1,(G.dealtO||[])[1])}</b></div>`:'';
+  return `${mvpBox}${vs}<div class="rsides">${side(0)}${side(1)}</div><p class="sub small rnote">()の中はオーバーキル分も含めた値です。</p>`;
 }
 function resultUnitsHTML(){
   const cols=[['dealt','与ダメ'],['taken','被ダメ'],['maxHit','最大'],['kills','撃破'],['attacks','攻撃'],['crits','クリ'],['ults',TERMS.ult],['skills','スキル'],['blocked','無効化']];
   const all=[0,1].flatMap(sideUnits), best=k=>Math.max(1,...all.map(u=>stOf(u)[k]));
   const rows=pid=>sideUnits(pid).map(u=>{ const d=D(u.def), s=stOf(u);
-    return `<tr class="${u.out?'out':''}"><th><span class="p${pid}">●</span> ${esc(d.name)}${u.master?` <small class="sub">${TERMS.player}</small>`:''}</th>${cols.map(([k])=>`<td class="${s[k]&&s[k]===best(k)&&['dealt','maxHit','kills'].includes(k)?'top':''}">${fmt(s[k])}</td>`).join('')}</tr>`; }).join('');
+    return `<tr class="${u.out?'out':''}"><th><span class="p${pid}">●</span> ${esc(d.name)}${u.master?` <small class="sub">${TERMS.player}</small>`:''}</th>${cols.map(([k])=>`<td class="${s[k]&&s[k]===best(k)&&['dealt','maxHit','kills'].includes(k)?'top':''}">${k==='dealt'||k==='taken'?ovk(s[k],s[k+'O']):fmt(s[k])}</td>`).join('')}</tr>`; }).join('');
   return `<div class="rtablewrap"><table class="rtable"><thead><tr><th></th>${cols.map(([,l])=>`<th>${l}</th>`).join('')}</tr></thead>
     <tbody>${rows(0)}${rows(1)}</tbody></table></div>
-    <p class="sub small rnote">与ダメ・被ダメは実際に減ったHP（オーバーキル分は含まない）。最大＝1回の攻撃の最大ダメージ。攻撃＝攻撃の回数（連続攻撃は1回ずつ）。無効化＝回避・無敵・ダメージ無効で防いだ回数。</p>`;
+    <p class="sub small rnote">与ダメ・被ダメは実際に減ったHP。()の中はオーバーキル分も含めた値です。最大＝1回の攻撃の最大ダメージ。攻撃＝攻撃の回数（連続攻撃は1回ずつ）。無効化＝回避・無敵・ダメージ無効で防いだ回数。</p>`;
 }
 function resultTlHTML(){
   const tl=G.tl||[], n=Math.max(G.turn,tl.length-1);

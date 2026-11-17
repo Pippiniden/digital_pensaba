@@ -247,6 +247,7 @@ function cpuAlloc(easy){
 // 攻撃バフ・クリティカル期待値・Busterチェイン・ブレイブチェインの追加攻撃（補正なし）・再臨面の価値を含む。
 // 例：アルトリア1回＋小次郎2回 ＞ 小次郎ブレイブ。ブレイブの追加攻撃は「その騎のもう1回分」程度なので、
 //     1回あたりの期待値がほぼ2倍ある騎が別にいれば、混ぜた方が得になる
+// 測定で差が出なかったので入れていないもの（基準版との対戦・各14000試合、±0.8）：見込みを「殴る予定の相手」への補正で出す 49.6〜51.0%、NPが貯まるコマンドに価値を足す 49.8〜51.1%
 const ASC_VALUE = 40; // 再臨前の再臨面1回の価値（ダメージ換算。avgDmg と同じ）
 function cmdOf(u,f){ const face=D(u.def).faces[f]; return !u.asc&&face.pre.c==='ASC'?face.pre:u.asc?face.post:face.pre; }
 function cmdValue(u,c,stars,tgt){
@@ -259,12 +260,12 @@ function cmdValue(u,c,stars,tgt){
   }
   return d*hitsOf(c.eff)*(isAoe(c.eff)?Math.max(1,alive(tgt.pid).length):1);
 }
-function allocEV(alloc,noChain){
+function allocEV(alloc,noChain,per){ // per＝騎ごとの見込みの使い回し（同じ局面で配分をいくつも比べるとき。cpuAllocEV）
   const tgt=[...alive(1-G.cur)].sort((a,b)=>maxHp(b)-maxHp(a))[0], stars=G.players[G.cur].stars;
   const slots=[]; Object.entries(alloc).forEach(([uid,n])=>{ for(let i=0;i<n;i++) slots.push(U(uid)); });
   if(!slots.length) return 0;
   // 1回ごとの期待値は独立なので足し合わせ、Busterチェインだけ「3回ともBuster」の確率で加える
-  const per=new Map();
+  per=per||new Map();
   const stat=u=>{ if(!per.has(u)){ const cs=[0,1,2,3,4,5].map(f=>cmdOf(u,f));
     per.set(u,{v:cs.reduce((s,c)=>s+cmdValue(u,c,stars,tgt),0)/6, pR:cs.filter(c=>c.c==='R'&&c.dmg>0).length/6,
       ex:cs.reduce((s,c)=>s+(c.c==='ASC'?(u.asc?0:ASC_VALUE):(c.dmg||0)*hitsOf(c.eff)),0)/6}); } return per.get(u); };
@@ -278,8 +279,8 @@ function cpuAllocEV(us){
   const rec=(i,cur,left)=>{ if(i===us.length){ if(left===0) out.push(cur); return; }
     for(let k=0;k<=Math.min(left,G.maxActs[us[i].uid]);k++) rec(i+1,{...cur,[us[i].uid]:k},left-k); };
   rec(0,{},requiredAlloc());
-  let best=null, bv=-1;
-  for(const a of out){ const v=allocEV(a); if(v>bv){ bv=v; best=a; } }
+  let best=null, bv=-1; const per=new Map();
+  for(const a of out){ const v=allocEV(a,false,per); if(v>bv){ bv=v; best=a; } }
   return best||Object.fromEntries(us.map(u=>[u.uid,0]));
 }
 function ultPower(u){
@@ -304,18 +305,84 @@ function ultRollPower(u,ud){
   const extra=n===3&&!ud.eff.some(e=>e.k==='copyRoll'&&e.noExtra)?avgDmg(u):0;
   return n*(avg+Math.max(0,atk)+crit)+extra;
 }
+// 宝具のダメージのうち、回避・無敵で防がれずに通る見込み（tgt＝単体宝具の攻撃対象）。効果は実際と同じ順（ultEffOrder）にたどる：
+// ダメージより前の「自分に無敵貫通・必中」「敵の強化解除」は効き、後ろに並んでいるものは間に合わない。回数つきの回避・無敵は防ぐたびに1回減る（連続攻撃・複数のダメージ効果）。
+// raw=true なら防がれないものとして数える（割合を出すときの分母）。per（Map）を渡すと、敵ごとの通るダメージを入れる。ロール宝具の分（ultRollPower）は含めない
+function ultLand(u,tgt,raw,per){
+  const ud=D(u.def).ult, hits=hitsOf(ud.eff), up=mods(u,'npPow').sum-mods(u,'npPowDown').sum, foes=alive(1-u.pid);
+  const cnt=(t,k)=>t.fx.filter(x=>x.k===k).reduce((s,x)=>s+(x.times==null?Infinity:x.times),0);
+  const g=new Map(foes.map(t=>[t,raw?{invul:0,evade:0}:{invul:cnt(t,'invul'),evade:cnt(t,'evade')}]));
+  let pierce=has(u,'pierce'), sure=has(u,'sureHit'), sum=0;
+  for(const e of ultEffOrder(ud.eff)){
+    if(e.k==='pierce'&&e.t==='self') pierce=true;
+    else if(e.k==='sureHit'&&e.t==='self') sure=true;
+    else if(e.k==='strip'&&(e.t==='enemy_all'||e.t==='target')) (e.t==='enemy_all'?foes:[tgt]).forEach(t=>{ const x=t&&g.get(t); if(!x||has(t,'stripImmune')) return; if(!e.vs||e.vs==='invul') x.invul=0; if(!e.vs||e.vs==='evade') x.evade=0; });
+    else if(e.k==='dmg'&&(e.t==='enemy_all'||e.t==='target')){
+      for(let h=0;h<hits;h++) (e.t==='enemy_all'?foes:[tgt]).forEach(t=>{ const x=t&&g.get(t); if(!x||(e.cond&&!condOk(e.cond,t))) return;
+        if(!pierce&&x.invul>0){ x.invul--; return; }
+        if(!pierce&&!sure&&x.evade>0){ x.evade--; return; }
+        const v=e.max?maxHp(t):Math.max(0,e.v+up); if(per) per.set(t,(per.get(t)||0)+v); sum+=v; });
+    }
+  }
+  return sum;
+}
+// 宝具のダメージが通る割合（0〜1）。攻撃対象を選ぶときに使う
+const ultPass = (u,t)=>{ const r=ultLand(u,t,true); return r>0?ultLand(u,t)/r:1; };
+// つよい以上の「宝具の見込みダメージ」：防がれる分を引いたもの（単体宝具は一番通る相手に撃つ前提）＋ロール宝具の分
+function ultHitPower(u){
+  const ud=D(u.def).ult, single=ud.eff.some(e=>e.k==='dmg'&&e.t==='target');
+  return (single?Math.max(0,...targetCandidates().map(t=>ultLand(u,t))):ultLand(u,null))+ultRollPower(u,ud);
+}
+// 宝具で倒せる敵の数（ガッツ持ちは倒せない扱い。単体宝具は倒せる相手がいれば1）
+function ultKills(u){
+  const ud=D(u.def).ult, single=ud.eff.some(e=>e.k==='dmg'&&e.t==='target'), n=t=>{ const per=new Map(); ultLand(u,t,false,per); return [...per].filter(([x,v])=>!has(x,'guts')&&v>=x.hp).length; };
+  return single?Math.max(0,...targetCandidates().map(n)):n(null);
+}
+let ULT_KILL = 100;    // 宝具で倒せる敵1騎につき、見込みダメージに足す値（0=足さない）
+let ULT_DYING = true;  // 次の相手の手番で倒れそうな騎（cpuDanger）の宝具は、通常攻撃の見込みを下回っていても撃つ（NP100%のまま倒れない）
 function cpuUltUser(){
   const c=alive(G.cur).filter(u=>canUlt(u)&&u.np>=RULES.ultCost);
-  const u=c.sort((a,b)=>ultPower(b)-ultPower(a))[0]||null;
-  // つよい以上：攻撃宝具は、このターンの通常攻撃の見込みダメージを下回るなら温存する
-  if(u&&cpuHard()&&ultPower(u)>0&&ultPower(u)<turnPower()) return null;
-  return u;
+  if(!cpuHard()) return c.sort((a,b)=>ultPower(b)-ultPower(a))[0]||null;
+  // つよい以上：攻撃宝具は「回避・無敵で防がれる分を引いた見込み」で比べ、このターンの通常攻撃の見込みダメージを下回るなら温存する（全員に防がれる空撃ちをしない）。
+  // 攻撃宝具を温存するときも、ダメージのない補助宝具は使う
+  // 測定（tools/cpu-audit.js・つよい同士・先読みなし）：空撃ち＝攻撃宝具がすべて防がれた割合はチーム 9.5% → 0%、シンプル 16.8% → 0%（対象選びの cpuTargetCands・cpuPickHard 込み）。
+  // 直す前の版との対戦（各6000試合）はチーム 51.1%・シンプル 52.6%・マスター 49.5%・マスターチーム 50.3%（±1.3）＝強さはほぼ同じで、見た目の不自然さを消す修正
+  const pw=new Map(c.map(u=>[u,ultHitPower(u)]));
+  const atk=c.filter(u=>ultPower(u)>0).sort((a,b)=>pw.get(b)-pw.get(a))[0];
+  if(atk&&pw.get(atk)>0&&(pw.get(atk)+(ULT_KILL?ULT_KILL*ultKills(atk):0)>=turnPower()||(ULT_DYING&&cpuDanger(atk)))) return atk;
+  return c.find(u=>ultPower(u)<=0)||null;
 }
 // このターンに割り振った行動の見込みダメージ。つよい以上は allocEV（クリティカル期待値・ブレイブチェインの追加攻撃を含み、Busterチェインは含めない）
 function turnPower(){
   if(cpuHard()) return allocEV(G.alloc,true);
   return Object.entries(G.alloc).reduce((s,[uid,n])=>s+n*avgDmg(U(uid)),0)+(Object.values(G.alloc).some(n=>n===3)?60:0);
 }
+// ---------- つよい以上：次の相手の手番で倒れそうか ----------
+// 相手の次の手番に u が集中して狙われたときの見込みダメージ：
+//  通常攻撃＝1回あたりの平均ダメージ（u への補正込み）がいちばん高い敵の DANGER_ACTS 回ぶん ／ 宝具＝いま撃てる（NP100%）敵の宝具のうち最大。大きい方。
+//  回避・無敵が残っていれば、防ぐ回数ぶん（回数なしは全部）を引く。行動できない敵（スタン・魅了）は数えない
+let DANGER_ACTS = 3;
+function cpuIncoming(u){
+  const foes=alive(1-u.pid).filter(e=>!disabled(e)); if(!foes.length) return 0;
+  const guard=u.fx.filter(x=>x.k==='invul'||x.k==='evade').reduce((s,x)=>s+(x.times==null?Infinity:x.times),0);
+  const per=e=>[0,1,2,3,4,5].reduce((s,f)=>{ const c=cmdOf(e,f); if(!(c.dmg>0)) return s; const m=dmgMods(e,u,c.c==='W'?null:c.c); return s+applyPct(Math.max(0,c.dmg+m.sum),m.pct)*hitsOf(c.eff); },0)/6;
+  const normal=Math.max(...foes.map(per))*Math.max(0,DANGER_ACTS-Math.min(guard,DANGER_ACTS));
+  const ult=e=>{ const ud=D(e.def).ult, up=mods(e,'npPow').sum-mods(e,'npPowDown').sum, h=hitsOf(ud.eff), n=ud.eff.filter(x=>x.k==='dmg').length*h; if(!n) return 0;
+    const all=ud.eff.filter(x=>x.k==='dmg').reduce((s,x)=>s+(x.max?maxHp(u):(m=>applyPct(Math.max(0,x.v+m.sum+up),m.pct))(dmgMods(e,u,ud.c)))*h,0);
+    return all*Math.max(0,n-Math.min(guard,n))/n; };
+  return Math.max(normal,...foes.filter(e=>e.np>=RULES.ultCost&&canUlt(e)).map(ult));
+}
+// 倒れそうな味方：見込みダメージ × DANGER_K が残りHP以上（ガッツ持ちは踏みとどまるので別）。チームでは誰が狙われるか分からないので「集中して狙われたら倒れる」騎はすべて当てはまる
+let DANGER_K = 1; // 1より小さいほど「本当に危ないときだけ」。0＝この判断を使わない
+function cpuDanger(u){
+  if(!DANGER_K||u.out||u.master||has(u,'guts')) return false;
+  return cpuIncoming(u)*DANGER_K>=u.hp;
+}
+// 倒れそうな騎のスキルは、この点数以上なら使う（ふだんは3点）＝倒れる前に使い切る。0点のスキル（今は意味がない効果）は使わない
+// 測定（tools/cpu-audit.js・つよい同士・先読みなし）：戦闘不能になった騎の未使用スキルはチーム 17.8% → 12.8%、シンプル 19.9% → 12.4%。
+// 基準版（この判断を入れる前）との対戦（各2万試合を2回、±0.7）：ULT_KILL・ULT_DYING・TGT_GUARD と合わせて チーム 50.4〜51.4%・マスターチーム 51.1〜51.3%・シンプル 49.9〜50.5%・マスター 50.6〜51.4%＝強さはほぼ同じか、わずかに上。
+// 入れなかったもの：守りの効果（回避・無敵・ガッツ・ターゲット集中）を「倒れそうな味方がいるとき」に使う → 49.3〜50.3% で差なし
+let DANGER_MIN = .5;
 function usableSkills(){
   const out=[];
   alive(G.cur).forEach(u=>{ if(!canSkill(u)) return;
@@ -326,7 +393,8 @@ function cpuNextSkill(easy){
   const list=usableSkills();
   if(easy) return list.find(x=>rnd01(`${G.turn}s${x.u.uid}${x.si}`)<.3)||null;
   let best=null;
-  for(const x of list){ const sc=cpuHard()?cpuGuardScore(x.u,x.si):cpuSkillScore(x.u,x.si); if(sc>=(cpuHard()?3:2)&&(!best||sc>best.sc)) best={...x,sc}; } // つよい以上は3点以上で使う（2→3は勝率同等だった）
+  const dying=new Map(), dy=u=>{ if(!dying.has(u)) dying.set(u,cpuHard()&&cpuDanger(u)); return dying.get(u); };
+  for(const x of list){ const sc=cpuHard()?cpuGuardScore(x.u,x.si):cpuSkillScore(x.u,x.si); if((sc>=(cpuHard()?3:2)||(sc>=DANGER_MIN&&dy(x.u)))&&(!best||sc>best.sc)) best={...x,sc}; } // 倒れそうかの見積もり（重い）は、3点に届かないスキルがあるときだけ // つよい以上は3点以上で使う（2→3は勝率同等だった）
   return best;
 }
 // つよい（チームバトル）：回避・無敵を含むスキルは、敵の宝具（NP100%）に合わせて使う。
@@ -497,10 +565,30 @@ function cpuPredictTarget(){
 }
 function cpuPickTarget(uid,si,easy){
   const u=U(uid), s=si==null?D(u.def).ult:D(u.def).skills[si]; // si なし＝宝具
-  const cands=skillCands(u,s);
+  let cands=skillCands(u,s);
   if(!cands.length) return u;
   if(easy) return cands[Math.floor(rnd01(`${G.turn}p${uid}${si}`)*cands.length)];
-  const k=s.eff.map(e=>e.k);
+  if(cpuHard()) return cpuPickHard(u,s,si,cands);
+  return cpuPickKind(cands,s,s.eff.map(e=>e.k))||cands[0];
+}
+// つよい以上の対象選び：まず候補ごとに効果の点数（cpuEffScore）を出して、いちばん高い相手に絞る（攻撃強化なら今ターン殴る味方、回避なら減っている味方、NPなら宝具に届く味方）。
+// 同点の中では効果の種類ごとの決め打ち（cpuPickKind）、それでも決まらなければ：敵＝殴る予定の相手 ／ 守りだけの効果＝HPの割合が低い味方 ／ それ以外＝今ターンの攻撃回数が多い（同じなら平均ダメージが高い）味方。
+// 以前は決め打ちに当てはまらない効果（攻撃強化・回避・無敵など）を候補の先頭＝編成順の1番目に付けていた
+function cpuPickHard(u,s,si,cands){
+  const k=s.eff.filter(e=>e.t==='picked'||e.from==='picked'||e.k==='copyRoll').map(e=>e.k); // 選んだ相手にかかる効果だけを見る（自分や全体にかかる効果で対象を決めない）
+  if(si!=null){ const sc=cands.map(c=>cpuEffScore(u,s.eff,c,si)), mx=Math.max(...sc); cands=cands.filter((_,i)=>sc[i]>=mx-1e-9); }
+  else if(k.includes('npPow')) return [...cands].sort((a,b)=>ultPower(b)-ultPower(a))[0]; // 宝具威力アップを配る宝具：宝具が強い味方へ
+  const hit=cpuPickKind(cands,s,k); if(hit) return hit;
+  if(cands.length<2) return cands[0];
+  const foes=cands.filter(c=>c.pid!==u.pid);
+  if(foes.length===cands.length){ const p=cpuPredictTarget(); return cands.includes(p)?p:cands[0]; }
+  const mine=cands.filter(c=>c.pid===u.pid); if(!mine.length) return cands[0];
+  const guard=x=>['evade','invul','guts','def','defTrait','nullUnder'].includes(x);
+  if(k.some(guard)&&k.every(x=>guard(x)||!FX[x]||FX[x].buff!==true)) return [...mine].sort((a,b)=>hpR(a)-hpR(b))[0];
+  return [...mine].sort((a,b)=>attackCount([b])-attackCount([a])||avgDmg(b)-avgDmg(a))[0];
+}
+// 効果の種類ごとの決め打ち（k＝見る効果の種類）。当てはまる種類がなければ null
+function cpuPickKind(cands,s,k){
   if(k.includes('copyBuff')&&s.eff.some(e=>e.k==='copyBuff'&&e.from==='picked')) return [...cands].sort((a,b)=>a.fx.filter(x=>FX[x.k].buff===true).length<b.fx.filter(x=>FX[x.k].buff===true).length?1:-1)[0]; // 強化が多い相手からコピー
   if(k.includes('copyDebuff')&&s.eff.some(e=>e.k==='copyDebuff'&&e.from==='picked')) return [...cands].sort((a,b)=>a.fx.filter(x=>FX[x.k].buff===false).length<b.fx.filter(x=>FX[x.k].buff===false).length?1:-1)[0];
   if(k.includes('copyRoll')){ const avg=x=>D(x.def).faces.reduce((s2,f)=>s2+(isCopyCmd(f.post)?0:f.post.dmg||0),0); return [...cands].sort((a,b)=>avg(b)-avg(a))[0]; } // 再臨後コマンドの平均ダメージが高い相手の鉛筆
@@ -508,7 +596,7 @@ function cpuPickTarget(uid,si,easy){
   if(k.includes('np')){ const below=cands.filter(c=>c.np<RULES.ultCost); return [...(below.length?below:cands)].sort((a,b)=>b.np-a.np)[0]; }
   if(['stun','charm','fear','sealSkill','sealUlt','instantDeath'].some(x=>k.includes(x))) return [...cands].sort((a,b)=>b.np-a.np||b.hp-a.hp)[0];
   if(k.includes('poison')||k.includes('burn')){ const c=cands.filter(x=>!has(x,'poison')&&!has(x,'burn')); return [...(c.length?c:cands)].sort((a,b)=>b.hp-a.hp)[0]; }
-  return cands[0];
+  return null;
 }
 // 攻撃対象：倒し切れる相手（NPが高い・コストが高い方）を優先、無理なら削れる割合が大きい相手
 function estDamage(t){
@@ -544,13 +632,18 @@ function cpuBestTarget(easy){
 //  - 倒せるからといって小物を優先しない（倒すと相手の残りが行動回数+1になる）
 //  - 倒し切れない相手を殴って宝具ゲージを100%に乗せない（被弾1回ごとに NP+gaugeOnHit）
 //  - 回避・無敵がある相手は後回し
+// つよい以上の攻撃対象の候補：単体宝具は、すべて防がれる相手（回避・無敵）を外す（ほかに通る相手がいるとき）
+const cpuTargetCands = ()=>{ const c=targetCandidates(); if(!G.ult||G.targetAll) return c; const u=U(G.ult), ok=c.filter(t=>ultLand(u,t)>0); return ok.length?ok:c; };
+let TGT_GUARD = true; // 通常攻撃の対象選び（脅威度）：回避・無敵は一律「4割」ではなく、防がれる回数を数える（false＝4割）
+// 通常攻撃が通る割合：攻撃 hits 回のうち、回避・無敵の回数ぶん（回数なしは全部）が防がれる
+function atkPass(t,hits){ if(!hits) return 1; const g=t.fx.filter(x=>x.k==='invul'||x.k==='evade').reduce((s,x)=>s+(x.times==null?Infinity:x.times),0); return Math.max(0,hits-Math.min(g,hits))/hits; }
 const cpuThreat = t=>avgDmg(t)*1.5+ultPower(t)*.3+40;
 function cpuThreatTarget(){
-  const c=targetCandidates();
+  const c=cpuTargetCands();
   const hits=G.ult?D(U(G.ult).def).ult.eff.filter(e=>e.k==='dmg').length*hitsOf(D(U(G.ult).def).ult.eff):G.rolled.reduce((s,r)=>s+(r.cmd.dmg>0?hitsOf(r.cmd.eff):0),0);
   let best=c[0], bs=-Infinity;
   for(const t of c){
-    let d=estDamage(t); if(has(t,'invul')||has(t,'evade')) d*=.4;
+    let d=estDamage(t); if(G.ult) d*=ultPass(U(G.ult),t); else if(has(t,'invul')||has(t,'evade')) d*=TGT_GUARD?atkPass(t,hits):.4; // 宝具は防がれる割合をそのまま見る。通常攻撃は防がれる回数を引く（atkPass）
     const th=cpuThreat(t), kill=d>=t.hp&&!has(t,'guts');
     let sc=Math.min(d,t.hp)/maxHp(t)*th + th*.5;
     if(kill){ if(t.np>=70) sc+=ultPower(t)*.5; } // 宝具が近い相手を倒せるなら止める
@@ -565,7 +658,7 @@ function cpuThreatTarget(){
 // 実際の出目は知らない（試しの乱数は別物）。ルール処理はエンジンそのものなので、ルールを変えても追従する
 let cpuMcMemo=null;
 function cpuMcTarget(){
-  const c=targetCandidates();
+  const c=cpuTargetCands();
   if(c.length<2) return c[0];
   const key=`${G.seed}|${G.turn}|${G.ult}|${G.rolled.length}`;
   if(cpuMcMemo&&cpuMcMemo.key===key&&c.some(u=>u.uid===cpuMcMemo.uid)) return U(cpuMcMemo.uid);
