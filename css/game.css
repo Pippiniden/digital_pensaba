@@ -747,7 +747,7 @@ body[data-screen="mode"] #app{position:relative} /* 背景（position:fixed）�
   .dockrow>button{flex:none;margin-left:auto}
   .dcost+button{margin-left:0}
   /* 上の見出しからは、固定バーと重なるもの（枠・コスト・決定・警告）を外す */
-  .setup:not(.draft):not(.zukan){padding-bottom:calc(108px +var(--bot,0px) + env(safe-area-inset-bottom,0px))}
+  .setup:not(.draft):not(.zukan){padding-bottom:calc(132px + var(--bot,0px) + env(safe-area-inset-bottom,0px))}
   .setup:not(.draft)>.sethead>.slots,.setup:not(.draft)>.sethead>.costm,.setup:not(.draft)>.sethead [data-a="setupConfirm"],.setup>.warn{display:none}
 }
 @media (max-width:860px){
