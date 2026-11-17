@@ -348,5 +348,22 @@ const DEFAULT_MASTERS = [
       {"name":"4B494C4C","eff":[{"k":"dmg","t":"enemy_svt","v":80},{"k":"heal","t":"self","v":50}]},
       {"name":"ｻ爨ﾋ､ｿ､､","eff":[{"k":"atkDown","t":"enemy_svt","v":30,"turns":1},{"k":"fear","t":"enemy_svt","v":0,"turns":1,"chance":3}]}
     ]
+  },
+  {
+    "id":"m_natsume", "name":"千速棗", "cost":3, "hp":400,
+    "lines":{"support":["ほら、頑張んなよ","私の足が必要かい？"],"attack":["仙道ドライブキーック！","仙道オーバードライブキーック！","足癖が悪くてね！"],"spell":[]},
+    "faces":[
+      {"label":"無","eff":[]},
+      {"label":"神行法","eff":[{"k":"onAtkNp","t":"ally_svt","v":5},{"k":"star","t":"master","v":5}]},
+      {"label":"仙道シール","eff":[{"k":"heal","t":"ally_svt","v":40},{"k":"onAtkStar","t":"ally_svt","v":3}]},
+      {"label":"天速星","eff":[{"k":"onAtkStar","t":"ally_svt","v":5},{"k":"onAtkNp","t":"ally_svt","v":10},{"k":"atk","t":"ally_svt","v":20,"color":"G"},{"k":"onAtkNp","t":"ally_svt","v":5,"color":"G"},{"k":"critRoll","t":"ally_svt","v":1}]},
+      {"label":"仙道シール","eff":[{"k":"heal","t":"svt","v":30},{"k":"onAtkStar","t":"ally_svt","v":3}]},
+      {"label":"無","eff":[]}
+    ],
+    "spells":[
+      {"name":"韋駄天夏目","eff":[{"k":"evade","t":"ally_svt","v":0,"turns":1},{"k":"actsUp","t":"ally_svt","v":1,"times":1}],"line":["悪いけど、こっちは暇なんだ！"]},
+      {"name":"仙人の知恵","eff":[{"k":"evade","t":"ally_svt","v":0,"turns":3,"times":1},{"k":"actsUp","t":"ally_svt","v":1,"times":1}],"line":["無駄に長生きしてるんでね！"]},
+      {"name":"よくわかんないけど仙丹","eff":[{"k":"guts","t":"ally_svt","v":200,"turns":1,"times":1},{"k":"np","t":"ally_svt","v":15}],"line":["一粒齧れば健康だよ！"]}
+    ]
   }
 ];
