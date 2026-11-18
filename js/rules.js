@@ -19,10 +19,11 @@ const IMG_PLACEHOLDER = { face:'img/placeholder/face.webp', card:'img/placeholde
 // コマンドカードは3枚の重ね合わせ： 背景（bg） → キャラ画像 → 枠と種別名（frame）
 // bg と frame は全サーヴァント共通の素材です。空欄の間は CSS で描いた背景・枠・文字を使います
 // frame の画像に種別名（BUSTER など）を描き込んだ場合は、文字の表示は自動で消えます
+// mark＝カード下部の模様（キャラ画像の上）/ name＝種別名の文字画像（mark の上）。どちらも透過 WebP。name があれば CSS の文字は出しません
 const CARD_LAYERS = {
-  R:   { bg:'', frame:'' },   // Buster
-  B:   { bg:'', frame:'' },   // Arts
-  G:   { bg:'', frame:'' },   // Quick
+  R:   { bg:'', frame:'', mark:'img/ui/cardmark-R.webp', name:'img/ui/cardname-R.webp' },   // Buster
+  B:   { bg:'', frame:'', mark:'img/ui/cardmark-B.webp', name:'img/ui/cardname-B.webp' },   // Arts
+  G:   { bg:'', frame:'', mark:'img/ui/cardmark-G.webp', name:'img/ui/cardname-G.webp' },   // Quick
   ULT: { bg:'', frame:'' },   // 宝具（空欄なら宝具の色の bg を使い、CSS の金枠を付ける）
 };
 

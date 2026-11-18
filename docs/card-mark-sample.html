@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>カード模様サンプル（模様＋文字 別レイヤー）</title>
+<link rel="stylesheet" href="../css/base.css">
+<style>
+:root{--mk-w:92%;--mk-b:2%;--nm-w:72%;--nm-b:5%}
+body{margin:0;padding:20px;background:#0b1226;color:#dfe6ff;font-family:system-ui,"Yu Gothic",sans-serif}
+h1{font-size:18px;margin:0 0 4px}p.n{margin:0 0 14px;color:#9aa6c4;font-size:13px;line-height:1.6}
+.tune{max-width:640px;margin:0 0 18px;padding:12px 14px;border:1px solid #243158;border-radius:8px;background:#0f1832;font-size:13px}
+.tune label{display:flex;gap:8px;align-items:center;margin:6px 0}
+.tune input[type=range]{flex:1}.tune output{width:56px;text-align:right;color:#f6e3a1}
+.tune .k{width:130px;flex:none}
+.row{display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end;margin-bottom:24px}
+.cell{display:flex;flex-direction:column;align-items:center;font-size:11px;color:#9aa6c4;gap:4px}
+/* ---- 本番に入れるならこの部分 ---- 全部カード幅に対する % なので、どの大きさでも比率が崩れない */
+.cc-mark,.cc-name{position:absolute;left:50%;transform:translateX(-50%);height:auto;pointer-events:none}
+.cc-mark{z-index:5;width:var(--mk-w);bottom:var(--mk-b);filter:drop-shadow(0 .6cqw 1cqw rgba(0,0,0,.35))}
+.cc-name{z-index:8;width:var(--nm-w);bottom:var(--nm-b);filter:drop-shadow(0 .5cqw .8cqw rgba(0,0,0,.5))}
+/* 見本の切り替え */
+body.nomark .cc-mark{display:none}
+body.nonm .cc-name,body.nonm .ccname{display:none}
+body.cssname .cc-name{display:none}
+body:not(.cssname) .ccname{display:none}
+body.noimg .ccimg{display:none}
+</style></head><body>
+<h1>カード模様サンプル（模様と文字を別レイヤーに）</h1>
+<p class="n">模様 <code>img/ui/cardmark-R|G|B.webp</code>（z=5）と文字 <code>img/ui/cardname-R|G|B.webp</code>（z=8）を別の透過画像にして重ねています（R=Buster / G=Quick / B=Arts）。<br>
+位置と大きさはスライダーで動かせます。決まった値を教えてもらえれば CSS に固定します。</p>
+<div class="tune">
+  <label><input type="checkbox" id="cMark" checked> 模様を表示</label>
+  <label><input type="checkbox" id="cName" checked> 文字を表示</label>
+  <label><input type="checkbox" id="cCss"> 文字を画像でなく CSS（.ccname）にする（比較用）</label>
+  <label><input type="checkbox" id="cImg" checked> キャラ画像を表示</label>
+  <label><span class="k">模様の幅</span><input type="range" id="mw" min="50" max="110" value="92"><output id="mwo"></output></label>
+  <label><span class="k">模様の下位置</span><input type="range" id="mb" min="-10" max="30" value="2"><output id="mbo"></output></label>
+  <label><span class="k">文字の幅</span><input type="range" id="nw" min="40" max="100" value="72"><output id="nwo"></output></label>
+  <label><span class="k">文字の下位置</span><input type="range" id="nb" min="-5" max="30" value="5"><output id="nbo"></output></label>
+  <label><span class="k">カード幅（下の行）</span><input type="range" id="w" min="24" max="360" value="170"><output id="wo">170px</output></label>
+</div>
+<div id="out"></div>
+<script>
+const IMG='../img/units/adonis.webp';
+const KINDS=[['R','Buster'],['B','Arts'],['G','Quick']];
+function card(col,label,w,cls=''){
+  return `<div class="ccard ${col}${cls}" style="width:${w}px">
+    <img class="ccimg" src="${IMG}" alt="">
+    <img class="cc-mark" src="../img/ui/cardmark-${col}.webp" alt="">
+    <span class="cc-ft"></span><span class="ccname">${label}</span>
+    <img class="cc-name" src="../img/ui/cardname-${col}.webp" alt="${label}">
+    <span class="ccdmg">120</span></div>`;
+}
+const FIX=[24,40,74,110,170,260];
+document.getElementById('out').innerHTML=KINDS.map(([c,l])=>`<div class="row">${FIX.map(w=>`<div class="cell">${card(c,l,w,w<=40?' sm':'')}${w}px</div>`).join('')}</div>`).join('')
+ +`<div class="row" id="var">${KINDS.map(([c,l])=>`<div class="cell">${card(c,l,170)}</div>`).join('')}</div>`;
+const $=id=>document.getElementById(id),R=document.documentElement.style;
+function upd(){
+  const b=document.body.classList;
+  b.toggle('nomark',!$('cMark').checked);b.toggle('nonm',!$('cName').checked);
+  b.toggle('cssname',$('cCss').checked);b.toggle('noimg',!$('cImg').checked);
+  [['mw','--mk-w'],['mb','--mk-b'],['nw','--nm-w'],['nb','--nm-b']].forEach(([i,v])=>{R.setProperty(v,$(i).value+'%');$(i+'o').textContent=$(i).value+'%'});
+  const w=$('w').value;$('wo').textContent=w+'px';
+  document.querySelectorAll('#var .ccard').forEach(e=>e.style.width=w+'px');
+}
+['cMark','cName','cCss','cImg','mw','mb','nw','nb','w'].forEach(i=>$(i).addEventListener('input',upd));upd();
+</script></body></html>
