@@ -149,7 +149,7 @@ table.faces th{color:var(--sub)}
 .cc-mark{position:absolute;left:50%;transform:translateX(-50%);height:auto;pointer-events:none;z-index:5;width:92%;bottom:2%;filter:drop-shadow(0 .6cqw 1cqw rgba(0,0,0,.35))}
 /* 種別名：外の縁(.s)・内側の縁(.m)・金光沢の本体(.f)の3枚を重ねる。値は docs/card-name-tune.html で決めたもの */
 .cc-nm{--rot:-6deg;--sk:-14deg;--fs:21cqw;--ini:1.34em;--scx:1.03;--scy:1;--ls:.045em;--x:50%;--y:10.25%;
-  --ff:"Noto Serif JP",serif;--fw:900;--sw:3.4cqw;--so:#000;--mw:1.2cqw;--mo:#ecc998;--shx:1cqw;--shy:.8cqw;--shb:.8cqw;--shc:#000;
+  --ff:"Noto Serif JP",serif;--fw:900;--sw:3.6cqw;--so:#000;--mw:0cqw;--mo:#ecc998;--shx:1cqw;--shy:.8cqw;--shb:.6cqw;--shc:#000;
   --metal:linear-gradient(96deg,transparent 32%,rgba(255,255,255,.23) 39%,rgba(255,255,255,0) 46%,transparent 100%),linear-gradient(180deg,#fff 0%,#fffaeb 32%,#e7cf97 43.4%,#e8c387 50%,#d0913e 58.8%,#f3cf86 83%,#fff3c4 100%);
   position:absolute;z-index:8;left:var(--x);bottom:var(--y);display:grid;white-space:nowrap;line-height:1.1;pointer-events:none;
   transform-origin:50% 60%;transform:translateX(-50%) rotate(var(--rot)) skewX(var(--sk)) scale(var(--scx),var(--scy));
