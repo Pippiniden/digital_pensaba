@@ -128,8 +128,27 @@ const DEFAULT_MASTERS = [
     ]
   },
   {
+    "id":"m_kota", "name":"一文字コータ", "cost":3, "hp":300,
+    "fit":{"face":{"x":50,"y":0,"z":100},"np":{"x":50,"y":15,"z":85}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%b0%ec%ca%b8%bb%fa%a5%b3%a1%bc%a5%bf",
+    "faces":[
+      {"label":"みんな、ぶっとばせ！","eff":[{"k":"atk","t":"svt","v":20,"color":"R"}],"line":["一気にぶっとばしてやれ！","サーヴァントバトル！　コマンド・オーダー！"]},
+      {"label":"応援","eff":[{"k":"desc","t":"svt","v":0,"text":"コータは精一杯応援している"}],"line":["みんな、がんばってくれ！"]},
+      {"label":"変幻自在の攻撃だ！","eff":[{"k":"onAtkNp","t":"svt","v":10,"color":"B"}],"line":["サーヴァントバトル！　コマンド・オーダー！"]},
+      {"label":"必殺の作戦だ！","eff":[{"k":"atk","t":"ally_svt","v":20,"color":"R"},{"k":"onAtkNp","t":"ally_svt","v":10,"color":"B"},{"k":"onAtkStar","t":"ally_svt","v":4,"color":"G"}],"line":["とびっきりの作戦、いくぞ！"]},
+      {"label":"ひらめき","eff":[{"k":"desc","t":"svt","v":0,"text":"コータは何かひらめいたようだ"}],"line":["そうか、そうだったのか！","わかったぞ！"]},
+      {"label":"スピードで撹乱しろ！","eff":[{"k":"onAtkStar","t":"enemy_master","v":3,"color":"G"}],"line":["スピードで攻めろ！","サーヴァントバトル！　コマンド・オーダー！"]}
+    ],
+    "spells":[
+      {"name":"コマンド：リカバリー","eff":[{"k":"heal","t":"ally_svt","v":200}],"line":["みんな、大丈夫か！？"]},
+      {"name":"コマンド：オーバーパワー","eff":[{"k":"np","t":"ally_svt","v":15},{"k":"npPow","t":"svt","v":70,"turns":1}],"line":["俺達の絆を見せてやろう！"]},
+      {"name":"コマンド：スピーダー","eff":[{"k":"evade","t":"ally_svt","v":0,"turns":1},{"k":"actsUp","t":"ally_svt","v":1,"times":1}],"line":["かわせ、オレのサーヴァント！"]}
+    ]
+  },
+  {
     "id":"m_shadowkaiser", "name":"シャドウカイザー", "cost":4, "hp":350,
     "fit":{"face":{"x":50,"y":0,"z":100},"np":{"x":50,"y":3,"z":105},"cut":{"x":0,"y":9,"z":100}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%a5%b7%a5%e3%a5%c9%a5%a6%a5%ab%a5%a4%a5%b6%a1%bc",
     "lines":{"support":["サーヴァントバトル、コマンド・オーダー！","ゆけっ、我が傀儡よ！","ハッハッハッハ……"],"attack":["聖杯戦争は命のやり取りなのだ！"],"spell":["サーヴァントなど勝つための道具にすぎん！","こうなっては令呪を使うほかあるまい！"]},
     "faces":[
       {"label":"無","eff":[]},
@@ -146,25 +165,27 @@ const DEFAULT_MASTERS = [
     ]
   },
   {
-    "id":"m_kota", "name":"一文字コータ", "cost":3, "hp":300,
-    "fit":{"face":{"x":50,"y":0,"z":100},"np":{"x":50,"y":15,"z":85}},
+    "id":"m_masaru", "name":"大聖寺マサル", "cost":3, "hp":300,
+    "fit":{"face":{"x":50,"y":43,"z":100},"np":{"x":50,"y":31,"z":105},"cut":{"x":0,"y":5,"z":100}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%c2%e7%c0%bb%bb%fb%a5%de%a5%b5%a5%eb",
     "faces":[
-      {"label":"みんな、ぶっとばせ！","eff":[{"k":"atk","t":"svt","v":20,"color":"R"}],"line":["一気にぶっとばしてやれ！","サーヴァントバトル！　コマンド・オーダー！"]},
-      {"label":"応援","eff":[{"k":"desc","t":"svt","v":0,"text":"コータは精一杯応援している"}],"line":["みんな、がんばってくれ！"]},
-      {"label":"変幻自在の攻撃だ！","eff":[{"k":"onAtkNp","t":"svt","v":10,"color":"B"}],"line":["サーヴァントバトル！　コマンド・オーダー！"]},
-      {"label":"必殺の作戦だ！","eff":[{"k":"atk","t":"ally_svt","v":20,"color":"R"},{"k":"onAtkNp","t":"ally_svt","v":10,"color":"B"},{"k":"onAtkStar","t":"ally_svt","v":4,"color":"G"}],"line":["とびっきりの作戦、いくぞ！"]},
-      {"label":"ひらめき","eff":[{"k":"desc","t":"svt","v":0,"text":"コータは何かひらめいたようだ"}],"line":["そうか、そうだったのか！","わかったぞ！"]},
-      {"label":"スピードで撹乱しろ！","eff":[{"k":"onAtkStar","t":"enemy_master","v":3,"color":"G"}],"line":["スピードで攻めろ！","サーヴァントバトル！　コマンド・オーダー！"]}
+      {"label":"","eff":[]},
+      {"label":"","eff":[{"k":"def","t":"ally_svt","v":20},{"k":"maxHp","t":"svt","v":60}]},
+      {"label":"","eff":[{"k":"def","t":"svt","v":20},{"k":"maxHp","t":"svt","v":40}]},
+      {"label":"","eff":[{"k":"def","t":"ally_svt","v":30},{"k":"maxHp","t":"ally_svt","v":80}]},
+      {"label":"","eff":[{"k":"def","t":"svt","v":20},{"k":"maxHp","t":"svt","v":30}]},
+      {"label":"","eff":[]}
     ],
     "spells":[
-      {"name":"コマンド：リカバリー","eff":[{"k":"heal","t":"ally_svt","v":200}],"line":["みんな、大丈夫か！？"]},
-      {"name":"コマンド：オーバーパワー","eff":[{"k":"np","t":"ally_svt","v":15},{"k":"npPow","t":"svt","v":70,"turns":1}],"line":["俺達の絆を見せてやろう！"]},
-      {"name":"コマンド：スピーダー","eff":[{"k":"evade","t":"ally_svt","v":0,"turns":1},{"k":"actsUp","t":"ally_svt","v":1,"times":1}],"line":["かわせ、オレのサーヴァント！"]}
+      {"name":"必殺強化","eff":[{"k":"npPow","t":"ally_svt","v":100,"turns":1}]},
+      {"name":"応急手当","eff":[{"k":"heal","t":"ally_svt","v":200}]},
+      {"name":"緊急回避","eff":[{"k":"evade","t":"ally_svt","v":0,"turns":1},{"k":"actsUp","t":"ally_svt","v":1,"times":1}]}
     ]
   },
   {
     "id":"m_erika", "name":"黒咲恵梨佳", "cost":4, "hp":350,
     "fit":{"face":{"x":50,"y":16,"z":100},"np":{"x":50,"y":14,"z":89}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%b9%f5%ba%e9%b7%c3%cd%fc%b2%c2",
     "faces":[
       {"label":"高速思考","eff":[{"k":"desc","t":"self","v":0,"text":"黒咲恵梨佳は戦況を見極めようとしている。"}]},
       {"label":"血晶魔術・治癒","eff":[{"k":"heal","t":"ally_svt","v":30}]},
@@ -181,7 +202,8 @@ const DEFAULT_MASTERS = [
   },
   {
     "id":"m_seiji", "name":"柏木星司", "cost":5, "hp":470,
-    "fit":{"np":{"x":50,"y":14,"z":94}},
+    "fit":{"face":{"x":50,"y":11,"z":100},"np":{"x":50,"y":14,"z":94}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%c7%f0%cc%da%c0%b1%bb%ca",
     "faces":[
       {"label":"","eff":[{"k":"onAtkStar","t":"ally_svt","v":3}]},
       {"label":"","eff":[{"k":"onAtkStar","t":"ally_svt","v":3}]},
@@ -197,8 +219,27 @@ const DEFAULT_MASTERS = [
     ]
   },
   {
+    "id":"m_antonia", "name":"シスター・アントニア", "cost":2, "hp":330,
+    "fit":{"face":{"x":50,"y":15,"z":100},"np":{"x":50,"y":9,"z":105},"cut":{"x":0,"y":11,"z":100}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%a5%b7%a5%b9%a5%bf%a1%bc%a1%a6%a5%a2%a5%f3%a5%c8%a5%cb%a5%a2",
+    "faces":[
+      {"label":"","eff":[]},
+      {"label":"","eff":[]},
+      {"label":"","eff":[{"k":"onAtkNp","t":"ally_svt","v":10,"color":"B"},{"k":"heal","t":"ally_svt","v":30},{"k":"def","t":"ally_svt","v":15}]},
+      {"label":"","eff":[{"k":"onAtkNp","t":"svt","v":15,"color":"B"},{"k":"heal","t":"svt","v":50},{"k":"def","t":"ally_svt","v":25}]},
+      {"label":"","eff":[{"k":"onAtkNp","t":"ally_svt","v":10,"color":"B"},{"k":"heal","t":"ally_svt","v":30},{"k":"def","t":"ally_svt","v":15}]},
+      {"label":"","eff":[]}
+    ],
+    "spells":[
+      {"name":"瞬間強化","eff":[{"k":"atk","t":"ally_svt","v":40,"turns":1},{"k":"def","t":"ally_svt","v":30,"turns":1}]},
+      {"name":"霊子向上・全","eff":[{"k":"atk","t":"svt","v":20,"turns":1,"color":"B"},{"k":"onAtkNp","t":"svt","v":10,"turns":1},{"k":"np","t":"svt","v":10}]},
+      {"name":"A.A.A.","eff":[{"k":"atk","t":"ally_svt","v":68,"turns":1,"color":"B"},{"k":"nullUnder","t":"ally_svt","v":68,"turns":1},{"k":"np","t":"ally_svt","v":68},{"k":"actsUp","t":"ally_svt","v":1,"turns":1}]}
+    ]
+  },
+  {
     "id":"m_ssetsuna", "name":"五月雨刹那", "cost":4, "hp":400,
     "fit":{"face":{"x":50,"y":0,"z":100}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%b8%de%b7%ee%b1%ab%d1%eb%c6%e1",
     "faces":[
       {"label":"","eff":[{"k":"onAtkStar","t":"ally_svt","v":3},{"k":"onAtkNp","t":"ally_svt","v":5,"cond":{"k":"trait","v":"女性"}}]},
       {"label":"","eff":[{"k":"star","t":"master","v":6},{"k":"atk","t":"svt","v":10,"cond":{"k":"trait","v":"女性","self":true}}]},
@@ -214,8 +255,9 @@ const DEFAULT_MASTERS = [
     ]
   },
   {
-    "id":"m_jubiro", "name":"石鷹授比郎", "cost":1, "hp":230,
+    "id":"m_jubiro", "name":"石鷹授比郎", "cost":1, "hp":250,
     "fit":{"face":{"x":50,"y":0,"z":100},"np":{"x":50,"y":8,"z":105},"cut":{"x":0,"y":8,"z":100}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%c0%d0%c2%eb%bc%f8%c8%e6%cf%ba",
     "lines":{"support":["こいつぁスゲェ！！なんて入り組んだストーリーと謎だ！！","この聖杯戦争に！！俺達の骨を埋めてやろうじゃねぇかぁ！！","この戦争に勝てないと心が折れたら、逃げ時だぜ？"],"attack":[],"spell":["先の詠める漫画なんざつまらないにもほどがあるだろうがァァアアア！！！","この聖杯戦争ッ！！”俺に描かせろ”ッッッ！！！！"]},
     "faces":[
       {"label":"","eff":[{"k":"atk","t":"ally_svt","v":40,"color":"R"},{"k":"onAtkNp","t":"ally_svt","v":10}]},
@@ -234,6 +276,7 @@ const DEFAULT_MASTERS = [
   {
     "id":"m_seimei", "name":"安倍晴明", "cost":5, "hp":500,
     "fit":{"face":{"x":50,"y":0,"z":119},"np":{"x":50,"y":9,"z":105}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%b0%c2%c7%dc%c0%b2%cc%c0",
     "faces":[
       {"label":"鉄拳","eff":[{"k":"dmg","t":"enemy_master","v":100}],"line":["ふはははは！　貴様に術など不要！"]},
       {"label":"鉄拳","eff":[{"k":"dmg","t":"enemy_master","v":100}],"line":["ふはははは！　貴様に術など不要！"]},
@@ -251,6 +294,7 @@ const DEFAULT_MASTERS = [
   {
     "id":"m_kuzunoha", "name":"葛の葉", "cost":1, "hp":100,
     "fit":{"face":{"x":50,"y":0,"z":100}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%b3%eb%a4%ce%cd%d5",
     "faces":[
       {"label":"無","eff":[],"line":["わはは、このマンガは面白いのう！"]},
       {"label":"狸丼","eff":[{"k":"heal","t":"ally_svt","v":30}],"line":["狸丼さんや、おやつを持ってきてたもれ"]},
@@ -268,6 +312,7 @@ const DEFAULT_MASTERS = [
   {
     "id":"m_kiri", "name":"ドクトル・キリ", "cost":3, "hp":280,
     "fit":{"face":{"x":50,"y":0,"z":100},"np":{"x":50,"y":3,"z":105},"cut":{"x":0,"y":9,"z":100}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%a5%c9%a5%af%a5%c8%a5%eb%a1%a6%a5%ad%a5%ea",
     "faces":[
       {"label":"無","eff":[],"line":["ん？　まちがったかな……"]},
       {"label":"治療手術","eff":[{"k":"heal","t":"ally_svt","v":30}],"line":["ま、この程度ならねー"]},
@@ -285,6 +330,7 @@ const DEFAULT_MASTERS = [
   {
     "id":"m_isla", "name":" アイラ・ダウル・オルナ", "cost":5, "hp":540,
     "fit":{"face":{"x":50,"y":21,"z":100}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%a5%a2%a5%a4%a5%e9%a1%a6%a5%c0%a5%a6%a5%eb%a1%a6%a5%aa%a5%eb%a5%ca",
     "faces":[
       {"label":"","eff":[{"k":"onAtkNp","t":"ally_svt","v":10},{"k":"onAtkNp","t":"ally_svt","v":5,"color":"B"},{"k":"atk","t":"ally_svt","v":30,"color":"B"},{"k":"cardConv","t":"ally_svt","v":0,"color":"B"}]},
       {"label":"","eff":[{"k":"onAtkNp","t":"svt","v":10},{"k":"onAtkNp","t":"ally_svt","v":5,"color":"B"},{"k":"atk","t":"ally_svt","v":20,"color":"B"}]},
@@ -302,6 +348,7 @@ const DEFAULT_MASTERS = [
   {
     "id":"m_ophelia", "name":"ベアズリー・オフィーリア", "cost":3, "hp":300,
     "fit":{"face":{"x":50,"y":0,"z":100}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%a5%d9%a5%a2%a5%ba%a5%ea%a1%bc%a1%a6%a5%aa%a5%d5%a5%a3%a1%bc%a5%ea%a5%a2",
     "faces":[
       {"label":"","eff":[{"k":"heal","t":"svt","v":30}]},
       {"label":"","eff":[{"k":"heal","t":"ally_svt","v":50}]},
@@ -317,25 +364,9 @@ const DEFAULT_MASTERS = [
     ]
   },
   {
-    "id":"m_masaru", "name":"大聖寺マサル", "cost":3, "hp":300,
-    "fit":{"face":{"x":50,"y":43,"z":100},"np":{"x":50,"y":31,"z":105},"cut":{"x":0,"y":5,"z":100}},
-    "faces":[
-      {"label":"","eff":[]},
-      {"label":"","eff":[{"k":"def","t":"ally_svt","v":20},{"k":"maxHp","t":"svt","v":60}]},
-      {"label":"","eff":[{"k":"def","t":"svt","v":20},{"k":"maxHp","t":"svt","v":40}]},
-      {"label":"","eff":[{"k":"def","t":"ally_svt","v":30},{"k":"maxHp","t":"ally_svt","v":80}]},
-      {"label":"","eff":[{"k":"def","t":"svt","v":20},{"k":"maxHp","t":"svt","v":30}]},
-      {"label":"","eff":[]}
-    ],
-    "spells":[
-      {"name":"必殺強化","eff":[{"k":"npPow","t":"ally_svt","v":100,"turns":1}]},
-      {"name":"応急手当","eff":[{"k":"heal","t":"ally_svt","v":200}]},
-      {"name":"緊急回避","eff":[{"k":"evade","t":"ally_svt","v":0,"turns":1},{"k":"actsUp","t":"ally_svt","v":1,"times":1}]}
-    ]
-  },
-  {
     "id":"m_chudovishche", "name":"チュドーヴィシチェ", "cost":2, "hp":240,
     "fit":{"face":{"x":50,"y":16,"z":100},"np":{"x":50,"y":0,"z":77},"cut":{"x":0,"y":1,"z":87}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%a5%c1%a5%e5%a5%c9%a1%bc%a5%f4%a5%a3%a5%b7%a5%c1%a5%a7",
     "faces":[
       {"label":"にじり寄り","eff":[]},
       {"label":"咀嚼","eff":[{"k":"dmg","t":"enemy_master","v":70}]},
@@ -352,7 +383,8 @@ const DEFAULT_MASTERS = [
   },
   {
     "id":"m_natsume", "name":"千速棗", "cost":3, "hp":400,
-    "fit":{"np":{"x":50,"y":11,"z":105},"cut":{"x":0,"y":0,"z":93}},
+    "fit":{"face":{"x":50,"y":15,"z":100},"np":{"x":50,"y":11,"z":105},"cut":{"x":0,"y":0,"z":93}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%c0%e9%c2%ae%dc%a7",
     "lines":{"support":["ほら、頑張んなよ","私の足が必要かい？"],"attack":["仙道ドライブキーック！","仙道オーバードライブキーック！","足癖が悪くてね！"],"spell":[]},
     "faces":[
       {"label":"無","eff":[]},
@@ -385,24 +417,6 @@ const DEFAULT_MASTERS = [
       {"name":"混沌再臨","eff":[{"k":"skillCharge","t":"ally_svt","v":1}]},
       {"name":"蛹は羽化せず","eff":[{"k":"heal","t":"ally_svt","v":200}]},
       {"name":"擬似宇宙・災厄世界","eff":[{"k":"dmg","t":"enemy_both","v":80},{"k":"curse","t":"enemy_both","v":0,"times":1,"chance":3}]}
-    ]
-  },
-  {
-    "id":"m_antonia", "name":"シスター・アントニア", "cost":2, "hp":330,
-    "fit":{"face":{"x":50,"y":15,"z":100},"np":{"x":50,"y":9,"z":105},"cut":{"x":0,"y":11,"z":100}},
-    "link":"https://seesaawiki.jp/kagemiya/d/%a5%b7%a5%b9%a5%bf%a1%bc%a1%a6%a5%a2%a5%f3%a5%c8%a5%cb%a5%a2",
-    "faces":[
-      {"label":"","eff":[]},
-      {"label":"","eff":[]},
-      {"label":"","eff":[{"k":"onAtkNp","t":"ally_svt","v":10,"color":"B"},{"k":"heal","t":"ally_svt","v":30},{"k":"def","t":"ally_svt","v":15}]},
-      {"label":"","eff":[{"k":"onAtkNp","t":"svt","v":15,"color":"B"},{"k":"heal","t":"svt","v":50},{"k":"def","t":"ally_svt","v":25}]},
-      {"label":"","eff":[{"k":"onAtkNp","t":"ally_svt","v":10,"color":"B"},{"k":"heal","t":"ally_svt","v":30},{"k":"def","t":"ally_svt","v":15}]},
-      {"label":"","eff":[]}
-    ],
-    "spells":[
-      {"name":"瞬間強化","eff":[{"k":"atk","t":"ally_svt","v":40,"turns":1},{"k":"def","t":"ally_svt","v":30,"turns":1}]},
-      {"name":"霊子向上・全","eff":[{"k":"atk","t":"svt","v":20,"turns":1,"color":"B"},{"k":"onAtkNp","t":"svt","v":10,"turns":1},{"k":"np","t":"svt","v":10}]},
-      {"name":"A.A.A.","eff":[{"k":"atk","t":"ally_svt","v":68,"turns":1,"color":"B"},{"k":"nullUnder","t":"ally_svt","v":68,"turns":1},{"k":"np","t":"ally_svt","v":68},{"k":"actsUp","t":"ally_svt","v":1,"turns":1}]}
     ]
   }
 ];

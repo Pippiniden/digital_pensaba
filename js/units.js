@@ -279,6 +279,8 @@ const DEFAULT_UNITS = [
     "id":"kagemiya", "name":"カゲミヤ", "cls":"シャドウチェイサー", "cost":4, "hp":680,
     "traits":["中立","中庸","人","男性","愛する者"],
     "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":7,"z":89},"cut":{"x":0,"y":2,"z":97}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%a5%ab%a5%b2%a5%df%a5%e4",
+    "memo":"君の人生は、不幸なものであったのか────",
     "lines":{
       "start":[],
       "attack":[],
@@ -1134,7 +1136,9 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"croesusalter", "name":"クロイソス【オルタ】", "cls":"セイバー", "cost":5, "hp":830,
+    "traits":["男性","混沌","善","人","人型","王"],
     "fit":{"face":{"x":50,"y":36,"z":115},"card":{"x":50,"y":46,"z":122},"np":{"x":50,"y":14,"z":105},"cut":{"x":0,"y":4,"z":100}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%a5%af%a5%ed%a5%a4%a5%bd%a5%b9%a1%ca%a5%aa%a5%eb%a5%bf%a1%cb",
     "lines":{
       "start":["金の力はクラスすら自在に選べるのだ！"],
       "attack":["冨め、『蛇銭剣』","お前は釣り合う相手か？","これが俺の『千両邪銭金櫻』だ…"],
@@ -1200,6 +1204,7 @@ const DEFAULT_UNITS = [
     "id":"odysseiya", "name":"オデュッセウス", "cls":"グラップラー", "cost":3, "hp":520,
     "traits":["女性","混沌","善","地","ギリシャ","王"],
     "fit":{"face":{"x":50,"y":10,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":14,"z":98},"cut":{"x":0,"y":0,"z":88}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%a5%aa%a5%c7%a5%e5%a5%c3%a5%bb%a5%a6%a5%b9%28%b7%fd%29",
     "lines":{
       "start":["よーい、どんだ！","ゴングを鳴らしてくれ！","キミは自分の体の中にコスモを感じたことはあるかい？"],
       "attack":["せいや！","しゅん！","しゃいな！"],
