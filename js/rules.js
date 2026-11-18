@@ -261,7 +261,7 @@ const FX = {
   atkTrait:{name:'特攻',buff:true,val:true,trait:true},      // 攻撃対象が属性 trait を持っていれば攻撃ダメージ+x
   defTrait:{name:'特防',buff:true,val:true,trait:true},      // 攻撃してきた相手が属性 trait を持っていれば被ダメージ-x（被ダメージ減少無視で無視される）           // 攻撃対象が弱体（vs で種類を限定、未指定なら何でも）を受けていれば攻撃ダメージ+x
   counter:{name:'反撃',buff:true,val:true},                  // 攻撃（コマンド・宝具）を受けるたびに攻撃側へxダメージ（補正・無敵・回避の影響なし）
-  // 被ダメージ時○○：攻撃対象になったターンの終了フェイズに1回発動（回避・無敵で防いでも発動）
+  // 被ダメージ時NP：ダメージを受けるたびに発動（回避・無敵で防いだ攻撃では発動しない）。被ダメージ時スター：攻撃対象になったターンの終了フェイズに1回
   onHitNp:{name:'被ダメージ時NP獲得',buff:true,val:true},      // NP+x%（呪いで止まる）
   hitNpUp:{name:'被弾時NP獲得量アップ',buff:true,val:true},     // 攻撃を受けて実際にダメージを受けるたびのNP獲得が+x%（回避・無敵では増えない。呪いで止まる）
   onHitStar:{name:'被ダメージ時スター獲得',buff:true,val:true}, // 自分のマスターがスターx個獲得

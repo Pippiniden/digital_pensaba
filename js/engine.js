@@ -478,10 +478,13 @@ function dealDamage(u,dmg,isHit,o={}){
   u.hp=hp1;
   if(ko){ markKiller(u,o.att||o.src); if(!gutsHold(u)){ retreat(u); return; } } // ガッツ：一連の攻撃が終わるまでHP0で踏みとどまる
   if(isHit){
-    // 被ダメージ時○○ はここではなく、攻撃対象になったターンの終了フェイズ（hitEffects）で発動する
-    const c=npSealFx(u);
-    if(c){ consume(u,[c]); log(`${nm(u)}は${FX[c.k].name}で${TERMS.gauge}が増えない`,'sub'); }
-    else{ const hu=mods(u,'hitNpUp'); addNp(u,npRate(u,RULES.gaugeOnHit+hu.sum),'other'); if(hu.list.length) consume(u,hu.list); } // 被弾時NP獲得量アップ（回避・無敵で防いだ攻撃はここに来ない）
+    // 被ダメージ時NP（onHitNp）も被弾のたびにここで加算する（被ダメージ時スターだけは終了フェイズの hitEffects）
+    const c=npSealFx(u), hn=mods(u,'onHitNp');
+    if(c){ consume(u,[c]); log(`${nm(u)}は${FX[c.k].name}で${TERMS.gauge}が増えない`,'sub'); if(hn.list.length) consume(u,hn.list); }
+    else{
+      const hu=mods(u,'hitNpUp'); addNp(u,npRate(u,RULES.gaugeOnHit+hu.sum),'other'); if(hu.list.length) consume(u,hu.list); // 被弾時NP獲得量アップ（回避・無敵で防いだ攻撃はここに来ない）
+      if(hn.sum){ addNp(u,hn.sum,'other'); log(`${nm(u)} 被ダメージ時：${TERMS.gauge}+${hn.sum}%`,'good'); consume(u,hn.list); }
+    }
     // 反撃：攻撃側へ固定ダメージ（補正・無敵・回避・クリティカルの影響なし、NPは増えない）
     const ct=mods(u,'counter'), a=o.att;
     if(ct.sum&&a&&!a.out){
@@ -864,13 +867,7 @@ function hitEffects(){
   ALL().forEach(u=>{
     if(!u.tgtd) return; delete u.tgtd;
     if(u.out) return;
-    const hn=mods(u,'onHitNp'), hs=mods(u,'onHitStar');
-    if(hn.sum){
-      const c=npSealFx(u);
-      if(c){ consume(u,[c]); log(`${nm(u)}は${FX[c.k].name}で被ダメージ時の${TERMS.gauge}が増えない`,'sub'); }
-      else { addNp(u,hn.sum,'other'); log(`${nm(u)} 被ダメージ時：${TERMS.gauge}+${hn.sum}%`,'good'); }
-      consume(u,hn.list);
-    }
+    const hs=mods(u,'onHitStar');
     if(hs.sum){ gainStars(u.pid,hs.sum); log(`${nm(u)} 被ダメージ時：${TERMS.star}${hs.sum}個獲得`,'good'); consume(u,hs.list); }
     syncU(u);
   });
