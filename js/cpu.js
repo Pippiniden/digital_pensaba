@@ -549,6 +549,9 @@ function cpuEffScore(u,effs,picked,si){
       case 'healBlock': sc+=foes.some(t=>hpR(t)<.7||t.fx.some(x=>x.k==='regenHp'))?2:1; break;
       case 'cardConv': case 'cardConvPick': sc+=acting?1.5:.5; break;
       case 'buffExtend': sc+=ts.some(t=>t.fx.some(x=>FX[x.k].buff===true&&x.turns!=null))?2:0; break;
+      case 'ascend': { // 再臨できる味方がいれば価値あり。スキル3が未使用ならさらに高い（再臨でそのターンから使える）。再臨済みだけなら使わない
+        const can=ts.filter(t=>t.pid===u.pid&&!t.master&&!t.out&&!t.asc);
+        sc+=can.length?(can.some(t=>!t.used[2])?5:3.5):-3; break; }
       case 'skillCharge': sc+=ts.some(t=>t.used.some((x,i)=>x&&!(t===u&&i===si)))?3:-1; break;
       case 'cleanse': sc+=ts.some(t=>t.fx.some(x=>e.vs?x.k===e.vs:FX[x.k].buff===false))?2:0; break;
       case 'np': sc+=ts.some(t=>t.np<RULES.ultCost&&t.np+e.v>=RULES.ultCost)?4:ts.some(t=>t.np<RULES.ultCost)?1.5:0; break;

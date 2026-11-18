@@ -632,6 +632,7 @@ function fxText(e){
     case 'cardConvPick': s='カード変換→Buster/Arts/Quickから選ぶ'; break;
     case 'buffExtend': s=`強化の効果時間+${e.v}T`; break;
     case 'skillCharge': s=`使用済みスキル${e.v}個を再使用可能に`; break;
+    case 'ascend': s=TERMS.ascFull; break;
     case 'np': s=`${TERMS.gauge}${e.v>=0?'+':''}${e.v}%`; break;
     case 'star': s=`${TERMS.star}${e.v}個獲得`; break;
     case 'dmg': s=e.max?'最大HPぶんのダメージ(軽減不可)':`${e.v}ダメージ`; break;

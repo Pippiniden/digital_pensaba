@@ -408,6 +408,9 @@ function applyOne0(src,t,e,o={}){
       idx.forEach(i=>t.used[i]=false);
       log(idx.length?`${nm(t)}のスキル${idx.map(i=>i+1).join('・')}が再使用可能に`:`${nm(t)}に使用済みのスキルがない`, idx.length?'good':'sub'); return;
     }
+    case 'ascend': // スキルによる再臨。マスター・戦闘不能・再臨済みには効果なし
+      if(t.master||t.out||t.asc){ log(`${nm(t)}は${TERMS.asc}の効果を受けられない`,'sub'); return; }
+      ascend(t); return;
     case 'instantDeath': { // HPを0にする。ガッツがあれば踏みとどまる
       log(`${nm(t)}に即死効果`,'bad');
       const g=has(t,'guts');

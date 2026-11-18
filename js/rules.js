@@ -299,6 +299,8 @@ const FX = {
   buffExtend:{name:'強化延長',val:true,inst:true},           // 対象のターン制の強化すべての残りターン+x
   skillCharge:{name:'スキル再使用',val:true,inst:true},      // 対象の使用済みスキルをx個（番号の若い順）もう一度使えるようにする。使ったスキル自身・スキル再使用を持つスキルは戻らない
   dmg:{name:'ダメージ',val:true,inst:true,maxOk:true,only:['ult','master']}, // マスターの補助・令呪では固定ダメージ（補正・無敵・回避なし）。max で対象の最大HPぶん（軽減不可）
+  // 再臨：対象のサーヴァントを再臨させる（再臨後コマンド・スキル3解放）。すでに再臨済み・戦闘不能・マスターには効果なし
+  ascend:{name:'再臨',inst:true},
   // 特殊行動専用：自分以外の戦闘不能でないサーヴァント1体（敵味方どちらでも）を選び、その鉛筆を代わりにロールして
   // 出た再臨後コマンドをこの行動として使う
   // 宝具でも使える：宝具の「対象の選び方」で選んだ1体の鉛筆をロール（選ばないときはランダムに1体）。出たコマンドを攻撃対象に使う（NP・スターは増えない）
@@ -338,7 +340,7 @@ const FX_GROUPS = [
   ['防御・耐性', ['def','defTrait','evade','invul','guts','taunt','nullUnder','counter','maxHp','debuffImmune','mentalImmune','deathImmune','stripImmune','npDownImmune','starLossImmune']],
   ['継続・ターン', ['actsUp','regenHp','regenNp','regenStar','onHitNp','hitNpUp','onHitStar']],
   ['弱体', ['atkDown','atkPctDown','npPowDown','defDown','critDown','starDown','npGainDown','debuffDown','debuffResDown','buffDown','poison','burn','spread','drain','curse','hitNpSeal','stun','charm','fear','actsDown','sealSkill','sealUlt','healBlock','buffImmune']],
-  ['回復・即時', ['heal','np','star','starLoss','cleanse','cleanseMental','strip','buffExtend','skillCharge','copyBuff','copyDebuff']],
+  ['回復・即時', ['heal','np','star','starLoss','cleanse','cleanseMental','strip','buffExtend','skillCharge','ascend','copyBuff','copyDebuff']],
   ['攻撃・特殊', ['dmg','multiHit','aoe','selfDmg','instantDeath','copyRoll']],
   ['表示', ['desc']],
 ];
