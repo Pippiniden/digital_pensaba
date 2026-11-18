@@ -696,8 +696,10 @@ function zukanLinesHTML(d){
   const rows=Object.entries(keys).map(([k,label])=>[k,label,(d.lines&&d.lines[k])||[],cond(k)]).filter(([,,l,c])=>l.length||c.length);
   if(!rows.length) return '';
   const cl=c=>condLineText(c); // 例：味方に黒咲恵梨佳がいる場合
+  // 同じ条件文のものは1つにまとめる（出てきた順）
+  const condGroups=c=>{ const m=new Map(); c.forEach(x=>{ const t=cl(x); m.set(t,(m.get(t)||[]).concat(x.lines)); }); return [...m]; };
   return `<h4>セリフ</h4><div class="zlines">${rows.map(([k,label,l,c])=>`<details><summary>${esc(label)}<small class="sub">${l.length+c.reduce((n,x)=>n+x.lines.length,0)}件</small></summary>
-    <ul>${l.map(t=>`<li>${esc(t)}</li>`).join('')}${c.map(x=>x.lines.map(t=>`<li class="zcond"><small>${esc(cl(x))}</small>${esc(t)}</li>`).join('')).join('')}</ul></details>`).join('')}</div>`;
+    <ul>${l.map(t=>`<li>${esc(t)}</li>`).join('')}${condGroups(c).map(([txt,ls])=>`<li class="zcond"><small>${esc(txt)}</small>${ls.map(esc).join('<br>')}</li>`).join('')}</ul></details>`).join('')}</div>`;
 }
 const zukanDetailHTML = d=>unitDetailHTML(d).replace(/<\/div>\s*$/,'')+recUnitHTML(d)+zukanLinesHTML(d)+'</div>';
 // 編成画面・図鑑のどちらでも、右の詳細欄と ⓘ のウィンドウに出す中身
