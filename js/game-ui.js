@@ -696,12 +696,18 @@ function zukanLinesHTML(d){
   // 条件つきセリフは、その場面の中に条件を添えて並べる（「味方のだれか」が〇〇のとき など）
   const cond=k=>(d.condLines||[]).filter(c=>c.key===k&&c.lines.length);
   const rows=Object.entries(keys).map(([k,label])=>[k,label,(d.lines&&d.lines[k])||[],cond(k)]).filter(([,,l,c])=>l.length||c.length);
-  if(!rows.length) return '';
+  // スキル・鉛筆の面ごとの専用セリフ（その行動のときだけ通常セリフの代わりに出るもの）
+  const own=[];
+  (d.skills||[]).forEach((s,i)=>{ if(s.line&&s.line.length) own.push([`スキル${i+1}${s.name?`：${s.name}`:''}`,s.line]); });
+  (d.faces||[]).forEach((f,i)=>[['pre','前'],['post','後']].forEach(([w,wl])=>{ const c=f[w];
+    if(c&&c.line&&c.line.length&&!(w==='post'&&f.pre&&f.pre.line===c.line)) own.push([`鉛筆の面${i+1}（${wl}）${c.label?`：${c.label}`:''}`,c.line]); }));
+  const ownHTML=own.length?`<h4>行動限定のセリフ</h4><div class="zlines">${own.map(([t,l])=>`<details><summary>${esc(t)}<small class="sub">${l.length}件</small></summary><ul>${l.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></details>`).join('')}</div>`:'';
+  if(!rows.length) return ownHTML;
   const cl=c=>condLineText(c); // 例：味方に黒咲恵梨佳がいる場合
   // 同じ条件文のものは1つにまとめる（出てきた順）
   const condGroups=c=>{ const m=new Map(); c.forEach(x=>{ const t=cl(x); m.set(t,(m.get(t)||[]).concat(x.lines)); }); return [...m]; };
   return `<h4>セリフ</h4><div class="zlines">${rows.map(([k,label,l,c])=>`<details><summary>${esc(label)}<small class="sub">${l.length+c.reduce((n,x)=>n+x.lines.length,0)}件</small></summary>
-    <ul>${l.map(t=>`<li>${esc(t)}</li>`).join('')}${condGroups(c).map(([txt,ls])=>`<li class="zcond"><small>${esc(txt)}</small>${ls.map(esc).join('<br>')}</li>`).join('')}</ul></details>`).join('')}</div>`;
+    <ul>${l.map(t=>`<li>${esc(t)}</li>`).join('')}${condGroups(c).map(([txt,ls])=>`<li class="zcond"><small>${esc(txt)}</small>${ls.map(esc).join('<br>')}</li>`).join('')}</ul></details>`).join('')}</div>${ownHTML}`;
 }
 const zukanDetailHTML = d=>unitDetailHTML(d).replace(/<\/div>\s*$/,'')+recUnitHTML(d)+zukanLinesHTML(d)+'</div>';
 // 編成画面・図鑑のどちらでも、右の詳細欄と ⓘ のウィンドウに出す中身
