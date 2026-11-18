@@ -929,7 +929,7 @@ const DEFAULT_UNITS = [
       {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
       {"acts":1,"pre":{"c":"B","dmg":60,"np":15,"star":0},"post":{"c":"B","dmg":80,"np":20,"star":0}},
-      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"破壊工作","eff":[{"k":"atkDown","t":"enemy_all","v":20,"turns":3},{"k":"defDown","t":"target","v":20,"turns":3}],"dmg":0,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"破壊工作","eff":[{"k":"atkDown","t":"enemy_all","v":20,"turns":3},{"k":"defDown","t":"enemy_all","v":20,"turns":3}],"dmg":0,"np":0,"star":0}},
       {"acts":3,"pre":{"c":"B","dmg":60,"np":15,"star":0},"post":{"c":"B","dmg":70,"np":20,"star":0}},
       {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":4},"post":{"c":"G","dmg":60,"np":0,"star":6}}
     ],
@@ -1170,7 +1170,7 @@ const DEFAULT_UNITS = [
     "ult":{"name":"信仰はかくも容易く崩れ去る","c":"B","eff":[{"k":"critRoll","t":"self","v":3,"turns":1},{"k":"copyBuff","t":"self","v":0,"from":"target"},{"k":"copyRoll","t":"self","v":0},{"k":"copyRoll","t":"self","v":0},{"k":"copyRoll","t":"self","v":0}],"ruby":"しゅへのうらぎり","pick":"any"}
   },
   {
-    "id":"logistilla", "name":"ロジェスティラ", "cls":"キャスター", "cost":4, "hp":680,
+    "id":"logistilla", "name":"ロジェスティラ", "cls":"キャスター", "cost":4, "hp":670,
     "traits":["女性","秩序","善","フランス","地","人型"],
     "fit":{"face":{"x":50,"y":12,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":8,"z":87},"cut":{"x":0,"y":6,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%ed%a5%b8%a5%a7%a5%b9%a5%c6%a5%a3%a5%e9",
@@ -1189,7 +1189,7 @@ const DEFAULT_UNITS = [
       {"acts":1,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":90,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
       {"acts":1,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
-      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"真・恐慌呼び起こせし魔笛","eff":[{"k":"curse","t":"enemy_all","v":0,"times":1,"chance":2},{"k":"evade","t":"self","v":0,"turns":3,"times":2}],"dmg":0,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"真・恐慌呼び起こせし魔笛","eff":[{"k":"curse","t":"enemy_all","v":0,"times":1,"chance":2},{"k":"evade","t":"self","v":0,"turns":3,"times":3}],"dmg":0,"np":0,"star":0}},
       {"acts":3,"pre":{"c":"B","dmg":50,"np":10,"star":0},"post":{"c":"B","dmg":60,"np":15,"star":0}},
       {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":4},"post":{"c":"G","dmg":40,"np":0,"star":6}}
     ],
@@ -1224,7 +1224,7 @@ const DEFAULT_UNITS = [
       {"acts":1,"pre":{"c":"R","dmg":60,"np":0,"star":0},"post":{"c":"R","dmg":80,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":35,"np":15,"star":0,"eff":[{"k":"multiHit","t":"self","v":2}]}},
       {"acts":1,"pre":{"c":"B","dmg":40,"np":10,"star":0},"post":{"c":"B","dmg":30,"np":10,"star":0,"eff":[{"k":"multiHit","t":"self","v":2}]}},
-      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"特殊行動","eff":[{"k":"evade","t":"self","v":0,"turns":1},{"k":"counter","t":"self","v":30,"turns":1}],"dmg":0,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"クロスカウンター","eff":[{"k":"evade","t":"self","v":0,"turns":1},{"k":"counter","t":"self","v":30,"turns":1}],"dmg":0,"np":0,"star":0}},
       {"acts":3,"pre":{"c":"B","dmg":20,"np":10,"star":0},"post":{"c":"B","dmg":30,"np":15,"star":0,"eff":[{"k":"multiHit","t":"self","v":2}]}},
       {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":4},"post":{"c":"G","dmg":40,"np":0,"star":6}}
     ],
@@ -1236,7 +1236,7 @@ const DEFAULT_UNITS = [
     "ult":{"name":"青銅流星拳","c":"B","eff":[{"k":"dmg","t":"target","v":250},{"k":"evade","t":"self","v":0,"turns":1},{"k":"stun","t":"target","v":0,"turns":1,"chance":5},{"k":"star","t":"master","v":15}],"ruby":"ブロンズりゅうせいけん"}
   },
   {
-    "id":"magoichi", "name":"雑賀孫市", "cls":"アーチャー", "cost":3, "hp":530,
+    "id":"magoichi", "name":"雑賀孫市", "cls":"アーチャー", "cost":3, "hp":550,
     "traits":["男性","中立","中庸","人","人型","日本","戦国時代"],
     "fit":{"face":{"x":50,"y":18,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":6,"z":105},"cut":{"x":0,"y":12,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%bb%a8%b2%ec%c2%b9%bb%d4",
@@ -1558,5 +1558,33 @@ const DEFAULT_UNITS = [
       {"name":"魔女挽きの葬送刃","eff":[{"k":"atk","t":"picked","v":20,"turns":3},{"k":"atkTrait","t":"picked","v":50,"turns":3,"trait":"キャスター"},{"k":"cleanse","t":"picked","v":0}],"rank":"D","pick":"ally"}
     ],
     "ult":{"name":"偽・天球創生","c":"B","eff":[{"k":"dmg","t":"enemy_all","v":180},{"k":"hitNpSeal","t":"target","v":0,"turns":3},{"k":"curse","t":"target","v":0,"times":1,"chance":3}],"ruby":"コプルニシュカ・ヤマ"}
+  },
+  {
+    "id":"victy", "name":"ヴィクティ・トランスロード", "cls":"ピーステラー", "cost":5, "hp":850,
+    "lines":{
+      "start":[],
+      "attack":[],
+      "extra":[],
+      "damage":[],
+      "skill":[],
+      "np":[],
+      "npDamage":[],
+      "defeat":[],
+      "win":[]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":90,"np":0,"star":2},"post":{"c":"R","dmg":120,"np":0,"star":3}},
+      {"acts":2,"pre":{"c":"R","dmg":90,"np":0,"star":2},"post":{"c":"R","dmg":110,"np":0,"star":3}},
+      {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":2},"post":{"c":"R","dmg":100,"np":0,"star":3}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"R","dmg":80,"np":0,"star":3,"eff":[{"k":"atk","t":"ally_all","v":20,"turns":1}]}},
+      {"acts":3,"pre":{"c":"B","dmg":70,"np":15,"star":3},"post":{"c":"B","dmg":90,"np":20,"star":4}},
+      {"acts":1,"pre":{"c":"G","dmg":50,"np":0,"star":6},"post":{"c":"G","dmg":60,"np":0,"star":7}}
+    ],
+    "skills":[
+      {"name":"天蓋霊基","eff":[{"k":"atk","t":"ally_all","v":20,"turns":1},{"k":"onAtkStar","t":"ally_all","v":4,"turns":3}],"rank":"A++"},
+      {"name":"千里眼(星)","eff":[{"k":"regenStar","t":"ally_all","v":5,"turns":3},{"k":"onAtkStar","t":"self","v":4,"turns":3},{"k":"critRoll","t":"ally_all","v":1,"turns":3}],"rank":"A++"},
+      {"name":"天軍変生","eff":[{"k":"ascend","t":"picked","v":0},{"k":"heal","t":"picked","v":100},{"k":"actsUp","t":"picked","v":1,"turns":1},{"k":"star","t":"master","v":10}],"rank":"EX","pick":"ally"}
+    ],
+    "ult":{"name":"無限の星意物","c":"R","eff":[{"k":"np","t":"ally_other","v":50},{"k":"atk","t":"ally_other","v":40,"turns":2},{"k":"npPow","t":"ally_other","v":60,"turns":2},{"k":"invul","t":"ally_other","v":0,"times":1,"turns":1},{"k":"heal","t":"ally_other","v":100}]}
   }
 ];
