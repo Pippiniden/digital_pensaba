@@ -176,7 +176,8 @@ table.faces th{color:var(--sub)}
   background:linear-gradient(180deg,rgba(14,16,30,.92),rgba(6,8,18,.95));
   border:max(1px,.8cqw) solid var(--gold);border-radius:1.6cqw;
   box-shadow:0 0 0 max(.5px,.3cqw) #000,inset 0 0 0 max(.5px,.3cqw) rgba(246,227,161,.25),0 .6cqw 1.6cqw rgba(0,0,0,.6)}
-.ccex{position:absolute;left:0;right:0;bottom:24cqw;text-align:center;font-size:12cqw;color:#fff;text-shadow:0 1px 2px #000}
+/* NP+・★は絵に埋もれないよう、濃い帯＋金の縁取りの札にして少し大きく出す */
+.ccex{position:absolute;left:50%;right:auto;bottom:36cqw;transform:translateX(-50%);max-width:92%;white-space:nowrap;text-align:center;font-size:13cqw;font-weight:700;line-height:1.25;color:#fff7d6;padding:.5cqw 4cqw;border-radius:999px;background:rgba(6,10,24,.82);border:.6cqw solid var(--gold-hi);text-shadow:0 1px 2px #000;box-shadow:0 1px 4px rgba(0,0,0,.7)}
 /* 宝具：金 */
 .ccard.ULT{--cc:#c99a3a;--cd:#3a2806;box-shadow:0 0 10px rgba(246,227,161,.7),0 3px 10px rgba(0,0,0,.55)}
 .ccard.ULT .ccname{color:var(--gold-hi);text-shadow:0 0 2.4cqw #c99a3a,0 .5cqw .8cqw #000}

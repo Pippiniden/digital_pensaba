@@ -77,7 +77,9 @@ function svtHTML(u){
   const allocable=canAllocMore(u);
   const pickable=allocable || (G.spellPick&&pickOk(G.spellPick.side,u,G.cur)) || (G.copy&&copyCands(U(G.copy.uid)).includes(u)) || (G.pending&&pickValid(u)) || (!G.pending&&!G.copy&&ph==='target'&&targetCandidates().includes(u));
   const acting=G.ult?G.ult===u.uid:(G.alloc[u.uid]||0)>0;
-  const tgt=(G.targetAll?u.pid!==G.cur&&!u.out&&['target','end'].includes(ph):G.target===u.uid)&&!sh.out;
+  // 全体宝具でも、ダメージ効果がない補助宝具（味方への強化・回復だけ）なら敵に TARGET は出さない
+  const ultHit=!G.targetAll||!G.ult||D(U(G.ult).def).ult.eff.some(e=>e.k==='dmg');
+  const tgt=(G.targetAll?ultHit&&u.pid!==G.cur&&!u.out&&['target','end'].includes(ph):G.target===u.uid)&&!sh.out;
   // スキルを使える自分のサーヴァント（スキル欄が隠れる小さい表示のとき、ⓘ を光らせて知らせる）
   const canSk=u.pid===G.cur&&ph==='skill'&&!G.pending&&!otherActing()&&(d.skills.some((s,i)=>skillUsable(u,i))||!G.ult&&!G.ultDone&&canUlt(u)&&u.np>=RULES.ultCost);
   const cls=['svt',sh.out?'out':'',pickable?'pickable':'',tgt?'targeted':'',acting&&u.pid===G.cur?'acting':'',canSk?'canskill':''].join(' ');
