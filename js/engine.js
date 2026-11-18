@@ -113,6 +113,8 @@ function rollFx(uid,f,o={}){ (o.keys||[]).forEach(k=>FXHIDE.add(k)); fxEmit({t:'
 // ---------- ヘルパー ----------
 const D = id=>UNITS.find(u=>u.id===id)||MASTERS.find(m=>m.id===id)||ALL_UNITS.find(u=>u.id===id)||ALL_MASTERS.find(m=>m.id===id);
 const traitsOf = u=>(D(u.def)||{}).traits||[]; // 属性（特攻・特防の判定用）
+// 特攻・特防の対象指定：属性・クラス名・キャラID のどれに一致してもよい
+const traitHit = (u,s)=>!!u&&!!s&&(traitsOf(u).includes(s)||((D(u.def)||{}).cls)===s||u.def===s);
 const ruleset = ()=>RULESETS[G.rule]||RULESETS.team;
 const keepRule = ()=>({rule:G.rule, handicap:G.handicap});
 const ALL = ()=>[...G.players[0].party,...G.players[1].party];
@@ -519,15 +521,15 @@ function dmgMods(att,tgt,color){
     // 弱体状態特攻：対象が指定の弱体（vs 未指定なら何か1つ）を受けていれば加算
     const vs=att.fx.filter(e=>e.k==='atkVs'&&tgt.fx.some(x=>e.vs?x.k===e.vs:FX[x.k].buff===false));
     if(vs.length){ sum+=vs.reduce((s,e)=>s+e.v,0); usedA.push(...vs); }
-    // 属性特攻：対象が属性 trait を持っていれば加算
-    const tt=traitsOf(tgt), at=att.fx.filter(e=>e.k==='atkTrait'&&tt.includes(e.trait));
+    // 特攻：対象が属性・クラス・キャラIDが trait に一致すれば加算
+    const at=att.fx.filter(e=>e.k==='atkTrait'&&traitHit(tgt,e.trait));
     if(at.length){ sum+=at.reduce((s,e)=>s+e.v,0); usedA.push(...at); }
     const dd=modsC(tgt,'defDown',color,att); sum+=dd.sum; usedT.push(...dd.list);
     const ig=att.fx.find(e=>e.k==='ignoreDef');
     if(ig){ if(modsC(tgt,'def',color,att).list.length) usedA.push(ig); }
     else { const df=modsC(tgt,'def',color,att); sum-=df.sum; usedT.push(...df.list);
       // 属性特防：攻撃してきた相手が属性 trait を持っていれば減算（被ダメージ減少無視なら見ない）
-      const ta=traitsOf(att), dt=tgt.fx.filter(e=>e.k==='defTrait'&&ta.includes(e.trait));
+      const dt=tgt.fx.filter(e=>e.k==='defTrait'&&traitHit(att,e.trait));
       if(dt.length){ sum-=dt.reduce((s,e)=>s+e.v,0); usedT.push(...dt); } }
   }
   // 色指定のある攻撃ダメージ+（色バフ）の合計：クリティカルで2倍

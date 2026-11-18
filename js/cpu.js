@@ -529,8 +529,8 @@ function cpuEffScore(u,effs,picked,si){
       case 'onHitNp': sc+=ts.some(t=>t.np<RULES.ultCost)?1.5:.5; break;
       case 'counter': sc+=ts.some(t=>t.pid===u.pid)?2:-1; break;
       case 'atkVs': sc+=acting&&enemies.some(x=>x.fx.some(f=>e.vs?f.k===e.vs:FX[f.k].buff===false))?3:.5; break;
-      case 'atkTrait': sc+=acting&&traitsOf(cpuPredictTarget()).includes(e.trait)?3:0; break; // 殴る予定の相手（cpuPredictTarget）がその属性のときだけ使う
-      case 'defTrait': sc+=ts.some(t=>t.pid===u.pid&&hpR(t)<.8)&&enemies.some(x=>traitsOf(x).includes(e.trait))?2.5:.5; break;
+      case 'atkTrait': sc+=acting&&traitHit(cpuPredictTarget(),e.trait)?3:0; break; // 殴る予定の相手（cpuPredictTarget）がその属性のときだけ使う
+      case 'defTrait': sc+=ts.some(t=>t.pid===u.pid&&hpR(t)<.8)&&enemies.some(x=>traitHit(x,e.trait))?2.5:.5; break;
       case 'critDown': sc+=foes.length?1.5:-1; break;
       case 'npGainDown': sc+=foes.length?1.5:-1; break;
       case 'starDown': sc+=foes.length?1:-1; break;

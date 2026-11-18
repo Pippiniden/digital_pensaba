@@ -153,7 +153,7 @@ function normalizeUnits(raw){
 function validateUnits(units){
   const issues=[], ids=new Map();
   if(!units.length) issues.push({i:-1,level:'error',msg:`${TERMS.unit}が1体もありません`});
-  const allTraits=new Set(units.flatMap(u=>u.traits||[]));
+  const allTraits=new Set(units.flatMap(u=>[...(u.traits||[]),u.cls,u.id])); // 特攻・特防は属性・クラス・キャラIDで指定できる
   units.forEach((u,i)=>{
     const add=(level,msg)=>issues.push({i,level,msg});
     traitUseCheck(u.faces.flatMap(f=>[...(f.pre.eff||[]),...(f.post.eff||[])]).concat(...u.skills.map(s=>s.eff),u.ult.eff),allTraits,add);
@@ -216,7 +216,7 @@ function traitUseCheck(effs,allTraits,add){
   const miss=[...new Set([
     ...effs.filter(e=>FX[e.k]&&FX[e.k].trait&&e.trait&&!allTraits.has(e.trait)).map(e=>e.trait),
     ...effs.filter(e=>e.cond&&e.cond.k==='trait'&&e.cond.v&&!allTraits.has(e.cond.v)).map(e=>e.cond.v)])];
-  if(miss.length) add('warn',`属性「${miss.join('」「')}」を持つ${TERMS.unit}がいません（特攻・特防が発動しません）`);
+  if(miss.length) add('warn',`属性・クラス・IDが「${miss.join('」「')}」の${TERMS.unit}がいません（特攻・特防が発動しません）`);
 }
 function checkEffs(effs,ctx,where,add){
   effs.forEach((e,ei)=>{
@@ -238,7 +238,7 @@ function checkEffs(effs,ctx,where,add){
     if(e.chance&&e.chance>=6) add('warn',`${w}：ロール6以下は必ず成功します`);
     if(e.k==='cardConv'&&!e.color) add('error',`${w}：カード変換は変換先の色を指定してください`);
     if(e.vs&&!(e.k in VS_KINDS)) add('warn',`${w}：この効果では弱体の種類の指定は使われません`);
-    if(FX[e.k].trait&&!e.trait) add('error',`${w}：${FX[e.k].name}は対象の属性を指定してください`);
+    if(FX[e.k].trait&&!e.trait) add('error',`${w}：${FX[e.k].name}は対象（属性・クラス・キャラID）を指定してください`);
     if(e.trait&&!FX[e.k].trait) add('warn',`${w}：この効果では属性の指定は使われません`);
     if(e.cond){
       if(FX[e.k].noTgt) add('warn',`${w}：この効果では条件は使われません`);
@@ -350,7 +350,7 @@ function checkMasterSheet(m,add){
 // units を渡すと、サーヴァントとIDが重なっていないかも確かめる（ゲームはIDでサーヴァント→マスターの順に探すため）
 // level：'error'（反映できない） / 'big'（大警告：シートの決まりに反する） / 'warn'（小警告・注意：シートの目安から外れる）
 function validateMasters(ms,units=[]){
-  const issues=[], ids=new Map(), uids=new Set(units.map(u=>u.id)), allTraits=new Set(units.flatMap(u=>u.traits||[]));
+  const issues=[], ids=new Map(), uids=new Set(units.map(u=>u.id)), allTraits=new Set(units.flatMap(u=>[...(u.traits||[]),u.cls,u.id]));
   if(!ms.length) issues.push({i:-1,level:'warn',msg:`${TERMS.player}が1人もいません（マスタールールが遊べません）`});
   ms.forEach((m,i)=>{
     const add=(level,msg)=>issues.push({i,level,msg});
@@ -391,7 +391,7 @@ function mastersToJS(ms){
   const body=ms.map(m=>[
     '  {',
     `    "id":${j(m.id)}, "name":${j(m.name)}, "cost":${m.cost}, "hp":${m.hp},`,
-    ...(fitIsDef(m.fit,'face')?[]:[`    "fit":${j({face:m.fit.face})},`]),
+    ...(['face','np','cut'].every(k=>fitIsDef(m.fit,k))?[]:[`    "fit":${j(Object.fromEntries(['face','np','cut'].filter(k=>!fitIsDef(m.fit,k)).map(k=>[k,m.fit[k]])))},`]),
     ...(m.link?[`    "link":${j(m.link)},`]:[]),
     ...(m.memo?[`    "memo":${j(m.memo)},`]:[]),
     ...(Object.keys(MASTER_LINE_KEYS).some(k=>m.lines[k].length)?[`    "lines":${j(Object.fromEntries(Object.keys(MASTER_LINE_KEYS).map(k=>[k,m.lines[k]])))},`]:[]),
@@ -615,8 +615,8 @@ function fxText(e){
     case 'regenHp': s=`ターン開始時HP${e.v}回復`; break;
     case 'regenNp': s=`ターン開始時${TERMS.gauge}+${e.v}%`; break;
     case 'regenStar': s=`ターン開始時${TERMS.star}${e.v}個獲得`; break;
-    case 'atkTrait': s=`〔${e.trait||'属性未指定'}〕特攻+${e.v}`; break;
-    case 'defTrait': s=`〔${e.trait||'属性未指定'}〕特防(被ダメージ-${e.v})`; break;
+    case 'atkTrait': s=`〔${e.trait||'対象未指定'}〕特攻+${e.v}`; break;
+    case 'defTrait': s=`〔${e.trait||'対象未指定'}〕特防(被ダメージ-${e.v})`; break;
     case 'debuffImmune': case 'buffImmune': s=e.vs&&FX[e.vs]?`〔${FX[e.vs].name}〕${e.k==='buffImmune'?'強化':'弱体'}無効`:FX[e.k].name; break;
     case 'cleanse': case 'strip': s=e.vs&&FX[e.vs]?`〔${FX[e.vs].name}〕解除`:FX[e.k].name; break;
     case 'atkVs': s=`${e.vs&&FX[e.vs]?`〔${FX[e.vs].name}〕状態`:'弱体状態'}特攻+${e.v}`; break;

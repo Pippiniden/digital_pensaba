@@ -145,7 +145,7 @@ function fixEff(e){
   if(!f.copy) delete e.from;
   else if(!(e.from in FROM_TARGETS)) e.from='self';
   if(!f.trait) delete e.trait;
-  else if(!e.trait) e.trait=allTraits()[0]||'';
+  else if(!e.trait) e.trait=traitTargets()[0]||'';
   if(e.k==='cardConv'&&!e.color) e.color='R';
   if(e.k==='critMult'&&!(e.v>100)) e.v=200;
   if(e.k==='dmg'||e.k==='copyRoll') delete e.at;
@@ -161,7 +161,8 @@ function fixEff(e){
 
 // 全サーヴァントの属性（入力候補・特攻/特防の選択肢）
 const allTraits = ()=>[...new Set(units.flatMap(u=>u.traits||[]))].sort((a,b)=>a.localeCompare(b,'ja'));
-const traitDatalist = ()=>`<datalist id="traitlist">${allTraits().map(t=>`<option value="${esc(t)}"></option>`).join('')}</datalist>`;
+const traitTargets = ()=>[...allTraits(),...CLASSES,...units.map(u=>u.id)]; // 特攻・特防の候補：属性・クラス・キャラID
+const traitDatalist = ()=>`<datalist id="traitlist">${traitTargets().map(t=>`<option value="${esc(t)}"></option>`).join('')}</datalist>`;
 // 専用セリフ欄（スキル・鉛筆の面）。空なら通常の「スキル使用」「攻撃」のセリフを使う
 const ownLineIn=(p,arr,fallback)=>`<label class="ownline"><span>専用セリフ（任意）</span><textarea data-p="${p}" data-t="optlines" rows="${Math.max(1,(arr||[]).length)}" placeholder="空なら「${esc(fallback)}」のセリフ。1行に1つ">${esc((arr||[]).join(String.fromCharCode(10)))}</textarea></label>`;
 
@@ -281,7 +282,7 @@ function diffLists(draft,game){
 // 項目名（例：スキル2 › 効果1 › 値）
 const SEG={name:'名前',ruby:'ルビ',cls:'クラス',cost:'コスト',hp:'HP',traits:'属性',link:'リンク',memo:'メモ',wip:'制作中',fit:'画像の位置',lines:'セリフ',ult:TERMS.ult,
   pre:'再臨前',post:'再臨後',acts:'行動数',c:'色',dmg:'ダメージ',np:'NP',star:'スター',label:'名前',line:'専用セリフ',pick:'対象の選び方',br:'改行位置',
-  k:'種類',t:'対象',v:'値',turns:'ターン',times:'回数',chance:'確率',color:'色指定',trait:'属性指定',at:'タイミング',max:'最大HP',text:'説明文',cond:'条件',sure:'解除・無効不可',vs:'対象の状態',from:'コピー元',noExtra:'エクストラなし',
+  k:'種類',t:'対象',v:'値',turns:'ターン',times:'回数',chance:'確率',color:'色指定',trait:'特攻・特防の対象',at:'タイミング',max:'最大HP',text:'説明文',cond:'条件',sure:'解除・無効不可',vs:'対象の状態',from:'コピー元',noExtra:'エクストラなし',
   key:'場面',who:'誰',face:'顔',card:'カード',cut:'カットインの立ち絵',x:'横',y:'縦',z:'拡大',master:'マスター'};
 // roots＝[下書き側, 比較先側]（スキル名・効果の種類を引くため）。どちらか見つかったほうを使う
 function pathLabel(p,m,roots){
@@ -480,7 +481,16 @@ function renderMasterForm(el){
       ${ownLineIn(`spells.${i}.line`,s.line,MASTER_LINE_KEYS.spell)}
     </div>`).join('')}
   </section>
+  <section class="sec"><h2>令呪カットイン</h2>
+    <p class="sub small nm">令呪を使ったときに出るカットインです。名前は使った令呪の名前（下のプレビューは令呪1）。画像の位置を調整できます。</p>
+    <div class="subcard ctedit">
+      <div class="row"><b>カットイン</b><span class="grow"></span><button class="small" data-act="mctReplay">▶ 再生</button></div>
+      <div class="ctprev" data-mctprev></div>
+      ${cutinFitHTML(m)}
+    </div>
+  </section>
   ${traitDatalist()}`;
+  mctUpdate(true);
 }
 function renderMasterSide(el){
   const m=cur(); if(!m){ el.innerHTML=''; return; }
@@ -654,7 +664,10 @@ const cutinEdHTML=u=>`<div class="subcard ctedit">
       <div class="ctbr" data-ctbr></div>
       <div class="ctwarn" data-ctwarn></div>
       <div class="ctprev" data-ctprev></div>
-      <div class="fitgrp"><b>帯の顔アップ（立ち絵のどこを大きく見せるか）</b>
+      ${cutinFitHTML(u)}
+    </div>`;
+// カットインの画像位置スライダー（サーヴァントの宝具・マスターの令呪で共用）
+const cutinFitHTML=u=>`<div class="fitgrp"><b>帯の顔アップ（立ち絵のどこを大きく見せるか）</b>
         ${[['x','左右'],['y','上下'],['z','拡大']].map(([a,lab])=>`<label class="fitrow"><span>${lab}</span>
           <input type="range" min="${fitRange('np',a)[0]}" max="${fitRange('np',a)[1]}" step="1" data-p="fit.np.${a}" data-t="num" value="${u.fit.np[a]}">
           <output data-fitout="np.${a}">${u.fit.np[a]}%</output></label>`).join('')}
@@ -663,8 +676,7 @@ const cutinEdHTML=u=>`<div class="subcard ctedit">
         ${[['x','左右','右へ'],['y','上下','下へ'],['z','大きさ','']].map(([a,lab])=>`<label class="fitrow"><span>${lab}</span>
           <input type="range" min="${fitRange('cut',a)[0]}" max="${fitRange('cut',a)[1]}" step="1" data-p="fit.cut.${a}" data-t="num" value="${u.fit.cut[a]}">
           <output data-fitout="cut.${a}">${u.fit.cut[a]}%</output></label>`).join('')}
-        <button class="small" data-act="fitReset" data-k="cut">リセット</button></div>
-    </div>`;
+        <button class="small" data-act="fitReset" data-k="cut">リセット</button></div>`;
 // 改行位置の選択: 「自動」「1行」、文字と文字の間をクリックするとそこで改行
 function ctBrHTML(ult){
   const a=[...ult.name], br=ult.br;
@@ -693,6 +705,17 @@ function ctMeasure(){
   const u=cur(), st=document.querySelector('[data-ctprev] .ct'), w=document.querySelector('[data-ctwarn]'); if(!u||!st||!w) return;
   const r=cutinLayout(st,u.ult), iss=cutinIssues(r,u.ult);
   w.innerHTML=iss.length?iss.map(s=>`<div class="iss warn">⚠ ${esc(s)}</div>`).join(''):'<div class="ok">✓ カットインに収まっています</div>';
+}
+// マスターの令呪カットイン：プレビュー（令呪1の名前・金色）。顔アップ位置の変更は作り直さず値だけ差し替える
+function mctUpdate(force){
+  const m=cur(), box=document.querySelector('[data-mctprev]'); if(!m||!isM()||!box) return;
+  const sp=m.spells[0]||{name:''}, ult={name:sp.name,c:'Y'}, key=JSON.stringify([m.id,sp.name]), old=box.querySelector('.ct');
+  if(!force&&old&&box.dataset.key===key){
+    ['x','y','z'].forEach(a=>{ old.style.setProperty('--g'+a,m.fit.np[a]+'%'); old.style.setProperty('--c'+a,m.fit.cut[a]); }); return; }
+  box.dataset.key=key;
+  box.innerHTML=cutinStageHTML(m,ult,{hold:true,top:'令呪発動'});
+  if(!force) box.querySelector('.ct').getAnimations({subtree:true}).forEach(a=>{ try{ a.finish(); }catch(e){} });
+  cutinLayoutWhenReady(box.querySelector('.ct'),ult);
 }
 // プレビューの幅が変わったら測り直す
 if(typeof ResizeObserver!=='undefined') new ResizeObserver(()=>ctMeasure()).observe(document.querySelector('#form'));
@@ -783,7 +806,7 @@ function effRow(path,j,e,ctx,n,atKind){
     ${val}
     ${f.inst?'':(f.timesOnly||(ctx==='master'&&/^faces./.test(path))?'':optNum(p+'.turns',e.turns,'ターン'))+optNum(p+'.times',e.times,'回数')}
     ${FX[e.k]&&FX[e.k].color?`<label class="mini"><span>色</span><select data-p="${p}.color" data-t="optstr">${opt('','すべて',e.color||'')}${['R','B','G'].map(c=>opt(c,TERMS[c],e.color)).join('')}</select></label>`:''}
-    ${f.trait?`<label class="mini"><span>属性</span><input class="traitin" list="traitlist" data-p="${p}.trait" data-t="optstr" value="${esc(e.trait||'')}" placeholder="属性名"></label>`:''}
+    ${f.trait?`<label class="mini"><span>対象</span><input class="traitin" list="traitlist" data-p="${p}.trait" data-t="optstr" value="${esc(e.trait||'')}" placeholder="属性・クラス・ID"></label>`:''}
     ${e.k in VS_KINDS?(()=>{ const bf=VS_KINDS[e.k]; return `<label class="mini"><span>${bf?'強化':'弱体'}</span><select data-p="${p}.vs" data-t="optstr">${opt('',e.k==='atkVs'?'どれでも':'すべて',e.vs||'')}${Object.keys(FX).filter(k=>FX[k].buff===bf).map(k=>opt(k,FX[k].name,e.vs)).join('')}</select></label>`; })():''}
     ${f.noTgt?'':`<label class="mini"><span>確率</span><select data-p="${p}.chance" data-t="optnum">${opt('','必ず',e.chance??'')}${[1,2,3,4,5].map(k=>opt(k,`ロール${k}以下`,e.chance)).join('')}</select></label>`}
     ${f.noTgt?'':condIn(p,e,f)}
@@ -814,6 +837,7 @@ function updatePreviews(){
     document.querySelectorAll('[data-prev="mface"]').forEach(el=>el.textContent=mFaceText(u.faces[+el.dataset.i]));
     document.querySelectorAll('[data-prev="spell"]').forEach(el=>el.textContent=effsText(u.spells[+el.dataset.i].eff,null,mTLabel));
     document.querySelectorAll('[data-fitout]').forEach(el=>{ const [k,a]=el.dataset.fitout.split('.'); el.textContent=`${u.fit[k][a]}%`; });
+    mctUpdate();
     document.querySelectorAll('[data-linecount]').forEach(el=>el.textContent=`${u.lines[el.dataset.linecount].length}件`);
     const ma=RULESETS.master.masterAtk, at=document.querySelector('[data-mprev="atk"]'); if(at) at.textContent=`攻撃：相手${TERMS.player}へ${u.cost*ma.master}・相手${TERMS.unit}へ${u.cost*ma.svt}（マスタールール）`;
     document.querySelectorAll('[data-imgprev]').forEach(el=>{ const key=`${u.id}|${JSON.stringify(u.fit)}`; if(el.dataset.key===key) return; el.dataset.key=key; el.innerHTML=faceImg(u,'face lg');
@@ -1035,6 +1059,7 @@ document.addEventListener('click',e=>{
     case 'fitReset': { u.fit[b.dataset.k]={...FIT_DEF[b.dataset.k]}; full(); break; }
     case 'ctBr': { if(b.dataset.br==='') delete u.ult.br; else u.ult.br=+b.dataset.br; light(); break; }
     case 'ctReplay': ctUpdate(true); break;
+    case 'mctReplay': mctUpdate(true); break;
     case 'effAdd': { if(!getPath(u,b.dataset.path)) setPath(u,b.dataset.path,[]); getPath(u,b.dataset.path).push(newEff(b.dataset.ctx,b.dataset.path)); full(); break; }
     case 'effDel': getPath(u,b.dataset.path).splice(+b.dataset.i,1); full(); break;
     case 'effMove': { const l=getPath(u,b.dataset.path), i=+b.dataset.i, j=i+Number(b.dataset.d); [l[i],l[j]]=[l[j],l[i]]; full(); break; }
