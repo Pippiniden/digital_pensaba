@@ -554,7 +554,7 @@ function faceImg(d,cls='face'){ return `<span class="${cls}">${unitImg(d,'face',
 // コマンドカードの共通素材（rules.js の CARD_LAYERS）。宝具は bg が空なら宝具の色の bg を借りる
 function cardLayers(kind,col){
   const L=CARD_LAYERS[kind]||{}, base=CARD_LAYERS[col]||{};
-  return { bg:L.bg||(kind==='ULT'?base.bg:'')||'', frame:L.frame||'', mark:L.mark||'', name:L.name||'' };
+  return { bg:L.bg||(kind==='ULT'?base.bg:'')||'', frame:L.frame||'', mark:L.mark||'' };
 }
 // コマンドカード
 //   Buster/Arts/Quick・宝具：背景(共通) → キャラ画像(サーヴァントごと) → 枠と種別名(共通) の3層
@@ -571,7 +571,7 @@ function cmdCardHTML(d,c,opt={}){
       ${L.bg?`<img class="cc-bg" src="${esc(L.bg)}" alt="">`:''}
       ${unitImg(d,'card','ccimg',d?d.name:'')}
       ${L.mark?`<img class="cc-mark" src="${esc(L.mark)}" alt="">`:''}
-      ${L.frame?`<img class="cc-frame" src="${esc(L.frame)}" alt="${esc(label)}">`:L.name?`<img class="cc-name" src="${esc(L.name)}" alt="${esc(label)}">`:`<span class="ccname">${label}</span>`}
+      ${L.frame?`<img class="cc-frame" src="${esc(L.frame)}" alt="${esc(label)}">`:isUlt?`<span class="ccname">${label}</span>`:`<span class="cc-nm" aria-label="${esc(label)}"><i class="s">${esc(label)}</i><i class="m">${esc(label)}</i><i class="f">${esc(label)}</i></span>`}
       <span class="cc-ft"></span>${c.dmg!=null?`<span class="ccdmg">${c.dmg}</span>`:''}${ex&&!opt.small?`<span class="ccex">${ex}</span>`:''}</div>`;
   }
   const label=c.c==='ASC'?TERMS.asc:(c.label||TERMS.W);

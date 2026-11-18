@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>カード種別名 調整サンプル</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Noto+Serif+JP:wght@600;700;900&display=swap">
+<link rel="stylesheet" href="../css/base.css">
+<style>
+body{margin:0;background:#0b1226;color:#dfe6ff;font-family:system-ui,"Yu Gothic",sans-serif;display:flex;align-items:flex-start;gap:20px;padding:16px}
+#panel{flex:none;width:370px;max-height:calc(100vh - 32px);overflow:auto;position:sticky;top:16px;padding:10px 12px;border:1px solid #243158;border-radius:8px;background:#0f1832;font-size:12px}
+#panel h2{font-size:12px;margin:12px 0 4px;color:#f6e3a1;border-bottom:1px solid #243158;padding-bottom:2px}
+#panel label{display:grid;grid-template-columns:100px 1fr 54px;gap:6px;align-items:center;margin:3px 0}
+#panel output{text-align:right;color:#f6e3a1;font-variant-numeric:tabular-nums}
+#panel input[type=color]{width:100%;height:20px;padding:0;border:1px solid #3a4a80;background:none}
+#panel select,#panel button{background:#1c2a52;color:#dfe6ff;border:1px solid #3a4a80;border-radius:4px;padding:3px 8px;font-size:12px}
+#panel button{cursor:pointer;margin:6px 6px 0 0}
+#panel textarea{width:100%;box-sizing:border-box;height:150px;margin-top:6px;background:#060c20;color:#cfe;border:1px solid #243158;border-radius:4px;font:11px/1.5 ui-monospace,Consolas,monospace}
+#main{flex:1;min-width:0}
+h1{font-size:16px;margin:0 0 4px}p.n{margin:0 0 12px;color:#9aa6c4;font-size:12px;line-height:1.6}
+.row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-bottom:18px}
+.cell{display:flex;flex-direction:column;align-items:center;font-size:11px;color:#9aa6c4;gap:4px}
+.cc-mark{position:absolute;left:50%;transform:translateX(-50%);height:auto;pointer-events:none;z-index:5;width:92%;bottom:2%;filter:drop-shadow(0 .6cqw 1cqw rgba(0,0,0,.35))}
+body.nomark .cc-mark{display:none}
+.ccard .ccname{display:none}
+/* ===== 種別名（CSS）。値はすべて :root の変数（左のパネルで変更） ===== */
+.nm{position:absolute;z-index:8;left:var(--x);bottom:var(--y);display:grid;white-space:nowrap;line-height:1.1;pointer-events:none;
+  transform-origin:50% 60%;transform:translateX(-50%) rotate(var(--rot)) skewX(var(--sk)) scale(var(--scx),var(--scy));
+  font-family:var(--ff);font-weight:var(--fw);font-size:var(--fs);letter-spacing:var(--ls);
+  filter:drop-shadow(var(--shx) var(--shy) var(--shb) var(--shc))}
+.nm>i{grid-area:1/1;font-style:inherit;padding:0 1cqw}
+.nm>i::first-letter{font-size:var(--ini)}
+.nm>.s{color:var(--so);-webkit-text-stroke:var(--sw) var(--so);paint-order:stroke fill}
+.nm>.m{color:var(--mo);-webkit-text-stroke:var(--mw) var(--mo)}
+.nm>.f{color:transparent;background:var(--metal);-webkit-background-clip:text;background-clip:text}
+</style></head><body>
+<div id="panel"></div>
+<div id="main">
+<h1>カード種別名 調整サンプル</h1>
+<p class="n">左のパネルで、文字の<b>配置の傾き（回転）</b>・文字の斜め（skew）・大きさ・字間・金の各色・光の筋などを変えられます。3枚とも同じ設定で、下の小さいカードでサイズ別の見え方も確認できます。気に入った値は一番下の「CSS」欄をそのまま教えてください。</p>
+<div class="row" id="big"></div><div class="row" id="small"></div>
+</div>
+<script>
+const IMG='../img/units/adonis.webp';
+const KINDS=[['R','Buster'],['B','Arts'],['G','Quick']];
+function card(col,label,w,cls=''){return `<div class="ccard ${col}${cls}" style="width:${w}px"><img class="ccimg" src="${IMG}" alt="">
+ <img class="cc-mark" src="../img/ui/cardmark-${col}.webp" alt=""><span class="cc-ft"></span>
+ <span class="nm"><i class="s">${label}</i><i class="m">${label}</i><i class="f">${label}</i></span><span class="ccdmg">120</span></div>`}
+// 設定項目 [key, 見出し, min, max, step, 初期値, 単位] / 色 [key,見出し,'c',初期色] / 選択 [key,見出し,'s',候補,初期]
+const FONTS=['"Noto Serif JP",serif','Cinzel,"Noto Serif JP",serif','Georgia,"Noto Serif JP",serif','"Yu Mincho","Hiragino Mincho ProN",serif','"Noto Serif JP",serif|italic'];
+const FNAME=['Noto Serif JP（太明朝）','Cinzel','Georgia','游明朝','Noto Serif JP（疑似斜体）'];
+const SECS=[
+['配置・形',[
+ ['rot','配置の傾き（回転）',-30,30,.5,-6,'deg'],
+ ['sk','文字の斜め（skew）',-40,40,.5,-14,'deg'],
+ ['fs','文字の大きさ',8,32,.5,17,'cqw'],
+ ['ini','頭文字の倍率',.8,1.8,.01,1,'em'],
+ ['scx','横の伸縮',.6,1.4,.01,1,''],
+ ['scy','縦の伸縮',.6,1.4,.01,1,''],
+ ['ls','字間',-.06,.3,.005,.02,'em'],
+ ['x','左右位置',30,70,.5,50,'%'],
+ ['y','下からの位置',-4,30,.25,6,'%'],
+]],
+['フォント',[
+ ['ff','書体','s',FONTS,FONTS[0]],
+ ['fw','太さ',600,900,100,900,''],
+]],
+['金の色（上→下）',[
+ ['c0','最上（ハイライト）','c','#fffef2'],
+ ['c1','明るい金','c','#ffe9a0'],
+ ['c2','中間の金','c','#f0bd48'],
+ ['c3','境目の暗い金','c','#9a6410'],
+ ['c4','最も暗い影','c','#7a4a0c'],
+ ['c5','下の反射','c','#e2b04a'],
+ ['c6','最下','c','#fff3c4'],
+ ['hz','境目の位置',30,70,1,50,'%'],
+ ['hs','境目の硬さ（小さいほど鋭い）',1,25,1,5,'%'],
+ ['hl','明るい帯の広さ',10,50,1,26,'%'],
+]],
+['光の筋',[
+ ['sa','角度',60,150,1,105,'deg'],
+ ['sp','位置',10,90,1,42,'%'],
+ ['sw2','幅',2,40,1,10,'%'],
+ ['so2','強さ',0,1,.01,.75,''],
+]],
+['縁取り・影',[
+ ['sw','外の縁（太さ）',0,8,.1,3.2,'cqw'],
+ ['so','外の縁の色','c','#000000'],
+ ['mw','内側の縁（太さ）',0,4,.1,1.2,'cqw'],
+ ['mo','内側の縁の色','c','#6a420a'],
+ ['shx','影 横',-3,3,.1,0,'cqw'],
+ ['shy','影 縦',-3,4,.1,.8,'cqw'],
+ ['shb','影 ぼかし',0,5,.1,.8,'cqw'],
+ ['shc','影の色','c','#000000'],
+]],
+['表示',[
+ ['w','下の大きいカードの幅',60,360,1,170,'px'],
+]],
+];
+const V={},DEF={},UNIT={};
+const panel=document.getElementById('panel');
+let html='<b>調整パネル</b>';
+SECS.forEach(([t,items])=>{html+=`<h2>${t}</h2>`;items.forEach(it=>{
+ const k=it[0];
+ if(it[2]==='c'){DEF[k]=it[3];html+=`<label>${it[1]}<input type="color" id="i_${k}" value="${it[3]}"><output id="o_${k}"></output></label>`}
+ else if(it[2]==='s'){DEF[k]=it[4];html+=`<label>${it[1]}<select id="i_${k}">${it[3].map((v,i)=>`<option value="${v.replace(/"/g,'&quot;')}">${FNAME[i]}</option>`).join('')}</select><output></output></label>`}
+ else{DEF[k]=it[5];UNIT[k]=it[6];html+=`<label>${it[1]}<input type="range" id="i_${k}" min="${it[2]}" max="${it[3]}" step="${it[4]}" value="${it[5]}"><output id="o_${k}"></output></label>`}})});
+html+=`<h2>その他</h2><label>模様を表示<input type="checkbox" id="i_mark" checked><span></span></label>
+<button id="reset">初期値に戻す</button><button id="copy">CSS をコピー</button><textarea id="css" readonly></textarea>`;
+panel.innerHTML=html;
+const root=document.documentElement.style;
+function read(){SECS.forEach(([,items])=>items.forEach(it=>{const e=document.getElementById('i_'+it[0]);V[it[0]]=(it[2]==='c'||it[2]==='s')?e.value:+e.value}))}
+function apply(){
+ read();
+ const u=k=>V[k]+UNIT[k];
+ const ff=V.ff.split('|')[0], ital=V.ff.includes('|italic');
+ const h=V.hz,s=V.hs,l=V.hl;
+ const g=`linear-gradient(180deg,${V.c0} 0%,${V.c1} ${Math.max(h-l,2)}%,${V.c2} ${Math.max(h-s*.6,3)}%,${V.c3} ${h}%,${V.c4} ${Math.min(h+s*.8,90)}%,${V.c5} ${Math.min(h+s+22,96)}%,${V.c6} 100%)`;
+ const sh=`linear-gradient(${V.sa}deg,transparent ${V.sp-V.sw2}%,rgba(255,255,255,${V.so2}) ${V.sp}%,rgba(255,255,255,0) ${V.sp+V.sw2}%,transparent 100%)`;
+ const m={'--rot':u('rot'),'--sk':u('sk'),'--fs':u('fs'),'--ini':u('ini'),'--scx':V.scx,'--scy':V.scy,'--ls':u('ls'),'--x':u('x'),'--y':u('y'),
+  '--ff':ff,'--fw':V.fw,'--metal':V.so2>0?`${sh},${g}`:g,'--sw':u('sw'),'--so':V.so,'--mw':u('mw'),'--mo':V.mo,
+  '--shx':u('shx'),'--shy':u('shy'),'--shb':u('shb'),'--shc':V.shc};
+ for(const k in m)root.setProperty(k,m[k]);
+ document.querySelectorAll('.nm').forEach(e=>e.style.fontStyle=ital?'italic':'normal');
+ document.body.classList.toggle('nomark',!document.getElementById('i_mark').checked);
+ document.querySelectorAll('#big .ccard').forEach(e=>e.style.width=V.w+'px');
+ SECS.forEach(([,items])=>items.forEach(it=>{const o=document.getElementById('o_'+it[0]);if(o)o.textContent=it[2]==='c'?V[it[0]]:V[it[0]]+(it[6]||'')}));
+ document.getElementById('css').value='.nm{ /* 種別名 */\n'+Object.entries(m).map(([k,v])=>`  ${k}:${v};`).join('\n')+(ital?'\n  font-style:italic;':'')+'\n}';
+}
+document.getElementById('big').innerHTML=KINDS.map(([c,l])=>`<div class="cell">${card(c,l,170)}</div>`).join('');
+document.getElementById('small').innerHTML=[40,74,110].map(w=>`<div class="cell">${card('R','Buster',w,w<=40?' sm':'')}${w}px</div>`).join('')
+ +[['B','Arts'],['G','Quick']].map(([c,l])=>`<div class="cell">${card(c,l,74)}74px</div>`).join('');
+panel.addEventListener('input',apply);
+document.getElementById('reset').onclick=()=>{for(const k in DEF){const e=document.getElementById('i_'+k);if(e)e.value=DEF[k]}apply()};
+document.getElementById('copy').onclick=()=>{const t=document.getElementById('css');t.select();try{navigator.clipboard.writeText(t.value)}catch(e){document.execCommand('copy')}};
+apply();
+</script></body></html>
