@@ -1021,7 +1021,7 @@ function applyMode(cfg){
 // 宝具を使う（picked＝対象を選ぶ宝具で選んだ1体）
 function startUlt(u,picked){
   const uid=u.uid;
-  if(masterRule()&&!D(u.def).ult.eff.some(e=>e.k==='dmg'||e.k==='copyRoll'||(FX[e.k]&&FX[e.k].copy&&e.from==='target'))){
+  if(masterRule()&&!D(u.def).ult.eff.some(e=>e.k==='dmg'||e.t==='target'||e.k==='copyRoll'||(FX[e.k]&&FX[e.k].copy&&e.from==='target'))){ // 攻撃対象（t:'target'）を使う効果がある宝具は補助扱いにせず、通常どおり攻撃対象を選ぶ（選ばないと対象なしで不発になる）
     // マスタールール：ダメージのない宝具は使用予定にして、スキルフェイズを終えるとき（skillDone）に行動回数-1で発動する。それまでは取り消せる
     G.ult=uid; G.ultSup=true; G.ultPick=picked?picked.uid:null; G.ultNp=u.np; u.np=0; syncU(u);
     log(`${nm(u)}が${TERMS.ult}「${esc(D(u.def).ult.name)}」を使用予定${picked?`（対象：${nm(picked)}）`:''}（スキルフェイズを終えると発動します）`,'good');
