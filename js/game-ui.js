@@ -699,8 +699,13 @@ function zukanLinesHTML(d){
   // スキル・鉛筆の面ごとの専用セリフ（その行動のときだけ通常セリフの代わりに出るもの）
   const own=[];
   if(d.master){ // マスター：補助の面（faces[].line）と令呪（spells[].line）
-    (d.faces||[]).forEach((f,i)=>{ if(f.line&&f.line.length) own.push([`補助の面${i+1}${f.label?`：${f.label}`:''}`,f.line]); });
-    (d.spells||[]).forEach((s,i)=>{ if(s.line&&s.line.length) own.push([`令呪${i+1}${s.name?`：${s.name}`:''}`,s.line]); });
+    // 同じ名前のものは「面1・2：名前」のようにひとまとめ（セリフは重複を除いて合わせる）
+    const grp=(arr,pre,nameOf)=>{ const m=new Map();
+      (arr||[]).forEach((x,i)=>{ if(!(x.line&&x.line.length)) return; const n=nameOf(x)||'', key=n||`#${i}`;
+        const g=m.get(key)||{n,idx:[],l:[]}; g.idx.push(i+1); x.line.forEach(t=>{ if(!g.l.includes(t)) g.l.push(t); }); m.set(key,g); });
+      m.forEach(g=>own.push([`${pre}${g.idx.join('・')}${g.n?`：${g.n}`:''}`,g.l])); };
+    grp(d.faces,'補助の面',f=>f.label);
+    grp(d.spells,'令呪',s=>s.name);
   }
   (d.skills||[]).forEach((s,i)=>{ if(s.line&&s.line.length) own.push([`スキル${i+1}${s.name?`：${s.name}`:''}`,s.line]); });
   (d.faces||[]).forEach((f,i)=>[['pre','前'],['post','後']].forEach(([w,wl])=>{ const c=f[w];
