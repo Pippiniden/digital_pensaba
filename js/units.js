@@ -1514,5 +1514,44 @@ const DEFAULT_UNITS = [
       {"name":"喰らいなさい、貪食の洞窟竜","eff":[{"k":"strip","t":"enemy_all","v":0},{"k":"defDown","t":"enemy_all","v":20,"turns":3,"chance":3},{"k":"burn","t":"enemy_all","v":20,"turns":3,"chance":3},{"k":"heal","t":"ally_all","v":80,"chance":4},{"k":"np","t":"self","v":20,"chance":4}],"rank":"-"}
     ],
     "ult":{"name":"目醒めなさい、幽けし夜の謝肉祭","c":"B","eff":[{"k":"npPow","t":"self","v":10,"turns":1,"chance":3},{"k":"npPow","t":"self","v":20,"turns":1,"chance":3},{"k":"npPow","t":"self","v":30,"turns":1,"chance":3},{"k":"atkTrait","t":"self","v":50,"turns":1,"trait":"人"},{"k":"dmg","t":"enemy_all","v":170},{"k":"heal","t":"ally_all","v":100}],"ruby":"シュローヴタイド・クレントヴァニエ","br":7}
+  },
+  {
+    "id":"ursula", "name":"謝肉祭の魔女ウルシュラ", "cls":"セイバー", "cost":3, "hp":500,
+    "traits":["女性","中立","悪","地","人型","魔性"],
+    "fit":{"face":{"x":50,"y":11,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":17,"z":88},"cut":{"x":0,"y":9,"z":100}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%bc%d5%c6%f9%ba%d7%a4%ce%cb%e2%bd%f7%a5%a6%a5%eb%a5%b7%a5%e5%a5%e9",
+    "lines":{
+      "start":["ガキ共をシメるのは愉悦じゃな……","邪魔をしおって、阿呆共めが！"],
+      "attack":["Toča！","Suša！","Strela！"],
+      "extra":["さあ、吹き飛ばしてやろうか……Vihar！","立ち枯れるが良い……Snežni metež！"],
+      "damage":["ぐぅっ！"],
+      "skill":["料理してやるとするかのう","ねるねるねるねる、練ってるぞい"],
+      "np":["とっておきじゃて、遠慮せずに見ていくが良い。『偽・天球創生』、Besneči vihar！"],
+      "npDamage":["こんのクソガキゃあああーーッ！"],
+      "defeat":["おのれ……おのれえええ……","こりゃ、しくじったわい……"],
+      "win":["フン！　とっとと帰るぞ……。わしゃ研究が残っとるんじゃ","けっ、年季が違うわ、年季が！"]
+    },
+    "condLines":[
+      {"key":"start","who":"other","cond":{"k":"id","v":"liza"},"lines":["少し揉んでやるとするかのう……","こんの跳ねっ返りめが！"]},
+      {"key":"defeat","who":"other","cond":{"k":"id","v":"liza"},"lines":["おんのれえ……生意気な娘め……","反抗期かーっ！？"]},
+      {"key":"win","who":"other","cond":{"k":"id","v":"liza"},"lines":["まだまだ、甘ったれには負けんわい！","派手なばかりじゃ足を取られるぞい、リザ！","これがわし流の教育じゃ！"]},
+      {"key":"start","who":"ally","cond":{"k":"id","v":"m_ursula"},"lines":["わしに命令されるとは……","なぜわしがわしに従わねばならんのじゃ！"]},
+      {"key":"defeat","who":"ally","cond":{"k":"id","v":"m_ursula"},"lines":["これは悪夢か……？","余計な混乱を招きおって！"]},
+      {"key":"win","who":"ally","cond":{"k":"id","v":"m_ursula"},"lines":["主従の息はぴったりか……複雑じゃのう","ああ、なんと混沌の状況か！","わしの勝利はわしのものじゃ！　わしの為ではないわい！"]}
+    ],
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":40,"np":10,"star":0},"post":{"c":"B","dmg":50,"np":15,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"天候混成","eff":[{"k":"onAtkNp","t":"self","v":10,"turns":3},{"k":"npPow","t":"self","v":50,"turns":3}],"dmg":0,"np":0,"star":0}},
+      {"acts":3,"pre":{"c":"B","dmg":20,"np":10,"star":0},"post":{"c":"B","dmg":40,"np":15,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":4},"post":{"c":"G","dmg":40,"np":0,"star":6}}
+    ],
+    "skills":[
+      {"name":"道具作成(空)","eff":[{"k":"np","t":"ally_all","v":10},{"k":"atk","t":"ally_all","v":10,"turns":3},{"k":"atk","t":"ally_all","v":10,"turns":3,"color":"B"},{"k":"aoeNormal","t":"self","v":0,"turns":1}],"rank":"A"},
+      {"name":"天球魔術","eff":[{"k":"evade","t":"self","v":0,"turns":1},{"k":"atk","t":"ally_all","v":40,"turns":3,"color":"B"}],"rank":"A"},
+      {"name":"魔女挽きの葬送刃","eff":[{"k":"atk","t":"picked","v":20,"turns":3},{"k":"atkTrait","t":"picked","v":50,"turns":3,"trait":"キャスター"},{"k":"cleanse","t":"picked","v":0}],"rank":"D","pick":"ally"}
+    ],
+    "ult":{"name":"偽・天球創生","c":"B","eff":[{"k":"dmg","t":"enemy_all","v":180},{"k":"hitNpSeal","t":"target","v":0,"turns":3},{"k":"curse","t":"target","v":0,"times":1,"chance":3}],"ruby":"コプルニシュカ・ヤマ"}
   }
 ];
