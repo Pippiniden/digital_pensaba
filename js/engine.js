@@ -838,7 +838,7 @@ const hcapText = ()=>G.hcap?`攻撃ダメージ+${G.hcap.atk}・獲得${TERMS.ga
 // 攻撃・被弾・チェインで得るNPに、ハンデのNP獲得量アップを掛ける（スキルなどで直接増えるNPには掛けない）
 const npRate = (u,v)=>hasHcap(u)&&G.hcap.np?Math.round(v*(100+G.hcap.np)/100):v;
 function beginTurn(){
-  Object.assign(G,{phase:'actRoll',actRolled:false,maxActs:{},alloc:{},rolled:[],ult:null,ultPick:null,ultNp:null,target:null,targetAll:false,gen:0,pending:null,copy:null,guard:null,mastered:false,ultDone:false,spellPick:null});
+  Object.assign(G,{phase:'actRoll',actRolled:false,maxActs:{},alloc:{},rolled:[],ult:null,ultSup:false,ultPick:null,ultNp:null,target:null,targetAll:false,gen:0,pending:null,copy:null,guard:null,mastered:false,ultDone:false,spellPick:null});
   const P=G.players[G.cur];
   if(P.evac){ P.evac=false; log(`${esc(P.name)}の${TERMS.player}が退避から戻った`,'sub'); }
   log(`━ ターン${G.turn}：${esc(G.players[G.cur].name)} ━`,'h');
@@ -1022,11 +1022,10 @@ function applyMode(cfg){
 function startUlt(u,picked){
   const uid=u.uid;
   if(masterRule()&&!D(u.def).ult.eff.some(e=>e.k==='dmg'||e.k==='copyRoll'||(FX[e.k]&&FX[e.k].copy&&e.from==='target'))){
-    // マスタールール：ダメージのない宝具は、行動回数-1でその場で使い、スキルフェイズを続けて行動決定へ進める
-    u.np=0; syncU(u); G.ultDone=true; resolveUlt(u,null,picked);
-    const top=Object.entries(G.alloc).filter(([,n])=>n>0).sort((a,b)=>b[1]-a[1])[0];
-    if(top){ G.alloc[top[0]]--; log(`補助${TERMS.ult}のため行動回数-1（${dn(U(top[0]))}）`,'sub'); }
-    flushKo(); checkWin(); return;
+    // マスタールール：ダメージのない宝具は使用予定にして、スキルフェイズを終えるとき（skillDone）に行動回数-1で発動する。それまでは取り消せる
+    G.ult=uid; G.ultSup=true; G.ultPick=picked?picked.uid:null; G.ultNp=u.np; u.np=0; syncU(u);
+    log(`${nm(u)}が${TERMS.ult}「${esc(D(u.def).ult.name)}」を使用予定${picked?`（対象：${nm(picked)}）`:''}（スキルフェイズを終えると発動します）`,'good');
+    return;
   }
   G.ult=uid; G.ultPick=picked?picked.uid:null; G.ultNp=u.np; u.np=0; syncU(u);
   log(`${nm(u)}が${TERMS.ult}「${esc(D(u.def).ult.name)}」を使用${picked?`（対象：${nm(picked)}）`:''}（このターンの行動になります）`,'good');
@@ -1047,9 +1046,11 @@ function doSkill(u,si,picked,color){
   checkWin(); // 即死などでスキルだけで決着することがある
 }
 function toTargetPhase(){
-  G.phase='target'; log(`${PN(5)} 攻撃対象決定`,'h'); phaseFx('TARGET','攻撃対象の選択');
-  const c=targetCandidates();
-  if(G.ult&&ultNoTarget(U(G.ult))){ G.targetAll=true; G.target=c[0].uid; return; } // 全体宝具：最初から敵全体を選んだ状態
+  G.phase='target';
+  const c=targetCandidates(), all=G.ult&&ultNoTarget(U(G.ult));
+  if(all){ log(`${PN(5)} ${TERMS.ult}発動`,'h'); phaseFx('NOBLE PHANTASM',`${TERMS.ult}発動`); } // 対象を選ばない宝具は「攻撃対象」の表示を出さない
+  else { log(`${PN(5)} 攻撃対象決定`,'h'); phaseFx('TARGET','攻撃対象の選択'); }
+  if(all){ G.targetAll=true; G.target=c[0].uid; return; } // 全体宝具：最初から敵全体を選んだ状態
   if(c.length===1||(!G.ult&&!G.rolled.length)) G.target=c[0].uid; // 攻撃がない（全員行動0回）ときは対象を選ぶ意味がないので自動で決める
 }
 
@@ -1506,11 +1507,21 @@ const ACTIONS = {
   cancelUlt(){
     if(G.phase!=='skill'||G.pending||!G.ult) return;
     const u=U(G.ult); u.np=Math.min(RULES.gaugeMax,u.np+(G.ultNp??RULES.ultCost));
-    G.ult=null; G.ultPick=null; G.ultNp=null; syncU(u);
+    G.ult=null; G.ultPick=null; G.ultNp=null; G.ultSup=false; syncU(u);
     log(`${nm(u)}の${TERMS.ult}の使用を取り消した`,'sub');
   },
   skillDone(){
     if(G.phase!=='skill'||G.pending) return;
+    if(G.ult&&G.ultSup){ // マスタールールの補助宝具：ここで発動し、行動回数-1
+      const u=U(G.ult), picked=G.ultPick?U(G.ultPick):null;
+      G.ult=null; G.ultPick=null; G.ultNp=null; G.ultSup=false; G.ultDone=true;
+      resolveUlt(u,null,picked);
+      const top=Object.entries(G.alloc).filter(([,n])=>n>0).sort((a,b)=>b[1]-a[1])[0];
+      if(top){ G.alloc[top[0]]--; log(`補助${TERMS.ult}のため行動回数-1（${dn(U(top[0]))}）`,'sub'); }
+      flushKo(); checkWin(); if(G.winner!=null) return;
+      G.phase='action'; log(`${PN(4)} 行動決定`,'h'); phaseFx('COMMAND','行動決定');
+      return;
+    }
     if(G.ult) toTargetPhase();
     else { G.phase='action'; log(`${PN(4)} 行動決定`,'h'); phaseFx('COMMAND','行動決定'); }
   },

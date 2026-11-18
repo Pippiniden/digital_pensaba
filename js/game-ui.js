@@ -203,7 +203,7 @@ function promptHTML(){
         ? `<p class="hl">「${esc(pendingSkill().name)}」：変換先のカードの色を選んでください</p><div class="row">${['R','B','G'].map(c=>`<button class="primary" data-a="skillColor" data-c="${c}">${TERMS[c]}</button>`).join('')}</div><button class="ghost" data-a="cancelPick">キャンセル</button>`
         : G.pending
         ? `<p class="hl">「${esc(pendingSkill().name)}」の対象を選んでください${G.pending.color?`（カード変換：${TERMS[G.pending.color]}）`:''}</p><button class="ghost" data-a="cancelPick">キャンセル</button>`
-        : `<p>スキル・${TERMS.ult}を使えます。${TERMS.ult}は${TERMS.gauge}${RULES.ultCost}%以上・1ターン1回。</p>${G.ult?`<p class="hl">${nm(U(G.ult))}が${TERMS.ult}を使用予定 <button class="small ghost" data-a="cancelUlt" title="${TERMS.gauge}を戻して取り消します（このフェイズの間だけ）">取り消す</button></p>`:''}<button class="primary big" data-a="skillDone">${G.ult?'攻撃対象の選択へ':'行動決定へ'}</button>`;
+        : `<p>スキル・${TERMS.ult}を使えます。${TERMS.ult}は${TERMS.gauge}${RULES.ultCost}%以上・1ターン1回。</p>${G.ult?`<p class="hl">${nm(U(G.ult))}が${TERMS.ult}を使用予定 <button class="small ghost" data-a="cancelUlt" title="${TERMS.gauge}を戻して取り消します（このフェイズの間だけ）">取り消す</button></p>`:''}<button class="primary big" data-a="skillDone">${G.ult?(G.ultSup?`${TERMS.ult}を発動して行動決定へ`:'攻撃対象の選択へ'):'行動決定へ'}</button>`;
     case 'action': {
       const left=remainingRolls();
       if(G.copy) return `<p class="hl">${nm(U(G.copy.uid))}：ロールする${TERMS.unit}を選んでください（敵味方どちらでも・${TERMS.asc}後コマンドを使用）</p>`;
@@ -981,7 +981,7 @@ function autoMove(){
       if(!G.actRolled) return ['rollActs'];
       // 全員を最大まで行動させても上限以内なら、配分を選ぶ余地はない
       return Object.values(G.maxActs).reduce((a,b)=>a+b,0)<=RULES.actionsMax ? ['confirmAlloc'] : null;
-    case 'skill': return hasSkillChoice()?null:['skillDone'];
+    case 'skill': return G.ult||hasSkillChoice()?null:['skillDone']; // 宝具を選んだ直後は取り消せるよう自動で進めない
     case 'master': { // マスターフェイズは毎回選ぶ。ただし補助の対象が1体しか選べないときは選ぶ余地がない
       const sp=G.spellPick;
       if(sp&&sp.sup){ const c=pickCands(sp.side,G.cur); if(c.length===1) return ['masterSupportPick',{uid:c[0].uid}]; }
