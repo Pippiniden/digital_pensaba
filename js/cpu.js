@@ -665,9 +665,28 @@ function cpuThreatTarget(){
     let sc=Math.min(d,t.hp)/maxHp(t)*th + th*.5;
     if(kill){ if(t.np>=70) sc+=ultPower(t)*.5; } // 宝具が近い相手を倒せるなら止める
     else if(t.np<RULES.ultCost && !has(t,'curse') && !has(t,'hitNpSeal') && t.np+hits*RULES.gaugeOnHit>=RULES.ultCost) sc-=ultPower(t)*.3;
+    if(TGT_LEARN) sc=cpuTgtLearn(t,d,sc,kill,hits);
     if(sc>bs){ bs=sc; best=t; }
   }
   return best;
+}
+// 攻撃対象の点数の補正（学習）：つよい同士の試合で、攻撃対象を選ぶ場面ごとに全候補を先読み（16回×40ターン）で評価し、
+// 「脅威度の点数から別の相手に変えたときの勝率の差」を候補の特徴の一次式で当てはめた重み（通常攻撃 約10万件・宝具 約7千件）。
+// 交差検証では判断1回あたり 通常 +1.5%・宝具 +2.2%。重みどうしは相関が強いので、1つずつの意味は読まない
+let TGT_LEARN = true;
+const TGT_W = {
+  atk:{hsc:2.357,dmgFrac:-10.811,dmgAbs:6.624,kill:.935,killNp70:-2.87,killReady:4.92,feed:1.204,th:3.319,hpR:.926,hp:-1.938,np:-.975,ready:3.659,ult:-1.75,pass:-2.877,cost:2.396,ultNoTgt:-1.444,skillsLeft:1.226,buffs:.144,debuffs:-.36,disabled:-.479,hpAfter:11.737,readyAfter:-1.261},
+  ult:{hsc:1.573,dmgFrac:2.458,dmgAbs:4.838,kill:1.081,killNp70:-1.433,killReady:3.063,feed:-1.983,th:1.359,hpR:5.639,hp:-.943,np:.395,ready:2.554,ult:-.211,avg:1.047,pass:-.109,cost:4.663,guts:1.782,ultNoTgt:-3.736,skillsLeft:1.926,buffs:1.128,debuffs:-1.31,disabled:-3.522,hpAfter:3.181,readyAfter:-.509},
+};
+function cpuTgtLearn(t,d,sc,kill,hits){
+  const w=G.ult?TGT_W.ult:TGT_W.atk, est=estDamage(t), pass=est>0?d/est:1, dd=Math.min(d,t.hp), mhp=maxHp(t), ready=t.np>=RULES.ultCost;
+  const feed=!kill&&t.np<RULES.ultCost&&!has(t,'curse')&&!has(t,'hitNpSeal')&&t.np+hits*RULES.gaugeOnHit>=RULES.ultCost;
+  const x={hsc:sc/100, dmgFrac:dd/mhp, dmgAbs:dd/100, kill:+kill, killNp70:+(kill&&t.np>=70), killReady:+(kill&&ready), feed:+feed,
+    th:cpuThreat(t)/100, hpR:t.hp/mhp, hp:t.hp/100, np:t.np/100, ready:+ready, ult:ultPower(t)/100, avg:avgDmg(t)/10, pass, cost:D(t.def).cost,
+    guts:+has(t,'guts'), ultNoTgt:+!!ultNoTarget(t), skillsLeft:t.used.filter(x=>!x).length,
+    buffs:t.fx.filter(x=>FX[x.k]&&FX[x.k].buff===true).length, debuffs:t.fx.filter(x=>FX[x.k]&&FX[x.k].buff===false).length,
+    disabled:+!!disabled(t), hpAfter:Math.max(0,t.hp-dd)/mhp, readyAfter:+(ready&&!kill)};
+  let s=0; for(const k in w) s+=w[k]*x[k]; return s;
 }
 
 // ---------- 超つよい：攻撃対象を先読みで選ぶ（モンテカルロ） ----------
