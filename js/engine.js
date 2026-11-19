@@ -463,10 +463,15 @@ function applyOne0(src,t,e,o={}){
 // =====================================================================
 // x以下のダメージ無効：最終ダメージが値以下なら true
 const nullified=(tgt,dmg)=>{ const v=Math.max(0,...tgt.fx.filter(e=>e.k==='nullUnder').map(e=>e.v)); return v>0&&dmg<=v?v:0; };
-function blocked(att,tgt){
-  if(has(att,'pierce')) return null;
+// 無効にした nullUnder（条件を満たすうち最も小さいもの1つ）を使用済みにする
+const nullUse=(tgt,dmg)=>{ const l=tgt.fx.filter(e=>e.k==='nullUnder'&&e.v>0&&dmg<=e.v).sort((a,b)=>a.v-b.v); if(l.length) consume(tgt,[l[0]]); };
+// 回避・無敵で防げるか。defer(u,list)：攻撃側の必中・無敵貫通の消費（全体攻撃・複数ダメージ効果ではあとでまとめて）。攻撃1回ごとに1回消費
+function blocked(att,tgt,defer=consume){
+  const pi=att.fx.filter(e=>e.k==='pierce'), sh=att.fx.filter(e=>e.k==='sureHit');
+  if(pi.length){ defer(att,pi); return null; }
+  if(sh.length) defer(att,sh);
   let e=tgt.fx.find(x=>x.k==='invul');
-  if(!e && !has(att,'sureHit')) e=tgt.fx.find(x=>x.k==='evade');
+  if(!e && !sh.length) e=tgt.fx.find(x=>x.k==='evade');
   if(!e) return null;
   consume(tgt,[e]);
   return FX[e.k].name;
@@ -545,8 +550,8 @@ function dmgMods(att,tgt,color){
 // スター発生数ダウン(starDown)：1回の攻撃で発生するスターの合計から x 個引く（0未満にはしない）。返り値＝まだ引き切れていない分
 function gainNpStar(att,cmd,mult){
   if(cmd.np) addNp(att,npRate(att,cmd.np*mult),'atk');
-  let cut=mods(att,'starDown').sum;
-  if(cmd.star){ const v=cmd.star*mult, g=Math.max(0,v-cut); cut=Math.max(0,cut-v); G.gen+=g; }
+  const sd=mods(att,'starDown'); let cut=sd.sum;
+  if(cmd.star){ const v=cmd.star*mult, g=Math.max(0,v-cut); cut=Math.max(0,cut-v); G.gen+=g; if(sd.list.length) consume(att,sd.list); }
   return cut;
 }
 // ---------- 他のサーヴァントをロール（copyRoll） ----------
@@ -631,9 +636,9 @@ function attackHit(att,cmd,tgt,o,lab){
     log(`${n} ${cmdChip(cmd)} → オーバーキル（${TERMS.gauge}・${TERMS.star}${mult}倍）`);
     fxEmit({t:'dmg',uid:tgt.uid,v:fmt(dmg),crit,over:true});
   } else {
-    const b=blocked(att,tgt);
+    const b=blocked(att,tgt,cons);
     if(b){ st(tgt).blocked++; log(`${n} ${cmdChip(cmd)} → ${nm(tgt)}：${b}で無効 <span class="sub">(${note.join(' / ')})</span>`); fxEmit({t:'dmg',uid:tgt.uid,text:b}); }
-    else if(nullified(tgt,dmg)){ st(tgt).blocked++; log(`${n} ${cmdChip(cmd)} → ${nm(tgt)}：${fmt(dmg)}ダメージは${nullified(tgt,dmg)}以下なので無効 <span class="sub">(${note.join(' / ')})</span>`); fxEmit({t:'dmg',uid:tgt.uid,text:'無効'}); consume(tgt,usedT); }
+    else if(nullified(tgt,dmg)){ st(tgt).blocked++; log(`${n} ${cmdChip(cmd)} → ${nm(tgt)}：${fmt(dmg)}ダメージは${nullified(tgt,dmg)}以下なので無効 <span class="sub">(${note.join(' / ')})</span>`); fxEmit({t:'dmg',uid:tgt.uid,text:'無効'}); nullUse(tgt,dmg); consume(tgt,usedT); }
     else { log(`${n} ${cmdChip(cmd)} → ${nm(tgt)}：<b>${fmt(dmg)}</b>ダメージ <span class="sub">(${note.join(' / ')})</span>`); consume(tgt,usedT); dealDamage(tgt,dmg,true,{crit,att}); }
   }
   const starCut=o.noGain?0:gainNpStar(att,cmd,mult);
@@ -641,7 +646,7 @@ function attackHit(att,cmd,tgt,o,lab){
   // 攻撃時○○（エクストラアタックでは発動しない）
   if(!o.extra&&!o.noGain){
     const s=mods(att,'onAtkStar',cmd.c), p=mods(att,'onAtkNp',cmd.c);
-    if(s.sum){ const g=Math.max(0,s.sum-starCut); G.gen+=g; log(`${n} 攻撃時効果：${TERMS.star}${g}個発生`,'sub'); }
+    if(s.sum){ const g=Math.max(0,s.sum-starCut); G.gen+=g; log(`${n} 攻撃時効果：${TERMS.star}${g}個発生`,'sub'); if(starCut>0){ const sd=mods(att,'starDown'); consume(att,sd.list); } }
     if(p.sum){ addNp(att,npRate(att,p.sum),'atk'); log(`${n} 攻撃時効果：${TERMS.gauge}+${p.sum}%`,'sub'); }
     consume(att,[...s.list,...p.list]);
   }
@@ -686,6 +691,7 @@ function resolveCommand(att,cmd,tgt,o={}){
     }
     if(pend) pend.forEach(([u,l])=>consume(u,l));
   }
+  if(aoe&&!isAoe(cmd.eff)) consume(att,att.fx.filter(e=>e.k==='aoeNormal')); // 通常攻撃の全体化：攻撃1回で1回消費
   tl.forEach(syncU); syncU(att); // 獲得したNP・使い切った効果は、ダメージ演出のあとで画面に反映
 
   // 攻撃後の効果（例：自身の弱体解除）
@@ -752,9 +758,9 @@ function resolveUlt(u,tgt,picked){
           dmg=applyPct(Math.max(0,e.v+m.sum+up.sum-dn.sum),m.pct);
         }
         if(t.master&&e.t==='enemy_all'){ log(`→ ${nm(t)}${lab}：<b>${fmt(dmg)}</b>ダメージ`); dealDamage(t,dmg,false,{np:true,src:u}); continue; }
-        const b=blocked(u,t);
+        const b=blocked(u,t,(x,l)=>l.forEach(y=>usedA.add(y)));
         if(b){ st(t).blocked++; log(`→ ${nm(t)}${lab}：${b}で無効`); fxEmit({t:'dmg',uid:t.uid,text:b}); }
-        else if(!e.max&&nullified(t,dmg)){ st(t).blocked++; log(`→ ${nm(t)}${lab}：${fmt(dmg)}ダメージは${nullified(t,dmg)}以下なので無効`); fxEmit({t:'dmg',uid:t.uid,text:'無効'}); consume(t,usedT); }
+        else if(!e.max&&nullified(t,dmg)){ st(t).blocked++; log(`→ ${nm(t)}${lab}：${fmt(dmg)}ダメージは${nullified(t,dmg)}以下なので無効`); fxEmit({t:'dmg',uid:t.uid,text:'無効'}); nullUse(t,dmg); consume(t,usedT); }
         else { log(`→ ${nm(t)}${lab}：<b>${fmt(dmg)}</b>ダメージ${e.max?'（最大HP・軽減不可）':''}`); consume(t,usedT); dealDamage(t,dmg,true,{np:true,att:u}); if(!t.out&&!h) say(t,'npDamage',{other:u}); }
         if(u.out) break; // 反撃で倒れたら残りの対象には当たらない
       }
