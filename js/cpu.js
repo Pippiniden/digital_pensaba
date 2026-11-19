@@ -486,9 +486,14 @@ function cpuSkillScore(u,si){
 // 入れる前の版との対戦（つよい・先読みなし・各約20万試合）：チーム 50.20%・マスターチーム 50.27%（±0.22）。当てはまるキャラが少ないので全体の差は小さい
 let GUARD_KEEP = true;
 const permGuard = (e,effs,ts)=>e.times&&!e.turns&&ts.some(t=>t.pid===G.cur&&!has(t,e.k))&&effs.every(x=>['evade','invul','def','cleanse','taunt'].includes(x.k));
+// 意味がない場面で使わない（tools/skill-waste.js の点検で見つかった無駄。スキル全体が無駄な使い方 2.5%→0.4%、旧版との対戦 team 50.8%・mteam 50.8%（±0.7））：条件つきのスタン・魅了は対象がいなければ0、1ターンの宝具威力アップは宝具を撃つときだけ、
+// ターゲット集中はほかの味方が持っている・敵が全体宝具を撃てるなら0、自分用の守りはほかの味方がターゲット集中を持っている（全体宝具も来ない）なら0、ガッツは重ねない
+let SKILL_SENSE = true;
 // 効果の並び（スキル・令呪）の「今使う価値」。si はスキル番号（スキル以外は -1）
 function cpuEffScore(u,effs,picked,si){
   const allies=alive(u.pid), enemies=alive(1-u.pid), stars=G.players[u.pid].stars;
+  const aoeSoon=SKILL_SENSE&&enemies.some(x=>!x.master&&canUlt(x)&&x.np>=70&&ultNoTarget(x));
+  const shielded=t=>SKILL_SENSE&&t.pid===u.pid&&!has(t,'taunt')&&!aoeSoon&&allies.some(a=>a!==t&&has(a,'taunt')); // 敵の単体攻撃はターゲット集中の味方に行く
   let sc=0;
   for(const e of effs){
     if(FX[e.k]&&FX[e.k].noTgt) continue; // 説明文・連続攻撃（スキルでは使わない）
@@ -523,9 +528,9 @@ function cpuEffScore(u,effs,picked,si){
       case 'aoeNormal': sc+=acting&&enemies.length>=2?3:.3; break;
       case 'sureHit': sc+=acting&&enemies.some(x=>has(x,'evade'))?4:.5; break;
       case 'pierce': sc+=acting&&enemies.some(x=>has(x,'evade')||has(x,'invul'))?4:.5; break;
-      case 'def': case 'evade': case 'invul': sc+=ts.some(t=>hpR(t)<.6)||(GUARD_KEEP&&permGuard(e,effs,ts))?3:0; break;
-      case 'guts': sc+=ts.some(t=>hpR(t)<.5)?4:0; break;
-      case 'taunt': sc+=hpR(u)>=.5&&allies.some(a=>a!==u&&hpR(a)<.5)?3:0; break;
+      case 'def': case 'evade': case 'invul': { const ex=ts.filter(t=>!shielded(t)); sc+=ex.some(t=>hpR(t)<.6)||(GUARD_KEEP&&ex.length&&permGuard(e,effs,ex))?3:0; break; }
+      case 'guts': sc+=ts.some(t=>hpR(t)<.5&&!(SKILL_SENSE&&has(t,'guts')))?4:0; break;
+      case 'taunt': sc+=hpR(u)>=.5&&allies.some(a=>a!==u&&hpR(a)<.5)&&!(SKILL_SENSE&&(aoeSoon||allies.some(a=>a!==u&&has(a,'taunt'))))?3:0; break;
       case 'heal': sc+=ts.some(t=>maxHp(t)-t.hp>=e.v*.7)?3:0; break;
       case 'regenHp': case 'maxHp': sc+=ts.some(t=>hpR(t)<.8)?2:1; break;
       case 'regenNp': sc+=ts.some(t=>t.np<RULES.ultCost)?2:.5; break;
@@ -561,13 +566,16 @@ function cpuEffScore(u,effs,picked,si){
       case 'cleanse': sc+=ts.some(t=>t.fx.some(x=>e.vs?x.k===e.vs:FX[x.k].buff===false))?2:0; break;
       case 'np': sc+=ts.some(t=>t.np<RULES.ultCost&&t.np+e.v>=RULES.ultCost)?4:ts.some(t=>t.np<RULES.ultCost)?1.5:0; break;
       case 'star': sc+=cpuHard()?starSkillScore(e.v,u.pid):G.ult?.5:2; break;
-      case 'stun': case 'charm': sc+=3; break;
+      case 'stun': case 'charm': sc+=!SKILL_SENSE||foes.some(t=>!has(t,'debuffImmune')&&!(FX[e.k].mental&&has(t,'mentalImmune')))?3:-1; break; // 条件つき（特定の相手だけ）は対象がいなければ使わない
       case 'poison': case 'burn': sc+=ts.some(t=>!has(t,e.k))?2:0; break;
       case 'curse': case 'hitNpSeal': case 'atkDown': case 'atkPctDown': sc+=2; break;
       case 'strip': sc+=ts.some(t=>t.fx.some(x=>e.vs?x.k===e.vs:FX[x.k].buff))?2:0; break;
       case 'defDown': sc+=ts.some(t=>t.pid===u.pid)?-1:1; break;
       case 'dmg': sc+=foes.length?2:0; break;
-      case 'npPow': sc+=ts.some(t=>G.ult===t.uid||(t.np>=RULES.ultCost&&!G.ult))?3:.5; break;
+      case 'npPow': // 1ターンだけなら、今ターン宝具を撃つとき（同じスキルのNPで100%に届く場合も）だけ。宝具を撃つかは先に決めているので、NP100%でも撃たないなら無駄
+      if(SKILL_SENSE&&(e.turns||0)<=1&&!e.times){ const gain=effs.filter(x=>x.k==='np'&&x.v>0).reduce((s,x)=>s+x.v,0);
+        sc+=ts.some(t=>G.ult===t.uid||(!G.ult&&!G.ultDone&&canUlt(t)&&t.np<RULES.ultCost&&t.np+gain>=RULES.ultCost))?3:0; break; }
+      sc+=ts.some(t=>G.ult===t.uid||(t.np>=RULES.ultCost&&!G.ult))?3:.5; break;
       case 'npPowDown': sc+=foes.some(t=>t.np>=RULES.ultCost-30)?2.5:foes.length?.5:-1; break;
       case 'selfDmg': sc-=ts.reduce((s,t)=>s+(t.pid===u.pid?(effVal(e,t)>=t.hp?6:effVal(e,t)/maxHp(t)*4):-1.5),0); break; // 味方が倒れる自傷は使わない
     }
