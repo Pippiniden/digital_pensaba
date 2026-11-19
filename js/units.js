@@ -329,7 +329,7 @@ const DEFAULT_UNITS = [
       {"key":"win","who":"ally","cond":{"k":"id","v":"m_erika"},"lines":["これがボクとエリカの愛の力ってね！"]},
       {"key":"start","who":"other","cond":{"k":"id","v":"lancelot"},"lines":["ったく、キミと正面衝突とはね"]},
       {"key":"start","who":"ally","cond":{"k":"id","v":"lancelot"},"lines":["さ、前線は任せたよセイバー！"]},
-      {"key":"win","who":"other","cond":{"k":"id","v":"maximinus"},"lines":["冗談でしょ……こいつと一緒にされてたのボク……！？"]}
+      {"key":"win","who":"other","cond":{"k":"id","v":"themistocles"},"lines":["冗談でしょ……こいつと一緒にされてたの、ボク……！？"]}
     ],
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
@@ -880,7 +880,7 @@ const DEFAULT_UNITS = [
     "ult":{"name":"赤い盾","c":"R","eff":[{"k":"dmg","t":"target","v":300},{"k":"invul","t":"self","v":0,"turns":1},{"k":"cleanse","t":"ally_all","v":0}],"ruby":"レッドシールド"}
   },
   {
-    "id":"guillaume", "name":"ギヨーム9世", "cls":"キャスター", "cost":3, "hp":550,
+    "id":"guillaume", "name":"ギヨーム9世", "cls":"キャスター", "cost":3, "hp":500,
     "traits":["男性","混沌","善","人","人型","フランス"],
     "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":0,"z":105},"cut":{"x":0,"y":12,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%ae%a5%e8%a1%bc%a5%e09%c0%a4",
@@ -911,7 +911,7 @@ const DEFAULT_UNITS = [
     "ult":{"name":"全ての騎士たちの歌","c":"B","eff":[{"k":"np","t":"picked","v":60},{"k":"npPow","t":"picked","v":80,"turns":2}],"ruby":"ヴィーダ","pick":"other"}
   },
   {
-    "id":"vercingetorix", "name":"ウェルキンゲトリクス", "cls":"セイバー", "cost":4, "hp":900,
+    "id":"vercingetorix", "name":"ウェルキンゲトリクス", "cls":"セイバー", "cost":4, "hp":850,
     "traits":["男性","中立","中庸","人","人型","王","フランス"],
     "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":0,"z":105},"cut":{"x":0,"y":10,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%a6%a5%a7%a5%eb%a5%ad%a5%f3%a5%b2%a5%c8%a5%ea%a5%af%a5%b9",
@@ -1591,18 +1591,18 @@ const DEFAULT_UNITS = [
   {
     "id":"maximinus", "name":"マクシミヌス・トラクス", "cls":"バーサーカー", "cost":4, "hp":750,
     "traits":["男性","混沌","悪","人","人型","王"],
-    "fit":{"face":{"x":50,"y":18,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":0,"z":105},"cut":{"x":0,"y":11,"z":100}},
+    "fit":{"face":{"x":50,"y":5,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":0,"z":105},"cut":{"x":0,"y":11,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%de%a5%af%a5%b7%a5%df%a5%cc%a5%b9%a1%a6%a5%c8%a5%e9%a5%af%a5%b9",
     "lines":{
-      "start":[],
-      "attack":[],
-      "extra":[],
-      "damage":[],
-      "skill":[],
-      "np":[],
-      "npDamage":[],
-      "defeat":[],
-      "win":[]
+      "start":["ふは、フハハ覇ハハ覇覇覇覇ハハッ！！貴様らは、殺すに値する！！","戦乱は、何処だ...！！"],
+      "attack":["受けてみよオオオ終オオ終終終終オオオ！！","砕け散るがイ威イ威威威！！！！","覇覇覇覇ハハッ！！"],
+      "extra":["その血と命を我に捧ぐ事だけが、貴様らの価値である！！"],
+      "damage":["その程度かあ紅紅紅紅紅紅紅！！"],
+      "skill":["刮目せよ...我が紅蓮なる暴威をッ！！！！","惰弱！脆弱！軟弱者めが！砕け散らしてくれるわ！！"],
+      "np":["我が血は紅。我が命は凶。軟弱なりや凡百を踏み躙りその上に立つが故の皇帝！！　紅蓮を受けよ...『禍殃、紅蓮なる蛮地より』！！！！"],
+      "npDamage":["ぐ終終終終終終終終オオオオ！！！！"],
+      "defeat":["ふ、フ覇覇、フハハハハハハ...","おのれ！　おのれ、おのれ、おのれ！！貴様如きが我が道を阻むなどオオ怨怨怨怨怨怨怨！！！！！"],
+      "win":["ふは、フハハ覇覇覇覇覇覇！！！！！！戦乱の化身たる我が前に立ち塞がるという愚行の代償、その命と引き換えに知ったようだな！！！！！！"]
     },
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
@@ -1622,18 +1622,18 @@ const DEFAULT_UNITS = [
   {
     "id":"chiriduka", "name":"塵塚怪王", "cls":"ライダー", "cost":4, "hp":840,
     "traits":["女性","混沌","中庸","地","人型","魔性","神性","王","ヒト科以外"],
-    "fit":{"face":{"x":50,"y":40,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":14,"z":105},"cut":{"x":0,"y":0,"z":100}},
+    "fit":{"face":{"x":50,"y":11,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":14,"z":105},"cut":{"x":0,"y":0,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%bf%d0%c4%cd%b2%f8%b2%a6",
     "lines":{
-      "start":[],
-      "attack":[],
-      "extra":[],
-      "damage":[],
-      "skill":[],
-      "np":[],
-      "npDamage":[],
-      "defeat":[],
-      "win":[]
+      "start":["塵も積もれば山となる。我々と闘うとはそういうことだぞ","さて、早く終わらせて収集の続きを始めたいんだが？"],
+      "attack":["潰れろ！","押しつぶす！","くらえ！"],
+      "extra":["おまえも我々の一部になりそうだな！"],
+      "damage":["崩れる！？"],
+      "skill":["ではこれで行こうか","何せ我々は役に立つからな！"],
+      "np":["木を裂き、土を焼き、鉄を叩き、油を燃やした。そして我々が出来た…我々たちが出来た。塵芥のように押しつぶそう！『塵積姥の怪王』！"],
+      "npDamage":["片付けられちゃうー！？"],
+      "defeat":["ああ…ダメだダメだダメだ！我々はまだ働ける使えるんだ捨てないでくれ壊さないで","嫌だ…我々はまだ…使われて役に立ち…"],
+      "win":["主がそういう見た目が嫌だから取り込まないでやる！ありがたく思うんだな！","物は大切に！使えるものは最後まで使えよ！"]
     },
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
@@ -1651,45 +1651,51 @@ const DEFAULT_UNITS = [
     "ult":{"name":"塵積姥の怪王","c":"G","eff":[{"k":"npPow","t":"self","v":40,"turns":3,"chance":2},{"k":"npPow","t":"self","v":30,"turns":3,"chance":3},{"k":"npPow","t":"self","v":20,"turns":3,"chance":4},{"k":"atk","t":"self","v":40,"turns":2,"color":"G"},{"k":"dmg","t":"target","v":220}],"ruby":"ちりつもりしうばのかいおう"}
   },
   {
-    "id":"sulla", "name":"スッラ", "cls":"ライダー", "cost":5, "hp":880,
+    "id":"sulla", "name":"スッラ", "cls":"ライダー", "cost":5, "hp":900,
+    "traits":["男性","女性","中立","中庸","星","人型","ローマ"],
+    "fit":{"face":{"x":50,"y":9,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":16,"z":105},"cut":{"x":0,"y":8,"z":100}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%a5%b9%a5%c3%a5%e9",
     "lines":{
-      "start":[],
+      "start":["貴方は神の意志を理解できていません。失望しました。"],
       "attack":[],
       "extra":[],
       "damage":[],
-      "skill":[],
-      "np":[],
+      "skill":["貴方の回答はイエスかノーです"],
+      "np":["スッラちゃんは貴方からすべてを奪います。『粛清記す血濡れの名簿』いつでもスッラはフェリクスです"],
       "npDamage":[],
       "defeat":[],
-      "win":[]
+      "win":["任務完了。これより独裁官を辞職します。お疲れ様でした。無事独裁官を辞められるスッラはフェリクスです","今回もスッラの目標は無事達成されました。スッラは今回もフェリクスです"]
     },
     "faces":[
-      {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":120,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":120,"np":0,"star":2}},
       {"acts":2,"pre":{"c":"R","dmg":100,"np":0,"star":2},"post":{"c":"R","dmg":110,"np":0,"star":0}},
-      {"acts":1,"pre":{"c":"B","dmg":50,"np":20,"star":0},"post":{"c":"B","dmg":60,"np":25,"star":0}},
-      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"ディクタトル・ペルペトゥオ","eff":[{"k":"np","t":"target","v":-10},{"k":"starLoss","t":"target","v":3},{"k":"heal","t":"self","v":50},{"k":"np","t":"self","v":10},{"k":"star","t":"master","v":3}],"dmg":50,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":60,"np":20,"star":0},"post":{"c":"B","dmg":70,"np":25,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"幸運","eff":[{"k":"np","t":"target","v":-20},{"k":"starLoss","t":"target","v":3},{"k":"heal","t":"self","v":50},{"k":"np","t":"self","v":10},{"k":"star","t":"master","v":3}],"dmg":50,"np":0,"star":0}},
       {"acts":3,"pre":{"c":"B","dmg":60,"np":15,"star":0},"post":{"c":"B","dmg":70,"np":20,"star":0}},
       {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":4},"post":{"c":"G","dmg":50,"np":0,"star":6}}
     ],
     "skills":[
-      {"name":"圧政者","eff":[{"k":"atk","t":"ally_all","v":20,"turns":3},{"k":"defDown","t":"enemy_all","v":20,"turns":3},{"k":"atkDown","t":"enemy_all","v":20,"turns":3}],"rank":"A"},
-      {"name":"黄金率(美)","eff":[{"k":"debuffImmune","t":"self","v":0,"turns":3},{"k":"regenNp","t":"self","v":10,"turns":3}],"rank":"B"},
-      {"name":"幸運独裁官","eff":[{"k":"star","t":"master","v":15},{"k":"critDown","t":"enemy_all","v":5,"turns":1}],"rank":"EX"}
+      {"name":"ディクタトル・ペルペトゥオ","eff":[{"k":"atk","t":"ally_all","v":20,"turns":3},{"k":"debuffImmune","t":"ally_all","v":0,"turns":3},{"k":"def","t":"ally_all","v":20,"turns":3},{"k":"debuffUp","t":"ally_all","v":1,"turns":3},{"k":"buffUp","t":"ally_all","v":1,"turns":3},{"k":"cardConvPick","t":"ally_all","v":0,"turns":1}],"rank":"A"},
+      {"name":"エパフロデト","eff":[{"k":"debuffImmune","t":"self","v":0,"turns":3},{"k":"regenNp","t":"self","v":10,"turns":3}],"rank":"B"},
+      {"name":"直感(運命)","eff":[{"k":"star","t":"master","v":15},{"k":"critDown","t":"enemy_all","v":5,"turns":1},{"k":"critRoll","t":"self","v":1,"turns":1},{"k":"critPow","t":"self","v":50,"turns":1}],"rank":"EX","line":["スッラは今回もフェリクスです。"]}
     ],
-    "ult":{"name":"粛清記す血濡れの名簿","c":"R","eff":[{"k":"strip","t":"enemy_all","v":0},{"k":"instantDeath","t":"enemy_all","v":0,"chance":1},{"k":"instantDeath","t":"enemy_all","v":0,"chance":1},{"k":"regenStar","t":"self","v":5,"turns":3}],"ruby":"プロスクリプティオ"}
+    "ult":{"name":"雷鳴の夢告","c":"R","eff":[{"k":"pierce","t":"self","v":0,"times":1},{"k":"dmg","t":"target","v":250}],"ruby":"プロスクリプティオ"}
   },
   {
-    "id":"themistocles", "name":"テミストクレス", "cls":"ライダー", "cost":5, "hp":800,
+    "id":"themistocles", "name":"テミストクレス", "cls":"ライダー", "cost":5, "hp":900,
+    "traits":["男性","秩序","悪","人","人型","ギリシャ"],
+    "fit":{"face":{"x":50,"y":13,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":14,"z":105},"cut":{"x":0,"y":7,"z":100}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%a5%c6%a5%df%a5%b9%a5%c8%a5%af%a5%ec%a5%b9",
     "lines":{
-      "start":[],
+      "start":["俺様は勝てる戦しかしたくねぇんだよなァ！"],
       "attack":[],
       "extra":[],
-      "damage":[],
-      "skill":[],
+      "damage":["ヒィィィィ！"],
+      "skill":["これは偉大なる俺様の手助けが必要ですかなァ？"],
       "np":[],
-      "npDamage":[],
+      "npDamage":["ヒィィィィ！悪かったです！！俺が悪かったですよぉ！"],
       "defeat":[],
-      "win":[]
+      "win":["やっぱり俺様がナンバーワンサーヴァントなんだよなァ！"]
     },
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":90,"np":0,"star":0},"post":{"c":"R","dmg":120,"np":0,"star":0}},
@@ -1707,20 +1713,20 @@ const DEFAULT_UNITS = [
     "ult":{"name":"界統べる支配の聖船","c":"G","eff":[{"k":"strip","t":"enemy_all","v":0,"vs":"def"},{"k":"dmg","t":"enemy_all","v":280},{"k":"invul","t":"self","v":0,"turns":1}],"ruby":"テイコス・クシュリノン・アウトクラトール"}
   },
   {
-    "id":"ethelfleda", "name":"エセルフレード", "cls":"セイバー", "cost":4, "hp":810,
+    "id":"ethelfleda", "name":"エセルフレード", "cls":"セイバー", "cost":4, "hp":800,
     "traits":["女性","秩序","善","人","人型","竜","イギリス"],
-    "fit":{"face":{"x":50,"y":31,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":14,"z":79},"cut":{"x":0,"y":6,"z":100}},
+    "fit":{"face":{"x":50,"y":14,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":14,"z":79},"cut":{"x":0,"y":6,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%a8%a5%bb%a5%eb%a5%d5%a5%ec%a1%bc%a5%c9",
     "lines":{
-      "start":[],
-      "attack":[],
-      "extra":[],
-      "damage":[],
-      "skill":[],
-      "np":[],
-      "npDamage":[],
-      "defeat":[],
-      "win":[]
+      "start":["マーシアの鉄壁を易々と破れると思うな","これより先は我が領域である！"],
+      "attack":["踏み砕く","そこだあっ！","薙ぎ払う！","砕け散れっ！"],
+      "extra":["吼え猛ろ、竜よ！　消し飛べええええ！"],
+      "damage":["ちっ！"],
+      "skill":["討ち滅ぼす","貴様は逃さん！"],
+      "np":["宝具開帳。至高の城砦は汝らの霊柩。撃滅する。──哭け、『訃音告げる討滅の城壁』！"],
+      "npDamage":["図に乗るなよ……！"],
+      "defeat":["マスター……どうかご無事で……！","我が城塞が……崩されるなどと……"],
+      "win":["貴様らの言い分に興味はない。私は唯、マスターの命に従うのみだ","奴らを倒せとのご命令、確かに果たしました"]
     },
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":60,"np":0,"star":0},"post":{"c":"R","dmg":80,"np":0,"star":0}},
@@ -1740,18 +1746,18 @@ const DEFAULT_UNITS = [
   {
     "id":"phaethon", "name":"パエトーン", "cls":"ライダー", "cost":1, "hp":350,
     "traits":["男性","混沌","善","地","人型","子供","神性"],
-    "fit":{"face":{"x":50,"y":18,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":14,"z":105},"cut":{"x":0,"y":6,"z":100}},
+    "fit":{"face":{"x":50,"y":15,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":14,"z":105},"cut":{"x":0,"y":6,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%A5%D1%A5%A8%A5%C8%A1%BC%A5%F3",
     "lines":{
-      "start":[],
-      "attack":[],
+      "start":["や、やるぞ...ぼくはアポロンの息子なんだ...！"],
+      "attack":["うぅ...！","助けて...お姉ちゃん...！"],
       "extra":[],
-      "damage":[],
-      "skill":[],
-      "np":[],
-      "npDamage":[],
-      "defeat":[],
-      "win":[]
+      "damage":["あうっ..."],
+      "skill":["星が...見える...","ぼくには太陽神の加護が...ある筈なんだ...ッ！！"],
+      "np":["き、起動せよ...太陽神アポロンの戦車よ！！これが...ぼくがアポロンの子である証明だ───！！う、うわああああ！！！！"],
+      "npDamage":["うわああああ！！！！！"],
+      "defeat":["お父さん...","ごめんなさい...ごめんなさい...！"],
+      "win":["か、勝った...？そうだ...アポロンの子は、勝たなきゃダメなんだ..."]
     },
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":40,"np":0,"star":0},"post":{"c":"R","dmg":70,"np":0,"star":0}},
@@ -1798,5 +1804,39 @@ const DEFAULT_UNITS = [
       {"name":"キメリカル・ビースト","eff":[{"k":"curse","t":"enemy_all","v":0,"times":1,"chance":2},{"k":"heal","t":"self","v":120},{"k":"skillCharge","t":"self","v":1}],"rank":"A++"}
     ],
     "ult":{"name":"汝、星を改む猛獣","c":"R","eff":[{"k":"strip","t":"enemy_all","v":0,"vs":"def"},{"k":"atkTrait","t":"self","v":50,"turns":3,"trait":"地"},{"k":"dmg","t":"enemy_all","v":250},{"k":"defDown","t":"target","v":20,"turns":3,"color":"R"}],"ruby":"キマイラ・カタストロフィ"}
+  },
+  {
+    "id":"chief", "name":"隠されし首領", "cls":"ルーラー", "cost":5, "hp":800,
+    "traits":["女性","秩序","中庸","人型","神性","超巨大","高位存在","人類の脅威"],
+    "fit":{"face":{"x":50,"y":21,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":23,"z":81},"cut":{"x":0,"y":12,"z":100}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%22%B1%A3%A4%B5%A4%EC%A4%B7%BC%F3%CE%CE%22",
+    "lines":{
+      "start":["ハッ！！　当職を怒らせたか！！","どう殺してくれようか？"],
+      "attack":["\"止まれ！\"","お痛がすぎるな","命知らずが！"],
+      "extra":["その存在の一片までも、歴史の果てから消し去ってくれyアダァ！！？　くっ…膝擦りむいた…！"],
+      "damage":["くそ…！"],
+      "skill":["神よりの恩寵である"],
+      "np":["少し、本気の片鱗を見せてくれる"],
+      "npDamage":["止まれ！　止まれったら！　頼むぶへぁ！"],
+      "defeat":["どういう事だそれぇ！","……ぐすん"],
+      "win":["当職は偉いんだぞ本当に！"]
+    },
+    "condLines":[
+      {"key":"start","who":"other","cond":{"k":"trait","v":"神性"},"lines":["ゼウスとか、オーディンとか、みんなみーんな当職の支配下だ！　子供みたいなもんなんだ！"]}
+    ],
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":90,"np":0,"star":0},"post":{"c":"R","dmg":120,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"B","dmg":70,"np":15,"star":0},"post":{"c":"B","dmg":80,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":60,"np":10,"star":0},"post":{"c":"B","dmg":80,"np":15,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"B","dmg":70,"np":10,"star":0,"eff":[{"k":"stun","t":"target","v":0,"turns":1,"chance":3}]}},
+      {"acts":3,"pre":{"c":"B","dmg":50,"np":10,"star":0},"post":{"c":"B","dmg":70,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":50,"np":0,"star":4},"post":{"c":"G","dmg":60,"np":0,"star":6}}
+    ],
+    "skills":[
+      {"name":"身体無き者","eff":[{"k":"np","t":"self","v":20},{"k":"guts","t":"self","v":150,"turns":5}],"rank":"A++"},
+      {"name":"神明裁決(始原)","eff":[{"k":"np","t":"picked","v":-15,"chance":3},{"k":"stun","t":"picked","v":0,"turns":1,"chance":3},{"k":"atkVs","t":"self","v":50,"turns":5,"vs":"stun"}],"rank":"A","pick":"enemy","line":["我が言葉を以て命ずる！！　\"止まれ！\""]},
+      {"name":"開闢の導き手","eff":[{"k":"regenStar","t":"self","v":5,"turns":3},{"k":"critRoll","t":"self","v":3,"turns":3},{"k":"critPow","t":"self","v":50,"turns":3},{"k":"debuffUp","t":"self","v":1,"turns":3}],"rank":"■"}
+    ],
+    "ult":{"name":"隠されしは神秘の砦","c":"B","eff":[{"k":"stun","t":"target","v":0,"turns":1},{"k":"dmg","t":"target","v":450}],"ruby":"ザ・シークレット・カストディアン"}
   }
 ];
