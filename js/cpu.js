@@ -7,12 +7,12 @@
    ===================================================================== */
 
 // 難易度。hard 以上は攻撃対象を「脅威度」で選び、宝具をダメージ見込みで撃つ。さらに攻撃対象は先読み（モンテカルロ）で決める：
-// hard は軽く（試行 MC_R_HARD 回・先 MC_T_HARD ターン）、expert はじっくり（MC_R_EXPERT 回・MC_T_EXPERT ターン。シンプルルールではスキル・宝具も）
+// hard は軽く（試行 MC_R_HARD 回・先 MC_T_HARD ターン）、expert はじっくり（MC_R_EXPERT 回・MC_T_EXPERT ターン。スキル・宝具も）
 const CPU_LEVELS = {
   easy:  {name:'よわい',   desc:'スキルや攻撃対象をほぼ気まぐれに選ぶ'},
   normal:{name:'ふつう',   desc:'状況を見てスキル・行動配分・攻撃対象を選ぶ'},
   hard:  {name:'つよい',   desc:'危険な相手を狙い、攻撃対象は少し先を読んで選ぶ。宝具も撃ちどきを選ぶ'},
-  expert:{name:'超つよい', desc:'攻撃対象（シンプルではスキル・宝具）をじっくり先読みして選ぶ'},
+  expert:{name:'超つよい', desc:'攻撃対象・スキル・宝具をじっくり先読みして選ぶ'},
 };
 const cpuHard = ()=>G.level==='hard'||G.level==='expert';
 // 先読み：攻撃対象の候補ごとに、決着まで（または打ち切りまで）試す回数と、1回の試しで進める最大ターン数（超えたら残りHPで評価）
@@ -77,8 +77,8 @@ function cpuDecide(){
       let m=null;
       if(!G.ult&&!G.ultDone){ const u=cpuUltUser(); if(u) m=['useUlt',{uid:u.uid}]; }
       if(!m){ const s=cpuNextSkill(easy); m=s ? ['useSkill',{uid:s.u.uid,si:String(s.si)}] : ['skillDone']; }
-      // 超つよい・シンプルルール：スキル・宝具も先読みで選ぶ（チームバトルでは逆に弱くなったので使わない）
-      return G.level==='expert'&&ruleset().partyMax===1 ? cpuMcSkill(m) : m;
+      // 超つよい：スキル・宝具も先読みで選ぶ（チームバトルは MC_SKILL_TEAM に入れた強さだけ）
+      return mcSkillOn() ? cpuMcSkill(m) : m;
     }
     case 'action': {
       if(G.copy){ // 他のサーヴァントをロール：再臨後コマンドの平均ダメージが高い相手を選ぶ
@@ -481,6 +481,11 @@ function cpuSkillScore(u,si){
   const s=D(u.def).skills[si];
   return cpuEffScore(u,s.eff,s.pick?cpuPickTarget(u.uid,si,false):null,si);
 }
+// 回数だけで消える守り（ターン数なしの回避・無敵・防御）は、受けるまで残るので早く使っても無駄にならない。守りだけのスキル（回避・無敵・防御・弱体解除・ターゲット集中）ならHPに関係なく使う。
+// 先読み（超つよいと同じ16回×40ターン）の判断を集めた解析：つよいが温存した場面で使うと +3.1%（±0.7・1848件）。ほかの効果（回復など）が混ざるスキルは使い時が違うので対象外。
+// 入れる前の版との対戦（つよい・先読みなし・各約20万試合）：チーム 50.20%・マスターチーム 50.27%（±0.22）。当てはまるキャラが少ないので全体の差は小さい
+let GUARD_KEEP = true;
+const permGuard = (e,effs,ts)=>e.times&&!e.turns&&ts.some(t=>t.pid===G.cur&&!has(t,e.k))&&effs.every(x=>['evade','invul','def','cleanse','taunt'].includes(x.k));
 // 効果の並び（スキル・令呪）の「今使う価値」。si はスキル番号（スキル以外は -1）
 function cpuEffScore(u,effs,picked,si){
   const allies=alive(u.pid), enemies=alive(1-u.pid), stars=G.players[u.pid].stars;
@@ -518,7 +523,7 @@ function cpuEffScore(u,effs,picked,si){
       case 'aoeNormal': sc+=acting&&enemies.length>=2?3:.3; break;
       case 'sureHit': sc+=acting&&enemies.some(x=>has(x,'evade'))?4:.5; break;
       case 'pierce': sc+=acting&&enemies.some(x=>has(x,'evade')||has(x,'invul'))?4:.5; break;
-      case 'def': case 'evade': case 'invul': sc+=ts.some(t=>hpR(t)<.6)?3:0; break;
+      case 'def': case 'evade': case 'invul': sc+=ts.some(t=>hpR(t)<.6)||(GUARD_KEEP&&permGuard(e,effs,ts))?3:0; break;
       case 'guts': sc+=ts.some(t=>hpR(t)<.5)?4:0; break;
       case 'taunt': sc+=hpR(u)>=.5&&allies.some(a=>a!==u&&hpR(a)<.5)?3:0; break;
       case 'heal': sc+=ts.some(t=>maxHp(t)-t.hp>=e.v*.7)?3:0; break;
@@ -679,9 +684,15 @@ function cpuMcTarget(){
   cpuMcMemo={key, uid:c[bi].uid};
   return c[bi];
 }
-// 超つよい（シンプルルール）：スキル・宝具の手を先読みで選ぶ。h は「つよい」の手。
+// 超つよい：スキル・宝具の手を先読みで選ぶ。h は「つよい」の手。
 // 候補が多いと運よく高く出た手を選びがちなので、h より MC_MARGIN（勝率）以上よいときだけ h から変える
-const MC_MARGIN = .1;
+let MC_MARGIN = .1;
+// チームバトルでもスキル・宝具を先読みで選ぶ強さ（'expert' / 'hard,expert' など。'' ＝使わない。hard は CPU_LOOKAHEAD のときだけ）
+// 測定（旧版との対戦・各400試合）：expert で team 58.6%・mteam 59.3%。考える時間は1手番 平均約0.7〜1.1秒（旧 約0.2秒）。
+// hard でも team 52.6%・mteam 54.4%（各800試合）と少し強くなるが、時間が約4倍（先読みありのバランス検証も遅くなる）ので入れていない
+let MC_SKILL_TEAM = 'expert';
+const mcSkillOn = ()=>!cpuInRollout && (ruleset().partyMax===1 ? G.level==='expert'
+  : MC_SKILL_TEAM.split(',').includes(G.level) && (G.level==='expert'||CPU_LOOKAHEAD));
 function cpuMcSkill(h){
   const cands=[['skillDone']];
   if(!G.ult&&!G.ultDone) alive(G.cur).forEach(u=>{ if(canUlt(u)&&u.np>=RULES.ultCost) cands.push(['useUlt',{uid:u.uid}]); });
