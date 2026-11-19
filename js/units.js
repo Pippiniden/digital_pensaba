@@ -328,7 +328,8 @@ const DEFAULT_UNITS = [
       {"key":"defeat","who":"ally","cond":{"k":"id","v":"m_erika"},"lines":["エリカ……ごめん……"]},
       {"key":"win","who":"ally","cond":{"k":"id","v":"m_erika"},"lines":["これがボクとエリカの愛の力ってね！"]},
       {"key":"start","who":"other","cond":{"k":"id","v":"lancelot"},"lines":["ったく、キミと正面衝突とはね"]},
-      {"key":"start","who":"ally","cond":{"k":"id","v":"lancelot"},"lines":["さ、前線は任せたよセイバー！"]}
+      {"key":"start","who":"ally","cond":{"k":"id","v":"lancelot"},"lines":["さ、前線は任せたよセイバー！"]},
+      {"key":"win","who":"other","cond":{"k":"id","v":"maximinus"},"lines":["冗談でしょ……こいつと一緒にされてたのボク……！？"]}
     ],
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
@@ -774,7 +775,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"utixorabbit", "name":"ウティホの兎", "cls":"アサシン", "cost":2, "hp":330,
-    "traits":["女性","混沌","中庸","地","獣"],
+    "traits":["女性","混沌","中庸","地","獣","ヒト科以外"],
     "fit":{"face":{"x":50,"y":15,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":29,"z":105},"cut":{"x":0,"y":6,"z":95}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%a6%a5%c6%a5%a3%a5%db%a4%ce%c5%c6",
     "lines":{
@@ -929,7 +930,7 @@ const DEFAULT_UNITS = [
       {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
       {"acts":1,"pre":{"c":"B","dmg":60,"np":15,"star":0},"post":{"c":"B","dmg":80,"np":20,"star":0}},
-      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"破壊工作","eff":[{"k":"atkDown","t":"enemy_all","v":20,"turns":3},{"k":"defDown","t":"enemy_all","v":20,"turns":3}],"dmg":0,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"破壊工作","eff":[{"k":"atkDown","t":"enemy_all","v":20,"turns":3},{"k":"defDown","t":"enemy_all","v":20,"turns":3},{"k":"aoeNormal","t":"self","v":0,"turns":1,"times":1}],"dmg":20,"np":0,"star":0}},
       {"acts":3,"pre":{"c":"B","dmg":60,"np":15,"star":0},"post":{"c":"B","dmg":70,"np":20,"star":0}},
       {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":4},"post":{"c":"G","dmg":60,"np":0,"star":6}}
     ],
@@ -1008,7 +1009,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"ceryneia", "name":"ケリュネイアの鹿", "cls":"アーチャー", "cost":4, "hp":670,
-    "traits":["女性","ギリシャ","混沌","善","地","人型","獣"],
+    "traits":["女性","ギリシャ","混沌","善","地","人型","獣","ヒト科以外"],
     "fit":{"face":{"x":50,"y":18,"z":129},"card":{"x":50,"y":21,"z":128},"np":{"x":50,"y":14,"z":105},"cut":{"x":0,"y":4,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%b1%a5%ea%a5%e5%a5%cd%a5%a4%a5%a2%a4%ce%bc%af",
     "lines":{
@@ -1430,8 +1431,8 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"himetsuru", "name":"姫鶴一文字", "cls":"セイバー", "cost":4, "hp":600,
-    "traits":["女性","中立","善","人型","日本"],
-    "fit":{"face":{"x":50,"y":18,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":14,"z":105},"cut":{"x":0,"y":7,"z":100}},
+    "traits":["女性","中立","善","人型","日本","ヒト科以外"],
+    "fit":{"face":{"x":50,"y":16,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":14,"z":105},"cut":{"x":0,"y":7,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%c9%b1%c4%e1%b0%ec%ca%b8%bb%fa",
     "lines":{
       "start":["…行かせて、頂きます","行きましょう、ご主人様"],
@@ -1457,7 +1458,7 @@ const DEFAULT_UNITS = [
       {"name":"被虐体質","eff":[{"k":"taunt","t":"self","v":0,"turns":1},{"k":"def","t":"self","v":20,"turns":3},{"k":"onHitNp","t":"self","v":10,"turns":3},{"k":"onHitStar","t":"self","v":3,"turns":3}],"rank":"E"},
       {"name":"鶴の双翼","eff":[{"k":"onAtkNp","t":"self","v":10,"turns":3},{"k":"onAtkStar","t":"self","v":3,"turns":3},{"k":"onAtkNp","t":"self","v":20,"turns":3,"color":"B"},{"k":"onAtkStar","t":"self","v":6,"turns":3,"color":"G"},{"k":"sureHit","t":"self","v":0,"turns":3},{"k":"np","t":"self","v":25}]}
     ],
-    "ult":{"name":"真贋双翼","c":"B","eff":[{"k":"sureHit","t":"self","v":0,"turns":3},{"k":"npPow","t":"self","v":50,"turns":3},{"k":"ignoreDef","t":"self","v":0,"turns":1},{"k":"multiHit","t":"self","v":2},{"k":"dmg","t":"target","v":250},{"k":"defDown","t":"target","v":20,"turns":3}],"ruby":"しんがんそうよく"}
+    "ult":{"name":"真贋双翼","c":"B","eff":[{"k":"sureHit","t":"self","v":0,"turns":3},{"k":"ignoreDef","t":"self","v":0,"turns":1},{"k":"multiHit","t":"self","v":2},{"k":"dmg","t":"target","v":250},{"k":"defDown","t":"target","v":20,"turns":3}],"ruby":"しんがんそうよく"}
   },
   {
     "id":"saishoku", "name":" 彩蝕のハサン", "cls":"アサシン", "cost":3, "hp":550,
@@ -1585,6 +1586,217 @@ const DEFAULT_UNITS = [
       {"name":"千里眼(星)","eff":[{"k":"regenStar","t":"ally_all","v":5,"turns":3},{"k":"onAtkStar","t":"self","v":4,"turns":3},{"k":"critRoll","t":"ally_all","v":1,"turns":3}],"rank":"A++"},
       {"name":"天軍変生","eff":[{"k":"ascend","t":"picked","v":0},{"k":"heal","t":"picked","v":100},{"k":"actsUp","t":"picked","v":1,"turns":1},{"k":"star","t":"master","v":10}],"rank":"EX","pick":"ally"}
     ],
-    "ult":{"name":"無限の星意物","c":"R","eff":[{"k":"np","t":"ally_other","v":50},{"k":"atk","t":"ally_other","v":40,"turns":2},{"k":"npPow","t":"ally_other","v":60,"turns":2},{"k":"invul","t":"ally_other","v":0,"times":1,"turns":1},{"k":"heal","t":"ally_other","v":100}]}
+    "ult":{"name":"無限の星意物","c":"R","eff":[{"k":"np","t":"ally_other","v":50},{"k":"atk","t":"ally_other","v":40,"turns":2},{"k":"npPow","t":"ally_other","v":60,"turns":2},{"k":"invul","t":"ally_other","v":0,"turns":1,"times":1},{"k":"heal","t":"ally_other","v":100}]}
+  },
+  {
+    "id":"maximinus", "name":"マクシミヌス・トラクス", "cls":"バーサーカー", "cost":4, "hp":750,
+    "traits":["男性","混沌","悪","人","人型","王"],
+    "fit":{"face":{"x":50,"y":18,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":0,"z":105},"cut":{"x":0,"y":11,"z":100}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%a5%de%a5%af%a5%b7%a5%df%a5%cc%a5%b9%a1%a6%a5%c8%a5%e9%a5%af%a5%b9",
+    "lines":{
+      "start":[],
+      "attack":[],
+      "extra":[],
+      "damage":[],
+      "skill":[],
+      "np":[],
+      "npDamage":[],
+      "defeat":[],
+      "win":[]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":90,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"R","dmg":90,"np":0,"star":0,"eff":[{"k":"defDown","t":"target","v":20,"turns":3}]}},
+      {"acts":3,"pre":{"c":"B","dmg":60,"np":15,"star":0},"post":{"c":"B","dmg":70,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":4},"post":{"c":"G","dmg":50,"np":0,"star":6}}
+    ],
+    "skills":[
+      {"name":"皇帝特権(軍人)","eff":[{"k":"atk","t":"self","v":30,"turns":3,"chance":3},{"k":"npPow","t":"self","v":80,"turns":3,"chance":3},{"k":"pierce","t":"self","v":0,"turns":1}],"rank":"B-"},
+      {"name":"蛮帝のカリスマ","eff":[{"k":"strip","t":"ally_all","v":0,"chance":2,"vs":"atk"},{"k":"strip","t":"ally_all","v":0,"chance":2,"vs":"critPow"},{"k":"atk","t":"ally_all","v":20,"turns":3},{"k":"atk","t":"ally_all","v":20,"turns":3,"color":"R"}],"rank":"C+"},
+      {"name":"戦禍の始まり","eff":[{"k":"critDown","t":"ally_all","v":5,"turns":3},{"k":"critDown","t":"enemy_all","v":2,"turns":3},{"k":"atk","t":"self","v":30,"turns":3,"color":"R"},{"k":"defDown","t":"enemy_all","v":20,"turns":3,"color":"R"}],"rank":"A+"}
+    ],
+    "ult":{"name":"禍殃、紅蓮なる蛮地より","c":"R","eff":[{"k":"atk","t":"ally_all","v":20,"turns":3,"color":"R"},{"k":"atk","t":"ally_all","v":10,"turns":3,"chance":4,"color":"R"},{"k":"atk","t":"ally_all","v":10,"turns":3,"chance":3,"color":"R"},{"k":"atk","t":"ally_all","v":10,"turns":3,"chance":2,"color":"R"},{"k":"dmg","t":"enemy_all","v":200}],"ruby":"トラーケー・ルベル・プラエトリアニ"}
+  },
+  {
+    "id":"chiriduka", "name":"塵塚怪王", "cls":"ライダー", "cost":4, "hp":840,
+    "traits":["女性","混沌","中庸","地","人型","魔性","神性","王","ヒト科以外"],
+    "fit":{"face":{"x":50,"y":40,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":14,"z":105},"cut":{"x":0,"y":0,"z":100}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%bf%d0%c4%cd%b2%f8%b2%a6",
+    "lines":{
+      "start":[],
+      "attack":[],
+      "extra":[],
+      "damage":[],
+      "skill":[],
+      "np":[],
+      "npDamage":[],
+      "defeat":[],
+      "win":[]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"B","dmg":60,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":50,"np":10,"star":0},"post":{"c":"B","dmg":60,"np":15,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"百器徒然打倒夜行","eff":[{"k":"skillCharge","t":"self","v":1},{"k":"heal","t":"self","v":50},{"k":"np","t":"self","v":10}],"dmg":0,"np":0,"star":0}},
+      {"acts":3,"pre":{"c":"G","dmg":40,"np":0,"star":4},"post":{"c":"G","dmg":50,"np":0,"star":6}},
+      {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":3},"post":{"c":"G","dmg":50,"np":0,"star":6}}
+    ],
+    "skills":[
+      {"name":"鬼種の魔","eff":[{"k":"atk","t":"ally_all","v":20,"turns":3},{"k":"npPow","t":"self","v":80,"turns":3}],"rank":"B-"},
+      {"name":"付喪神","eff":[{"k":"hitNpUp","t":"self","v":10,"turns":3},{"k":"debuffImmune","t":"self","v":0,"turns":3},{"k":"atk","t":"self","v":15,"turns":3}],"rank":"A"},
+      {"name":"塵塚の権威","eff":[{"k":"charm","t":"enemy_all","v":0,"turns":1,"chance":2},{"k":"skillCharge","t":"self","v":1},{"k":"np","t":"self","v":10}],"rank":"A"}
+    ],
+    "ult":{"name":"塵積姥の怪王","c":"G","eff":[{"k":"npPow","t":"self","v":40,"turns":3,"chance":2},{"k":"npPow","t":"self","v":30,"turns":3,"chance":3},{"k":"npPow","t":"self","v":20,"turns":3,"chance":4},{"k":"atk","t":"self","v":40,"turns":2,"color":"G"},{"k":"dmg","t":"target","v":220}],"ruby":"ちりつもりしうばのかいおう"}
+  },
+  {
+    "id":"sulla", "name":"スッラ", "cls":"ライダー", "cost":5, "hp":880,
+    "lines":{
+      "start":[],
+      "attack":[],
+      "extra":[],
+      "damage":[],
+      "skill":[],
+      "np":[],
+      "npDamage":[],
+      "defeat":[],
+      "win":[]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":120,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"R","dmg":100,"np":0,"star":2},"post":{"c":"R","dmg":110,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":50,"np":20,"star":0},"post":{"c":"B","dmg":60,"np":25,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"ディクタトル・ペルペトゥオ","eff":[{"k":"np","t":"target","v":-10},{"k":"starLoss","t":"target","v":3},{"k":"heal","t":"self","v":50},{"k":"np","t":"self","v":10},{"k":"star","t":"master","v":3}],"dmg":50,"np":0,"star":0}},
+      {"acts":3,"pre":{"c":"B","dmg":60,"np":15,"star":0},"post":{"c":"B","dmg":70,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":4},"post":{"c":"G","dmg":50,"np":0,"star":6}}
+    ],
+    "skills":[
+      {"name":"圧政者","eff":[{"k":"atk","t":"ally_all","v":20,"turns":3},{"k":"defDown","t":"enemy_all","v":20,"turns":3},{"k":"atkDown","t":"enemy_all","v":20,"turns":3}],"rank":"A"},
+      {"name":"黄金率(美)","eff":[{"k":"debuffImmune","t":"self","v":0,"turns":3},{"k":"regenNp","t":"self","v":10,"turns":3}],"rank":"B"},
+      {"name":"幸運独裁官","eff":[{"k":"star","t":"master","v":15},{"k":"critDown","t":"enemy_all","v":5,"turns":1}],"rank":"EX"}
+    ],
+    "ult":{"name":"粛清記す血濡れの名簿","c":"R","eff":[{"k":"strip","t":"enemy_all","v":0},{"k":"instantDeath","t":"enemy_all","v":0,"chance":1},{"k":"instantDeath","t":"enemy_all","v":0,"chance":1},{"k":"regenStar","t":"self","v":5,"turns":3}],"ruby":"プロスクリプティオ"}
+  },
+  {
+    "id":"themistocles", "name":"テミストクレス", "cls":"ライダー", "cost":5, "hp":800,
+    "lines":{
+      "start":[],
+      "attack":[],
+      "extra":[],
+      "damage":[],
+      "skill":[],
+      "np":[],
+      "npDamage":[],
+      "defeat":[],
+      "win":[]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":90,"np":0,"star":0},"post":{"c":"R","dmg":120,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"B","dmg":70,"np":15,"star":0},"post":{"c":"B","dmg":80,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":60,"np":10,"star":0},"post":{"c":"B","dmg":70,"np":15,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"B","dmg":70,"np":5,"star":2,"eff":[{"k":"npPow","t":"self","v":50}]}},
+      {"acts":3,"pre":{"c":"G","dmg":50,"np":0,"star":4},"post":{"c":"G","dmg":60,"np":0,"star":6}},
+      {"acts":1,"pre":{"c":"G","dmg":50,"np":0,"star":3},"post":{"c":"G","dmg":60,"np":0,"star":5}}
+    ],
+    "skills":[
+      {"name":"知将の閃き","eff":[{"k":"onAtkStar","t":"ally_all","v":2,"turns":3,"color":"G"},{"k":"onAtkNp","t":"ally_all","v":5,"turns":3},{"k":"taunt","t":"ally_other","v":0,"turns":3}],"rank":"B"},
+      {"name":"戦略","eff":[{"k":"onAtkNp","t":"ally_all","v":5,"turns":3}],"rank":"A+"},
+      {"name":"扇動","eff":[{"k":"critPow","t":"picked","v":50,"turns":3},{"k":"onAtkStar","t":"picked","v":5,"turns":3},{"k":"defDown","t":"picked","v":20,"turns":3}],"rank":"A++","pick":"ally"}
+    ],
+    "ult":{"name":"界統べる支配の聖船","c":"G","eff":[{"k":"strip","t":"enemy_all","v":0,"vs":"def"},{"k":"dmg","t":"enemy_all","v":280},{"k":"invul","t":"self","v":0,"turns":1}],"ruby":"テイコス・クシュリノン・アウトクラトール"}
+  },
+  {
+    "id":"ethelfleda", "name":"エセルフレード", "cls":"セイバー", "cost":4, "hp":810,
+    "traits":["女性","秩序","善","人","人型","竜","イギリス"],
+    "fit":{"face":{"x":50,"y":31,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":14,"z":79},"cut":{"x":0,"y":6,"z":100}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%a5%a8%a5%bb%a5%eb%a5%d5%a5%ec%a1%bc%a5%c9",
+    "lines":{
+      "start":[],
+      "attack":[],
+      "extra":[],
+      "damage":[],
+      "skill":[],
+      "np":[],
+      "npDamage":[],
+      "defeat":[],
+      "win":[]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":60,"np":0,"star":0},"post":{"c":"R","dmg":80,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":90,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"不滅の城壁","eff":[{"k":"def","t":"self","v":20,"turns":3},{"k":"heal","t":"self","v":30}],"dmg":0,"np":0,"star":0}},
+      {"acts":3,"pre":{"c":"B","dmg":50,"np":10,"star":0},"post":{"c":"B","dmg":60,"np":15,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":2},"post":{"c":"G","dmg":40,"np":0,"star":3}}
+    ],
+    "skills":[
+      {"name":"カリスマ","eff":[{"k":"atk","t":"ally_all","v":20,"turns":3}],"rank":"C"},
+      {"name":"ウェルブルガへの祈り","eff":[{"k":"regenHp","t":"self","v":50,"turns":3},{"k":"taunt","t":"self","v":0,"turns":3},{"k":"def","t":"self","v":20,"turns":3}],"rank":"D"},
+      {"name":"魔力放出(竜) ","eff":[{"k":"atk","t":"self","v":20,"turns":1},{"k":"def","t":"self","v":30,"turns":1}],"rank":"B"}
+    ],
+    "ult":{"name":"訃音告げる討滅の城壁","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":180},{"k":"def","t":"self","v":10,"turns":3},{"k":"taunt","t":"self","v":0,"turns":2},{"k":"nullUnder","t":"self","v":50,"turns":2}],"ruby":"クウェアルム・キストウェアル"}
+  },
+  {
+    "id":"phaethon", "name":"パエトーン", "cls":"ライダー", "cost":1, "hp":350,
+    "traits":["男性","混沌","善","地","人型","子供","神性"],
+    "fit":{"face":{"x":50,"y":18,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":14,"z":105},"cut":{"x":0,"y":6,"z":100}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%A5%D1%A5%A8%A5%C8%A1%BC%A5%F3",
+    "lines":{
+      "start":[],
+      "attack":[],
+      "extra":[],
+      "damage":[],
+      "skill":[],
+      "np":[],
+      "npDamage":[],
+      "defeat":[],
+      "win":[]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":40,"np":0,"star":0},"post":{"c":"R","dmg":70,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"R","dmg":40,"np":0,"star":0},"post":{"c":"R","dmg":60,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":40,"np":20,"star":0},"post":{"c":"B","dmg":50,"np":25,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"完全燃焼へと至る蛮勇","eff":[{"k":"npPow","t":"self","v":30,"turns":3},{"k":"selfDmg","t":"self","v":50,"at":"post"}],"dmg":0,"np":0,"star":0}},
+      {"acts":3,"pre":{"c":"G","dmg":20,"np":0,"star":4},"post":{"c":"G","dmg":30,"np":0,"star":6}},
+      {"acts":1,"pre":{"c":"G","dmg":20,"np":0,"star":3},"post":{"c":"G","dmg":30,"np":0,"star":5}}
+    ],
+    "skills":[
+      {"name":"アポロンの子","eff":[{"k":"desc","t":"self","v":0,"text":"太陽神アポロンの息子であることを示すスキル。それだけである。"}],"rank":"E-"},
+      {"name":"紅顔の美少年","eff":[{"k":"charm","t":"picked","v":0,"turns":1,"cond":{"k":"trait","v":"アポロン"}}],"rank":"E-","pick":"enemy"},
+      {"name":"禍つ星の子","eff":[{"k":"np","t":"self","v":30},{"k":"critRoll","t":"self","v":99,"turns":3},{"k":"debuffImmune","t":"self","v":0,"turns":3,"cond":{"k":"trait","v":"神性"}},{"k":"critDown","t":"ally_other","v":1,"turns":3},{"k":"selfDmg","t":"self","v":100}],"rank":"A++"}
+    ],
+    "ult":{"name":"黄道翔けし輝耀の星","c":"R","eff":[{"k":"dmg","t":"target","v":220},{"k":"selfDmg","t":"self","v":20,"max":true}],"ruby":"ポイボス・アポローン・ハルマ"}
+  },
+  {
+    "id":"chimaira", "name":"リュキアン・キマイラ", "cls":"バーサーカー", "cost":4, "hp":740,
+    "traits":["女性","混沌","悪","地","人型","獣","魔性","神性","機械","超巨大","ヒト科以外"],
+    "fit":{"face":{"x":50,"y":19,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":11,"z":78},"cut":{"x":0,"y":0,"z":88}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%a5%ea%a5%e5%a5%ad%a5%a2%a5%f3%a1%a6%a5%ad%a5%de%a5%a4%a5%e9",
+    "lines":{
+      "start":[],
+      "attack":[],
+      "extra":[],
+      "damage":[],
+      "skill":[],
+      "np":[],
+      "npDamage":[],
+      "defeat":[],
+      "win":[]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"R","dmg":80,"np":0,"star":0,"eff":[{"k":"burn","t":"target","v":20,"turns":3}]}},
+      {"acts":3,"pre":{"c":"G","dmg":40,"np":0,"star":4},"post":{"c":"G","dmg":50,"np":0,"star":6}},
+      {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":3},"post":{"c":"G","dmg":50,"np":0,"star":5}}
+    ],
+    "skills":[
+      {"name":"嵌合接合混合獣","eff":[{"k":"atk","t":"self","v":30,"turns":3,"color":"G"},{"k":"atk","t":"self","v":30,"turns":3,"color":"R"},{"k":"def","t":"self","v":20,"turns":3}],"rank":"B"},
+      {"name":"怪力","eff":[{"k":"atk","t":"self","v":40,"turns":1}],"rank":"A"},
+      {"name":"キメリカル・ビースト","eff":[{"k":"curse","t":"enemy_all","v":0,"times":1,"chance":2},{"k":"heal","t":"self","v":120},{"k":"skillCharge","t":"self","v":1}],"rank":"A++"}
+    ],
+    "ult":{"name":"汝、星を改む猛獣","c":"R","eff":[{"k":"strip","t":"enemy_all","v":0,"vs":"def"},{"k":"atkTrait","t":"self","v":50,"turns":3,"trait":"地"},{"k":"dmg","t":"enemy_all","v":250},{"k":"defDown","t":"target","v":20,"turns":3,"color":"R"}],"ruby":"キマイラ・カタストロフィ"}
   }
 ];
