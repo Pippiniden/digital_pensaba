@@ -61,6 +61,7 @@ function setSrc(kind){ B.src=kind; B.data=loadData(kind); B.A={ids:[],m:null}; B
 const eu=()=>B.data.units.filter(u=>u.id&&!B.excl.has(u.id));
 const em=()=>B.data.masters.filter(m=>m.id&&!B.mexcl.has(m.id));
 const uOf=id=>B.data.units.find(u=>u.id===id)||{name:id,cost:0,hp:0};
+const uNm=id=>{ const u=uOf(id), same=B.data.units.some(o=>o.id!==id&&o.name===u.name); return same?`${u.name}（${id}）`:u.name; };   // 同名の別キャラは id を添えて見分ける
 const mOf=id=>B.data.masters.find(m=>m.id===id)||{name:id,cost:0};
 
 // ---------- 編成 ----------
@@ -70,8 +71,8 @@ function mkTeam(ids,m){
   ids=byHp(ids); const cost=ids.reduce((s,id)=>s+uOf(id).cost,0)+(m?mOf(m).cost:0);
   return {ids,m:m||null,cost,key:teamKey(ids,m)};
 }
-const teamName=t=>t.ids.map(id=>uOf(id).name).join('・')+(t.m?`／${mOf(t.m).name}`:'');
-const teamHTML=t=>`${esc(t.ids.map(id=>uOf(id).name).join('・'))}${t.m?` <span class="sub">／${esc(mOf(t.m).name)}</span>${((B.res&&B.res.mcol)||{})[t.m]?` <span class="tag">${TERMS[B.res.mcol[t.m]]}特化</span>`:''}`:''} <span class="sub small">C${t.cost}</span>`;
+const teamName=t=>t.ids.map(id=>uNm(id)).join('・')+(t.m?`／${mOf(t.m).name}`:'');
+const teamHTML=t=>`${esc(t.ids.map(id=>uNm(id)).join('・'))}${t.m?` <span class="sub">／${esc(mOf(t.m).name)}</span>${((B.res&&B.res.mcol)||{})[t.m]?` <span class="tag">${TERMS[B.res.mcol[t.m]]}特化</span>`:''}`:''} <span class="sub small">C${t.cost}</span>`;
 
 // ルールに合う編成を全部並べる（filter：full＝合計コストが上限ちょうど / maximal＝これ以上追加できない / all）
 function enumTeams(filter=B.filter){
@@ -223,7 +224,7 @@ function taskSubs(t,view){
   if(view==='master') return ['m:'+t.tag.mi,'m:'+t.tag.mj];
   const out=[]; for(const tm of [t.ta,t.tb]){ tm.ids.forEach(id=>out.push('u:'+id)); if(tm.m) out.push('m:'+tm.m); } return [...new Set(out)];
 }
-const subName=k=>k==='team'?'検証する編成':k[0]==='u'?uOf(k.slice(2)).name:mOf(k.slice(2)).name;
+const subName=k=>k==='team'?'検証する編成':k[0]==='u'?uNm(k.slice(2)):mOf(k.slice(2)).name;
 // 目標までの試合数の見込み：全員が goalNeed 試合ずつ要る。1試合で進む人数（両陣営のサーヴァント／マスター）で割る
 function goalEst(tasks,view,goal){
   const keys=new Set(); tasks.forEach(t=>taskSubs(t,view).forEach(k=>keys.add(k)));
@@ -384,7 +385,7 @@ function builderHTML(key,label){
   return `<div class="bld"><b>${label}</b>
     <div class="chips mt">${B.data.units.filter(u=>u.id).map(u=>{
       const on=T.ids.includes(u.id), over=!on&&max>1&&cost+u.cost>cap, full=!on&&max>1&&T.ids.length>=max;
-      return `<button class="chip ${on?'on':''} ${B.excl.has(u.id)?'off':''}" data-b="bld" data-k="${key}" data-id="${esc(u.id)}" ${dis||over||full?'disabled':''}>${esc(u.name)}<span class="sub small">C${u.cost}</span></button>`; }).join('')}</div>
+      return `<button class="chip ${on?'on':''} ${B.excl.has(u.id)?'off':''}" data-b="bld" data-k="${key}" data-id="${esc(u.id)}" ${dis||over||full?'disabled':''}>${esc(uNm(u.id))}<span class="sub small">C${u.cost}</span></button>`; }).join('')}</div>
     ${hasMaster()?`<div class="row mt"><label class="sub small">マスター <select data-s="bm" data-k="${key}" ${dis}><option value="">（選んでください）</option>${B.data.masters.map(m=>`<option value="${esc(m.id)}" ${T.m===m.id?'selected':''}>${esc(m.name)}（C${m.cost}）</option>`).join('')}</select></label></div>`:''}
     <div class="cost">${max>1?`合計コスト <b class="${cost>cap?'bad':''}">${cost}</b> / ${cap}${hasMaster()?'（マスター込み）':''}　`:`コスト ${cost}　`}<button class="small" data-b="bldClear" data-k="${key}" ${dis}>クリア</button>
       ${max>1?`<button class="small" data-b="bldRandom" data-k="${key}" ${dis}>ランダム</button>`:''}</div></div>`;
@@ -402,7 +403,7 @@ function exclHTML(){
   return `<details class="excl"><summary>検証から外す　<span class="sub small">${n||nm?`サーヴァント${n}体${hasMaster()?`・マスター${nm}人`:''}を除外中`:'なし'}</span></summary>
     <p class="note">外したキャラは、編成の組み合わせ・相手・マスター比較に使いません（エディタのバランス検証と共有）。</p>
     <div class="row"><button class="small" data-b="exclNone" ${dis}>すべて戻す</button></div>
-    <div class="chips mt">${B.data.units.filter(u=>u.id).map(u=>`<button class="chip ${B.excl.has(u.id)?'off':''}" data-b="excl" data-id="${esc(u.id)}" ${dis}>${esc(u.name)}<span class="sub small">C${u.cost}</span></button>`).join('')}</div>
+    <div class="chips mt">${B.data.units.filter(u=>u.id).map(u=>`<button class="chip ${B.excl.has(u.id)?'off':''}" data-b="excl" data-id="${esc(u.id)}" ${dis}>${esc(uNm(u.id))}<span class="sub small">C${u.cost}</span></button>`).join('')}</div>
     ${hasMaster()?`<div class="chips mt">${B.data.masters.filter(m=>m.id).map(m=>`<button class="chip ${B.mexcl.has(m.id)?'off':''}" data-b="mexcl" data-id="${esc(m.id)}" ${dis}>${esc(m.name)}<span class="sub small">C${m.cost}</span></button>`).join('')}</div>`:''}</details>`;
 }
 
@@ -463,7 +464,7 @@ function resDetail(R){
       ${th('与ダメ','1試合あたりの与ダメージ')}${solo?'':th('チーム内','味方全員の与ダメージに占める割合')}${th('被ダメ','1試合あたりの被ダメージ')}${th('撃破','1試合あたりに倒した数')}${th('クリ率','攻撃のうちクリティカルになった割合')}
       ${th('宝具','1試合あたりの宝具の回数')}${th('勝ち｜負け','勝った試合と負けた試合それぞれの、1試合あたりの宝具の回数')}${th('スキル','1試合あたりのスキルの回数')}${th('防いだ','1試合あたりに回避・無敵などで攻撃を防いだ回数')}
       ${th('再臨','再臨できた試合の割合と、再臨した平均ターン')}${th(TERMS.out,'戦闘不能になった試合の割合と、その平均ターン')}</tr></thead><tbody>${rows.map(([id,a],i)=>{ const n=a.n;
-      return `<tr class="${grade(a.w/n)}"><td class="num">${i+1}</td><td>${esc(uOf(id).name)} <span class="sub small">C${uOf(id).cost}</span></td><td class="num rate"><b>${pct(a.w/n)}</b></td><td class="num">${a.first?pct(a.firstW/a.first):'-'}</td>
+      return `<tr class="${grade(a.w/n)}"><td class="num">${i+1}</td><td>${esc(uNm(id))} <span class="sub small">C${uOf(id).cost}</span></td><td class="num rate"><b>${pct(a.w/n)}</b></td><td class="num">${a.first?pct(a.firstW/a.first):'-'}</td>
         <td class="num">${Math.round(a.dealt/n)}</td>${solo?'':`<td class="num">${pct(a.share/n)}</td>`}<td class="num">${Math.round(a.taken/n)}</td><td class="num">${f2(a.kills/n)}</td><td class="num">${a.attacks?pct(a.crits/a.attacks):'-'}</td>
         <td class="num">${f2(a.ults/n)}</td><td class="num">${a.nW?f2(a.ultsW/a.nW):'-'}｜${a.nL?f2(a.ultsL/a.nL):'-'}</td><td class="num">${f2(a.skills/n)}</td><td class="num">${f2(a.blocked/n)}</td>
         <td class="num">${pct(a.asc/n)} <span class="sub small">${a.asc?f1(a.ascT/a.asc)+'T':''}</span></td><td class="num">${pct(a.ko/n)} <span class="sub small">${a.ko?f1(a.koT/a.ko)+'T':''}</span></td></tr>`; }).join('')}</tbody></table></div>
@@ -473,7 +474,7 @@ const levelName=R=>R.level==='hard+'?'つよい（先読みあり）':R.level===
 // CSV：1試合の1キャラを1行に（Excel で文字化けしないよう BOM つき UTF-8）
 function detailCSV(R){
   const q=v=>{ v=v==null?'':String(v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; };
-  const names=t=>t.ids.map(id=>uOf(id).name).join('・'), lv=levelName(R);
+  const names=t=>t.ids.map(id=>uNm(id)).join('・'), lv=levelName(R);
   const head=['試合番号','ルール','CPU','ターン数','勝ち','先攻','側','キャラID','キャラ名','コスト','並び順','味方の編成','味方のマスター','相手の編成','相手のマスター',
     '与ダメージ','チームの与ダメージ','被ダメージ','最大ダメージ','撃破数','攻撃回数','クリティカル回数','宝具回数','スキル回数','防いだ回数','再臨したターン','戦闘不能になったターン','残りHP',
     'チェインBuster','チェインArts','チェインQuick','ブレイブチェイン'];
@@ -562,7 +563,7 @@ function strengthHTML(R,unitW,mW){
     return `<div><h3>${title}</h3><div class="tbl"><table class="stats"><thead><tr><th>#</th><th>名前</th><th title="ほかが全員平均的なとき、このキャラ1体の差で勝率が何%になるか（50%＝平均的）">単体の強さ</th><th></th><th title="上の表の、そのキャラを含む編成の平均勝率">平均勝率</th><th title="平均勝率 − 単体の強さ。プラスなら味方や相手に恵まれていたぶん、マイナスなら足を引っぱられていたぶん">差</th></tr></thead><tbody>${rows.map((x,i)=>{
       const s=raw.get(x.id), rp=s&&s.g?s.w/s.g:null, d=rp==null?null:Math.round((rp-x.p)*100);
       return `<tr class="${grade(x.p)}"><td class="num">${i+1}</td><td>${esc(nameOf(x.id))} <span class="sub small">C${costOf(x.id)}</span></td><td class="num rate"><b>${pct(x.p)}</b> <span class="sub small">±${Math.round(x.moe)}</span></td><td>${bar(x.p)}</td><td class="num">${rp==null?'-':pct(rp)}</td><td class="num">${d==null?'-':(d>0?'+':'')+d}</td></tr>`; }).join('')}</tbody></table></div></div>`; };
-  return `<div class="grid">${tbl('サーヴァント単体の強さ','u',unitW,id=>uOf(id).name,id=>uOf(id).cost)}${hasMaster()?tbl('マスター単体の強さ','m',mW,id=>mOf(id).name,id=>mOf(id).cost):''}</div>
+  return `<div class="grid">${tbl('サーヴァント単体の強さ','u',unitW,id=>uNm(id),id=>uOf(id).cost)}${hasMaster()?tbl('マスター単体の強さ','m',mW,id=>mOf(id).name,id=>mOf(id).cost):''}</div>
     <p class="note">「単体の強さ」は、味方と相手の強さを差し引いたそのキャラだけの強さです。全対戦をまとめて「両陣営のキャラの強さの差で勝敗が決まる」という式に当てはめて求めています。50%が平均的で、${R.opp==='same'?'同じ合計コスト同士の対戦なので「50%＝コスト相応」と読めます。':'相手の範囲が「すべて」なので、コストの高いキャラほど高く出ます。'}組み合わせの相性（特定の味方と組んだときだけ強い、など）は式に入っていないので、平均としての強さです。</p>`;
 }
 
@@ -585,8 +586,8 @@ function resRank(R){
       `<tr class="${rowCls(s.w,s.g)}"><td class="num">${i+1}</td><td>${esc(nameOf(id))} <span class="sub small">C${costOf(id)}</span></td><td class="num rate">${rateCell(s.w,s.g,s)}</td><td>${bar(s.w/s.g)}</td><td class="num">${[...teams.values()].filter(x=>title.includes('マスター')?x.t.m===id:x.t.ids.includes(id)).length}</td></tr>`).join('')}</tbody></table></div></div>`; };
   let mx='';
   if(rs().partyMax===1&&!hasMaster()&&rows.length<=24){ // シンプルルール：キャラ同士の勝率表
-    const ks=rows.map(s=>s.t).sort((a,b)=>a.cost-b.cost||uOf(a.ids[0]).name.localeCompare(uOf(b.ids[0]).name));
-    mx=`<h3>勝率表（行のキャラから見た勝率 %）</h3><div class="tbl"><table class="mx"><thead><tr><th></th>${ks.map(t=>`<th title="${esc(teamName(t))}"><span class="vert">${esc(uOf(t.ids[0]).name)}</span><span class="sub small">C${t.cost}</span></th>`).join('')}</tr></thead><tbody>${ks.map(a=>`<tr><th class="rh">${esc(uOf(a.ids[0]).name)} <span class="sub small">C${a.cost}</span></th>${ks.map(b=>{
+    const ks=rows.map(s=>s.t).sort((a,b)=>a.cost-b.cost||uNm(a.ids[0]).localeCompare(uNm(b.ids[0])));
+    mx=`<h3>勝率表（行のキャラから見た勝率 %）</h3><div class="tbl"><table class="mx"><thead><tr><th></th>${ks.map(t=>`<th title="${esc(teamName(t))}"><span class="vert">${esc(uNm(t.ids[0]))}</span><span class="sub small">C${t.cost}</span></th>`).join('')}</tr></thead><tbody>${ks.map(a=>`<tr><th class="rh">${esc(uNm(a.ids[0]))} <span class="sub small">C${a.cost}</span></th>${ks.map(b=>{
       if(a===b) return '<td class="self">—</td>'; const c=cell.get(a.key+'|'+b.key); if(!c) return '<td class="none"></td>'; const p=c.w/c.g;
       return `<td class="hm" style="--p:${p}" title="${esc(teamName(a))} vs ${esc(teamName(b))}：${pct(p)}">${Math.round(p*100)}</td>`; }).join('')}</tr>`).join('')}</tbody></table></div>`;
   }
@@ -594,7 +595,7 @@ function resRank(R){
   return `<div class="sums"><div class="sum"><span class="sub small">編成数</span><b>${rows.length}</b></div>
       <div class="sum"><span class="sub small">対戦数</span><b>${R.items.length}</b></div>${spread?`<div class="sum"><span class="sub small">${spread.split('：')[0]}</span><b style="font-size:16px">${spread.split('：')[1]}</b></div>`:''}</div>
     <div class="grid"><div style="grid-column:1/-1"><h3>編成ランキング</h3>${tbl}</div>
-    ${unitTbl('サーヴァント別の平均勝率',unitW,id=>uOf(id).name,id=>uOf(id).cost)}
+    ${unitTbl('サーヴァント別の平均勝率',unitW,id=>uNm(id),id=>uOf(id).cost)}
     ${hasMaster()?unitTbl('マスター別の平均勝率',mW,id=>mOf(id).name,id=>mOf(id).cost):''}</div>${strengthHTML(R,unitW,mW)}${mx}
     <p class="note">キャラ別の勝率は、そのキャラを含む編成の勝率を試合数で平均したものです（味方・相手の組み合わせの影響を含みます）。</p>`;
 }
@@ -616,7 +617,7 @@ function resTeam(R){
       ${box('勝率',pct(p),grade(p),`±${Math.round(moeX(tot))}%`)}${box('勝-敗'+(draw?'-分':''),`${win}-${lose}${draw?`-${draw}`:''}`)}${box('平均ターン',(turns/dd).toFixed(1))}
       ${box('先攻時勝率',fg?pct(fw/fg):'-')}${box('与 / 被ダメ',`${Math.round(dA/dd)} / ${Math.round(dB/dd)}`)}${box(`${TERMS.out}した味方`,`${(out/dd).toFixed(2)}騎`,'', `1試合あたり`)}</div>
     ${R.items.length>1?`<div class="grid">
-      ${grp('相手にいたサーヴァント',byU,id=>`${esc(uOf(id).name)} <span class="sub small">C${uOf(id).cost}</span>`)}
+      ${grp('相手にいたサーヴァント',byU,id=>`${esc(uNm(id))} <span class="sub small">C${uOf(id).cost}</span>`)}
       ${byM.size?grp('相手にいたマスター',byM,id=>`${esc(mOf(id).name)} <span class="sub small">C${mOf(id).cost}</span>`):''}
       ${grp('相手の合計コスト',byC,k=>`コスト${k}`)}</div>
     <h3>相手別（苦手な順）</h3><div class="tbl"><table class="stats"><thead><tr><th>相手</th><th>勝率</th><th></th><th>勝-敗${draw?'-分':''}</th><th>平均ターン</th><th>先攻時勝率</th></tr></thead><tbody>${rows.map(x=>
@@ -644,9 +645,9 @@ function resMaster(R){
   let sm='';
   if(svts.size&&svts.size<=14){
     const sl=[...svts].sort((a,b)=>uOf(a).cost-uOf(b).cost);
-    sm=`<h3>マスター × サーヴァント（そのマスターの勝率 %）</h3><div class="tbl"><table class="mx"><thead><tr><th></th>${sl.map(s=>`<th><span class="vert">${esc(uOf(s).name)}</span><span class="sub small">C${uOf(s).cost}</span></th>`).join('')}</tr></thead><tbody>${ids.map(m=>`<tr><th class="rh">${esc(mOf(m).name)}</th>${sl.map(s=>{
+    sm=`<h3>マスター × サーヴァント（そのマスターの勝率 %）</h3><div class="tbl"><table class="mx"><thead><tr><th></th>${sl.map(s=>`<th><span class="vert">${esc(uNm(s))}</span><span class="sub small">C${uOf(s).cost}</span></th>`).join('')}</tr></thead><tbody>${ids.map(m=>`<tr><th class="rh">${esc(mOf(m).name)}</th>${sl.map(s=>{
       const c=svtCell.get(m+'|'+s); if(!c||!c.g) return '<td class="none"></td>'; const p=c.w/c.g;
-      return `<td class="hm" style="--p:${p}" title="${esc(mOf(m).name)} × ${esc(uOf(s).name)}：${pct(p)}">${Math.round(p*100)}</td>`; }).join('')}</tr>`).join('')}</tbody></table></div>`;
+      return `<td class="hm" style="--p:${p}" title="${esc(mOf(m).name)} × ${esc(uNm(s))}：${pct(p)}">${Math.round(p*100)}</td>`; }).join('')}</tr>`).join('')}</tbody></table></div>`;
   }
   return `<div class="sums"><div class="sum"><span class="sub small">マスター</span><b>${rows.length}</b></div><div class="sum"><span class="sub small">対戦数</span><b>${R.items.length}</b></div></div>
     <h3>マスターの強さ（同じサーヴァントでの勝率）</h3>${tbl}
