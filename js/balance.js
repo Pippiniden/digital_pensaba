@@ -362,7 +362,7 @@ function renderCtl(){
         ${sel('level',[['normal','ふつう'],['hard','つよい（先読みなし・速い）'],['hard+','つよい（先読みあり・遅い）']],B.level,'CPUの強さ')}
         ${rs().handicapAsc&&B.view!=='master'?`<label class="chk"><input type="checkbox" data-s="handicap" ${B.handicap?'checked':''} ${dis}>ハンデ戦（${hcapRuleText(rs()).replace(/。$/,'')}）</label>`:''}
       </div>
-      <div class="opts"><label class="chk"><input type="checkbox" data-s="detail" ${B.detail?'checked':''} ${dis}>解析用のデータを記録する（実行後に「キャラ別の内訳」と CSV 出力が使えます）</label>
+      <div class="opts"><label class="chk"><input type="checkbox" data-s="detail" ${B.detail?'checked':''} ${dis}>解析用のデータを記録する（実行後に「キャラ別の内訳」と CSV・要約の保存が使えます）</label>
         <label class="chk"><input type="checkbox" data-s="bg" ${B.bg?'checked':''} ${dis}>タブを裏にしても回し続ける（実行中だけ、聞こえない大きさの音を鳴らします）</label></div>
       ${needTeam?`<div class="seg">${[['pool','全編成と対戦'],['duel','2つの編成の直接対決']].map(([v,l])=>`<button class="${B.vs===v?'on':''}" data-b="set" data-k="vs" data-v="${v}" ${dis}>${l}</button>`).join('')}</div>
         ${builderHTML('A',B.vs==='duel'?'チームA':'検証する編成')}${B.vs==='duel'?builderHTML('B','チームB'):''}`:''}
@@ -458,6 +458,7 @@ function resDetail(R){
   const th=(t,tip)=>`<th title="${tip}">${t}</th>`;
   return `<h3>キャラ別の内訳（解析用の記録 ${R.logGames.toLocaleString()}試合ぶん）</h3>
     <div class="row"><button class="small" data-b="csv">CSV を保存（1キャラ1行）</button><span class="sub small">表計算ソフトで開けます（${(R.logGames*RULESETS[R.rule].partyMax*2).toLocaleString()}行）。列の説明は表の見出しにマウスを乗せると出ます。</span></div>
+    <div class="row"><button class="small" data-b="sum">要約を保存（Markdown）</button><span class="sub small">AI に渡せる大きさ（数十KB）にまとめたもの：キャラ別の成績とコスト内での強さ、外れ値、並び順、相性のよい／わるい組、対面。</span></div>
     <div class="tbl mt"><table class="stats"><thead><tr><th>#</th><th>名前</th>${th('勝率','このキャラがいた側が勝った割合（記録した全試合。目標の誤差つきの実行では、上の表と少し違うことがあります）')}${th('先攻時','このキャラの側が先攻だった試合の勝率')}
       ${th('与ダメ','1試合あたりの与ダメージ')}${solo?'':th('チーム内','味方全員の与ダメージに占める割合')}${th('被ダメ','1試合あたりの被ダメージ')}${th('撃破','1試合あたりに倒した数')}${th('クリ率','攻撃のうちクリティカルになった割合')}
       ${th('宝具','1試合あたりの宝具の回数')}${th('勝ち｜負け','勝った試合と負けた試合それぞれの、1試合あたりの宝具の回数')}${th('スキル','1試合あたりのスキルの回数')}${th('防いだ','1試合あたりに回避・無敵などで攻撃を防いだ回数')}
@@ -468,10 +469,11 @@ function resDetail(R){
         <td class="num">${pct(a.asc/n)} <span class="sub small">${a.asc?f1(a.ascT/a.asc)+'T':''}</span></td><td class="num">${pct(a.ko/n)} <span class="sub small">${a.ko?f1(a.koT/a.ko)+'T':''}</span></td></tr>`; }).join('')}</tbody></table></div>
     <p class="note">数字は「そのキャラがいた試合」の平均です。強さの理由の手がかりで、原因そのものではありません（強い味方と組んだぶんも混ざります）。</p>`;
 }
+const levelName=R=>R.level==='hard+'?'つよい（先読みあり）':R.level==='hard'?'つよい（先読みなし）':'ふつう';
 // CSV：1試合の1キャラを1行に（Excel で文字化けしないよう BOM つき UTF-8）
 function detailCSV(R){
   const q=v=>{ v=v==null?'':String(v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; };
-  const names=t=>t.ids.map(id=>uOf(id).name).join('・'), lv=R.level==='hard+'?'つよい（先読みあり）':R.level==='hard'?'つよい（先読みなし）':'ふつう';
+  const names=t=>t.ids.map(id=>uOf(id).name).join('・'), lv=levelName(R);
   const head=['試合番号','ルール','CPU','ターン数','勝ち','先攻','側','キャラID','キャラ名','コスト','並び順','味方の編成','味方のマスター','相手の編成','相手のマスター',
     '与ダメージ','チームの与ダメージ','被ダメージ','最大ダメージ','撃破数','攻撃回数','クリティカル回数','宝具回数','スキル回数','防いだ回数','再臨したターン','戦闘不能になったターン','残りHP',
     'チェインBuster','チェインArts','チェインQuick','ブレイブチェイン'];
@@ -481,10 +483,21 @@ function detailCSV(R){
       u[DET.dealt],x.team.reduce((s,v)=>s+v[DET.dealt],0),u[DET.taken],u[DET.maxHit],u[DET.kills],u[DET.attacks],u[DET.crits],u[DET.ults],u[DET.skills],u[DET.blocked],u[DET.ascT],u[DET.koT],u[DET.hp],...x.chain].map(q).join(',')); });
   return '\ufeff'+out.join('\r\n');
 }
-function saveCSV(){
+// 要約（Markdown）：CSV と同じ記録を js/rank-summary.js に流す（tools/rank-summary.js で CSV から作るのと同じ中身）
+function detailSummary(R,file){
+  const S=rankSummary(), rule=RULESETS[R.rule].name, lv=levelName(R);
+  eachDetail(R,x=>{ const u=x.u, d=uOf(u[DET.id]);
+    S.add({match:x.gi,rule,cpu:lv,turns:x.g.t,win:x.win,first:!!x.first,side:x.side?'B':'A',id:u[DET.id],name:d.name,cost:d.cost,slot:x.slot+1,master:x.tm.m?mOf(x.tm.m).name:'',
+      dmg:u[DET.dealt],team:x.team.reduce((s,v)=>s+v[DET.dealt],0),taken:u[DET.taken],maxd:u[DET.maxHit],ko:u[DET.kills],atk:u[DET.attacks],crit:u[DET.crits],np:u[DET.ults],skill:u[DET.skills],block:u[DET.blocked],
+      asc:u[DET.ascT],out:u[DET.koT],hp:u[DET.hp]}); });
+  return S.text(`バランスラボ（${file}）`);
+}
+function saveDetail(kind){
   const R=B.res; if(!R||!R.log||!R.log.length) return;
-  const d=new Date(), p=n=>String(n).padStart(2,'0'), name=`pensaba-${R.rule}-${R.view}-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}.csv`;
-  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([detailCSV(R)],{type:'text/csv'})); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),10000);
+  const d=new Date(), p=n=>String(n).padStart(2,'0'), base=`pensaba-${R.rule}-${R.view}-${d.getFullYear()}${p(d.getMonth()+1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}`;
+  const name=kind==='sum'?base+'-summary.md':base+'.csv';
+  const blob=kind==='sum'?new Blob([detailSummary(R,base)],{type:'text/markdown'}):new Blob([detailCSV(R)],{type:'text/csv'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),10000);
   toast(`${name} を保存しました`);
 }
 const gOf=r=>r.n-r.errors, wOf=r=>r.win+r.draw/2;
@@ -651,7 +664,7 @@ document.addEventListener('click',e=>{
     case 'reload': setSrc(B.src); toast('ブラウザのデータを読み直しました'); break;
     case 'set': { const v=d.v; B[d.k]=v; if(d.k==='rule'||d.k==='view'){ B.A={ids:[],m:null}; B.B={ids:[],m:null}; } saveSet(); break; }
     case 'run': startRun(); return;
-    case 'csv': saveCSV(); return;
+    case 'csv': case 'sum': saveDetail(d.b); return;
     case 'stop': stopRun(); setTitle('中止'); if(B.res&&!B.res.done) B.res.stopped=true; renderProg(); renderRes(); break;
     case 'bld': { const T=B[d.k], i=T.ids.indexOf(d.id); if(i>=0) T.ids.splice(i,1); else if(rs().partyMax===1) T.ids=[d.id]; else T.ids.push(d.id); break; }
     case 'bldClear': B[d.k]={ids:[],m:null}; break;
