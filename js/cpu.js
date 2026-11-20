@@ -453,12 +453,12 @@ function critRollScore(e,ts,stars){
 function onAtkScore(e,ts){
   const mine=ts.filter(t=>t.pid===G.cur&&!t.master); if(!mine.length) return 0;
   const now=attackCount(mine), turns=e.turns||1;
-  let atks=now+(turns>1?(turns-1)*(ruleset().partyMax===1?2:1.5):0);
+  let atks=now+(turns>1?(turns-1)*(ruleset().partyMax===1?2:SKILL_V2&&e.k==='onAtkNp'?Math.min(3,1.5*mine.length):1.5):0);
   if(e.times) atks=Math.min(atks,e.times);
   if(atks<=0) return 0;
   if(e.k==='onAtkNp'){ // 全体で貯まるNP：宝具が撃てない味方がいなければ価値は低い
     if(!mine.some(t=>t.np<RULES.ultCost)) return .3;
-    return Math.min(4.5,atks*e.v/RULES.ultCost*6); // 効果量10・攻撃3回なら+30%。次のターン以降の分も合わせて、宝具が近づく価値として評価する
+    return Math.min(4.5,atks*e.v/RULES.ultCost*(SKILL_V2?8:6)); // 効果量10・攻撃3回なら+30%。次のターン以降の分も合わせて、宝具が近づく価値として評価する
   }
   // 攻撃時スター：増えたスターは次のターンのクリティカルになる。1ターンぶんの価値＝スターが増える前後のクリティカル率の差×次のターンの攻撃回数（starSkillScore と同じ見方）。
   // このターンはその割り振りで、残りのターンは1ターンの見込み攻撃回数で、2ターン目以降は先の不確かさで6割に割り引く
@@ -485,10 +485,15 @@ function cpuSkillScore(u,si){
 // 先読み（超つよいと同じ16回×40ターン）の判断を集めた解析：つよいが温存した場面で使うと +3.1%（±0.7・1848件）。ほかの効果（回復など）が混ざるスキルは使い時が違うので対象外。
 // 入れる前の版との対戦（つよい・先読みなし・各約20万試合）：チーム 50.20%・マスターチーム 50.27%（±0.22）。当てはまるキャラが少ないので全体の差は小さい
 let GUARD_KEEP = true;
-const permGuard = (e,effs,ts)=>e.times&&!e.turns&&ts.some(t=>t.pid===G.cur&&!has(t,e.k))&&effs.every(x=>['evade','invul','def','cleanse','taunt'].includes(x.k));
+const permGuard = (e,effs,ts)=>e.times&&!e.turns&&ts.some(t=>t.pid===G.cur&&!(has(t,e.k)&&!(SKILL_V2&&e.k==='def')))&&effs.every(x=>['evade','invul','def','cleanse','taunt'].includes(x.k));
 // 意味がない場面で使わない（tools/skill-waste.js の点検で見つかった無駄。スキル全体が無駄な使い方 2.5%→0.4%、旧版との対戦 team 50.8%・mteam 50.8%（±0.7））：条件つきのスタン・魅了は対象がいなければ0、1ターンの宝具威力アップは宝具を撃つときだけ、
 // ターゲット集中はほかの味方が持っている・敵が全体宝具を撃てるなら0、自分用の守りはほかの味方がターゲット集中を持っている（全体宝具も来ない）なら0、ガッツは重ねない
 let SKILL_SENSE = true;
+// 超つよいの判断の蒸留（2回目）で見つかった使い控え・使いすぎの手直し：自分側にかかるデメリット（クリティカル率ダウンなど）は減点しない、
+// 数ターン続く攻撃時NPは次のターン以降の味方の攻撃も数える、回数制の防御は防御がすでにあっても重ねる、長く残る回数制の回避・無敵は混ざったスキルでも価値あり、
+// 防御無視は殴る予定の相手が防御を持っているときだけ。当てはまるキャラが少ないので全体の差は小さい（旧版との対戦 各約5.4万試合：team 50.22%・mteam 50.34%（±0.42）、スキル全体が無駄 0.3%）
+let SKILL_V2 = true;
+const selfDraw=(foes,ts,v)=>foes.length?v:SKILL_V2&&ts.length?0:-1; // 弱体：敵に入れば v、自分側だけならデメリットなので0（旧：-1）
 // 効果の並び（スキル・令呪）の「今使う価値」。si はスキル番号（スキル以外は -1）
 function cpuEffScore(u,effs,picked,si){
   const allies=alive(u.pid), enemies=alive(1-u.pid), stars=G.players[u.pid].stars;
@@ -508,7 +513,7 @@ function cpuEffScore(u,effs,picked,si){
       case 'atkPct': sc+=acting?3:0; break;
       case 'atk': sc+=cpuHard()?atkBuffScore(e,ts):acting?3:0; break;
       case 'critPow': sc+=acting&&!G.ult&&critLevel(stars)>=3?3:0; break;
-      case 'ignoreDef': sc+=acting&&enemies.some(x=>has(x,'def'))?3:.5; break;
+      case 'ignoreDef': sc+=acting&&(SKILL_V2?has(cpuPredictTarget()||u,'def')||enemies.every(x=>has(x,'def')):enemies.some(x=>has(x,'def')))?3:.5; break;
       case 'debuffImmune': sc+=ts.some(t=>hpR(t)<.7)?1.5:.5; break;
       case 'buffImmune': sc+=foes.length?2:-1; break;
       case 'fear': case 'actsDown': case 'sealSkill': sc+=foes.length?2:-1; break;
@@ -528,7 +533,7 @@ function cpuEffScore(u,effs,picked,si){
       case 'aoeNormal': sc+=acting&&enemies.length>=2?3:.3; break;
       case 'sureHit': sc+=acting&&enemies.some(x=>has(x,'evade'))?4:.5; break;
       case 'pierce': sc+=acting&&enemies.some(x=>has(x,'evade')||has(x,'invul'))?4:.5; break;
-      case 'def': case 'evade': case 'invul': { const ex=ts.filter(t=>!shielded(t)); sc+=ex.some(t=>hpR(t)<.6)||(GUARD_KEEP&&ex.length&&permGuard(e,effs,ex))?3:0; break; }
+      case 'def': case 'evade': case 'invul': { const ex=ts.filter(t=>!shielded(t)); sc+=ex.some(t=>hpR(t)<.6)||(GUARD_KEEP&&ex.length&&permGuard(e,effs,ex))?3:SKILL_V2&&e.k!=='def'&&e.times&&(e.turns||0)>=4&&ex.some(t=>t.pid===u.pid&&!has(t,e.k))?1.5:0; break; }
       case 'guts': sc+=ts.some(t=>hpR(t)<.5&&!(SKILL_SENSE&&has(t,'guts')))?4:0; break;
       case 'taunt': sc+=hpR(u)>=.5&&allies.some(a=>a!==u&&hpR(a)<.5)&&!(SKILL_SENSE&&(aoeSoon||allies.some(a=>a!==u&&has(a,'taunt'))))?3:0; break;
       case 'heal': sc+=ts.some(t=>maxHp(t)-t.hp>=e.v*.7)?3:0; break;
@@ -541,9 +546,9 @@ function cpuEffScore(u,effs,picked,si){
       case 'atkVs': sc+=acting&&enemies.some(x=>x.fx.some(f=>e.vs?f.k===e.vs:FX[f.k].buff===false))?3:.5; break;
       case 'atkTrait': sc+=acting&&traitHit(cpuPredictTarget(),e.trait)?3:0; break; // 殴る予定の相手（cpuPredictTarget）がその属性のときだけ使う
       case 'defTrait': sc+=ts.some(t=>t.pid===u.pid&&hpR(t)<.8)&&enemies.some(x=>traitHit(x,e.trait))?2.5:.5; break;
-      case 'critDown': sc+=foes.length?1.5:-1; break;
-      case 'npGainDown': sc+=foes.length?1.5:-1; break;
-      case 'starDown': sc+=foes.length?1:-1; break;
+      case 'critDown': sc+=selfDraw(foes,ts,1.5); break;
+      case 'npGainDown': sc+=selfDraw(foes,ts,1.5); break;
+      case 'starDown': sc+=selfDraw(foes,ts,1); break;
       case 'debuffUp': sc+=acting?1:0; break;
       case 'copyBuff': case 'copyDebuff': { // コピー元に強化（弱体）があり、対象が味方（弱体は敵）なら価値あり
         const want=e.k==='copyBuff', fu=resolveTargets(u,e.from||'self',picked)[0];
@@ -552,9 +557,9 @@ function cpuEffScore(u,effs,picked,si){
         sc+=n&&good?Math.min(4,1+n):want?0:-1; break; }
       case 'onAtkNp': case 'onAtkStar': sc+=onAtkScore(e,ts); break;
       case 'buffUp': sc+=acting?.5:0; break;
-      case 'debuffResDown': sc+=foes.length?1:-1; break;
-      case 'debuffDown': sc+=foes.length?1.5:-1; break;
-      case 'buffDown': sc+=foes.length?1.5:-1; break;
+      case 'debuffResDown': sc+=selfDraw(foes,ts,1); break;
+      case 'debuffDown': sc+=selfDraw(foes,ts,1.5); break;
+      case 'buffDown': sc+=selfDraw(foes,ts,1.5); break;
       case 'critMult': sc+=acting&&!G.ult&&critLevel(stars)>=3?3:0; break;
       case 'healBlock': sc+=foes.some(t=>hpR(t)<.7||t.fx.some(x=>x.k==='regenHp'))?2:1; break;
       case 'cardConv': case 'cardConvPick': sc+=acting?1.5:.5; break;
