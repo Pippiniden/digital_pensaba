@@ -2,7 +2,7 @@
 // バランスラボ（balance.js の「要約を保存」）と tools/rank-summary.js（CSV から作る）で共用。ブラウザでは グローバルの rankSummary、Node では require で使う
 //
 //   const s=rankSummary({only:Set|null, min:0（0=自動）, top:20});
-//   s.add({match, rule, cpu, turns, win:1/0/.5, first:bool, side:'A'/'B', id, name, cost, slot:並び順(1〜), master:'名前'|'',
+//   s.add({match, rule, cpu, turns, win:1/0/.5, first:bool, side:'A'/'B', id, name, cost, master:'名前'|'',
 //          dmg, team:チームの与ダメージ, taken, maxd, ko, atk, crit, np, skill, block, asc:再臨したターン|null, out:戦闘不能になったターン|null, hp});
 //   s.text('元データの説明')  → Markdown
 // 記録は試合ごとにまとめて流すこと（match が変わったところで1試合を締める）
@@ -12,7 +12,6 @@ function rankSummary(opt){
   const ONLY=opt.only||null, MIN=opt.min||0, TOP=opt.top||20;
   const chars=new Map();   // id -> 成績
   const costs=new Map();   // cost -> {n,w}
-  const slots=new Map();   // `${id}|${並び順}` -> {n,w}
   const masters=new Map(); // マスター名 -> {n,w}
   const pairs=new Map();   // 味方どうし `a|b` -> {n,w}
   const vs=new Map();      // 対面 `a|b`（a 側から見た）-> {n,w}
@@ -43,7 +42,7 @@ function rankSummary(opt){
     c.ko+=N(r.ko); c.atk+=N(r.atk); c.crit+=N(r.crit); c.np+=N(r.np); c.skill+=N(r.skill); c.block+=N(r.block); c.hp+=N(r.hp);
     if(r.asc!=null){ c.asc++; c.ascT+=N(r.asc); }
     if(r.out!=null){ c.out++; c.outT+=N(r.out); }
-    inc(costs,c.cost,win); inc(slots,r.id+'|'+r.slot,win);
+    inc(costs,c.cost,win);
     buf.push({id:r.id,side:r.side,win,first:!!r.first,turns:N(r.turns),master:r.master||''});
   }
 
@@ -55,7 +54,14 @@ function rankSummary(opt){
   function text(source){
     flush();
     const L=[], P=s=>L.push(s);
-    const cs=[...chars.values()], nm=id=>(chars.get(id)||{name:id}).name||id;
+    const cs=[...chars.values()];
+    // 表示名：同じ名前のキャラが複数いるときは「名前（コストN）」、コストも同じなら ID も添える
+    const label=new Map(), byName=new Map();
+    for(const c of cs){ const k=String(c.name||c.id).trim(); (byName.get(k)||byName.set(k,[]).get(k)).push(c); }
+    for(const [k,list] of byName) for(const c of list){
+      const sameCost=list.filter(o=>o.cost===c.cost).length>1;
+      label.set(c.id,list.length<2?k:sameCost?`${k}（コスト${c.cost}・${c.id}）`:`${k}（コスト${c.cost}）`); }
+    const nm=id=>label.get(id)||id;
     const costWr=new Map([...costs].map(([k,e])=>[k,e.w/e.n])), wr=c=>c.w/c.n, cd=c=>wr(c)-costWr.get(c.cost);
     P(`# 強さ解析の要約`); P('');
     P(`- 元データ：${source||'-'}（${n0(meta.rows)}行・${n0(meta.matches)}試合）`);
@@ -63,6 +69,7 @@ function rankSummary(opt){
     P(`- 平均ターン数：${r1(meta.turns/meta.matches)}／先攻の勝率：${meta.first.n?pc(meta.first.w/meta.first.n):'-'}`);
     P(`- 勝率の「95%の幅」：この範囲に本当の勝率がある見込み。幅が50%をまたぐなら、強い／弱いとは言い切れない`);
     P(`- 「コスト差」：同じコストのキャラ全体の勝率との差（コストが高いほど勝ちやすいぶんを除いた強さ）`);
+    P(`- 並び順はバランスラボが HP の高い順に自動で決めている（どこに置くと強いかは試していない）ので、並び順ごとの強さはこの要約からは分からない`);
     P('');
 
     P(`## コスト別の勝率`); P('');
@@ -74,27 +81,16 @@ function rankSummary(opt){
     const sorted=[...cs].sort((a,b)=>cd(b)-cd(a));
     P(table(['キャラ','ID','コスト','出場','勝率','95%の幅','コスト差','与ダメ','与ダメ割合','被ダメ','最大ダメ','撃破','攻撃','宝具','スキル','防御','再臨率','生存','倒れたターン'],
       sorted.map(c=>{ const [lo,hi]=wilson(c.w,c.n);
-        return [c.name,c.id,c.cost,n0(c.n),pc(wr(c)),`${(lo*100).toFixed(1)}–${(hi*100).toFixed(1)}`,sg(cd(c)),
+        return [nm(c.id),c.id,c.cost,n0(c.n),pc(wr(c)),`${(lo*100).toFixed(1)}–${(hi*100).toFixed(1)}`,sg(cd(c)),
           r0(c.dmg/c.n),c.team?pc(c.dmg/c.team):'-',r0(c.taken/c.n),r0(c.maxd),r1(c.ko/c.n),r1(c.atk/c.n),r1(c.np/c.n),r1(c.skill/c.n),r1(c.block/c.n),pc(c.asc/c.n),pc(1-c.out/c.n),c.out?r1(c.outT/c.out):'-']; })));
     P('');
 
     P(`## 外れ値（95%の幅が同じコストの平均にかからないキャラ）`); P('');
     const odd=sorted.filter(c=>{ const [lo,hi]=wilson(c.w,c.n), m=costWr.get(c.cost); return lo>m||hi<m; });
     const strong=odd.filter(c=>cd(c)>0), weak=odd.filter(c=>cd(c)<0).reverse();
-    P(`- 強すぎ（${strong.length}）：`+(strong.map(c=>`${c.name}（コスト${c.cost}・${sg(cd(c))}）`).join('、')||'なし'));
-    P(`- 弱すぎ（${weak.length}）：`+(weak.map(c=>`${c.name}（コスト${c.cost}・${sg(cd(c))}）`).join('、')||'なし'));
+    P(`- 強すぎ（${strong.length}）：`+(strong.map(c=>`${String(c.name).trim()}（コスト${c.cost}・${sg(cd(c))}）`).join('、')||'なし'));
+    P(`- 弱すぎ（${weak.length}）：`+(weak.map(c=>`${String(c.name).trim()}（コスト${c.cost}・${sg(cd(c))}）`).join('、')||'なし'));
     P('');
-
-    const slotKeys=[...new Set([...slots.keys()].map(k=>k.split('|')[1]))].sort();
-    if(slotKeys.length>1){
-      const minSlot=50, at=(c,s)=>{ const e=slots.get(c.id+'|'+s); return e&&e.n>=minSlot?e.w/e.n:null; };
-      const slotRows=sorted.map(c=>{ const vals=slotKeys.map(s=>at(c,s)), ok=vals.filter(v=>v!=null);
-        return {c,cells:vals.map(v=>v==null?'-':sg(v-wr(c))),spread:ok.length>1?Math.max(...ok)-Math.min(...ok):0}; }).sort((a,b)=>b.spread-a.spread);
-      P(`## 並び順別の勝率（キャラ自身の勝率との差。どこに置くと強いか）`); P('');
-      P(`並び順でいちばん差が出るキャラから順に（${minSlot}試合未満は「-」）。`); P('');
-      P(table(['キャラ','勝率',...slotKeys.map(s=>s+'番目'),'差の幅'],slotRows.map(r=>[r.c.name,pc(wr(r.c)),...r.cells,(r.spread*100).toFixed(1)])));
-      P('');
-    }
 
     if(masters.size){
       P(`## マスター別の勝率`); P('');

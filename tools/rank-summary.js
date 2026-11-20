@@ -28,7 +28,7 @@ function split(line){
   out.push(cur); return out;
 }
 const num=v=>v===''||v==null?null:Number(v);
-const COLS={match:'試合番号',rule:'ルール',cpu:'CPU',turns:'ターン数',win:'勝ち',first:'先攻',side:'側',id:'キャラID',name:'キャラ名',cost:'コスト',slot:'並び順',master:'味方のマスター',
+const COLS={match:'試合番号',rule:'ルール',cpu:'CPU',turns:'ターン数',win:'勝ち',first:'先攻',side:'側',id:'キャラID',name:'キャラ名',cost:'コスト',master:'味方のマスター',
   dmg:'与ダメージ',team:'チームの与ダメージ',taken:'被ダメージ',maxd:'最大ダメージ',ko:'撃破数',atk:'攻撃回数',crit:'クリティカル回数',np:'宝具回数',skill:'スキル回数',block:'防いだ回数',asc:'再臨したターン',out:'戦闘不能になったターン',hp:'残りHP'};
 
 const t0=Date.now();

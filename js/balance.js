@@ -487,7 +487,7 @@ function detailCSV(R){
 function detailSummary(R,file){
   const S=rankSummary(), rule=RULESETS[R.rule].name, lv=levelName(R);
   eachDetail(R,x=>{ const u=x.u, d=uOf(u[DET.id]);
-    S.add({match:x.gi,rule,cpu:lv,turns:x.g.t,win:x.win,first:!!x.first,side:x.side?'B':'A',id:u[DET.id],name:d.name,cost:d.cost,slot:x.slot+1,master:x.tm.m?mOf(x.tm.m).name:'',
+    S.add({match:x.gi,rule,cpu:lv,turns:x.g.t,win:x.win,first:!!x.first,side:x.side?'B':'A',id:u[DET.id],name:d.name,cost:d.cost,master:x.tm.m?mOf(x.tm.m).name:'',
       dmg:u[DET.dealt],team:x.team.reduce((s,v)=>s+v[DET.dealt],0),taken:u[DET.taken],maxd:u[DET.maxHit],ko:u[DET.kills],atk:u[DET.attacks],crit:u[DET.crits],np:u[DET.ults],skill:u[DET.skills],block:u[DET.blocked],
       asc:u[DET.ascT],out:u[DET.koT],hp:u[DET.hp]}); });
   return S.text(`バランスラボ（${file}）`);
