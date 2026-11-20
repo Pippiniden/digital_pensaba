@@ -1268,7 +1268,7 @@ const DEFAULT_UNITS = [
     "ult":{"name":"八咫鏡","c":"G","eff":[{"k":"star","t":"master","v":15},{"k":"defDown","t":"enemy_all","v":50,"turns":2,"color":"G"},{"k":"dmg","t":"enemy_all","v":230}],"ruby":"やたのかがみ"}
   },
   {
-    "id":"brunhild", "name":"ブリュンヒルト", "cls":"ランサー", "cost":4, "hp":790,
+    "id":"brunhild", "name":"ブリュンヒルト", "cls":"ランサー", "cost":4, "hp":760,
     "traits":["女性","中立","中庸","地","人型","ドイツ"],
     "fit":{"face":{"x":50,"y":17,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":16,"z":105},"cut":{"x":0,"y":-3,"z":89}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%d6%a5%ea%a5%e5%a5%f3%a5%d2%a5%eb%a5%c8%28%c1%e4%29",
@@ -1292,11 +1292,11 @@ const DEFAULT_UNITS = [
       {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":2},"post":{"c":"G","dmg":50,"np":0,"star":4}}
     ],
     "skills":[
-      {"name":"女傑の覇力","eff":[{"k":"ignoreDef","t":"self","v":0,"turns":3},{"k":"atk","t":"self","v":20,"turns":3},{"k":"debuffImmune","t":"self","v":0,"turns":3},{"k":"heal","t":"self","v":100}],"rank":"EX"},
+      {"name":"女傑の覇力","eff":[{"k":"atk","t":"self","v":20,"turns":3},{"k":"debuffImmune","t":"self","v":0,"turns":3},{"k":"maxHp","t":"self","v":150,"turns":5}],"rank":"EX"},
       {"name":"破瓜なき操","eff":[{"k":"atk","t":"self","v":20,"turns":3,"color":"R"},{"k":"atkTrait","t":"self","v":30,"turns":3,"trait":"男性","cond":{"k":"trait","v":"男性"}},{"k":"defTrait","t":"self","v":30,"turns":3,"trait":"男性"}],"rank":"A","line":["女に負ける訳がない……などと考えてはいないだろうな？"]},
       {"name":"威猛き女王の恋","eff":[{"k":"taunt","t":"picked","v":0,"turns":1},{"k":"np","t":"self","v":40},{"k":"heal","t":"self","v":120}],"rank":"E","pick":"enemy"}
     ],
-    "ult":{"name":"死かふたりが婚姻わるか","c":"R","eff":[{"k":"pierce","t":"self","v":0,"turns":1},{"k":"npPow","t":"self","v":30,"turns":1},{"k":"dmg","t":"target","v":100},{"k":"multiHit","t":"self","v":3}],"ruby":"ブリュンヒルト・フェアローブング"}
+    "ult":{"name":"死かふたりが婚姻わるか","c":"R","eff":[{"k":"ignoreDef","t":"self","v":0,"turns":1},{"k":"npPow","t":"self","v":30,"turns":1},{"k":"dmg","t":"target","v":70},{"k":"npPow","t":"self","v":30,"turns":1},{"k":"dmg","t":"target","v":70},{"k":"npPow","t":"self","v":30,"turns":3},{"k":"dmg","t":"target","v":70}],"ruby":"ブリュンヒルト・フェアローブング"}
   },
   {
     "id":"nileus", "name":"ニレウス", "cls":"シャインチェイサー", "cost":1, "hp":500,
@@ -1840,7 +1840,7 @@ const DEFAULT_UNITS = [
     "ult":{"name":"隠されしは神秘の砦","c":"B","eff":[{"k":"stun","t":"target","v":0,"turns":1},{"k":"dmg","t":"target","v":450}],"ruby":"ザ・シークレット・カストディアン"}
   },
   {
-    "id":"brunhild2", "name":"ブリュンヒルト", "cls":"アサシン", "cost":4, "hp":800,
+    "id":"brunhild2", "name":"ブリュンヒルト", "cls":"アサシン", "cost":4, "hp":750,
     "traits":["女性","混沌","中庸","地","ドイツ","アイスランド","人型","竜"],
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%d6%a5%ea%a5%e5%a5%f3%a5%d2%a5%eb%a5%c8",
     "lines":{
