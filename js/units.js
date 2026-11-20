@@ -1838,5 +1838,35 @@ const DEFAULT_UNITS = [
       {"name":"開闢の導き手","eff":[{"k":"regenStar","t":"self","v":5,"turns":3},{"k":"critRoll","t":"self","v":3,"turns":3},{"k":"critPow","t":"self","v":50,"turns":3},{"k":"debuffUp","t":"self","v":1,"turns":3}],"rank":"■"}
     ],
     "ult":{"name":"隠されしは神秘の砦","c":"B","eff":[{"k":"stun","t":"target","v":0,"turns":1},{"k":"dmg","t":"target","v":450}],"ruby":"ザ・シークレット・カストディアン"}
+  },
+  {
+    "id":"brunhild2", "name":"ブリュンヒルト", "cls":"アサシン", "cost":4, "hp":800,
+    "traits":["女性","混沌","中庸","地","ドイツ","アイスランド","人型","竜"],
+    "link":"https://seesaawiki.jp/kagemiya/d/%a5%d6%a5%ea%a5%e5%a5%f3%a5%d2%a5%eb%a5%c8",
+    "lines":{
+      "start":[],
+      "attack":[],
+      "extra":[],
+      "damage":[],
+      "skill":[],
+      "np":[],
+      "npDamage":[],
+      "defeat":[],
+      "win":[]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"B","dmg":60,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":50,"np":0,"star":4},"post":{"c":"G","dmg":60,"np":0,"star":6}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"殺戮応酬","eff":[{"k":"atk","t":"self","v":10},{"k":"defDown","t":"self","v":5}],"dmg":80,"np":0,"star":6}},
+      {"acts":3,"pre":{"c":"G","dmg":50,"np":0,"star":3},"post":{"c":"G","dmg":60,"np":0,"star":5}},
+      {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":3},"post":{"c":"G","dmg":50,"np":0,"star":5}}
+    ],
+    "skills":[
+      {"name":"凶行の魔手","eff":[{"k":"regenStar","t":"self","v":6,"turns":3},{"k":"atk","t":"self","v":40,"turns":3,"color":"G"},{"k":"critPow","t":"self","v":50,"turns":3,"color":"G"}],"rank":"A"},
+      {"name":"破瓜なき操","eff":[{"k":"np","t":"ally_all","v":10},{"k":"atk","t":"ally_other","v":20,"turns":3},{"k":"onAtkStar","t":"ally_other","v":3,"turns":3},{"k":"atkDown","t":"self","v":20,"turns":3}],"rank":"B"},
+      {"name":"盲目なる王妃の恋","eff":[{"k":"strip","t":"enemy_all","v":0,"vs":"taunt"},{"k":"np","t":"picked","v":10},{"k":"np","t":"self","v":10},{"k":"defDown","t":"picked","v":10,"turns":3},{"k":"heal","t":"self","v":100}],"rank":"EX","pick":"enemy"}
+    ],
+    "ult":{"name":"嘆き廻れ、愛憎の連鎖","c":"G","eff":[{"k":"stun","t":"target","v":0,"turns":1},{"k":"atkTrait","t":"self","v":50,"turns":1,"trait":"アーサー","cond":{"k":"trait","v":"悪","not":true}},{"k":"dmg","t":"target","v":400},{"k":"defDown","t":"target","v":30,"turns":3,"color":"G"}],"ruby":"カッツェン・ディ・トーリヒカイト","pick":"enemy"}
   }
 ];
