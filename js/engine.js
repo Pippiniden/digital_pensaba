@@ -1270,10 +1270,12 @@ const ACTIONS = {
     const pid=G.setupPid; G.setupMsg='';
     if(how==='random'){ ACTIONS.setupRandom({cost}); return; }
     const opp=G.picks[1-pid], pick=a=>a[Math.floor(Math.random()*a.length)];
+    // 組み合わせは十数万通りになるので Math.min(...配列) は使わない（引数が多すぎて例外になる）
+    const lo=(a,f)=>a.reduce((m,x)=>Math.min(m,f(x)),Infinity), hi=(a,f)=>a.reduce((m,x)=>Math.max(m,f(x)),-Infinity);
     if(masterRule()&&ruleset().partyMax===1){ // マスタールール：サーヴァント＋マスターの合計コストが相手と同じ（なければ一番近い）組み合わせからランダム
       const om=G.mpicks[1-pid], combos=UNITS.flatMap(u=>MASTERS.map(m=>({u:u.id,m:m.id,c:u.cost+m.cost})));
-      const want=opp.length&&om?D(opp[0]).cost+D(om).cost:Math.max(...combos.map(x=>x.c));
-      const gap=Math.min(...combos.map(x=>Math.abs(x.c-want))), top=combos.filter(x=>Math.abs(x.c-want)===gap), c=pick(top);
+      const want=opp.length&&om?D(opp[0]).cost+D(om).cost:hi(combos,x=>x.c);
+      const gap=lo(combos,x=>Math.abs(x.c-want)), top=combos.filter(x=>Math.abs(x.c-want)===gap), c=pick(top);
       G.picks[pid]=[c.u]; G.mpicks[pid]=c.m;
       if(gap) G.setupMsg=`合計コスト${want}の組み合わせがないため、いちばん近いコスト${c.c}で選びました`;
       return;
@@ -1293,10 +1295,10 @@ const ACTIONS = {
       rec(0,[],0);
     }
     if(!combos.length){ ACTIONS.setupRandom(); return; }
-    const size=opp.length||Math.max(...combos.map(x=>x.ids.length));
+    const size=opp.length||hi(combos,x=>x.ids.length);
     const sized=combos.filter(x=>x.ids.length===size), pool=sized.length?sized:combos;
-    const want=(opp.length?sumCost(opp)+mcost(1-pid):Math.max(...pool.map(x=>x.c)))+(Number(delta)||0);
-    const gap=Math.min(...pool.map(x=>Math.abs(x.c-want))), top=pool.filter(x=>Math.abs(x.c-want)===gap), c=pick(top);
+    const want=(opp.length?sumCost(opp)+mcost(1-pid):hi(pool,x=>x.c))+(Number(delta)||0);
+    const gap=lo(pool,x=>Math.abs(x.c-want)), top=pool.filter(x=>Math.abs(x.c-want)===gap), c=pick(top);
     G.picks[pid]=c.ids.slice().sort((a,b)=>D(b).hp-D(a).hp); // HPが高い順に1st
     if(c.m) G.mpicks[pid]=c.m;
     if(gap) G.setupMsg=`合計コスト${want}の編成が作れないため、いちばん近いコスト${top[0].c}で編成しました`;
