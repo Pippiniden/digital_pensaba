@@ -1842,6 +1842,7 @@ const DEFAULT_UNITS = [
   {
     "id":"brunhild2", "name":"ブリュンヒルト", "cls":"アサシン", "cost":4, "hp":750,
     "traits":["女性","混沌","中庸","地","ドイツ","アイスランド","人型","竜"],
+    "fit":{"face":{"x":50,"y":25,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":29,"z":86},"cut":{"x":0,"y":2,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%d6%a5%ea%a5%e5%a5%f3%a5%d2%a5%eb%a5%c8",
     "lines":{
       "start":[],
@@ -1865,8 +1866,8 @@ const DEFAULT_UNITS = [
     "skills":[
       {"name":"凶行の魔手","eff":[{"k":"regenStar","t":"self","v":6,"turns":3},{"k":"atk","t":"self","v":40,"turns":3,"color":"G"},{"k":"critPow","t":"self","v":50,"turns":3,"color":"G"}],"rank":"A"},
       {"name":"破瓜なき操","eff":[{"k":"np","t":"ally_all","v":10},{"k":"atk","t":"ally_other","v":20,"turns":3},{"k":"onAtkStar","t":"ally_other","v":3,"turns":3},{"k":"atkDown","t":"self","v":20,"turns":3}],"rank":"B"},
-      {"name":"盲目なる王妃の恋","eff":[{"k":"strip","t":"enemy_all","v":0,"vs":"taunt"},{"k":"np","t":"picked","v":10},{"k":"np","t":"self","v":10},{"k":"defDown","t":"picked","v":10,"turns":3},{"k":"heal","t":"self","v":100}],"rank":"EX","pick":"enemy"}
+      {"name":"盲目なる王妃の恋","eff":[{"k":"strip","t":"enemy_all","v":0,"vs":"taunt"},{"k":"np","t":"picked","v":-10},{"k":"np","t":"self","v":10},{"k":"defDown","t":"picked","v":10,"turns":3},{"k":"heal","t":"self","v":100}],"rank":"EX","pick":"enemy"}
     ],
-    "ult":{"name":"嘆き廻れ、愛憎の連鎖","c":"G","eff":[{"k":"stun","t":"target","v":0,"turns":1},{"k":"atkTrait","t":"self","v":50,"turns":1,"trait":"アーサー","cond":{"k":"trait","v":"悪","not":true}},{"k":"dmg","t":"target","v":400},{"k":"defDown","t":"target","v":30,"turns":3,"color":"G"}],"ruby":"カッツェン・ディ・トーリヒカイト","pick":"enemy"}
+    "ult":{"name":"嘆き廻れ、愛憎の連鎖","c":"G","eff":[{"k":"stun","t":"target","v":0,"turns":1},{"k":"atkTrait","t":"self","v":50,"turns":1,"trait":"善"},{"k":"dmg","t":"target","v":400},{"k":"defDown","t":"target","v":30,"turns":3,"color":"G"}],"ruby":"カッツェン・ディ・トーリヒカイト"}
   }
 ];

@@ -30,7 +30,7 @@ let G;
 let NEWGAME_N=0, FX_TAP=null;
 function newGame(o={}){
   NEWGAME_N++; if(FX_TAP) FX_TAP.length=0;
-  G = { phase:'mode', mode:null, rule:o.rule||'team', handicap:o.handicap??true, cpu:[false,false], level:'normal', scn:null, /* シナリオの戦闘中だけ：{spec,title,lock,mlock,pool,cap,pick,loseGo}（scnBegin） */ draft:null, /* ドラフトで編成した試合だけ：{pool,mpool,taken,order,i,done}（draftStart） */ arcade:null, /* アーケード中だけ：{diff,stage,picks,mpick,leads,results,continues}（arcadeStart） */ speed:(typeof window!=='undefined'&&window.SPEED_PREF)||700, seed:String(Math.random()),
+  G = { phase:'mode', mode:null, rule:o.rule||'team', handicap:o.handicap??true, cpu:[false,false], level:'normal', scn:null, /* シナリオの戦闘中だけ：{spec,title,lock,mlock,pool,cap,pick,loseGo}（scnBegin） */ draft:null, /* ドラフトで編成した試合だけ：{pool,mpool,taken,order,i,done}（draftStart） */ arcade:null, /* アーケード中だけ：{diff,stage,picks,mpick,leads,seen,lap,results,continues}（arcadeStart） */ speed:(typeof window!=='undefined'&&window.SPEED_PREF)||700, seed:String(Math.random()),
     setupPid:0, picks:[[],[]], mpicks:[null,null], setupMsg:'',
     // master：マスタールールのマスター（makeMaster）。spell：令呪 null/'decl'(宣言済み・次のマスターフェイズで使う)/'used'
     // evac：退避中（次の相手ターンの間） / zeroNext：前のターンの行動回数が0だった（次の行動回数+1）
@@ -926,11 +926,18 @@ const arcadeLast = ()=>!!G.arcade&&G.arcade.stage>=arcadeStages()-1;
 // コンティニュー：負けたステージを同じ相手でやり直す（回数は G.arcade.continues。総合リザルトに出す）。エンドレスでは不可
 const arcadeCanContinue = ()=>!!G.arcade&&G.phase==='over'&&G.winner!==0&&!arcadeEndless();
 // 今のステージの相手を編成して、ステージ紹介へ。1戦目だけコストを first ぶんずらす。先頭がこれまでの相手と重なったら選び直す（数回まで）
+// 相手には、すでに登場したサーヴァント・マスター（A.seen）と、1周目だけはプレイヤーの編成もなるべく出さない。
+// 残りで同じコストの編成が作れなくなったら seen を空にして次の周（A.lap）へ。2周目からはプレイヤーの編成も解禁
+const arcadeAvoid = A=>[...(A.seen||[]),...(A.lap?[]:[...A.picks,A.mpick].filter(Boolean))];
 function arcadeStage(){
   const A=G.arcade, df=ARCADE.diffs[A.diff], delta=A.stage===0?df.first||0:0;
   G.level=arcadeLevel(df,A.stage); G.setupPid=1; G.phase='setup';
-  for(let t=0;t<4;t++){ ACTIONS.setupCpu({how:'same',delta}); if(!A.leads.slice(-4).includes(G.picks[1][0])) break; }
+  for(let t=0;t<4;t++){
+    if(ACTIONS.setupCpu({how:'same',delta,avoid:arcadeAvoid(A)})===false){ A.seen=[]; A.lap=(A.lap||0)+1; ACTIONS.setupCpu({how:'same',delta,avoid:arcadeAvoid(A)}); }
+    if(!A.leads.slice(-4).includes(G.picks[1][0])) break;
+  }
   A.leads.push(G.picks[1][0]);
+  A.seen=[...(A.seen||[]),...G.picks[1],...(G.mpicks[1]?[G.mpicks[1]]:[])];
   G.setupMsg=''; G.phase='stage';
 }
 // 決着したステージの記録（総合リザルト用）
@@ -946,7 +953,7 @@ const arcadeCfg = level=>({mode:'cpu', level, cpu:[false,true], names:['あな�
 function arcadeStart(diff,endless){
   if(!ARCADE.rules.includes(G.rule)) G.rule=ARCADE.rules[0];
   const d=ARCADE.diffs[diff]?diff:'normal';
-  G.arcade={diff:d, endless:!!endless, stage:0, picks:[], mpick:null, leads:[], results:[], continues:0};
+  G.arcade={diff:d, endless:!!endless, stage:0, picks:[], mpick:null, leads:[], seen:[], lap:0, results:[], continues:0};
   applyMode(arcadeCfg(ARCADE.diffs[d].levels[0]));
 }
 // ---------- シナリオの戦闘（scenario.js が act('scnBattle',spec) で始める） ----------
@@ -1265,7 +1272,9 @@ const ACTIONS = {
   },
   // CPUのおまかせ編成。how='random'：完全ランダム（setupRandom と同じ） / how='same'：相手と同じコストになるように選ぶ
   // delta：相手のコストからずらす量（アーケードの1戦目）
-  setupCpu({how,cost,delta}={}){
+  // avoid：なるべく使わないキャラ・マスターの id（アーケード。チームのルールだけ）。避けると全キャラで選ぶより
+  //   コストが合わなくなる（または同じ人数で組めない）ときは何も選ばず false を返す
+  setupCpu({how,cost,delta,avoid}={}){
     if(G.phase!=='setup'||G.scn) return;
     const pid=G.setupPid; G.setupMsg='';
     if(how==='random'){ ACTIONS.setupRandom({cost}); return; }
@@ -1296,12 +1305,16 @@ const ACTIONS = {
     }
     if(!combos.length){ ACTIONS.setupRandom(); return; }
     const size=opp.length||hi(combos,x=>x.ids.length);
-    const sized=combos.filter(x=>x.ids.length===size), pool=sized.length?sized:combos;
-    const want=(opp.length?sumCost(opp)+mcost(1-pid):hi(pool,x=>x.c))+(Number(delta)||0);
+    const sized=combos.filter(x=>x.ids.length===size), all=sized.length?sized:combos;
+    const want=(opp.length?sumCost(opp)+mcost(1-pid):hi(all,x=>x.c))+(Number(delta)||0);
+    const bad=new Set(Array.isArray(avoid)?avoid:[]);
+    const pool=bad.size?sized.filter(x=>!x.ids.some(id=>bad.has(id))&&!(x.m&&bad.has(x.m))):all;
+    if(bad.size&&(!pool.length||lo(pool,x=>Math.abs(x.c-want))>lo(all,x=>Math.abs(x.c-want)))) return false;
     const gap=lo(pool,x=>Math.abs(x.c-want)), top=pool.filter(x=>Math.abs(x.c-want)===gap), c=pick(top);
     G.picks[pid]=c.ids.slice().sort((a,b)=>D(b).hp-D(a).hp); // HPが高い順に1st
     if(c.m) G.mpicks[pid]=c.m;
     if(gap) G.setupMsg=`合計コスト${want}の編成が作れないため、いちばん近いコスト${top[0].c}で編成しました`;
+    return true;
   },
   setupConfirm(){
     if(!G.picks[G.setupPid].length) return;
