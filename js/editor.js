@@ -99,7 +99,7 @@ function newEff(ctx,path){
 }
 // ---------- 効果の種類を変えたときの自動設定（値・対象・ターン） ----------
 // 値の目安（なければ20）。FX_VAL_MASTER＝マスターの補助・令呪で別の値を使うもの
-const FX_VAL = { atk:20, cardUp:30, atkDown:10, atkPct:20, atkPctDown:20, def:10, defDown:10, critPow:30, critMult:200, guts:100, critRoll:1, debuffUp:1, buffUp:1, debuffDown:1, debuffResDown:1, buffDown:1, critDown:1, starDown:2, npGainDown:5, nullUnder:30,
+const FX_VAL = { atk:20, cardUp:30, cardDown:30, atkDown:10, atkPct:20, atkPctDown:20, def:10, defDown:10, critPow:30, critMult:200, guts:100, critRoll:1, debuffUp:1, buffUp:1, debuffDown:1, debuffResDown:1, buffDown:1, critDown:1, starDown:2, npGainDown:5, nullUnder:30,
   onAtkStar:3, onAtkNp:10, actsUp:1, actsDown:1, regenHp:20, regenNp:5, regenStar:2, atkVs:50, atkTrait:50, defTrait:50, counter:20, onHitNp:10, hitNpUp:10, onHitStar:3,
   maxHp:100, poison:20, burn:20, drain:20, heal:100, np:20, star:5, starLoss:5, buffExtend:1, skillCharge:1, dmg:200, selfDmg:20, npPow:80, npPowDown:50, multiHit:2 };
 const FX_VAL_MASTER = { heal:30, dmg:50, star:5 };
@@ -147,7 +147,7 @@ function fixEff(e){
   if(!f.trait) delete e.trait;
   else if(!e.trait) e.trait=traitTargets()[0]||'';
   if(e.k==='cardConv'&&!e.color) e.color='R';
-  if(e.k==='cardUp'){ if(!e.color) e.color='R'; if(e.np==null&&e.star==null) Object.assign(e,CARD_UP_DEF[e.color]); } // カード性能アップ：色は必須。値は色ごとの既定値
+  if(CARD_DEFS[e.k]){ if(!e.color) e.color='R'; if(e.np==null&&e.star==null) Object.assign(e,CARD_DEFS[e.k][e.color]); } // カード性能アップ・ダウン：色は必須。値は色ごとの既定値
   else { delete e.np; delete e.star; }
   if(e.k==='critMult'&&!(e.v>100)) e.v=200;
   if(e.k==='dmg'||e.k==='copyRoll') delete e.at;
@@ -789,7 +789,7 @@ function effRow(path,j,e,ctx,n,atKind){
   const tg=TGT_BY_CTX[ctx].includes(e.t)?TGT_BY_CTX[ctx]:[...TGT_BY_CTX[ctx],e.t];
   // 値：最大HPにできる効果（ダメージ・自傷）は「最大HP」にチェックすると値の代わりに対象の最大HP（軽減不可）
   const val=f.val?(f.maxOk?`${e.max?'':numIn(p+'.v',e.v,e.k==='multiHit'?'回数':'値')}<label class="mini chk" title="値の代わりに対象の最大HPと同じダメージにする（軽減できない）"><input type="checkbox" data-p="${p}.max" data-t="bool" data-act="structural" ${e.max?'checked':''}><span>最大HP</span></label>`
-    :e.k==='cardUp'?numIn(p+'.v',e.v,'威力')+numIn(p+'.np',e.np??0,'NP獲得量')+numIn(p+'.star',e.star??0,'スター発生量') // カード性能アップは3つの値
+    :CARD_DEFS[e.k]?numIn(p+'.v',e.v,'威力')+numIn(p+'.np',e.np??0,'NP獲得量')+numIn(p+'.star',e.star??0,'スター発生量') // カード性能アップは3つの値
     :numIn(p+'.v',e.v,e.k==='multiHit'?'回数':'値')):'';
   if(e.k==='desc') return `<div class="eff" data-ep="${p}">
     <select class="effgrp" data-act="effGrp" data-ep="${p}" data-ctx="${ctx}" aria-label="効果の分類">${groups.map(([g,ks])=>opt(g,`${g}（${ks.length}）`,grp)).join('')}</select>
@@ -810,7 +810,7 @@ function effRow(path,j,e,ctx,n,atKind){
     ${f.noTgt?'':`<select data-p="${p}.t" aria-label="対象">${tg.map(t=>opt(t,(ctx==='master'?mTLabel(t):TARGETS[t])||t,e.t)).join('')}</select>`}
     ${val}
     ${f.inst?'':(f.timesOnly?'':ctx==='master'&&/^faces./.test(path)?faceTurns(p+'.turns',e.turns):optNum(p+'.turns',e.turns,'ターン'))+optNum(p+'.times',e.times,'回数')}
-    ${FX[e.k]&&FX[e.k].color?`<label class="mini"><span>色</span><select data-p="${p}.color" data-t="optstr"${e.k==='cardUp'?` data-act="cardUpColor" title="色を変えると、その色の既定値（威力・NP獲得量・スター発生量）が入ります"`:''}>${e.k==='cardUp'?'':opt('','すべて',e.color||'')}${['R','B','G'].map(c=>opt(c,TERMS[c],e.color)).join('')}</select></label>`:''}
+    ${FX[e.k]&&FX[e.k].color?`<label class="mini"><span>色</span><select data-p="${p}.color" data-t="optstr"${CARD_DEFS[e.k]?` data-act="cardUpColor" title="色を変えると、その色の既定値（威力・NP獲得量・スター発生量）が入ります"`:''}>${CARD_DEFS[e.k]?'':opt('','すべて',e.color||'')}${['R','B','G'].map(c=>opt(c,TERMS[c],e.color)).join('')}</select></label>`:''}
     ${f.trait?`<label class="mini"><span>対象</span><input class="traitin" list="traitlist" data-p="${p}.trait" data-t="optstr" value="${esc(e.trait||'')}" placeholder="属性・クラス・ID"></label>`:''}
     ${e.k in VS_KINDS?(()=>{ const bf=VS_KINDS[e.k]; return `<label class="mini"><span>${bf?'強化':'弱体'}</span><select data-p="${p}.vs" data-t="optstr">${opt('',e.k==='atkVs'?'どれでも':'すべて',e.vs||'')}${Object.keys(FX).filter(k=>FX[k].buff===bf).map(k=>opt(k,FX[k].name,e.vs)).join('')}</select></label>`; })():''}
     ${f.noTgt?'':`<label class="mini"><span>確率</span><select data-p="${p}.chance" data-t="optnum">${opt('','必ず',e.chance??'')}${[1,2,3,4,5].map(k=>opt(k,`ロール${k}以下`,e.chance)).join('')}</select></label>`}
@@ -969,7 +969,7 @@ document.addEventListener('input',e=>{
   if(el.dataset.act==='effKind'){ const ep=el.dataset.p.replace(/\.k$/,''), e=getPath(cur(),ep); autoEff(e,el.dataset.ctx,ep);
     if(isM()&&/^faces\./.test(el.dataset.p)) delete e.turns; // 補助の効果は既定でそのターンだけ（種類を変えたら1ターンに戻す）
     return full(); }
-  if(el.dataset.act==='cardUpColor'){ const e=getPath(cur(),el.dataset.p.replace(/\.color$/,'')); if(e&&CARD_UP_DEF[e.color]) Object.assign(e,CARD_UP_DEF[e.color]); return full(); } // 色を変えたら、その色の既定値に
+  if(el.dataset.act==='cardUpColor'){ const e=getPath(cur(),el.dataset.p.replace(/\.color$/,'')); if(e&&CARD_DEFS[e.k]&&CARD_DEFS[e.k][e.color]) Object.assign(e,CARD_DEFS[e.k][e.color]); return full(); } // 色を変えたら、その色の既定値に
   if(el.dataset.act==='structural') return full();
   light();
 });

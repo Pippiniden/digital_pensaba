@@ -561,6 +561,10 @@ function cpuEffScore(u,effs,picked,si){
         const a=(cpuHard()?atkBuffScore(e,ts):acting?3:0)*Math.min(1,e.v/20);
         const g=(e.np?onAtkScore({...e,k:'onAtkNp',v:e.np},ts):0)+(e.star?onAtkScore({...e,k:'onAtkStar',v:e.star},ts):0);
         sc+=Math.min(5,(a+g)*Math.min(1,share*2)); break; }
+      case 'cardDown': { // カード性能ダウン：敵に入れば、威力・NP・スターの大きさに、その色の面が出やすいかを掛ける（色の面が半分あれば満額）
+        if(!foes.length){ sc+=selfDraw(foes,ts,0); break; }
+        const share=foes.filter(t=>!t.master).reduce((m,t)=>Math.max(m,(D(t.def).faces||[]).filter(f=>f&&f.c===e.color).length/6),0);
+        sc+=Math.min(3.5,(2*Math.min(1,(e.v||0)/20)+(e.np||0)/10+(e.star||0)/3)*Math.min(1,share*2)); break; }
       case 'buffUp': sc+=acting?.5:0; break;
       case 'debuffResDown': sc+=selfDraw(foes,ts,1); break;
       case 'debuffDown': sc+=selfDraw(foes,ts,1.5); break;

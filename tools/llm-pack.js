@@ -17,7 +17,7 @@ const ctx={console,Math,Date,JSON,localStorage:store(),sessionStorage:store(),do
 ctx.window=ctx; vm.createContext(ctx);
 let src='';
 for(const f of ['rules','units','masters','common','unit-ref','ref-units','engine','guide']) src+=fs.readFileSync(path.join(ROOT,'js',f+'.js'),'utf8')+'\n;\n';
-vm.runInContext(src+'function render(){}\nthis.__G={FX,FX_GROUPS,FX_HELP,TARGETS,TGT_BY_CTX,PICKS,COND_KINDS,EFF_AT,LINE_KEYS,LINE_MIN,CLASSES,UNIT_REF,TERMS,RULES,VS_KINDS,FROM_BY_CTX,CARD_UP_DEF,CANON_UNIT_IDS,ALL_UNITS,normalizeUnit,validateUnits,refCompare};',ctx,{filename:'game.js'});
+vm.runInContext(src+'function render(){}\nthis.__G={FX,FX_GROUPS,FX_HELP,TARGETS,TGT_BY_CTX,PICKS,COND_KINDS,EFF_AT,LINE_KEYS,LINE_MIN,CLASSES,UNIT_REF,TERMS,RULES,VS_KINDS,FROM_BY_CTX,CARD_UP_DEF,CARD_DOWN_DEF,CANON_UNIT_IDS,ALL_UNITS,normalizeUnit,validateUnits,refCompare};',ctx,{filename:'game.js'});
 const G=ctx.__G, R=G.UNIT_REF;
 const COL={R:'Buster',B:'Arts',G:'Quick'};
 
@@ -28,6 +28,7 @@ const VAL={
   guts:'HP vで踏みとどまる', critRoll:'クリティカルレベル+v（1〜3が目安）', debuffUp:'弱体の判定ロール+v', buffUp:'強化の判定ロール+v',
   nullUnder:'1回のダメージがv以下なら0', onAtkStar:'攻撃のたびにスター v個', onAtkNp:'攻撃のたびにNP v%',
   cardUp:`v＝威力 / np＝NP獲得量 / star＝スター発生量（3つまとめて指定。既定 ${Object.entries(G.CARD_UP_DEF).map(([c,d])=>`${COL[c]} v${d.v}・np${d.np}・star${d.star}`).join(' / ')}）`,
+  cardDown:`v＝威力ダウン / np＝NP獲得量ダウン / star＝スター発生量ダウン（その色の攻撃1回ごと。3つまとめて指定。既定 ${Object.entries(G.CARD_DOWN_DEF).map(([c,d])=>`${COL[c]} v${d.v}・np${d.np}・star${d.star}`).join(' / ')}）`,
   actsUp:'次の行動回数+v', regenHp:'毎ターンHP v回復', regenNp:'毎ターンNP v%', regenStar:'毎ターンスター v個',
   atkVs:'弱体状態の相手へダメージ+v', atkTrait:'属性 trait を持つ相手へダメージ+v', defTrait:'属性 trait を持つ相手から受けるダメージ-v',
   counter:'攻撃を受けるたびに相手へ vダメージ', onHitNp:'被ダメージのたびにNP v%', hitNpUp:'被ダメージ時のNP獲得+v%', onHitStar:'攻撃対象になったターンの終わりにスター v個',
@@ -53,7 +54,7 @@ function usage(){
   return use;
 }
 const dur=e=>[e.turns?`${e.turns}T`:'',e.times?`${e.times}回`:'',e.chance?`ロール${e.chance}以下`:''].filter(Boolean).join('・');
-const patText=e=>[G.TARGETS[e.t]||e.t, G.FX[e.k].val||e.k==='cardUp'?(e.k==='cardUp'?`v${e.v}/np${e.np}/star${e.star}`:`${e.v}`):'', e.color?COL[e.color]:'', e.trait?`「${e.trait}」`:'', dur(e)].filter(Boolean).join(' ');
+const patText=e=>[G.TARGETS[e.t]||e.t, G.FX[e.k].val?(e.k==='cardUp'||e.k==='cardDown'?`v${e.v}/np${e.np}/star${e.star}`:`${e.v}`):'', e.color?COL[e.color]:'', e.trait?`「${e.trait}」`:'', dur(e)].filter(Boolean).join(' ');
 function patterns(list,max=4){
   const m=new Map();
   for(const x of list){ const k=patText(x.e); const o=m.get(k)||{k,n:0,cost:[]}; o.n++; o.cost.push(x.cost); m.set(k,o); }
@@ -67,7 +68,7 @@ function fields(k){
   else if(f.timesOnly) a.push('times（回数）で指定');
   else if(f.perm) a.push('効果時間なしでよい（永続）');
   else a.push('turns（ターン）か times（回数）が必要。どちらもないと永続');
-  if(k==='cardUp'||k==='cardConv') a.push('color 必須（R/B/G）'); else if(f.color) a.push('color で色を限定できる（任意）');
+  if(k==='cardUp'||k==='cardDown'||k==='cardConv') a.push('color 必須（R/B/G）'); else if(f.color) a.push('color で色を限定できる（任意）');
   if(f.trait) a.push('trait 必須（属性・クラス・キャラID）');
   if(f.copy) a.push(`from 必須（コピー元：${Object.keys(G.FROM_BY_CTX).map(c=>`${CTX_NAME[c]}は ${G.FROM_BY_CTX[c].join('/')}`).join('、')}）`);
   if(k in G.VS_KINDS) a.push(`vs で${G.VS_KINDS[k]?'強化':'弱体'}の種類（FXのキー）を限定できる（任意）`);
@@ -158,7 +159,7 @@ function md(){
     for(const k of ks){ const f=G.FX[k]; if(!f) continue;
       const kind=f.inst?'即時':f.buff===true?'強化':f.buff===false?'弱体':'—';
       P(`- **\`${k}\` ${f.name}**（${kind}）${G.FX_HELP[k]?' — '+G.FX_HELP[k]:''}`);
-      P(`  - 値：${f.val||k==='cardUp'?(VAL[k]||'値'):'使わない（0）'}。${fields(k)}。使える場所：${whereOk(k)}`);
+      P(`  - 値：${f.val?(VAL[k]||'値'):'使わない（0）'}。${fields(k)}。使える場所：${whereOk(k)}`);
       const u=use[k]||[]; if(u.length){
         for(const [w,lab] of [['skill','スキル'],['ult',G.TERMS.ult],['face','面']]){ const xs=u.filter(x=>x.where===w); if(xs.length) P(`  - 使用例（${lab} ${xs.length}件）：${patterns(xs).join('、')}`); }
       } else P('  - 使用例：まだない');

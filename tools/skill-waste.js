@@ -49,6 +49,7 @@ const body=function(N,ONLY,LEVEL,LOOK){
     onAtkNp:(t,e)=>t.np>=RULES.gaugeMax?'NPが満タン':oneTurn(e)&&(!isActing(t)||G.ult)?'今ターン通常攻撃しない味方（1ターン）':null,
     onAtkStar:(t,e)=>oneTurn(e)&&(!isActing(t)||G.ult)?'今ターン通常攻撃しない味方（1ターン）':null,
     cardUp:(t,e)=>oneTurn(e)&&!isActing(t)?'今ターン攻撃しない味方（1ターン）':!(D(t.def).faces||[]).some(f=>f&&f.c===e.color)?'その色の面がない味方':null,
+    cardDown:(t,e)=>!(D(t.def).faces||[]).some(f=>f&&f.c===e.color)?'その色の面がない敵':null,
     cardConv:(t,e)=>oneTurn(e)&&(!isActing(t)||G.ult)?'今ターン通常攻撃しない味方（1ターン）':null,
     // 守り：自分だけを守る効果なのに、ほかの味方がターゲット集中を持っていて、全体宝具も来そうにない
     def:(t,e,u)=>guardShadowed(t,u), evade:(t,e,u)=>guardShadowed(t,u)||dupGuard(t,e), invul:(t,e,u)=>guardShadowed(t,u)||dupGuard(t,e),
@@ -110,7 +111,7 @@ const body=function(N,ONLY,LEVEL,LOOK){
     defTrait:(h,ev,x)=>hit(h,ev)&&ev.att.some(a=>traitHit(a,x.trait)),
     taunt:(h,ev)=>hit(h,ev)&&!ev.all&&alive(h.pid).length>=2,
     // 敵に付けた弱体
-    atkDown:attacks, atkPctDown:attacks, starDown:normalAtk, npGainDown:attacks, critDown:(h,ev)=>normalAtk(h,ev)&&ev.stars>0,
+    atkDown:attacks, atkPctDown:attacks, starDown:normalAtk, npGainDown:attacks, cardDown:attacks, critDown:(h,ev)=>normalAtk(h,ev)&&ev.stars>0,
     npPowDown:(h,ev)=>attacks(h,ev)&&ev.ult, defDown:hit, curse:hit, hitNpSeal:hit,
     sealUlt:(h,ev)=>ev.type==='skillPhase'&&ev.pid===h.pid&&h.np>=READY, sealSkill:(h,ev)=>ev.type==='skillPhase'&&ev.pid===h.pid&&h.used.some((x,i)=>!x&&(i<2||h.asc)),
   };

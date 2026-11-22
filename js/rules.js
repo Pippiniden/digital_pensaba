@@ -290,6 +290,8 @@ const FX = {
   critDown:{name:'クリティカル率ダウン',buff:false,val:true},
   npGainDown:{name:'NP獲得量ダウン',buff:false,val:true,allOpt:true}, // 攻撃で得るNP（コマンド・攻撃時NP・チェイン）が1回ごとに x 減る（0未満にはならない）。all なら スキル・ターン開始時・被弾時などの獲得も対象
   starDown:{name:'スター発生数ダウン',buff:false,val:true},          // 攻撃1回で発生するスターが x 個減る
+  // カード性能ダウン：カード性能アップの弱体版。色（必須）のコマンドの 威力(v)＝攻撃ダメージ-・NP獲得量(np)・スター発生量(star) をまとめて下げる（1回の攻撃ごと）。既定値は CARD_DOWN_DEF
+  cardDown:{name:'カード性能ダウン',buff:false,val:true,color:true},
   debuffResDown:{name:'弱体耐性ダウン',buff:false,val:true},   // 自分が受ける確率つきの弱体の判定ロールをN+xにする（「必ず」の弱体には効かない）
   debuffDown:{name:'弱体成功率ダウン',buff:false,val:true},   // 自分が敵に付ける弱体の判定ロールをN-xにする。「必ず」の弱体もロール6以下の判定になる
   buffDown:{name:'強化成功率ダウン',buff:false,val:true},    // 自分が味方（自分含む）に付ける強化の判定ロールをN-xにする。「必ず」の強化もロール6以下の判定になる
@@ -329,6 +331,9 @@ const FX = {
 
 // カード性能アップの色ごとの既定値（エディタで色を選ぶと入る。v＝威力 / np＝NP獲得量 / star＝スター発生量）
 const CARD_UP_DEF = { R:{v:30,np:0,star:1}, G:{v:30,np:5,star:3}, B:{v:30,np:10,star:2} };
+// カード性能ダウンの色ごとの既定値（同じ形）。CARD_DEFS＝3つの値を持つ効果の種類 → 既定値
+const CARD_DOWN_DEF = { R:{v:30,np:0,star:1}, G:{v:30,np:5,star:3}, B:{v:30,np:10,star:2} };
+const CARD_DEFS = { cardUp:CARD_UP_DEF, cardDown:CARD_DOWN_DEF };
 // ---------- 効果の分類（エディタで「分類 → 種類」の2段で選ぶ） ----------
 // ここにない効果は最後の「その他」に入る
 // 条件つき効果（Eff.cond）：条件を満たす相手にだけ働く。condUse の効果は「使う瞬間」（ダメージ計算）に攻撃・防御の相手を見る。
@@ -344,7 +349,7 @@ const FX_GROUPS = [
   ['攻撃強化', ['atk','atkPct','npPow','atkVs','atkTrait','ignoreDef','sureHit','pierce','critPow','critMult','critRoll','debuffUp','buffUp','cardConv','cardConvPick','onAtkStar','onAtkNp','cardUp','aoeNormal']],
   ['防御・耐性', ['def','defTrait','evade','invul','guts','taunt','nullUnder','counter','maxHp','debuffImmune','mentalImmune','deathImmune','stripImmune','npDownImmune','starLossImmune']],
   ['継続・ターン', ['actsUp','regenHp','regenNp','regenStar','onHitNp','hitNpUp','onHitStar']],
-  ['弱体', ['atkDown','atkPctDown','npPowDown','defDown','critDown','starDown','npGainDown','debuffDown','debuffResDown','buffDown','poison','burn','spread','drain','curse','hitNpSeal','stun','charm','fear','actsDown','sealSkill','sealUlt','healBlock','buffImmune']],
+  ['弱体', ['atkDown','atkPctDown','npPowDown','defDown','critDown','starDown','npGainDown','cardDown','debuffDown','debuffResDown','buffDown','poison','burn','spread','drain','curse','hitNpSeal','stun','charm','fear','actsDown','sealSkill','sealUlt','healBlock','buffImmune']],
   ['回復・即時', ['heal','np','star','starLoss','cleanse','cleanseMental','strip','buffExtend','skillCharge','ascend','copyBuff','copyDebuff']],
   ['攻撃・特殊', ['dmg','multiHit','aoe','selfDmg','instantDeath','copyRoll']],
   ['表示', ['desc']],

@@ -184,10 +184,13 @@ function allLabel(effs){
   const ts=new Set(effs.filter(e=>FX[e.k]&&!FX[e.k].noTgt).map(e=>e.t)), a=ts.has('ally_all')||ts.has('ally_other'), en=ts.has('enemy_all')||ts.has('enemy_both');
   return a&&en?'全体':a?'味方全体':en?'敵全体':'';
 }
-// カード性能アップ（cardUp）は 攻撃ダメージ+（atk）・攻撃時NP（onAtkNp）・攻撃時スター（onAtkStar）の一部として数える（値はそれぞれ v / np / star）
-const CARD_UP_PART = { atk:'v', onAtkNp:'np', onAtkStar:'star' };
-const modOf = (e,k)=>e.k==='cardUp'?(e[CARD_UP_PART[k]]||0):e.v;
-const modHit = (e,k)=>e.k===k||(e.k==='cardUp'&&CARD_UP_PART[k]&&(e[CARD_UP_PART[k]]||0)>0);
+// カード性能アップ（cardUp）は 攻撃ダメージ+（atk）・攻撃時NP（onAtkNp）・攻撃時スター（onAtkStar）の一部として、
+// カード性能ダウン（cardDown）は 攻撃ダメージ-（atkDown）・スター発生数ダウン（starDown）の一部として数える（値はそれぞれ v / np / star）。
+// カード性能ダウンの NP獲得量は gainNpStar で、その色の攻撃1回で得る NP から引く
+const CARD_PART = { cardUp:{atk:'v', onAtkNp:'np', onAtkStar:'star'}, cardDown:{atkDown:'v', starDown:'star'} };
+const modOf = (e,k)=>CARD_PART[e.k]?(e[CARD_PART[e.k][k]]||0):e.v;
+const modHit = (e,k)=>e.k===k||(!!CARD_PART[e.k]&&!!CARD_PART[e.k][k]&&(e[CARD_PART[e.k][k]]||0)>0);
+const isCard = e=>!!CARD_PART[e.k]; // 回数は攻撃1回につき1回だけ減らす（威力が0なら attackHit の最後で減らす）
 function mods(u,k,color){
   const list=u.fx.filter(e=>modHit(e,k) && (!color || !e.color || e.color===color));
   return {sum:list.reduce((s,e)=>s+modOf(e,k),0), list};
@@ -453,7 +456,7 @@ function applyOne0(src,t,e,o={}){
   }
   const inst={k:e.k,v:e.v,color:e.color||null,turns:e.turns??null,times:e.times??null,owner:src.pid};
   if(e.vs) inst.vs=e.vs;
-  if(e.k==='cardUp'){ inst.np=e.np||0; inst.star=e.star||0; } // カード性能アップ：NP獲得量・スター発生量
+  if(CARD_PART[e.k]){ inst.np=e.np||0; inst.star=e.star||0; } // カード性能アップ・ダウン：NP獲得量・スター発生量
   if(e.sure) inst.sure=true; // 解除・無効の影響を受けない（ターン・回数では切れる）
   if(e.trait) inst.trait=e.trait;
   if(e.cond&&!e.cond.self) inst.cond=e.cond; // 条件つき（使う瞬間に見る効果はダメージ計算で判定）
@@ -552,12 +555,14 @@ function dmgMods(att,tgt,color){
   const colorBuff=a.list.filter(e=>e.color).reduce((s,e)=>s+modOf(e,'atk'),0);
   return {sum, pct:pa.sum-pd.sum, usedA, usedT, colorBuff};
 }
-// スター発生数ダウン(starDown)：1回の攻撃で発生するスターの合計から x 個引く（0未満にはしない）。返り値＝まだ引き切れていない分
+// スター発生数ダウン(starDown)：1回の攻撃で発生するスターの合計から x 個引く（0未満にはしない）。
+// カード性能ダウン(cardDown)：その色の攻撃1回で得る NP・発生するスターの合計から np / star を引く。返り値＝まだ引き切れていない分 {star, np}
 function gainNpStar(att,cmd,mult){
-  if(cmd.np) addNp(att,npRate(att,cmd.np*mult),'atk');
-  const sd=mods(att,'starDown'); let cut=sd.sum;
-  if(cmd.star){ const v=cmd.star*mult, g=Math.max(0,v-cut); cut=Math.max(0,cut-v); G.gen+=g; if(sd.list.length) consume(att,sd.list); }
-  return cut;
+  let np=att.fx.filter(e=>e.k==='cardDown'&&e.color===cmd.c).reduce((s,e)=>s+(e.np||0),0);
+  if(cmd.np){ const v=npRate(att,cmd.np*mult), g=Math.max(0,v-np); np=Math.max(0,np-v); addNp(att,g,'atk'); }
+  const sd=mods(att,'starDown',cmd.c); let cut=sd.sum;
+  if(cmd.star){ const v=cmd.star*mult, g=Math.max(0,v-cut); cut=Math.max(0,cut-v); G.gen+=g; consume(att,sd.list.filter(e=>!isCard(e))); }
+  return {star:cut, np};
 }
 // ---------- 他のサーヴァントをロール（copyRoll） ----------
 const isCopyCmd = c=>!!c&&c.c==='W'&&(c.eff||[]).some(e=>e.k==='copyRoll');
@@ -646,14 +651,15 @@ function attackHit(att,cmd,tgt,o,lab){
     else if(nullified(tgt,dmg)){ st(tgt).blocked++; log(`${n} ${cmdChip(cmd)} → ${nm(tgt)}：${fmt(dmg)}ダメージは${nullified(tgt,dmg)}以下なので無効 <span class="sub">(${note.join(' / ')})</span>`); fxEmit({t:'dmg',uid:tgt.uid,text:'無効'}); nullUse(tgt,dmg); consume(tgt,usedT); }
     else { log(`${n} ${cmdChip(cmd)} → ${nm(tgt)}：<b>${fmt(dmg)}</b>ダメージ <span class="sub">(${note.join(' / ')})</span>`); consume(tgt,usedT); dealDamage(tgt,dmg,true,{crit,att}); }
   }
-  const starCut=o.noGain?0:gainNpStar(att,cmd,mult);
+  const cut=o.noGain?{star:0,np:0}:gainNpStar(att,cmd,mult);
   cons(att,usedA);
   // 攻撃時○○（エクストラアタックでは発動しない）
   if(!o.extra&&!o.noGain){
     const s=mods(att,'onAtkStar',cmd.c), p=mods(att,'onAtkNp',cmd.c);
-    if(s.sum){ const g=Math.max(0,s.sum-starCut); G.gen+=g; log(`${n} 攻撃時効果：${TERMS.star}${g}個発生`,'sub'); if(starCut>0){ const sd=mods(att,'starDown'); consume(att,sd.list); } }
-    if(p.sum){ addNp(att,npRate(att,p.sum),'atk'); log(`${n} 攻撃時効果：${TERMS.gauge}+${p.sum}%`,'sub'); }
-    consume(att,[...s.list,...p.list].filter(e=>e.k!=='cardUp')); // カード性能アップの回数は攻撃ダメージ側で1回だけ減らす
+    if(s.sum){ const g=Math.max(0,s.sum-cut.star); G.gen+=g; log(`${n} 攻撃時効果：${TERMS.star}${g}個発生`,'sub'); if(cut.star>0){ const sd=mods(att,'starDown',cmd.c); consume(att,sd.list.filter(e=>!isCard(e))); } }
+    if(p.sum){ const v=Math.max(0,npRate(att,p.sum)-cut.np); addNp(att,v,'atk'); log(`${n} 攻撃時効果：${TERMS.gauge}+${p.sum}%${cut.np?`（カード性能ダウン-${Math.min(cut.np,npRate(att,p.sum))}）`:''}`,'sub'); }
+    consume(att,[...s.list,...p.list].filter(e=>!isCard(e))); // カード性能アップ・ダウンの回数は攻撃ダメージ側で1回だけ減らす
+    consume(att,att.fx.filter(e=>isCard(e)&&!(e.v>0)&&e.color===cmd.c)); // 威力0のカード性能アップ・ダウンはここで1回減らす
   }
 }
 function resolveCommand(att,cmd,tgt,o={}){

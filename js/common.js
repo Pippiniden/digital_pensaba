@@ -73,7 +73,7 @@ function normEff(e){
   const o={k:String(e.k||'atk'), t:String(e.t||'self'), v:num(e.v)};
   for(const k of ['turns','times','chance']) if(num(e[k])>0) o[k]=num(e[k]);
   if(['R','B','G'].includes(e.color)) o.color=e.color;
-  if(o.k==='cardUp'){ o.np=num(e.np); o.star=num(e.star); } // カード性能アップ：v＝威力 / np＝NP獲得量 / star＝スター発生量
+  if(CARD_DEFS[o.k]){ o.np=num(e.np); o.star=num(e.star); } // カード性能アップ・ダウン：v＝威力 / np＝NP獲得量 / star＝スター発生量
   // vs：弱体状態特攻の対象の弱体 / 弱体無効＝防ぐ弱体の種類 / 強化無効＝防ぐ強化の種類（未指定＝すべて）
   if(e.vs&&vsOk(String(e.k),e.vs)) o.vs=String(e.vs);
   const tr=String(e.trait??'').trim(); if(tr) o.trait=tr; // 属性特攻・特防の対象の属性
@@ -238,8 +238,8 @@ function checkEffs(effs,ctx,where,add){
     if(e.k==='instantDeath'&&['self','ally_all','ally_other'].includes(e.t)) add('warn',`${w}：味方に即死効果がかかります`);
     if(e.chance&&e.chance>=6) add('warn',`${w}：ロール6以下は必ず成功します`);
     if(e.k==='cardConv'&&!e.color) add('error',`${w}：カード変換は変換先の色を指定してください`);
-    if(e.k==='cardUp'&&!e.color) add('error',`${w}：カード性能アップは色を指定してください`);
-    if(e.k==='cardUp'&&!(e.v>0)&&!(e.np>0)&&!(e.star>0)) add('warn',`${w}：カード性能アップの威力・NP獲得量・スター発生量がすべて0です`);
+    if(CARD_DEFS[e.k]&&!e.color) add('error',`${w}：${FX[e.k].name}は色を指定してください`);
+    if(CARD_DEFS[e.k]&&!(e.v>0)&&!(e.np>0)&&!(e.star>0)) add('warn',`${w}：${FX[e.k].name}の威力・NP獲得量・スター発生量がすべて0です`);
     if(e.vs&&!(e.k in VS_KINDS)) add('warn',`${w}：この効果では弱体の種類の指定は使われません`);
     if(FX[e.k].trait&&!e.trait) add('error',`${w}：${FX[e.k].name}は対象（属性・クラス・キャラID）を指定してください`);
     if(e.trait&&!FX[e.k].trait) add('warn',`${w}：この効果では属性の指定は使われません`);
@@ -591,6 +591,7 @@ function fxText(e){
   switch(e.k){
     case 'atk': s=`攻撃ダメージ+${e.v}${col}`; break;
     case 'cardUp': s=[`${e.color?`(${TERMS[e.color]})`:''}性能アップ`, e.v?`威力+${e.v}`:'', e.np?`NP獲得量+${e.np}`:'', e.star?`スター発生量+${e.star}`:''].filter(Boolean).join('・'); break;
+    case 'cardDown': s=[`${e.color?`(${TERMS[e.color]})`:''}性能ダウン`, e.v?`威力-${e.v}`:'', e.np?`NP獲得量-${e.np}`:'', e.star?`スター発生量-${e.star}`:''].filter(Boolean).join('・'); break;
     case 'atkDown': s=`攻撃ダメージ-${e.v}${col}`; break;
     case 'atkPct': s=`攻撃ダメージ+${e.v}%${col}`; break;
     case 'atkPctDown': s=`攻撃ダメージ-${e.v}%${col}`; break;
