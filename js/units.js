@@ -1878,7 +1878,7 @@ const DEFAULT_UNITS = [
       {"name":"破瓜なき操","eff":[{"k":"np","t":"ally_all","v":10},{"k":"atk","t":"ally_other","v":20,"turns":3},{"k":"onAtkStar","t":"ally_other","v":3,"turns":3},{"k":"atkDown","t":"self","v":20,"turns":3}],"rank":"B"},
       {"name":"盲目なる王妃の恋","eff":[{"k":"strip","t":"enemy_all","v":0,"vs":"taunt"},{"k":"np","t":"picked","v":10},{"k":"np","t":"self","v":10},{"k":"defDown","t":"picked","v":10,"turns":3},{"k":"heal","t":"self","v":100}],"rank":"EX","pick":"enemy"}
     ],
-    "ult":{"name":"嘆き廻れ、愛憎の連鎖","c":"G","eff":[{"k":"stun","t":"target","v":0,"turns":1},{"k":"atkTrait","t":"self","v":50,"turns":1,"trait":"アーサー","cond":{"k":"trait","v":"悪","not":true}},{"k":"dmg","t":"target","v":400},{"k":"defDown","t":"target","v":30,"turns":3,"color":"G"}],"ruby":"カッツェン・ディ・トーリヒカイト"}
+    "ult":{"name":"嘆き廻れ、愛憎の連鎖","c":"G","eff":[{"k":"stun","t":"target","v":0,"turns":1},{"k":"atkTrait","t":"self","v":50,"turns":3,"trait":"善"},{"k":"dmg","t":"target","v":400},{"k":"defDown","t":"target","v":30,"turns":3,"color":"G"}],"ruby":"カッツェン・ディ・トーリヒカイト"}
   },
   {
     "id":"fredegund", "name":"フレデグンド", "cls":"アサシン", "cost":2, "hp":410,
