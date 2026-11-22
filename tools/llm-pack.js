@@ -2,7 +2,7 @@
 //
 //   node tools/llm-pack.js                  docs/llm/reference.md を作り直す（基準値・効果の一覧・今のキャラでの使われ方）
 //   node tools/llm-pack.js --check a.json   AI が書いた JSON（1体でも配列でも可）を検査する
-//                                           （読み込みエラー・エディタの検証・基準値との比較）
+//                                           （読み込みエラー・エディタの検証・強すぎ注意（UNIT_REF.limits）・基準値との比較）
 //   バランスの試し打ちは  node tools/ref-check.js --add a.json
 //
 // 資料はゲームのコード（rules.js の FX / TARGETS、unit-ref.js、guide.js の FX_HELP、units.js）から作るので、
@@ -17,7 +17,7 @@ const ctx={console,Math,Date,JSON,localStorage:store(),sessionStorage:store(),do
 ctx.window=ctx; vm.createContext(ctx);
 let src='';
 for(const f of ['rules','units','masters','common','unit-ref','ref-units','engine','guide']) src+=fs.readFileSync(path.join(ROOT,'js',f+'.js'),'utf8')+'\n;\n';
-vm.runInContext(src+'function render(){}\nthis.__G={FX,FX_GROUPS,FX_HELP,TARGETS,TGT_BY_CTX,PICKS,COND_KINDS,EFF_AT,LINE_KEYS,LINE_MIN,CLASSES,UNIT_REF,TERMS,RULES,VS_KINDS,FROM_BY_CTX,CARD_UP_DEF,CARD_DOWN_DEF,CANON_UNIT_IDS,ALL_UNITS,normalizeUnit,validateUnits,refCompare};',ctx,{filename:'game.js'});
+vm.runInContext(src+'function render(){}\nthis.__G={FX,FX_GROUPS,FX_HELP,TARGETS,TGT_BY_CTX,PICKS,COND_KINDS,EFF_AT,LINE_KEYS,LINE_MIN,CLASSES,UNIT_REF,TERMS,RULES,VS_KINDS,FROM_BY_CTX,CARD_UP_DEF,CARD_DOWN_DEF,CANON_UNIT_IDS,ALL_UNITS,normalizeUnit,validateUnits,refCompare,refLimits};',ctx,{filename:'game.js'});
 const G=ctx.__G, R=G.UNIT_REF;
 const COL={R:'Buster',B:'Arts',G:'Quick'};
 
@@ -137,6 +137,34 @@ function md(){
   P('- 効果時間は 1T（ターン）・3T がほとんど。強い効果ほど短く（1T・1回）、弱い効果は 3T。');
   P('- 確率つき（chance）は「ロールN以下で成功」。強い弱体（スタン・魅了など）に付けることが多い。');
   P('');
+  // 強さの上限（UNIT_REF.limits。申請ツールの「強すぎ注意」と同じ）
+  const LM=R.limits;
+  if(LM){
+    const fn=k=>`\`${k}\` ${G.FX[k]?G.FX[k].name:k}`, PL={skill:'スキル',ult:G.TERMS.ult,face:'面'};
+    P('### 強さの上限（守ること）');
+    P('');
+    P('申請ツールは、これを超えると「強すぎ注意」を出します。設定上どんなに強いキャラでも、この範囲で表現してください。');
+    P('');
+    P(`- 1つのスキルの効果は **${LM.maxEffs}つまで**。そのうち下の「強い効果」は **${LM.maxStrong}つまで**。`);
+    P(`- 効果時間は **${LM.maxTurns}T まで**。`);
+    for(const [k,o] of Object.entries(LM.forbid)) for(const [pl,why] of Object.entries(o)) P(`- ${fn(k)}：**${PL[pl]}には入れない**。${why.replace(/^.*?（/,'').replace(/）$/,'')}`);
+    P(`- コスト${LM.noDefFaceCost}以下は、鉛筆の面に \`evade\` 回避・\`invul\` 無敵を付けない。`);
+    P('- 自分にかける代償（自分への即死・弱体）はこの上限の対象外。');
+    P('');
+    P('**強い効果**（敵や味方にかけるとき。確率の上限は「ロールN以下」のN。確率つきの効果は `chance` を必ず付ける）');
+    P('');
+    P('| 効果 | 単体・自分 | 全体（ally_all / enemy_all） |');
+    P('|---|---|---|');
+    const lim=(t,m,c)=>[t!=null||m!=null?[t!=null?`${t}T`:'',m!=null?`${m}回`:''].filter(Boolean).join('か')+'まで':'',c!=null?`chance ${c}以下`:''].filter(Boolean).join('・')||'—';
+    for(const [k,s] of Object.entries(LM.strong)) P(`| ${fn(k)} | ${lim(s.turns,s.times,s.chance)} | ${lim(s.allTurns??s.turns,s.allTimes??s.times,s.allChance??s.chance)} |`);
+    P('');
+    P('**スキルの値の上限**');
+    P('');
+    P('| 効果 | 自分・単体 | 全体 |');
+    P('|---|---|---|');
+    for(const [k,[a,b]] of Object.entries(LM.val)) if(G.FX[k]) P(`| ${fn(k)} | ${a} | ${b} |`);
+    P('');
+  }
   // 3. 対象
   P('## 3. 効果の対象（t）');
   P('');
@@ -189,18 +217,20 @@ function check(file){
   try{ raw=JSON.parse(t); }catch(e){ const a=t.search(/[\[{]/), b=Math.max(t.lastIndexOf(']'),t.lastIndexOf('}')); try{ raw=JSON.parse(t.slice(a,b+1)); }catch(e2){ console.log('✖ JSONとして読めません：'+e2.message); process.exit(1); } }
   if(!Array.isArray(raw)) raw=[raw];
   const units=raw.map(x=>G.normalizeUnit(x)), all=[...G.ALL_UNITS,...units];
-  let bad=0;
+  let bad=0, much=0;
   // 正規化で消えた項目（スペルミスなど）を見つける
   const known=new Set(['id','name','cls','traits','cost','hp','fit','link','memo','wip','lines','condLines','faces','skills','ult']);
   raw.forEach((x,i)=>{ const extra=Object.keys(x).filter(k=>!known.has(k)); if(extra.length) console.log(`⚠ ${units[i].name||i}：使われない項目 ${extra.join(', ')}`); });
   const issues=G.validateUnits(all).filter(x=>x.i>=G.ALL_UNITS.length);
   units.forEach((u,ui)=>{
-    const i=G.ALL_UNITS.length+ui, its=issues.filter(x=>x.i===i);
+    const i=G.ALL_UNITS.length+ui, its=[...issues.filter(x=>x.i===i),...G.refLimits(u)];
     console.log(`\n■ ${u.name}（${u.id}）コスト${u.cost} ${u.cls}`);
-    for(const x of its){ console.log(`  ${x.level==='error'?'✖':x.level==='warn'?'⚠':'・'} ${x.msg}`); if(x.level==='error') bad++; }
+    for(const x of its){ console.log(`  ${x.level==='error'?'✖':x.level==='warn'?'⚠':'・'} ${x.msg}`); if(x.level==='error') bad++; if(/^強すぎ注意/.test(x.msg)) much++; }
     const cmp=G.refCompare(u); if(!cmp.length){ console.log('  （このコストの基準値はありません）'); return; }
     for(const x of cmp) console.log(`  ${x.ok===false?'↕':x.ok?'○':'・'} ${x.label} ${x.val}${x.note?'：'+x.note:''}`);
   });
+  if(much) console.log(`
+強すぎ注意 ${much}件。資料の「強さの上限」を超えています（読み込みはできますが、申請では直すよう頼まれます）。`);
   console.log(bad?`\nエラー ${bad}件。エディタでは読み込めますが、直さないとゲームに反映できません。`:'\nエラーなし。エディタの「1体を読み込み」で取り込めます。バランスは node tools/ref-check.js --add '+file+' で確かめられます。');
   process.exit(bad?1:0);
 }

@@ -47,10 +47,10 @@ function runCheck(){
 
 // 編集中のデータは形が崩れていることがあるので、検査・保存の前に正規化する
 const unitN=i=>normalizeUnit(S.units[i]);
-// その体の検査結果（エラー・注意）。今のキャラと一緒に検証して、ID の重複も見る
+// その体の検査結果（エラー・注意）。今のキャラと一緒に検証して、ID の重複も見る。強すぎ注意（refLimits）も足す
 function issuesOf(i){
   const all=[...OFFICIAL,...S.units.map((u,j)=>unitN(j))];
-  return validateUnits(all).filter(x=>x.i===OFFICIAL.length+i);
+  return [...validateUnits(all).filter(x=>x.i===OFFICIAL.length+i), ...refLimits(unitN(i)).map(x=>({...x,i:OFFICIAL.length+i}))];
 }
 const cnt=(its,l)=>its.filter(x=>x.level===l).length;
 function rateOf(i){

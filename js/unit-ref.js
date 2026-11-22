@@ -53,4 +53,35 @@ const UNIT_REF = {
 
   // ---- スター効率：6面の発生スターの合計の目安（〜前後）。コストが plusCost 以上なら plus [下限, 上限] だけ多め ----
   star:{ pre:10, post:20, plusCost:5, plus:[3,5] },
+
+  // ---- 強すぎ注意（申請ツールと node tools/llm-pack.js --check で「強すぎ」の注意を出す。AI 向けの資料にも同じ表が載る） ----
+  // 今のキャラ（原作キャラを除く）の使い方から決めた目安。外れてもエラーにはしない（測って釣り合っていればよい）
+  limits:{
+    maxEffs:3,      // 1つのスキルの効果の数（説明文・自分への代償は数えない）
+    maxTurns:5,     // 効果時間（ターン）の上限
+    maxStrong:1,    // 1つのスキルに入れる「強い効果」（下の strong にある効果）の数
+    noDefFaceCost:2,// このコスト以下は、鉛筆の面に回避・無敵を付けない
+    // 入れてはいけない場所：効果 → 場所（skill / ult / face）→ 理由
+    forbid:{
+      instantDeath:{ skill:'即死はスキルに入れられません（入れるなら宝具か4番の面に、ロール1以下の確率つきで）' },
+    },
+    // 強い効果：turns＝ターンの上限 / times＝回数の上限 / chance＝確率の上限（ロールN以下。付けないと必ず成功なので必須）
+    // all〜＝対象が全体（ally_all / enemy_all）のときの上限
+    strong:{
+      instantDeath:{ chance:1, allChance:1 },
+      stun:{ turns:1, times:1, chance:4, allChance:2 },
+      charm:{ turns:1, times:1, chance:4, allChance:2 },
+      fear:{ turns:1, times:1, chance:4, allChance:2 },
+      sealSkill:{ turns:1, times:1, chance:4, allChance:2 },
+      sealUlt:{ turns:1, times:1, chance:4, allChance:2 },
+      buffImmune:{ turns:1, times:1, chance:4, allChance:2 },
+      evade:{ turns:1, times:3, allTurns:1, allTimes:1 },
+      invul:{ turns:1, times:3, allTurns:1, allTimes:1 },
+      actsUp:{ turns:1, times:1 },
+      skillCharge:{},
+    },
+    // スキルの値の上限：効果 → [自分・単体, 全体]
+    val:{ atk:[40,30], atkPct:[30,20], def:[30,20], np:[50,20], star:[15,15], critRoll:[2,1], npPow:[80,60],
+          actsUp:[1,1], actsDown:[1,1], skillCharge:[1,1], heal:[200,100], guts:[250,150], regenNp:[10,5], critPow:[50,30] },
+  },
 };

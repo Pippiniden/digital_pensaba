@@ -80,3 +80,45 @@ function refCompare(u){
   if(dm.length) out.push({label:TERMS.ult,val:`${dm.map(e=>`${e.t==='enemy_all'?'全体':'単体'}${e.max?'最大HP':e.v}`).join('＋')}（基準 全体${R.ult.all[c]}／単体${R.ult.one[c]}）`,ok:null,note:'追加効果があるなら基準より低め'});
   return out;
 }
+
+// ---- 強すぎ注意（UNIT_REF.limits）：validateUnits と同じ形の指摘 [{level:'warn', msg}] ----
+// msg の頭は validateUnits と同じ（スキル1・効果2：/ 宝具・効果1：/ 出目4・再臨後・効果1：）なので、issueArea でタブに飛べる
+function refLimits(u){
+  const L=UNIT_REF.limits, out=[]; if(!L) return out;
+  const add=msg=>out.push({level:'warn',msg:'強すぎ注意：'+msg});
+  const isAll=e=>e.t==='ally_all'||e.t==='enemy_all';
+  const nm=k=>(FX[k]||{}).name||k;
+  // 弱体・即死を自分や味方にかける（代償）のは制限しない
+  const harm=e=>FX[e.k]&&(FX[e.k].buff===false||e.k==='instantDeath');
+  const one=(e,w,place)=>{
+    if(harm(e)&&['self','ally_all','ally_other'].includes(e.t)) return;
+    const f=L.forbid[e.k]; if(f&&f[place]) return add(`${w}：${f[place]}`);
+    if(e.turns>L.maxTurns) add(`${w}：効果時間は${L.maxTurns}Tまでにしてください（今は${e.turns}T）`);
+    const s=L.strong[e.k];
+    if(s){
+      const all=isAll(e), tc=all&&s.allTurns!=null?s.allTurns:s.turns, mc=all&&s.allTimes!=null?s.allTimes:s.times, cc=all&&s.allChance!=null?s.allChance:s.chance;
+      // ターンと回数はどちらか一方が上限内ならよい（回避3回、のように回数で区切る書き方もあるため）
+      const okT=tc!=null&&e.turns!=null&&e.turns<=tc, okM=mc!=null&&e.times!=null&&e.times<=mc;
+      if((tc!=null||mc!=null)&&!okT&&!okM) add(`${w}：${nm(e.k)}${all?'（全体）':''}は ${[tc!=null?`${tc}T`:'',mc!=null?`${mc}回`:''].filter(Boolean).join('か')} までにしてください`);
+      if(cc!=null&&!(e.chance>0&&e.chance<=cc)) add(`${w}：${nm(e.k)}${all?'（全体）':''}は確率つき（chance ${cc}以下）にしてください${e.chance?`（今は${e.chance}）`:'（今は必ず成功）'}`);
+    }
+    const v=L.val[e.k];
+    if(place==='skill'&&v&&typeof e.v==='number'&&!e.max){ const m=isAll(e)?v[1]:v[0];
+      if(Math.abs(e.v)>m) add(`${w}：${nm(e.k)}${isAll(e)?'（全体）':''}の値は${m}までにしてください（今は${e.v}）`); }
+  };
+  u.skills.forEach((s,si)=>{
+    const w=`スキル${si+1}`;
+    const n=s.eff.filter(e=>e.k!=='desc'&&!(harm(e)&&e.t==='self')).length; // 説明文・自分への代償は数えない
+    if(n>L.maxEffs) add(`${w}：効果は${L.maxEffs}つまでにしてください（今は${n}つ）`);
+    const st=s.eff.filter(e=>L.strong[e.k]&&!(harm(e)&&['self','ally_all','ally_other'].includes(e.t)));
+    if(st.length>L.maxStrong) add(`${w}：強い効果（${st.map(e=>nm(e.k)).join('・')}）は1つのスキルに${L.maxStrong}つまでにしてください`);
+    s.eff.forEach((e,ei)=>one(e,`${w}・効果${ei+1}`,'skill'));
+  });
+  u.ult.eff.forEach((e,ei)=>one(e,`${TERMS.ult}・効果${ei+1}`,'ult'));
+  u.faces.forEach((f,fi)=>[['pre',`${TERMS.asc}前`],['post',`${TERMS.asc}後`]].forEach(([k,lab])=>{
+    (f[k].eff||[]).forEach((e,ei)=>{ const w=`出目${fi+1}・${lab}・効果${ei+1}`;
+      if(u.cost<=L.noDefFaceCost&&(e.k==='evade'||e.k==='invul')) add(`${w}：コスト${L.noDefFaceCost}以下は、面に${nm(e.k)}を付けないでください（ダメージを0にしても強すぎる）`);
+      one(e,w,'face'); });
+  }));
+  return out;
+}
