@@ -330,7 +330,12 @@ const DEFAULT_UNITS = [
       {"key":"start","who":"other","cond":{"k":"id","v":"lancelot"},"lines":["ったく、キミと正面衝突とはね"]},
       {"key":"start","who":"ally","cond":{"k":"id","v":"lancelot"},"lines":["さ、前線は任せたよセイバー！"]},
       {"key":"win","who":"enemy","cond":{"k":"id","v":"themistocles"},"lines":["冗談でしょ……こいつと一緒にされてたの、ボク……！？"]},
-      {"key":"win","who":"ally","cond":{"k":"id","v":"themistocles"},"lines":["キミが余計なコト言ってるとボクまで誤解されるんだけど！"]}
+      {"key":"win","who":"ally","cond":{"k":"id","v":"themistocles"},"lines":["キミが余計なコト言ってるとボクまで誤解されるんだけど！"]},
+      {"key":"start","who":"other","cond":{"k":"id","v":"neoptolemus"},"lines":["キミのことはよく知ってるんでね","因縁の対決ってヤツかな"]},
+      {"key":"win","who":"enemy","cond":{"k":"id","v":"neoptolemus"},"lines":["やる気なし、かい？　ま、勝ちは拾わせてもらうよネオプトレモス","キミが何を考えていようと、手加減してちゃボクの身まで危ないんでね"]},
+      {"key":"start","who":"enemy","cond":{"k":"id","v":"nileus"},"lines":["あの光ってるのは無視して別のを狙おうか","相変わらずだね……ボクに勝てると思ってるのかい、ニレウス"]},
+      {"key":"defeat","who":"other","cond":{"k":"id","v":"nileus"},"lines":["う、嘘だろ！？　あのキラキラ男に負けるなんてー！"]},
+      {"key":"win","who":"enemy","cond":{"k":"id","v":"nileus"},"lines":["結局ずっと1人で光ってたな、あの男……","ボクは顔が良いだけの男には興味無いんでね"]}
     ],
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
@@ -1319,6 +1324,12 @@ const DEFAULT_UNITS = [
       "defeat":["悔いは……ありませぬ……","至れないと言うのか……","ぐふっ……もはやこれまで……"],
       "win":["勝利とはかくも美しい……","当然のこと……"]
     },
+    "condLines":[
+      {"key":"start","who":"other","cond":{"k":"id","v":"neoptolemus"},"lines":["その輝き……父とは比較にもならぬらしい"]},
+      {"key":"win","who":"enemy","cond":{"k":"id","v":"neoptolemus"},"lines":["彼の息子、如何なる者かと思いきや……自ら輝く気さえ無いようだ"]},
+      {"key":"start","who":"other","cond":{"k":"id","v":"odysseus"},"lines":["禁断のデュエルを始めましょうか！"]},
+      {"key":"win","who":"other","cond":{"k":"id","v":"odysseus"},"lines":["かつての仲間ならば分かるはず。最も美しく輝くのはこの私なのだと！"]}
+    ],
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":50,"np":0,"star":0},"post":{"c":"R","dmg":70,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"B","dmg":30,"np":20,"star":0},"post":{"c":"B","dmg":40,"np":25,"star":0}},
