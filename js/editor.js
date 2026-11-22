@@ -172,10 +172,10 @@ const ownLineIn=(p,arr,fallback)=>`<label class="ownline"><span>専用セリフ�
 function saveDraft(){ writeJSON(STORE.draft,units); writeJSON(STORE.mdraft,masters); stampEdits(); }
 // 再描画してもスクロール位置を保つ（フォームを丸ごと作り直すと、高さが一瞬縮んでページの先頭に戻されるため）
 function keepScroll(fn){
-  const y=window.scrollY, form=document.querySelector('#form'), ul=document.querySelector('.ulist'), lt=ul?ul.scrollTop:0;
+  const y=window.scrollY, form=document.querySelector('#form'), ul=document.querySelector('.ulist'), lt=ul?ul.scrollTop:0, side=document.querySelector('#side'), st=side?side.scrollTop:0;
   if(form) form.style.minHeight=form.offsetHeight+'px';
   fn();
-  const u2=document.querySelector('.ulist'); if(u2) u2.scrollTop=lt;
+  const u2=document.querySelector('.ulist'); if(u2) u2.scrollTop=lt; if(side) side.scrollTop=st; // 右側（固定）の中のスクロール位置も保つ
   window.scrollTo(0,y);
   if(form) requestAnimationFrame(()=>{ form.style.minHeight=''; window.scrollTo(0,y); });
 }
@@ -646,7 +646,8 @@ function formTabGo(k,face){
   const nav=document.querySelector('#ftabs'); if(nav) nav.innerHTML=formTabsHTML();
   if(k==='skills') ctUpdate(true); // 隠れていた宝具のカットインを測り直す
   if(face!=null){ const r=document.querySelectorAll('#form .facerow:not(.head)')[face]; if(r){ r.scrollIntoView({block:'center'}); r.classList.add('flash'); setTimeout(()=>r.classList.remove('flash'),1200); return; } }
-  if(nav) nav.scrollIntoView({block:'start'});
+  // フォームの先頭が画面より上に隠れているときだけ、先頭まで戻す（ページ全体を動かしすぎない）
+  const f=document.querySelector('#form'), top=f?f.getBoundingClientRect().top:0; if(top<0) window.scrollTo(0,window.scrollY+top-80);
 }
 const updateFormTabs=()=>{ const nav=document.querySelector('#ftabs'); if(nav&&!isM()) nav.innerHTML=formTabsHTML(); };
 // タブ・検証の指摘を押したら、そのタブへ（Enter / Space でも）
@@ -1050,7 +1051,8 @@ document.addEventListener('click',e=>{
     case 'tab': if(b.dataset.tab!==tab){ effMoreOpen.clear(); tab=b.dataset.tab==='masters'?'masters':'units'; rollIdx=null; try{ localStorage.setItem('pencilduel.editorTab',tab); }catch(e){} renderAll(); window.scrollTo({top:0}); } break;
     case 'sel': { effMoreOpen.clear(); // 一覧のスクロール位置は保つ（順番にキャラを見ていくときに先頭へ戻らないように）
       const ul=document.querySelector('.ulist'), lt=ul?ul.scrollTop:0;
-      setSel(+b.dataset.i); rollIdx=null; renderAll(); window.scrollTo({top:0});
+      const sd=document.querySelector('#side'), ss=sd?sd.scrollTop:0; // 右側（固定）の中の位置は保つ
+      setSel(+b.dataset.i); rollIdx=null; renderAll(); window.scrollTo({top:0}); if(sd) sd.scrollTop=ss;
       const u2=document.querySelector('.ulist'); if(u2) u2.scrollTop=lt; break; }
     case 'add': { const L=list(); L.push(isM()?newMaster():newUnit()); setSel(L.length-1); rollIdx=null; full(); break; }
     case 'dup': { const L=list(), i=selIdx(), c=clone(u); c.id=uniqueId(c.id); c.name+='（コピー）'; L.splice(i+1,0,c); setSel(i+1); full(); break; }
@@ -1129,6 +1131,8 @@ document.addEventListener('click',e=>{
 window.addEventListener('storage',e=>{ if(e.key===STORE.units||e.key===STORE.masters) renderStatus(); });
 
 boot();
+// ヘッダーの高さを CSS の --hdr に入れる（左の一覧・右側・フォームのタブを、ヘッダーの真下に固定するため。ボタンの折り返しで高さが変わる）
+(()=>{ const h=document.querySelector('header'); if(!h) return; const set=()=>document.documentElement.style.setProperty('--hdr',h.offsetHeight+'px'); set(); if(window.ResizeObserver) new ResizeObserver(set).observe(h); else addEventListener('resize',set); })();
 
 // 条件つきセリフの「どんなときに出るか」の文（例：戦闘開始：味方に黒咲恵梨佳がいる場合）。
 // 場面・条件を変えたら全体を描き直さずにこの行だけ更新する（値の反映は先に走る change の処理に任せる）

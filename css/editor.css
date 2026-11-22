@@ -5,7 +5,9 @@
 .ed{display:grid;grid-template-columns:220px minmax(0,1fr) 340px;gap:16px;max-width:1480px;margin:0 auto;padding:16px;align-items:start}
 @media (max-width:1200px){.ed{grid-template-columns:210px minmax(0,1fr)} #side{grid-column:1/-1}}
 @media (max-width:760px){.ed{grid-template-columns:1fr} header{position:static}}
-@media (min-width:761px){#list{position:sticky;top:72px}}
+@media (min-width:761px){#list{position:sticky;top:calc(var(--hdr,72px) + 16px)}} /* --hdr＝ヘッダーの高さ（editor.js が測って入れる）。ヘッダーの真下に固定する */
+/* 右側（プレビュー・検証・数値の目安）は画面に固定し、中だけでスクロールする（タブやキャラを変えても動かないように）。3列のときだけ */
+@media (min-width:1201px){#side{position:sticky;top:calc(var(--hdr,72px) + 16px);max-height:calc(100vh - var(--hdr,72px) - 32px);overflow-y:auto;overscroll-behavior:contain;padding-right:4px}}
 
 /* 一覧 */
 .ulist{display:flex;flex-direction:column;gap:4px;margin:8px 0;max-height:60vh;overflow:auto}
@@ -254,7 +256,8 @@ label.mini.hasref{display:inline-grid;grid-template-columns:auto auto;justify-co
 .refsum b{color:var(--ink);font-weight:600}.refsum .uref{margin-left:6px}
 
 /* フォームのタブ（editor.js の formTabsInit）・検証の指摘から飛ぶ */
-.ftabs{position:sticky;top:0;z-index:3;background:var(--panel2);padding-top:6px}
+.ftabs{position:sticky;top:var(--hdr,0px);z-index:3;background:var(--panel2);padding-top:6px}
+@media (max-width:760px){.ftabs{top:0}} /* 狭い画面ではヘッダーが固定されないので、タブは画面の一番上に */
 .issues li[data-ftab-go]{cursor:pointer}
 .issues li[data-ftab-go]:hover{background:rgba(127,166,255,.08)}
 .facerow.flash{outline:2px solid var(--gold);outline-offset:2px;transition:outline-color .3s}
