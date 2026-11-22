@@ -38,7 +38,7 @@ const body=function(N,ONLY,LEVEL,LOOK,VS){
   CPU_LOOKAHEAD=!!LOOK; if(VS) OLD_CPU.look(!!LOOK);
   const rules=Object.keys(RULESETS).filter(k=>!ONLY||ONLY.split(',').includes(k));
   const strip=s=>String(s).replace(/<[^>]+>/g,''), guarded=t=>has(t,'invul')||has(t,'evade');
-  const ATK=['atk','atkPct','critPow','critRoll','critMult','atkVs','atkTrait','onAtkNp','onAtkStar','aoeNormal','cardConv'];
+  const ATK=['atk','atkPct','critPow','critRoll','critMult','atkVs','atkTrait','onAtkNp','onAtkStar','cardUp','aoeNormal','cardConv'];
   const setup=rule=>{
     newGame({rule,handicap:false});
     act('chooseMode',{mode:'watch',level:LEVEL,level2:LEVEL});

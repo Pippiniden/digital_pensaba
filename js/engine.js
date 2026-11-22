@@ -184,14 +184,18 @@ function allLabel(effs){
   const ts=new Set(effs.filter(e=>FX[e.k]&&!FX[e.k].noTgt).map(e=>e.t)), a=ts.has('ally_all')||ts.has('ally_other'), en=ts.has('enemy_all')||ts.has('enemy_both');
   return a&&en?'全体':a?'味方全体':en?'敵全体':'';
 }
+// カード性能アップ（cardUp）は 攻撃ダメージ+（atk）・攻撃時NP（onAtkNp）・攻撃時スター（onAtkStar）の一部として数える（値はそれぞれ v / np / star）
+const CARD_UP_PART = { atk:'v', onAtkNp:'np', onAtkStar:'star' };
+const modOf = (e,k)=>e.k==='cardUp'?(e[CARD_UP_PART[k]]||0):e.v;
+const modHit = (e,k)=>e.k===k||(e.k==='cardUp'&&CARD_UP_PART[k]&&(e[CARD_UP_PART[k]]||0)>0);
 function mods(u,k,color){
-  const list=u.fx.filter(e=>e.k===k && (!color || !e.color || e.color===color));
-  return {sum:list.reduce((s,e)=>s+e.v,0), list};
+  const list=u.fx.filter(e=>modHit(e,k) && (!color || !e.color || e.color===color));
+  return {sum:list.reduce((s,e)=>s+modOf(e,k),0), list};
 }
 // 条件つきの効果を含む mods：相手 other が条件を満たすものだけ数える（other なしなら条件つきは数えない）
 function modsC(u,k,color,other){
-  const list=u.fx.filter(e=>e.k===k && (!color || !e.color || e.color===color) && (!e.cond||condOk(e.cond,other)));
-  return {sum:list.reduce((s,e)=>s+e.v,0), list};
+  const list=u.fx.filter(e=>modHit(e,k) && (!color || !e.color || e.color===color) && (!e.cond||condOk(e.cond,other)));
+  return {sum:list.reduce((s,e)=>s+modOf(e,k),0), list};
 }
 function consume(u,list){
   list.forEach(e=>{ if(e.times!=null) e.times--; });
@@ -424,14 +428,14 @@ function applyOne0(src,t,e,o={}){
       const src=fu.fx.filter(x=>FX[x.k]&&FX[x.k].buff===want&&!x.tmp&&!x.sure);
       if(!src.length){ log(`${nm(fu)}に${nmv}状態がないため、${nm(t)}へのコピーは効果なし`,'sub'); return; }
       // 同じ状態（種類・値・色・種類指定・属性・条件が同じ）は、対象がすでに持っている数までは重ねない（コピーし合うと状態が倍々に増えて処理が止まるため）
-      const key=x=>[x.k,x.v,x.color||'',x.vs||'',x.trait||'',x.cond?JSON.stringify(x.cond):''].join('|'), have={};
+      const key=x=>[x.k,x.v,x.np??'',x.star??'',x.color||'',x.vs||'',x.trait||'',x.cond?JSON.stringify(x.cond):''].join('|'), have={};
       t.fx.forEach(x=>{ const k=key(x); have[k]=(have[k]||0)+1; });
       const list=src.filter(x=>{ const k=key(x); if(have[k]>0){ have[k]--; return false; } return true; }).slice(0,Math.max(0,FX_CAP-t.fx.length));
       if(!list.length){ log(`${nm(t)}は${nm(fu)}の${nmv}状態をすでに持っているため、コピーは効果なし`,'sub'); return; }
       log(`${nm(t)}が${nm(fu)}の${nmv}状態（${list.length}個）をコピー`, want?'good':'bad');
       list.forEach(x=>{
         const c={k:x.k,t:e.t,v:x.v};
-        ['color','turns','times','vs','trait','cond','all'].forEach(p=>{ if(x[p]!=null) c[p]=x[p]; });
+        ['color','turns','times','vs','trait','cond','all','np','star'].forEach(p=>{ if(x[p]!=null) c[p]=x[p]; });
         if(!t.out) applyOne0(src,t,c,{});
       });
       return;
@@ -449,6 +453,7 @@ function applyOne0(src,t,e,o={}){
   }
   const inst={k:e.k,v:e.v,color:e.color||null,turns:e.turns??null,times:e.times??null,owner:src.pid};
   if(e.vs) inst.vs=e.vs;
+  if(e.k==='cardUp'){ inst.np=e.np||0; inst.star=e.star||0; } // カード性能アップ：NP獲得量・スター発生量
   if(e.sure) inst.sure=true; // 解除・無効の影響を受けない（ターン・回数では切れる）
   if(e.trait) inst.trait=e.trait;
   if(e.cond&&!e.cond.self) inst.cond=e.cond; // 条件つき（使う瞬間に見る効果はダメージ計算で判定）
@@ -544,7 +549,7 @@ function dmgMods(att,tgt,color){
       if(dt.length){ sum-=dt.reduce((s,e)=>s+e.v,0); usedT.push(...dt); } }
   }
   // 色指定のある攻撃ダメージ+（色バフ）の合計：クリティカルで2倍
-  const colorBuff=a.list.filter(e=>e.color).reduce((s,e)=>s+e.v,0);
+  const colorBuff=a.list.filter(e=>e.color).reduce((s,e)=>s+modOf(e,'atk'),0);
   return {sum, pct:pa.sum-pd.sum, usedA, usedT, colorBuff};
 }
 // スター発生数ダウン(starDown)：1回の攻撃で発生するスターの合計から x 個引く（0未満にはしない）。返り値＝まだ引き切れていない分
@@ -648,7 +653,7 @@ function attackHit(att,cmd,tgt,o,lab){
     const s=mods(att,'onAtkStar',cmd.c), p=mods(att,'onAtkNp',cmd.c);
     if(s.sum){ const g=Math.max(0,s.sum-starCut); G.gen+=g; log(`${n} 攻撃時効果：${TERMS.star}${g}個発生`,'sub'); if(starCut>0){ const sd=mods(att,'starDown'); consume(att,sd.list); } }
     if(p.sum){ addNp(att,npRate(att,p.sum),'atk'); log(`${n} 攻撃時効果：${TERMS.gauge}+${p.sum}%`,'sub'); }
-    consume(att,[...s.list,...p.list]);
+    consume(att,[...s.list,...p.list].filter(e=>e.k!=='cardUp')); // カード性能アップの回数は攻撃ダメージ側で1回だけ減らす
   }
 }
 function resolveCommand(att,cmd,tgt,o={}){

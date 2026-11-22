@@ -251,6 +251,9 @@ const FX = {
   // 攻撃時○○：ダメージを与えるコマンドを行うたびに発動（エクストラアタック・宝具では発動しない）。color で色を限定できる
   onAtkStar:{name:'攻撃時スター発生',buff:true,val:true,color:true},
   onAtkNp:{name:'攻撃時NP獲得',buff:true,val:true,color:true},
+  // カード性能アップ：色（必須）のコマンドの 威力(v)＝攻撃ダメージ+・NP獲得量(np)＝攻撃時NP・スター発生量(star)＝攻撃時スター をまとめて上げる。
+  // それぞれ atk / onAtkNp / onAtkStar と同じに働くが、別の種類なので「攻撃ダメージ+」だけを狙った解除などでは消えない。既定値は CARD_UP_DEF
+  cardUp:{name:'カード性能アップ',buff:true,val:true,color:true},
   actsUp:{name:'最大行動回数+',buff:true,val:true},          // 次の行動回数決定フェイズで出た数に+x（使うと回数を1消費）
   // 毎ターン○○：持ち主の手番の終了フェイズに発動（弱体ダメージの後）
   // ターン開始時○○：持ち主の陣営のターン開始時に発動（スターはそのターンの手持ちに加わる）
@@ -324,6 +327,8 @@ const FX = {
   desc:{name:'説明文（表示のみ）',inst:true,noTgt:true},
 };
 
+// カード性能アップの色ごとの既定値（エディタで色を選ぶと入る。v＝威力 / np＝NP獲得量 / star＝スター発生量）
+const CARD_UP_DEF = { R:{v:30,np:0,star:1}, G:{v:30,np:5,star:3}, B:{v:30,np:10,star:2} };
 // ---------- 効果の分類（エディタで「分類 → 種類」の2段で選ぶ） ----------
 // ここにない効果は最後の「その他」に入る
 // 条件つき効果（Eff.cond）：条件を満たす相手にだけ働く。condUse の効果は「使う瞬間」（ダメージ計算）に攻撃・防御の相手を見る。
@@ -336,7 +341,7 @@ const COND_KINDS = { trait:'属性', fx:'状態', hpBelow:'HP○%以下', hpAbov
 const LINE_WHO = { other:'相手・対象', self:'自分', ally:'味方のだれか', enemy:'敵のだれか' };
 ['atk','atkDown','atkPct','atkPctDown','def','defDown'].forEach(k=>{ if(FX[k]) FX[k].condUse=true; });
 const FX_GROUPS = [
-  ['攻撃強化', ['atk','atkPct','npPow','atkVs','atkTrait','ignoreDef','sureHit','pierce','critPow','critMult','critRoll','debuffUp','buffUp','cardConv','cardConvPick','onAtkStar','onAtkNp','aoeNormal']],
+  ['攻撃強化', ['atk','atkPct','npPow','atkVs','atkTrait','ignoreDef','sureHit','pierce','critPow','critMult','critRoll','debuffUp','buffUp','cardConv','cardConvPick','onAtkStar','onAtkNp','cardUp','aoeNormal']],
   ['防御・耐性', ['def','defTrait','evade','invul','guts','taunt','nullUnder','counter','maxHp','debuffImmune','mentalImmune','deathImmune','stripImmune','npDownImmune','starLossImmune']],
   ['継続・ターン', ['actsUp','regenHp','regenNp','regenStar','onHitNp','hitNpUp','onHitStar']],
   ['弱体', ['atkDown','atkPctDown','npPowDown','defDown','critDown','starDown','npGainDown','debuffDown','debuffResDown','buffDown','poison','burn','spread','drain','curse','hitNpSeal','stun','charm','fear','actsDown','sealSkill','sealUlt','healBlock','buffImmune']],

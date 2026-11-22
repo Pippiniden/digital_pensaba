@@ -34,7 +34,7 @@ const body=function(N,ONLY,LEVEL,LOOK){
   const enemyHas=(u,test)=>enemiesOf(u).some(e=>{ const d=D(e.def), effs=[...d.skills.flatMap(s=>s.eff),...d.ult.eff,...d.faces.flatMap(f=>[f.pre,f.post].flatMap(c=>c&&c.eff||[]))];
     return effs.some(test); });
   const oneTurn=e=>e.turns===1||(!e.turns&&!e.times); // 今ターン（と相手の1ターン）だけの効果
-  const ATK_K=['atk','atkPct','cardConv','cardConvPick','critPow','critMult','critRoll','sureHit','pierce','ignoreDef','atkVs','atkTrait','npPow','aoeNormal','onAtkNp','onAtkStar'];
+  const ATK_K=['atk','atkPct','cardConv','cardConvPick','critPow','critMult','critRoll','sureHit','pierce','ignoreDef','atkVs','atkTrait','npPow','aoeNormal','onAtkNp','onAtkStar','cardUp'];
   // ---- 使った時点で分かる無駄。t＝効果の対象1体、e＝効果、u＝使った側、effs＝同じスキルの全効果。理由の文字列か null ----
   const WASTE_NOW={
     atk:(t,e)=>oneTurn(e)&&!isActing(t)?'今ターン攻撃しない味方（1ターン）':null,
@@ -48,6 +48,7 @@ const body=function(N,ONLY,LEVEL,LOOK){
     aoeNormal:(t,e,u)=>enemiesOf(u).length<2?'敵が1体だけ':oneTurn(e)&&(!isActing(t)||G.ult)?'今ターン通常攻撃しない味方（1ターン）':null,
     onAtkNp:(t,e)=>t.np>=RULES.gaugeMax?'NPが満タン':oneTurn(e)&&(!isActing(t)||G.ult)?'今ターン通常攻撃しない味方（1ターン）':null,
     onAtkStar:(t,e)=>oneTurn(e)&&(!isActing(t)||G.ult)?'今ターン通常攻撃しない味方（1ターン）':null,
+    cardUp:(t,e)=>oneTurn(e)&&!isActing(t)?'今ターン攻撃しない味方（1ターン）':!(D(t.def).faces||[]).some(f=>f&&f.c===e.color)?'その色の面がない味方':null,
     cardConv:(t,e)=>oneTurn(e)&&(!isActing(t)||G.ult)?'今ターン通常攻撃しない味方（1ターン）':null,
     // 守り：自分だけを守る効果なのに、ほかの味方がターゲット集中を持っていて、全体宝具も来そうにない
     def:(t,e,u)=>guardShadowed(t,u), evade:(t,e,u)=>guardShadowed(t,u)||dupGuard(t,e), invul:(t,e,u)=>guardShadowed(t,u)||dupGuard(t,e),
@@ -104,7 +105,7 @@ const body=function(N,ONLY,LEVEL,LOOK){
     ignoreDef:(h,ev)=>attacks(h,ev)&&ev.tg.some(t=>has(t,'def')||has(t,'defTrait')),
     atkVs:(h,ev,x)=>attacks(h,ev)&&ev.tg.some(t=>hasDebuffK(t,x.vs)), atkTrait:(h,ev,x)=>attacks(h,ev)&&ev.tg.some(t=>traitHit(t,x.trait)),
     npPow:(h,ev)=>attacks(h,ev)&&ev.ult, aoeNormal:(h,ev)=>normalAtk(h,ev)&&alive(1-h.pid).length>=2,
-    onAtkNp:normalAtk, onAtkStar:normalAtk,
+    onAtkNp:normalAtk, onAtkStar:normalAtk, cardUp:attacks,
     def:hit, evade:hit, invul:hit, nullUnder:hit, guts:hit, counter:hit, onHitNp:hit, hitNpUp:hit, onHitStar:hit,
     defTrait:(h,ev,x)=>hit(h,ev)&&ev.att.some(a=>traitHit(a,x.trait)),
     taunt:(h,ev)=>hit(h,ev)&&!ev.all&&alive(h.pid).length>=2,
