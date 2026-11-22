@@ -57,10 +57,11 @@ function loadData(kind){
   try{ d.same=kind==='public'||(JSON.stringify(d.units)===JSON.stringify(defU())&&JSON.stringify(d.masters)===JSON.stringify(defM())); }catch(e){ d.same=false; }
   return d;
 }
-function setSrc(kind){ B.src=kind; B.data=loadData(kind); B.A={ids:[],m:null}; B.B={ids:[],m:null}; saveSet(); }
+function setSrc(kind){ B.src=kind; B.data=loadData(kind); B.uIdx=new Map(B.data.units.map(u=>[u.id,u])); B.dataVer=(B.dataVer||0)+1; B.A={ids:[],m:null}; B.B={ids:[],m:null}; saveSet(); }
 const eu=()=>B.data.units.filter(u=>u.id&&!B.excl.has(u.id));
 const em=()=>B.data.masters.filter(m=>m.id&&!B.mexcl.has(m.id));
-const uOf=id=>B.data.units.find(u=>u.id===id)||{name:id,cost:0,hp:0};
+// マスターチームでは編成が数十万になり uOf がそのぶん呼ばれるので、id → キャラの表（B.uIdx）で引く
+const uOf=id=>(B.uIdx&&B.uIdx.get(id))||B.data.units.find(u=>u.id===id)||{name:id,cost:0,hp:0};
 const uNm=id=>{ const u=uOf(id), same=B.data.units.some(o=>o.id!==id&&o.name===u.name); return same?`${u.name}（${id}）`:u.name; };   // 同名の別キャラは id を添えて見分ける
 const mOf=id=>B.data.masters.find(m=>m.id===id)||{name:id,cost:0};
 
@@ -94,7 +95,16 @@ function enumTeams(filter=B.filter){
   return full3;
 }
 const sample=(a,k)=>{ if(!(k>0)||k>=a.length) return a.slice(); const b=a.slice(); for(let i=0;i<k;i++){ const j=i+Math.floor(Math.random()*(b.length-i)); [b[i],b[j]]=[b[j],b[i]]; } return b.slice(0,k); };
+// a（self を含む）から self を除いて k 個をランダムに選ぶ（k が 0 か残り全部以上なら全部）。配列をコピーしないので、大きな a から少し選ぶときに速い
+function pickOthers(a,k,self){
+  const n=a.length-1;
+  if(!(k>0)||k>=n) return a.filter(o=>o!==self);
+  const got=new Set();
+  while(got.size<k){ const i=Math.floor(Math.random()*a.length); if(a[i]!==self) got.add(i); }
+  return [...got].map(i=>a[i]);
+}
 const oppOk=(a,b)=>a!==b&&(B.opp==='all'||(a.cost===b.cost&&a.ids.length===b.ids.length));
+const oppGroup=t=>B.opp==='all'?'':t.cost+'/'+t.ids.length; // oppOk で相手になれる編成のまとまり
 const useHandicap=()=>!!rs().handicapAsc&&B.handicap;
 
 // ---------- 対戦（タスク）の計画 ----------
@@ -110,9 +120,11 @@ function plan(){
 }
 function planRank(){
   const teams=enumTeams(); if(teams.length<2) return {tasks:[],err:'対戦できる編成が2つ以上ありません。編成の絞り込みを「すべて」にしてください'};
+  // 相手になれる編成を先にまとめておき、そこから選ぶ（編成ごとに全編成を絞り込むと、マスターチームの十数万編成で数分かかる）
+  const groups=new Map(); for(const t of teams){ const g=oppGroup(t); if(!groups.has(g)) groups.set(g,[]); groups.get(g).push(t); }
   const pairs=new Map();
   for(const t of teams){
-    sample(teams.filter(o=>oppOk(t,o)),B.k).forEach(o=>{ const key=[t.key,o.key].sort().join('|'); if(!pairs.has(key)) pairs.set(key,{ta:t,tb:o}); });
+    pickOthers(groups.get(oppGroup(t)),B.k,t).forEach(o=>{ const key=t.key<o.key?t.key+'|'+o.key:o.key+'|'+t.key; if(!pairs.has(key)) pairs.set(key,{ta:t,tb:o}); });
   }
   if(!pairs.size) return {tasks:[],err:'相手を選べる編成がありません。「相手の範囲」を「すべて」にしてください'};
   return {tasks:[...pairs.values()], teams:teams.length};
@@ -227,8 +239,11 @@ function taskSubs(t,view){
 const subName=k=>k==='team'?'検証する編成':k[0]==='u'?uNm(k.slice(2)):mOf(k.slice(2)).name;
 // 目標までの試合数の見込み：全員が goalNeed 試合ずつ要る。1試合で進む人数（両陣営のサーヴァント／マスター）で割る
 function goalEst(tasks,view,goal){
-  const keys=new Set(); tasks.forEach(t=>taskSubs(t,view).forEach(k=>keys.add(k)));
-  const nu=[...keys].filter(k=>k[0]==='u').length, nm=[...keys].filter(k=>k[0]==='m').length, need=goalNeed(goal);
+  // taskSubs と同じ数え方。対戦が数百万あるので、対戦ごとに配列を作らずに直接数える
+  const us=new Set(), ms=new Set();
+  if(view==='master') tasks.forEach(t=>{ ms.add(t.tag.mi); ms.add(t.tag.mj); });
+  else if(view!=='team') for(const t of tasks) for(const tm of [t.ta,t.tb]){ for(const id of tm.ids) us.add(id); if(tm.m) ms.add(tm.m); }
+  const nu=us.size, nm=ms.size, need=goalNeed(goal);
   const deff=1+(Math.max(1,B.n)-1)*GOAL_RHO; // 同じカードを B.n 試合ずつ回すぶんの割り増し
   return Math.ceil((view==='team'?need:Math.max(need*nu/(2*rs().partyMax),need*nm/2))*deff);
 }
@@ -327,11 +342,19 @@ function schedule(){ if(pending) return; pending=true; setTimeout(()=>{ pending=
 const seg=(key,opts,cur)=>`<div class="seg">${opts.map(([v,l])=>`<button class="${v===cur?'on':''}" data-b="set" data-k="${key}" data-v="${esc(v)}" ${B.run?'disabled':''}>${l}</button>`).join('')}</div>`;
 const sel=(key,opts,cur,label,extra='')=>`<label ${extra}>${label}<select data-s="${key}" ${B.run?'disabled':''}>${opts.map(([v,l])=>`<option value="${esc(v)}" ${String(v)===String(cur)?'selected':''}>${l}</option>`).join('')}</select></label>`;
 
+// 画面の見込み（対戦数など）用の plan()。マスターチームは編成を並べるだけで1秒ほどかかるので、
+// 組み合わせに関わる設定が変わったときだけ作り直す（試合数・CPUの強さなどを変えただけなら前の結果を使う）
+let planMemo={key:'',p:null};
+function planForView(){
+  const key=JSON.stringify([B.dataVer,B.rule,B.view,B.filter,B.opp,B.k,B.sv,B.vs,B.A,B.B,[...B.excl],[...B.mexcl],B.mcol,B.cmin]);
+  if(planMemo.key!==key) planMemo={key,p:plan()};
+  return planMemo.p;
+}
 function renderCtl(){
   const d=B.data, dis=B.run?'disabled':'', m=hasMaster(), team=rs().partyMax>1;
   const views=[['rank','編成の勝率ランキング'],['team','特定の編成の戦績'],...(m?[['master','マスターの強さ']]:[])];
   if(!views.some(v=>v[0]===B.view)) B.view='rank';
-  const p=plan(), goal=Number(B.goal)||0, games=p.tasks.length*B.n, est=goal&&!p.err?goalEst(p.tasks,B.view,goal):0;
+  const p=planForView(), goal=Number(B.goal)||0, games=p.tasks.length*B.n, est=goal&&!p.err?goalEst(p.tasks,B.view,goal):0;
   const goalWho={rank:hasMaster()?'サーヴァント別・マスター別の平均勝率':'サーヴァント別の平均勝率',team:'検証する編成の勝率',master:'マスター別の勝率'}[B.view];
   const src=Object.entries(BSRC).map(([k,l])=>{
     const dd=k===B.src?d:null;
