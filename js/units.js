@@ -329,7 +329,8 @@ const DEFAULT_UNITS = [
       {"key":"win","who":"ally","cond":{"k":"id","v":"m_erika"},"lines":["これがボクとエリカの愛の力ってね！"]},
       {"key":"start","who":"other","cond":{"k":"id","v":"lancelot"},"lines":["ったく、キミと正面衝突とはね"]},
       {"key":"start","who":"ally","cond":{"k":"id","v":"lancelot"},"lines":["さ、前線は任せたよセイバー！"]},
-      {"key":"win","who":"other","cond":{"k":"id","v":"themistocles"},"lines":["冗談でしょ……こいつと一緒にされてたの、ボク……！？"]}
+      {"key":"win","who":"enemy","cond":{"k":"id","v":"themistocles"},"lines":["冗談でしょ……こいつと一緒にされてたの、ボク……！？"]},
+      {"key":"win","who":"ally","cond":{"k":"id","v":"themistocles"},"lines":["キミが余計なコト言ってるとボクまで誤解されるんだけど！"]}
     ],
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
@@ -425,7 +426,11 @@ const DEFAULT_UNITS = [
       "win":["敵は全滅しましたね。では、先に進みましょう","あら、このアイテムはなんでしょうか？　マスター、どうぞお使いになってください"]
     },
     "condLines":[
-      {"key":"start","who":"other","cond":{"k":"id","v":"ahotoria"},"lines":["アーサー王があんなに愉快な方だなんて……"]}
+      {"key":"start","who":"other","cond":{"k":"id","v":"ahotoria"},"lines":["アーサー王があんなに愉快な方だなんて……"]},
+      {"key":"start","who":"other","cond":{"k":"id","v":"ethelfleda"},"lines":["久々に一手、お手合わせ願いますね。おば様！"]},
+      {"key":"extra","who":"other","cond":{"k":"id","v":"ethelfleda"},"lines":["これが、あなたの教えです！"]},
+      {"key":"defeat","who":"other","cond":{"k":"id","v":"ethelfleda"},"lines":["流石ですね……一本取られました……"]},
+      {"key":"win","who":"enemy","cond":{"k":"id","v":"ethelfleda"},"lines":["いかがでしたか、おば様？　あなたの期待に応えられたでしょうか","おば様の名に恥じぬ王であったつもりです！"]}
     ],
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
@@ -1096,7 +1101,7 @@ const DEFAULT_UNITS = [
     "skills":[
       {"name":"カリスマ","eff":[{"k":"atk","t":"ally_all","v":20,"turns":3,"chance":3},{"k":"defDown","t":"ally_all","v":10,"turns":3}],"rank":"C"},
       {"name":"加虐体質","eff":[{"k":"atk","t":"self","v":25,"turns":3,"chance":2},{"k":"critPow","t":"self","v":25,"turns":3,"chance":2},{"k":"defDown","t":"self","v":20,"turns":3},{"k":"atk","t":"enemy_all","v":15,"turns":3}],"rank":"C"},
-      {"name":"天空神の寵愛","eff":[{"k":"guts","t":"self","v":250,"turns":3,"chance":3},{"k":"cleanse","t":"self","v":0,"chance":3},{"k":"instantDeath","t":"self","v":0,"chance":1}],"rank":"C"}
+      {"name":"天空神の寵愛","eff":[{"k":"guts","t":"self","v":120,"turns":3,"chance":3},{"k":"cleanse","t":"self","v":0,"chance":3},{"k":"instantDeath","t":"self","v":0,"chance":1}],"rank":"C"}
     ],
     "ult":{"name":"天機破綻す猫屋敷","c":"R","eff":[{"k":"atkDown","t":"enemy_all","v":40,"turns":3},{"k":"instantDeath","t":"self","v":0,"chance":2}],"ruby":"シルシュ・アンシャル・キャットエディション"}
   },
@@ -1245,7 +1250,7 @@ const DEFAULT_UNITS = [
       "start":["敵影を視認した。これより作戦行動を────雑賀を開始する","行くぞ、速やかに敵軍を殲滅する"],
       "attack":["速射、連射！","牽制、次いで掃射！","支援しろ！"],
       "extra":["狙いは、外さん！"],
-      "damage":["補足されたか……！"],
+      "damage":["捕捉されたか……！"],
       "skill":["臆するな。我らには八咫烏が付いている","残弾確認。装填完了"],
       "np":["陽の光が届くのならば、我らの弾丸もまた届くのだ……射線は通った。撃ち抜く────『八咫鏡』！"],
       "npDamage":["ぐあああああっ！！"],
@@ -1330,7 +1335,7 @@ const DEFAULT_UNITS = [
     "ult":{"name":"花の如き死化粧","c":"B","eff":[{"k":"atk","t":"ally_other","v":20,"turns":3},{"k":"def","t":"ally_other","v":20,"turns":3},{"k":"star","t":"master","v":15},{"k":"selfDmg","t":"self","v":20,"max":true}],"ruby":"エレガンス・メンズノンノ"}
   },
   {
-    "id":"gwydion", "name":"グウィディオン", "cls":"キャスター", "cost":4, "hp":740,
+    "id":"gwydion", "name":"グウィディオン", "cls":"キャスター", "cost":4, "hp":760,
     "traits":["男性","混沌","悪","天","イギリス"],
     "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":8,"z":100},"np":{"x":50,"y":4,"z":105},"cut":{"x":-1,"y":0,"z":90}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%b0%a5%a6%a5%a3%a5%c7%a5%a3%a5%aa%a5%f3",
@@ -1522,7 +1527,7 @@ const DEFAULT_UNITS = [
     "ult":{"name":"目醒めなさい、幽けし夜の謝肉祭","c":"B","eff":[{"k":"npPow","t":"self","v":10,"turns":1,"chance":3},{"k":"npPow","t":"self","v":20,"turns":1,"chance":3},{"k":"npPow","t":"self","v":30,"turns":1,"chance":3},{"k":"atkTrait","t":"self","v":50,"turns":1,"trait":"人"},{"k":"dmg","t":"enemy_all","v":170},{"k":"heal","t":"ally_all","v":100}],"ruby":"シュローヴタイド・クレントヴァニエ","br":7}
   },
   {
-    "id":"ursula", "name":"謝肉祭の魔女ウルシュラ", "cls":"セイバー", "cost":3, "hp":500,
+    "id":"ursula", "name":"謝肉祭の魔女ウルシュラ", "cls":"セイバー", "cost":3, "hp":520,
     "traits":["女性","中立","悪","地","人型","魔性"],
     "fit":{"face":{"x":50,"y":11,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":17,"z":88},"cut":{"x":0,"y":9,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%bc%d5%c6%f9%ba%d7%a4%ce%cb%e2%bd%f7%a5%a6%a5%eb%a5%b7%a5%e5%a5%e9",
@@ -1728,6 +1733,12 @@ const DEFAULT_UNITS = [
       "defeat":["マスター……どうかご無事で……！","我が城塞が……崩されるなどと……"],
       "win":["貴様らの言い分に興味はない。私は唯、マスターの命に従うのみだ","奴らを倒せとのご命令、確かに果たしました"]
     },
+    "condLines":[
+      {"key":"start","who":"other","cond":{"k":"id","v":"athelstan"},"lines":["昔とは違うようだな……","あの小娘が立派に育ったものだな"]},
+      {"key":"extra","who":"other","cond":{"k":"id","v":"athelstan"},"lines":["その程度か！　まだ未熟！"]},
+      {"key":"defeat","who":"other","cond":{"k":"id","v":"athelstan"},"lines":["強くなったものだ……"]},
+      {"key":"win","who":"enemy","cond":{"k":"id","v":"athelstan"},"lines":["どうしたエゼルスタン。相手が身内で気後れしたか","私が教えた太刀筋をそのまま使って勝てると思うな！"]}
+    ],
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":60,"np":0,"star":0},"post":{"c":"R","dmg":80,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":90,"np":0,"star":0}},
@@ -1844,15 +1855,15 @@ const DEFAULT_UNITS = [
     "traits":["女性","混沌","中庸","地","ドイツ","アイスランド","人型","竜"],
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%d6%a5%ea%a5%e5%a5%f3%a5%d2%a5%eb%a5%c8",
     "lines":{
-      "start":[],
-      "attack":[],
-      "extra":[],
-      "damage":[],
-      "skill":[],
-      "np":[],
-      "npDamage":[],
-      "defeat":[],
-      "win":[]
+      "start":["ぜーんぶ、喰らい付くしてあげるよぉ……","雑魚をいくら倒したって……あいつには届かないのになぁ……","殺し合いは嫌？じゃあ試合で決めよっか……槍投げに、石投げ……標的はきみたちねぇ……"],
+      "attack":["楽しいよぉ！楽しいよねぇ！","惨めに……哀れに！無様に！","ぐっちゃぐっちゃ、だぁ！","背中が、ガラ空きぃ！","あっははははは！"],
+      "extra":["まだまだ物足りないんだけど……ねぇ……？","このまま縛って、一晩中逆さ吊りにしてあげよっかぁ……"],
+      "damage":["やだ……"],
+      "skill":["なぶり殺しにしてあげるぅ……","散らかさないで、お上品に……ねぇ……","力だけが取り柄だなんて、誰が決めたのぉ……？"],
+      "np":["終わることなき殺戮応酬……悲劇はさらなる悲劇を生んで、やがて死でふたりを分かつ。止められるものなら、止めて見せてよ……ねぇ、ったら！！『嘆き廻れ、愛憎の連鎖』！！","苦しいでしょ？痛いでしょ？死にたくなるでしょ？諦めちゃいなよぉ……さもないと、きみもあいつと同じになるよ。ほーら、もう時間切れ……引き裂け、『嘆き廻れ、愛憎の連鎖』"],
+      "npDamage":["絶対…………許さないから"],
+      "defeat":["こんな……こんな最期なんて、やだよぉ……","まだ、わたしは……終わってないはずなのにぃ……","先に……地獄で、待ってるからねぇ…………"],
+      "win":["あはっ。こんなしけた相手に勝ったって、何の意味もないよぉ……？","ここにもあいつは居ない……いつになったら会えるんだろう、ねぇ……？","疲れちゃったぁ……昔の私ならともかく、今の私にこんな無茶なことさせないでよぉ……"]
     },
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
@@ -1867,7 +1878,7 @@ const DEFAULT_UNITS = [
       {"name":"破瓜なき操","eff":[{"k":"np","t":"ally_all","v":10},{"k":"atk","t":"ally_other","v":20,"turns":3},{"k":"onAtkStar","t":"ally_other","v":3,"turns":3},{"k":"atkDown","t":"self","v":20,"turns":3}],"rank":"B"},
       {"name":"盲目なる王妃の恋","eff":[{"k":"strip","t":"enemy_all","v":0,"vs":"taunt"},{"k":"np","t":"picked","v":10},{"k":"np","t":"self","v":10},{"k":"defDown","t":"picked","v":10,"turns":3},{"k":"heal","t":"self","v":100}],"rank":"EX","pick":"enemy"}
     ],
-    "ult":{"name":"嘆き廻れ、愛憎の連鎖","c":"G","eff":[{"k":"stun","t":"target","v":0,"turns":1},{"k":"atkTrait","t":"self","v":50,"turns":1,"trait":"アーサー","cond":{"k":"trait","v":"悪","not":true}},{"k":"dmg","t":"target","v":400},{"k":"defDown","t":"target","v":30,"turns":3,"color":"G"}],"ruby":"カッツェン・ディ・トーリヒカイト","pick":"enemy"}
+    "ult":{"name":"嘆き廻れ、愛憎の連鎖","c":"G","eff":[{"k":"stun","t":"target","v":0,"turns":1},{"k":"atkTrait","t":"self","v":50,"turns":1,"trait":"アーサー","cond":{"k":"trait","v":"悪","not":true}},{"k":"dmg","t":"target","v":400},{"k":"defDown","t":"target","v":30,"turns":3,"color":"G"}],"ruby":"カッツェン・ディ・トーリヒカイト"}
   },
   {
     "id":"fredegund", "name":"フレデグンド", "cls":"アサシン", "cost":2, "hp":410,
@@ -1886,6 +1897,12 @@ const DEFAULT_UNITS = [
       "defeat":["もう……惨めな泥の中は嫌……","嘘よ……わたくしが戦場で死ぬなんて……"],
       "win":["おーほほほほ、いい気味ですわ～"]
     },
+    "condLines":[
+      {"key":"start","who":"other","cond":{"k":"id","v":"brunhild"},"lines":["アウストラシアの女の匂いがいたしますわね……"]},
+      {"key":"start","who":"other","cond":{"k":"id","v":"brunhild2"},"lines":["アウストラシアの女の匂いがいたしますわね……"]},
+      {"key":"win","who":"enemy","cond":{"k":"id","v":"brunhild"},"lines":["わ、わたくし生きてますの……？　あの女より一万倍おっかなかったですわ！"]},
+      {"key":"win","who":"enemy","cond":{"k":"id","v":"brunhild2"},"lines":["その腐った表情……ほんと嫌味なくらいアレに似ていましたわ"]}
+    ],
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":50,"np":0,"star":0},"post":{"c":"R","dmg":70,"np":0,"star":0}},
       {"acts":1,"pre":{"c":"B","dmg":40,"np":15,"star":0},"post":{"c":"B","dmg":50,"np":20,"star":0}},
@@ -1895,9 +1912,9 @@ const DEFAULT_UNITS = [
       {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":4},"post":{"c":"G","dmg":40,"np":0,"star":6}}
     ],
     "skills":[
-      {"name":"戦闘続行","eff":[{"k":"guts","t":"self","v":100,"turns":5}],"rank":"A"},
+      {"name":"戦闘続行","eff":[{"k":"guts","t":"self","v":120,"turns":5}],"rank":"A"},
       {"name":"毒の刃","eff":[{"k":"poison","t":"picked","v":25,"turns":3}],"rank":"D","pick":"enemy"},
-      {"name":"仕切り直し","eff":[{"k":"cleanse","t":"self","v":0},{"k":"evade","t":"self","v":0,"turns":1}],"rank":"A"}
+      {"name":"仕切り直し","eff":[{"k":"cleanse","t":"self","v":0},{"k":"heal","t":"self","v":200}],"rank":"A"}
     ],
     "ult":{"name":"私の忠実な毒刃よ","c":"G","eff":[{"k":"dmg","t":"enemy_all","v":30},{"k":"poison","t":"enemy_all","v":40,"turns":3,"chance":4},{"k":"instantDeath","t":"enemy_all","v":0,"chance":1}],"ruby":"オンブル・ヴニムーズ・エ・フィデル"}
   }

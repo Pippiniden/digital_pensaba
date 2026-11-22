@@ -132,12 +132,12 @@ const DEFAULT_MASTERS = [
     "fit":{"face":{"x":50,"y":0,"z":100},"np":{"x":50,"y":15,"z":85}},
     "link":"https://seesaawiki.jp/kagemiya/d/%b0%ec%ca%b8%bb%fa%a5%b3%a1%bc%a5%bf",
     "faces":[
-      {"label":"みんな、ぶっとばせ！","eff":[{"k":"atk","t":"svt","v":20,"color":"R"}],"line":["一気にぶっとばしてやれ！","サーヴァントバトル！　コマンド・オーダー！"]},
+      {"label":"みんな、ぶっとばせ！","eff":[{"k":"atk","t":"svt","v":30,"color":"R"}],"line":["一気にぶっとばしてやれ！","サーヴァントバトル！　コマンド・オーダー！"]},
       {"label":"応援","eff":[{"k":"desc","t":"svt","v":0,"text":"コータは精一杯応援している"}],"line":["みんな、がんばってくれ！"]},
       {"label":"変幻自在の攻撃だ！","eff":[{"k":"onAtkNp","t":"svt","v":10,"color":"B"}],"line":["サーヴァントバトル！　コマンド・オーダー！"]},
-      {"label":"必殺の作戦だ！","eff":[{"k":"atk","t":"ally_svt","v":20,"color":"R"},{"k":"onAtkNp","t":"ally_svt","v":10,"color":"B"},{"k":"onAtkStar","t":"ally_svt","v":4,"color":"G"}],"line":["とびっきりの作戦、いくぞ！"]},
+      {"label":"必殺の作戦だ！","eff":[{"k":"atk","t":"ally_svt","v":30,"color":"R"},{"k":"onAtkNp","t":"ally_svt","v":10,"color":"B"},{"k":"onAtkStar","t":"ally_svt","v":4,"color":"G"}],"line":["とびっきりの作戦、いくぞ！"]},
       {"label":"ひらめき","eff":[{"k":"desc","t":"svt","v":0,"text":"コータは何かひらめいたようだ"}],"line":["そうか、そうだったのか！","わかったぞ！"]},
-      {"label":"スピードで撹乱しろ！","eff":[{"k":"onAtkStar","t":"enemy_master","v":3,"color":"G"}],"line":["スピードで攻めろ！","サーヴァントバトル！　コマンド・オーダー！"]}
+      {"label":"スピードで撹乱しろ！","eff":[{"k":"onAtkStar","t":"enemy_master","v":4,"color":"G"}],"line":["スピードで攻めろ！","サーヴァントバトル！　コマンド・オーダー！"]}
     ],
     "spells":[
       {"name":"コマンド：リカバリー","eff":[{"k":"heal","t":"ally_svt","v":200}],"line":["みんな、大丈夫か！？"]},
@@ -332,16 +332,16 @@ const DEFAULT_MASTERS = [
     "fit":{"face":{"x":50,"y":21,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%a2%a5%a4%a5%e9%a1%a6%a5%c0%a5%a6%a5%eb%a1%a6%a5%aa%a5%eb%a5%ca",
     "faces":[
-      {"label":"","eff":[{"k":"onAtkNp","t":"ally_svt","v":10},{"k":"onAtkNp","t":"ally_svt","v":5,"color":"B"},{"k":"atk","t":"ally_svt","v":30,"color":"B"},{"k":"cardConv","t":"ally_svt","v":0,"color":"B"}]},
-      {"label":"","eff":[{"k":"onAtkNp","t":"svt","v":10},{"k":"onAtkNp","t":"ally_svt","v":5,"color":"B"},{"k":"atk","t":"ally_svt","v":20,"color":"B"}]},
-      {"label":"","eff":[{"k":"atk","t":"ally_svt","v":15},{"k":"atk","t":"ally_svt","v":20,"color":"B"}]},
+      {"label":"","eff":[{"k":"onAtkNp","t":"ally_svt","v":10},{"k":"cardConv","t":"ally_svt","v":0,"color":"B"},{"k":"cardUp","t":"ally_svt","v":30,"color":"B","np":10,"star":2}]},
+      {"label":"","eff":[{"k":"onAtkNp","t":"svt","v":5},{"k":"cardUp","t":"svt","v":10,"color":"B","np":5,"star":1}]},
+      {"label":"","eff":[{"k":"atk","t":"ally_svt","v":15},{"k":"cardUp","t":"ally_svt","v":30,"color":"B","np":10,"star":2},{"k":"cardConv","t":"ally_svt","v":0,"color":"B"}]},
       {"label":"","eff":[{"k":"evade","t":"svt","v":0,"times":1}]},
-      {"label":"","eff":[{"k":"atk","t":"ally_svt","v":15},{"k":"atk","t":"ally_svt","v":30,"color":"B"},{"k":"cardConv","t":"ally_svt","v":0,"color":"B"}]},
-      {"label":"","eff":[{"k":"onAtkNp","t":"ally_svt","v":10},{"k":"onAtkNp","t":"ally_svt","v":5,"color":"B"},{"k":"atk","t":"ally_svt","v":30,"color":"B"}]}
+      {"label":"","eff":[{"k":"atk","t":"ally_svt","v":15},{"k":"cardConv","t":"ally_svt","v":0,"color":"B"},{"k":"cardUp","t":"ally_svt","v":30,"color":"B","np":10,"star":2}]},
+      {"label":"","eff":[{"k":"onAtkNp","t":"ally_svt","v":10}]}
     ],
     "spells":[
       {"name":"戦魔女の嘶き","eff":[{"k":"actsUp","t":"svt","v":3,"turns":1},{"k":"onAtkStar","t":"svt","v":8,"turns":1},{"k":"defDown","t":"svt","v":20,"turns":1}]},
-      {"name":"秘蔵の宝石","eff":[{"k":"atk","t":"ally_svt","v":40,"turns":1,"color":"B"},{"k":"np","t":"svt","v":25}]},
+      {"name":"秘蔵の宝石","eff":[{"k":"cardUp","t":"ally_svt","v":40,"color":"B","turns":1,"np":10,"star":2},{"k":"np","t":"svt","v":25}]},
       {"name":"大神慟哭・三弦狂騒","eff":[{"k":"stun","t":"enemy_all","v":0,"turns":1,"chance":2},{"k":"charm","t":"enemy_all","v":0,"turns":1,"chance":4},{"k":"defDown","t":"enemy_all","v":20,"turns":1}]}
     ]
   },
@@ -425,16 +425,16 @@ const DEFAULT_MASTERS = [
     "lines":{"support":["はぁ……めど……"],"attack":[],"spell":[]},
     "faces":[
       {"label":"おさぼり","eff":[]},
-      {"label":"バール持ってください","eff":[{"k":"atk","t":"svt","v":10}]},
+      {"label":"バール持ってください","eff":[{"k":"atk","t":"svt","v":40,"color":"R"},{"k":"critPow","t":"ally_svt","v":30},{"k":"cardDown","t":"ally_svt","v":10,"color":"G","np":0,"star":2}]},
       {"label":"ちこいさんお願いします","eff":[{"k":"dmg","t":"enemy_master","v":80}]},
-      {"label":"めどいので掃除","eff":[{"k":"cleanse","t":"svt","v":0},{"k":"heal","t":"svt","v":30}]},
+      {"label":"めどいので今のうちにお掃除","eff":[{"k":"cleanse","t":"svt","v":0},{"k":"heal","t":"svt","v":60}]},
       {"label":"カップ麺にご飯いれたやつ","eff":[{"k":"heal","t":"svt","v":30}]},
       {"label":"お昼寝","eff":[]}
     ],
     "spells":[
       {"name":"霊子譲渡","eff":[{"k":"np","t":"ally_svt","v":30}]},
       {"name":"応急手当","eff":[{"k":"heal","t":"ally_svt","v":200}]},
-      {"name":"たまには本気出す","eff":[{"k":"atk","t":"ally_all","v":20,"turns":1},{"k":"actsUp","t":"ally_all","v":1,"turns":1}]}
+      {"name":"たまには本気出す","eff":[{"k":"atk","t":"ally_all","v":20,"turns":1},{"k":"actsUp","t":"ally_all","v":1,"turns":1},{"k":"cleanse","t":"ally_all","v":0}]}
     ]
   },
   {
@@ -442,9 +442,9 @@ const DEFAULT_MASTERS = [
     "fit":{"np":{"x":50,"y":20,"z":105},"cut":{"x":0,"y":7,"z":100}},
     "faces":[
       {"label":"無","eff":[],"line":["何も出来ないなんてひどいですー"]},
-      {"label":"","eff":[{"k":"def","t":"ally_svt","v":10},{"k":"def","t":"self","v":150}]},
+      {"label":"ひどいガード","eff":[{"k":"def","t":"ally_svt","v":10},{"k":"def","t":"self","v":150}]},
       {"label":"無","eff":[],"line":["何も出来ないなんてひどいですー"]},
-      {"label":"秘術","eff":[{"k":"def","t":"ally_all","v":20},{"k":"def","t":"self","v":150}]},
+      {"label":"痛いのは嫌ですー","eff":[{"k":"def","t":"ally_all","v":20},{"k":"def","t":"self","v":150}]},
       {"label":"無","eff":[],"line":["何も出来ないなんてひどいですー"]},
       {"label":"無","eff":[],"line":["何も出来ないなんてひどいですー"]}
     ],
