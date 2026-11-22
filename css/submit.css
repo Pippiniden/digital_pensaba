@@ -36,3 +36,51 @@ header .sub{color:var(--sub);font-size:13px}
 .bar{height:6px;background:#060d22;border:1px solid var(--line);border-radius:3px;overflow:hidden}
 .bar i{display:block;height:100%;background:var(--gold);transition:width .2s}
 .prev{min-width:0;overflow-x:auto}
+
+/* ---------- 編集フォーム（submit-edit.js） ---------- */
+.ecols{grid-template-columns:minmax(0,1fr) 330px;align-items:start}
+@media (max-width:980px){ .ecols{grid-template-columns:minmax(0,1fr)} }
+.chkpane{position:sticky;top:64px;max-height:calc(100vh - 80px);overflow:auto;padding:4px 10px 10px;border-left:1px solid var(--line)}
+@media (max-width:980px){ .chkpane{position:static;max-height:none;border-left:0;border-top:1px solid var(--line)} }
+.chkpane h3:first-child{margin-top:4px}
+.esec{margin:0 0 8px;border:1px solid rgba(42,71,133,.6);border-radius:3px;padding:4px 10px 8px}
+.esec>summary{cursor:pointer;color:var(--gold);font-weight:700;padding:4px 0}
+.egrid{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:flex-end}
+.ef{display:inline-flex;flex-direction:column;gap:1px;font-size:11.5px;color:var(--sub)}
+.ef.chk,.ef:has(>input[type=checkbox]){flex-direction:row;align-items:center;gap:4px;align-self:center}
+.ef.wide{flex:1 1 100%}
+.uedit input,.uedit select,.uedit textarea{font-size:13px;line-height:1.4;font-family:inherit;color:var(--ink);background:#060d22;border:1px solid var(--line);border-radius:3px;padding:3px 6px;min-width:0}
+.uedit input:focus,.uedit select:focus,.uedit textarea:focus{outline:1px solid var(--gold);border-color:var(--gold-lo)}
+.uedit input.n2{width:56px} .uedit input.n3{width:72px}
+.ef.mid input{width:180px}
+.ef.wide input{width:100%}
+.eface{border-collapse:collapse;width:100%;table-layout:fixed}
+.eface tr>th:first-child{width:44px}
+.eface th,.eface td{border-bottom:1px solid rgba(42,71,133,.5);padding:5px 4px;vertical-align:top;text-align:left}
+.eface th{color:var(--sub);font-weight:400;font-size:12px}
+.eface td.asc{color:var(--gold);font-size:12.5px}
+.cmdrow{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:flex-end;padding-left:6px;border-left:3px solid var(--w)}
+.cmdrow.cmd-R{border-color:var(--r)} .cmdrow.cmd-B{border-color:var(--b)} .cmdrow.cmd-G{border-color:var(--g)}
+.effs{display:flex;flex-direction:column;gap:4px;margin-top:4px;align-items:flex-start}
+.eff{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:flex-end;padding:4px 6px;background:rgba(6,13,34,.45);border-radius:3px;width:100%}
+.eff select.ek{max-width:170px}
+.eff .etext{flex:1 1 100%;font-size:11.5px;color:var(--sub)}
+.eff button.x{padding:2px 8px;margin-left:auto}
+.eblk{padding:6px 0 10px;border-bottom:1px dashed rgba(42,71,133,.6)}
+.eblk:last-child{border-bottom:0}
+.eno{color:var(--gold-hi);font-family:var(--serif);min-width:36px;align-self:center}
+.elines{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px}
+.elines textarea{width:100%;resize:vertical}
+details.prev{margin-top:10px}
+details.prev>summary{cursor:pointer;color:var(--sub);font-size:12.5px}
+/* 狭い画面：面の表を縦に並べる（出目 → 再臨前 → 再臨後） */
+@media (max-width:700px){
+  .eface,.eface tbody,.eface tr,.eface th,.eface td{display:block;width:100%}
+  .eface tr:first-child{display:none}
+  .eface tr{border-bottom:1px solid var(--line);padding:4px 0}
+  .eface th,.eface td{border:0}
+  .eface th::before{content:"出目 "}
+  .eface td::before{content:attr(data-l);display:block;font-size:11px;color:var(--sub)}
+  .sbm{padding:8px}
+  .sbox{padding:12px}
+}

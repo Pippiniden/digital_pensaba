@@ -11,7 +11,7 @@ const SUB_N=3000;                                    // 勝率の測定：環境
 const SUB_CHUNK=250;                                 // 1回のワーカー仕事の試合数
 const OFFICIAL=normalizeUnits(DEFAULT_UNITS);        // 今のキャラ（js/units.js）。ID の重複を見る
 const KNOWN_KEYS=new Set(['id','name','cls','traits','cost','hp','fit','link','memo','wip','lines','condLines','faces','skills','ult']);
-const S={ raw:[], units:[], extra:[], rate:[], busy:false };   // rate[i] = {A:{n,w}, S:{n,w}, done, total} | undefined
+const S={ raw:[], units:[], extra:[], rate:[], stale:[], busy:false, dirty:false };   // rate[i] = {A:{n,w}, S:{n,w}, done, total} | undefined / stale[i]＝測ったあとに編集した / dirty＝編集した
 
 const $=s=>document.querySelector(s);
 const msg=(t,bad)=>{ const m=$('#msg'); m.textContent=t; m.classList.toggle('bad',!!bad); };
@@ -35,18 +35,21 @@ function parseSrc(text){
 }
 
 function runCheck(){
+  if(S.dirty&&!confirm('下で編集した内容は消えて、貼り付けた文の内容に戻ります。よろしいですか？')) return;
   try{ S.raw=parseSrc($('#src').value); }
   catch(e){ S.raw=[]; S.units=[]; $('#out').innerHTML=''; return msg(e.message,true); }
   S.units=S.raw.map(normalizeUnit);
   S.extra=S.raw.map(x=>Object.keys(x).filter(k=>!KNOWN_KEYS.has(k)));
-  S.rate=[];
-  msg(`${S.units.length}体を読み込みました`);
+  S.rate=[]; S.dirty=false;
+  msg(`${S.units.length}体を読み込みました。下で名前や数値を直せます`);
   draw();
 }
 
+// 編集中のデータは形が崩れていることがあるので、検査・保存の前に正規化する
+const unitN=i=>normalizeUnit(S.units[i]);
 // その体の検査結果（エラー・注意）。今のキャラと一緒に検証して、ID の重複も見る
 function issuesOf(i){
-  const all=[...OFFICIAL,...S.units];
+  const all=[...OFFICIAL,...S.units.map((u,j)=>unitN(j))];
   return validateUnits(all).filter(x=>x.i===OFFICIAL.length+i);
 }
 const cnt=(its,l)=>its.filter(x=>x.level===l).length;
@@ -57,39 +60,48 @@ function rateOf(i){
 }
 
 // ---- 表示 ----
+// 全体を作り直す（読み込み時）。編集中は drawUnit（フォームの形が変わった）か refresh（検査欄だけ）を使う
 function draw(){
-  $('#out').innerHTML=S.units.map((u,i)=>unitHTML(u,i)).join('')+(S.units.length?shareHTML():'');
+  $('#out').innerHTML=S.units.map((u,i)=>unitHTML(u,i)).join('')+(S.units.length?`<div id="share">${shareHTML()}</div>`:'')+`<datalist id="clslist">${CLASSES.map(c=>`<option value="${esc(c)}">`).join('')}</datalist>`;
 }
+function drawUnit(i){
+  const el=document.querySelector(`.unit[data-u="${i}"] .uedit-wrap`); if(!el) return draw();
+  el.innerHTML=editFormHTML(S.units[i],i); refresh(i);
+}
+function refresh(i){
+  const c=document.querySelector(`#chk-${i}`); if(c) c.innerHTML=checkHTML(i);
+  const t=document.querySelector(`#ttl-${i}`); if(t) t.innerHTML=titleHTML(i);
+  const sh=$('#share'); if(sh) sh.innerHTML=shareHTML();
+}
+const refreshAll=()=>S.units.forEach((_,j)=>refresh(j));
+function titleHTML(i){ const u=S.units[i]; return `${esc(u.name||'（名前なし）')} <span class="sub">${esc(u.cls)}／コスト${u.cost}／HP${u.hp}／ID ${esc(u.id)}</span>`; }
 function unitHTML(u,i){
-  const its=issuesOf(i), cmp=refCompare(u), r=S.rate[i], rr=rateOf(i);
+  return `<section class="sbox unit" data-u="${i}">
+    <h2 id="ttl-${i}">${titleHTML(i)}</h2>
+    <div class="cols ecols">
+      <div class="uedit-wrap">${editFormHTML(u,i)}</div>
+      <aside class="chkpane" id="chk-${i}">${checkHTML(i)}</aside>
+    </div>
+  </section>`;
+}
+function checkHTML(i){
+  const u=unitN(i), its=issuesOf(i), cmp=refCompare(u), r=S.rate[i], rr=rateOf(i);
   const icon={error:'✖',warn:'⚠',line:'・'};
   const list=its.length?`<ul class="iss">${its.map(x=>`<li class="${x.level}">${icon[x.level]||'・'} ${esc(x.msg)}</li>`).join('')}</ul>`:'<p class="ok">エラー・注意はありません</p>';
-  const ex=S.extra[i].length?`<p class="warn">⚠ 使われない項目があります（読み込むと消えます）：${esc(S.extra[i].join(', '))}</p>`:'';
+  const ex=S.extra[i]&&S.extra[i].length?`<p class="warn">⚠ 使われない項目がありました（読み込みで消えています）：${esc(S.extra[i].join(', '))}</p>`:'';
   const cmpT=cmp.length?`<table class="cmp">${cmp.map(x=>`<tr class="${x.ok===false?'ng':x.ok?'ok':''}"><td>${x.ok===false?'↕':x.ok?'○':'・'}</td><th>${esc(x.label)}</th><td>${esc(x.val)}${x.note?`<small>${esc(x.note)}</small>`:''}</td></tr>`).join('')}</table>`:'<p class="sub">このコストの基準値はありません</p>';
   const rateT=rr?`<table class="cmp rate"><tr><th>${REF_KITS.A}</th><td>${rr.A.toFixed(1)}%</td></tr><tr><th>${REF_KITS.S}</th><td>${rr.S.toFixed(1)}%</td></tr>
       <tr class="${rr.verdict==='目安どおり'?'ok':'ng'}"><th>平均</th><td><b>${rr.all.toFixed(1)}%</b> … ${rr.verdict}<small>目安 50%±3%。各${rr.n}試合</small></td></tr></table>`
     : r&&!r.complete?`<p class="sub">測定中… ${r.done}/${r.total}</p><div class="bar"><i style="width:${Math.round(100*r.done/r.total)}%"></i></div>`
-    : `<p class="sub">基準どおりのテスト用${TERMS.unit}だけの環境（今のキャラは入れない）に1体入れて、CPU同士で戦わせた勝率を出します。数十秒かかります。</p>`;
-  return `<section class="sbox unit">
-    <h2>${esc(u.name||'（名前なし）')} <span class="sub">${esc(u.cls)}／コスト${u.cost}／HP${u.hp}／ID ${esc(u.id)}</span></h2>
-    <div class="cols">
-      <div>
-        <h3>検査 ${cnt(its,'error')?`<span class="tag bad">エラー${cnt(its,'error')}</span>`:'<span class="tag good">エラーなし</span>'}</h3>
-        ${ex}${list}
-        <h3>基準値との比較</h3>${cmpT}
-        <h3>勝率</h3>${rateT}
-        <div class="row"><button data-act="measure" data-i="${i}" ${S.busy||cnt(its,'error')?'disabled':''}>${rr?'もう一度測る':'勝率を測る'}</button>
-          ${cnt(its,'error')?'<span class="sub">エラーを直すと測れます</span>':''}</div>
-        <h3>出典</h3>
-        <p class="sub">設定ページのURL（任意。フリー素材の多くは出典の明記が条件です）</p>
-        <input type="url" class="link" data-i="${i}" value="${esc(u.link||'')}" placeholder="https://">
-      </div>
-      <div class="prev">
-        <h3>鉛筆の面</h3>${facesTableHTML(u)}
-        <h3>スキル・${TERMS.ult}</h3>${skillListHTML(u,true)}
-      </div>
-    </div>
-  </section>`;
+    : S.stale&&S.stale[i]?'<p class="warn">内容を変えたので、勝率を測り直してください。</p>'
+    : `<p class="sub">基準どおりのテスト用${TERMS.unit}だけの環境（今のキャラは入れない）に1体入れて、CPU同士で戦わせた勝率を出します。</p>`;
+  return `<h3>検査 ${cnt(its,'error')?`<span class="tag bad">エラー${cnt(its,'error')}</span>`:'<span class="tag good">エラーなし</span>'}</h3>
+    ${ex}${list}
+    <h3>基準値との比較</h3>${cmpT}
+    <h3>勝率</h3>${rateT}
+    <div class="row"><button data-act="measure" data-i="${i}" ${S.busy||cnt(its,'error')?'disabled':''}>${rr?'もう一度測る':'勝率を測る'}</button>
+      ${cnt(its,'error')?'<span class="sub">エラーを直すと測れます</span>':''}</div>
+    <details class="prev"><summary>スキル・${TERMS.ult}の説明文（ゲームでの表示）</summary>${skillListHTML(u,true)}</details>`;
 }
 function shareHTML(){
   const bad=S.units.some((u,i)=>cnt(issuesOf(i),'error'));
@@ -111,20 +123,20 @@ function shareHTML(){
 // ---- 勝率の測定：環境2つ × SUB_N 試合を SUB_CHUNK ずつワーカーに配る ----
 function measure(i){
   if(S.busy) return;
-  const u=JSON.parse(JSON.stringify(S.units[i])); u.id='submit_'+i; // 今のキャラと ID が重なっても測れるように別 ID にする
+  const u=unitN(i); u.id='submit_'+i; S.stale[i]=false; // 今のキャラと ID が重なっても測れるように別 ID にする
   const tasks=[]; for(const kit of ['A','S']) for(let n=SUB_N;n>0;n-=SUB_CHUNK) tasks.push({units:[u],id:u.id,kit,n:Math.min(SUB_CHUNK,n)});
   const r=S.rate[i]={A:{n:0,w:0},S:{n:0,w:0},done:0,total:tasks.length,complete:false};
-  S.busy=true; draw();
+  S.busy=true; refreshAll();
   const nw=Math.max(1,Math.min(tasks.length,(navigator.hardwareConcurrency||4)-1)), q='?v='+Date.now();
   let alive=nw, failed=null;
-  const finish=()=>{ if(--alive) return; S.busy=false; r.complete=!failed; if(failed){ S.rate[i]=undefined; msg('勝率を測れませんでした：'+failed,true); } draw(); };
+  const finish=()=>{ if(--alive) return; S.busy=false; r.complete=!failed; if(failed){ S.rate[i]=undefined; msg('勝率を測れませんでした：'+failed,true); } refreshAll(); };
   for(let k=0;k<nw;k++){
     const w=new Worker('js/submit-worker.js'+q);
     const next=()=>{ const t=tasks.pop(); if(!t||failed){ w.terminate(); finish(); return; } w.postMessage(t); };
     w.onmessage=e=>{ const m=e.data;
       if(m.t==='error'){ failed=m.msg; w.terminate(); finish(); return; }
       if(m.r.none){ failed='このコストでは合計コスト10の3騎編成が組めません'; w.terminate(); finish(); return; }
-      r[m.r.kit].n+=m.r.n; r[m.r.kit].w+=m.r.w; r.done++; draw(); next(); };
+      r[m.r.kit].n+=m.r.n; r[m.r.kit].w+=m.r.w; r.done++; refresh(i); next(); };
     w.onerror=e=>{ failed=e.message||'ワーカーの読み込みに失敗しました（file:// では動きません。http で開いてください）'; w.terminate(); finish(); };
     next();
   }
@@ -134,7 +146,7 @@ function measure(i){
 function discordText(){
   const L=['【サーヴァント導入申請】'];
   S.units.forEach((u,i)=>{
-    const its=issuesOf(i), ng=refCompare(u).filter(x=>x.ok===false), rr=rateOf(i);
+    const its=issuesOf(i), ng=refCompare(unitN(i)).filter(x=>x.ok===false), rr=S.stale[i]?null:rateOf(i);
     L.push('',`■ ${u.name}（${u.cls}／コスト${u.cost}）　ID：${u.id}`);
     L.push(`・出典：${u.link||'未記入'}`);
     L.push(`・検査：${cnt(its,'error')?`エラー${cnt(its,'error')}件`:'エラーなし'}${cnt(its,'warn')?`（注意${cnt(its,'warn')}件）`:''}`);
@@ -147,7 +159,7 @@ function discordText(){
 function fixText(){
   const L=['次の検査結果を見て、サーヴァントの JSON を直してください。直した JSON だけを ```json のコードブロック1つで出力してください。'];
   S.units.forEach((u,i)=>{
-    const its=issuesOf(i), ng=refCompare(u).filter(x=>x.ok===false), rr=rateOf(i);
+    const its=issuesOf(i), ng=refCompare(unitN(i)).filter(x=>x.ok===false), rr=S.stale[i]?null:rateOf(i);
     L.push('',`■ ${u.name}（${u.id}）`);
     if(S.extra[i].length) L.push(`- 使われない項目：${S.extra[i].join(', ')}（資料にない項目は書かない）`);
     its.forEach(x=>L.push(`- ${x.level==='error'?'エラー':'注意'}：${x.msg}`));
@@ -179,15 +191,35 @@ document.addEventListener('click',e=>{
     case 'check': runCheck(); break;
     case 'file': $('#file').click(); break;
     case 'measure': measure(i); break;
-    case 'save': { const data=S.units.map(cleanUnit); downloadText(fileName(),JSON.stringify(data.length===1?data[0]:data,null,2),'application/json'); msg(`${fileName()} を保存しました`); break; }
+    case 'save': { const data=S.units.map((u,j)=>cleanUnit(unitN(j))); downloadText(fileName(),JSON.stringify(data.length===1?data[0]:data,null,2),'application/json'); msg(`${fileName()} を保存しました`); break; }
     case 'copyDiscord': copy(discordText(),'Discord用の文'); break;
     case 'copyFix': copy(fixText(),'AIに直してもらう文'); break;
+    default: { const j=editClick(b); if(j!=null) edited(j,true); }
   }
+});
+// 編集：文字・数の入力は検査欄だけ更新（フォームは作り直さない）。形が変わる操作はその体のフォームを作り直す
+let refreshT=null;
+function edited(i,rebuild){
+  S.dirty=true; if(S.rate[i]&&S.rate[i].complete){ S.stale[i]=true; S.rate[i]=undefined; }
+  if(rebuild) drawUnit(i);
+  else{ clearTimeout(refreshT); refreshT=setTimeout(()=>refresh(i),150); }
+}
+document.addEventListener('input',e=>{
+  const el=e.target; if(!el.closest('.uedit')||!el.dataset.p||el.dataset.act) return;
+  if(el.tagName==='SELECT'||el.type==='checkbox') return; // 選択・チェックは change で受ける
+  pSet(S.units[+el.dataset.i],el.dataset.p,editValue(el)); edited(+el.dataset.i,false);
+  // 効果の値なら、その効果の説明文（ゲームでの表示）も直す
+  const row=el.closest('.eff'), tx=row&&row.querySelector('.etext'), ef=row&&pGet(S.units[+el.dataset.i],el.dataset.p.replace(/\.[^.]+$/,''));
+  if(tx&&ef&&FX[ef.k]) tx.textContent=effsText([normEff(ef)]);
 });
 document.addEventListener('change',e=>{
   const el=e.target;
-  if(el.id==='file'&&el.files[0]){ const rd=new FileReader(); rd.onload=()=>{ $('#src').value=String(rd.result); runCheck(); }; rd.readAsText(el.files[0]); el.value=''; }
-  if(el.classList.contains('link')){ const i=+el.dataset.i, v=el.value.trim();
-    if(v&&!normLink(v)){ msg('URL は http:// か https:// で始めてください',true); return; }
-    S.units[i].link=normLink(v)||undefined; if(!S.units[i].link) delete S.units[i].link; msg(v?'出典を設定しました':'出典を消しました'); }
+  if(el.id==='file'&&el.files[0]){ const rd=new FileReader(); rd.onload=()=>{ $('#src').value=String(rd.result); runCheck(); }; rd.readAsText(el.files[0]); el.value=''; return; }
+  if(!el.closest('.uedit')) return;
+  const i=+el.dataset.i;
+  if(el.dataset.act){ if(editStructural(el)) edited(i,true); return; }
+  if(el.dataset.p&&(el.tagName==='SELECT'||el.type==='checkbox')){
+    pSet(S.units[i],el.dataset.p,editValue(el));
+    edited(i,el.dataset.p.endsWith('.pick')||el.dataset.p.endsWith('.color')?false:/\.(t|from)$/.test(el.dataset.p)); // 対象を変えると効果の説明が変わるので作り直す
+  }
 });
