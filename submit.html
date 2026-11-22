@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>サーヴァント申請ツール</title>
+<title>サーヴァント・マスター申請ツール</title>
 <link rel="icon" href="data:,">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,7 +15,7 @@
 </head>
 <body>
 <header>
-  <h1>SERVANT SUBMIT</h1><span class="sub">サーヴァント申請ツール</span>
+  <h1>SERVANT SUBMIT</h1><span class="sub">サーヴァント・マスター申請ツール</span>
   <span class="grow"></span>
   <a class="btn" href="index.html">ゲームへ</a>
   <a class="btn" href="editor.html">エディタへ</a>
@@ -24,8 +24,9 @@
   <section class="sbox">
     <h2>1. AI にデータを作ってもらう</h2>
     <ol class="steps">
-      <li><a href="docs/llm/kit.md" download="pensaba-kit.md">申請キット（kit.md）</a>をダウンロードして、ChatGPT・Claude・Gemini などの AI に渡します（プロジェクトの資料に入れるか、チャットに添付）。</li>
-      <li>作ってほしいキャラクターの設定を AI に送ります。キャラシートの貼り付けで大丈夫です。書く項目に迷ったら<a href="docs/llm/sheet.md" download="pensaba-sheet.md">設定シート</a>を使ってください。</li>
+      <li>申請キットをダウンロードして、ChatGPT・Claude・Gemini などの AI に渡します（プロジェクトの資料に入れるか、チャットに添付）。<br>
+        サーヴァント：<a href="docs/llm/kit.md" download="pensaba-kit.md">申請キット（kit.md）</a>　／　マスター：<a href="docs/llm/master-kit.md" download="pensaba-master-kit.md">マスター申請キット（master-kit.md）</a></li>
+      <li>作ってほしいキャラクターの設定を AI に送ります。キャラシートの貼り付けで大丈夫です。書く項目に迷ったら設定シート（<a href="docs/llm/sheet.md" download="pensaba-sheet.md">サーヴァント</a>／<a href="docs/llm/master-sheet.md" download="pensaba-master-sheet.md">マスター</a>）を使ってください。</li>
       <li>AI が返した JSON（<code>{</code> で始まる文字の固まり）を、下の欄にそのまま貼り付けます。前後の文章が混ざっていてもかまいません。</li>
     </ol>
   </section>

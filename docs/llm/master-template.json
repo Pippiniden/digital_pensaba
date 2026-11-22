@@ -1,0 +1,25 @@
+{
+  "id": "tpl_master3",
+  "name": "テンプレート・マスター",
+  "cost": 3,
+  "hp": 300,
+  "memo": "書式の見本（このまま使うマスターではない）。シートどおりのコスト3。強み：特になし／弱くしたところ：なし（シートどおりなので）",
+  "lines": {
+    "support": ["援護するよ！","任せて！"],
+    "attack": ["えいっ！"],
+    "spell": ["令呪をもって命じる！"]
+  },
+  "faces": [
+    {"label":"無","eff":[]},
+    {"label":"強化魔術","eff":[{"k":"atk","t":"svt","v":10}]},
+    {"label":"魔力供給","eff":[{"k":"onAtkNp","t":"svt","v":5}]},
+    {"label":"秘術","eff":[{"k":"atk","t":"svt","v":30},{"k":"heal","t":"svt","v":80}]},
+    {"label":"治癒魔術","eff":[{"k":"heal","t":"svt","v":30}]},
+    {"label":"無","eff":[]}
+  ],
+  "spells": [
+    {"name":"応急手当","eff":[{"k":"heal","t":"ally_svt","v":200}]},
+    {"name":"瞬間強化","eff":[{"k":"atk","t":"ally_svt","v":40,"turns":1}]},
+    {"name":"ガンド","eff":[{"k":"stun","t":"enemy_svt","v":0,"turns":1}]}
+  ]
+}

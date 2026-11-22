@@ -140,6 +140,21 @@ const MSHEET = {
     poison:{name:'毒ダメージ（敵単体）', vals:[40,60,50,80]},
     burn:{name:'やけどダメージ（敵単体）', vals:[40,60,50,80]},
   },
+  // 令呪の強すぎ注意（申請ツールと node tools/llm-pack.js --check だけで使う。エディタには出さない）。汎用令呪テンプレ（SPELL_TPL）の値がもと
+  // all＝味方全体（ally_all）・敵全体（enemy_all / enemy_both）。令呪の svt は1騎を選ぶので単体
+  spell:{
+    maxEffs:3, maxTurns:3,
+    forbid:{ instantDeath:'即死は令呪に入れられません' },
+    // 強い効果：turns・times の上限（どちらか一方が上限内ならよい）と、全体にかけるときの確率の上限（ロールN以下）
+    strong:{ stun:{turns:1,times:1,allChance:2}, charm:{turns:1,times:1,allChance:2}, fear:{turns:1,times:1,allChance:2},
+      sealSkill:{turns:1,times:1,allChance:2}, sealUlt:{turns:1,times:1,allChance:2}, buffImmune:{turns:1,times:1,allChance:2},
+      invul:{turns:1,times:1}, evade:{turns:1,times:1} },
+    // 値の上限 [単体, 全体]。dmg の単体は敵サーヴァント（敵マスターは dmgMaster）
+    val:{ atk:[60,40], np:[50,20], heal:[300,150], npPow:[100,80], critPow:[100,50], critRoll:[4,2], actsUp:[3,1], onAtkNp:[20,10],
+      onAtkStar:[8,4], guts:[400,200], maxHp:[200,100], def:[40,20], atkDown:[40,20], defDown:[30,20], regenHp:[50,30], skillCharge:[1,1],
+      dmg:[200,80] },
+    dmgMaster:350,
+  },
 };
 
 // 汎用令呪テンプレ（FGOのマスター礼装がもと）。選ぶと令呪の名前と効果を置き換える。名前は自由に変えてよい

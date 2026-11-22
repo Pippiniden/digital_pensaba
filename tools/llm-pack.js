@@ -17,7 +17,7 @@ const ctx={console,Math,Date,JSON,localStorage:store(),sessionStorage:store(),do
 ctx.window=ctx; vm.createContext(ctx);
 let src='';
 for(const f of ['rules','units','masters','common','unit-ref','ref-units','engine','guide']) src+=fs.readFileSync(path.join(ROOT,'js',f+'.js'),'utf8')+'\n;\n';
-vm.runInContext(src+'function render(){}\nthis.__G={FX,FX_GROUPS,FX_HELP,TARGETS,TGT_BY_CTX,PICKS,COND_KINDS,EFF_AT,LINE_KEYS,LINE_MIN,CLASSES,UNIT_REF,TERMS,RULES,VS_KINDS,FROM_BY_CTX,CARD_UP_DEF,CARD_DOWN_DEF,CANON_UNIT_IDS,ALL_UNITS,normalizeUnit,validateUnits,refCompare,refLimits};',ctx,{filename:'game.js'});
+vm.runInContext(src+'function render(){}\nthis.__G={FX,FX_GROUPS,FX_HELP,TARGETS,TGT_BY_CTX,PICKS,COND_KINDS,EFF_AT,LINE_KEYS,LINE_MIN,CLASSES,UNIT_REF,TERMS,RULES,VS_KINDS,FROM_BY_CTX,CARD_UP_DEF,CARD_DOWN_DEF,CANON_UNIT_IDS,ALL_UNITS,normalizeUnit,validateUnits,refCompare,refLimits,MSHEET,SPELL_TPL,MASTER_LINE_KEYS,DEFAULT_MASTERS,CANON_MASTER_IDS,normalizeMaster,validateMasters,spellLimits,normEff,effsText,mTLabel,fxOnlyIn};',ctx,{filename:'game.js'});
 const G=ctx.__G, R=G.UNIT_REF;
 const COL={R:'Buster',B:'Arts',G:'Quick'};
 
@@ -210,12 +210,109 @@ function md(){
   return L.join('\n');
 }
 
+// ---- マスター用の資料（master-reference.md）：マスターシート（MSHEET）・令呪の上限（MSHEET.spell）・汎用令呪・今のマスター ----
+const MASTERS=G.DEFAULT_MASTERS.map(G.normalizeMaster);
+function mmd(){
+  const L=[], P=s=>L.push(s), M=G.MSHEET, SL=M.spell, T=G.TERMS;
+  const fn=k=>`\`${k}\` ${G.FX[k]?G.FX[k].name:k}`, et=effs=>G.effsText(effs.map(G.normEff),null,G.mTLabel);
+  const orig=MASTERS.filter(m=>!G.CANON_MASTER_IDS.includes(m.id));
+  P('# マスター作成資料（LLM用）');
+  P('');
+  P('> このファイルは `node tools/llm-pack.js` が作ります。手で直さないでください（ゲームのコードから作り直されます）。');
+  P(`> 作成日：${new Date().toISOString().slice(0,10)}`);
+  P('');
+  P('## 1. マスターシートの決まり（HPと補助の6面）');
+  P('');
+  P(`- **HP**：コスト×${M.hpPerCost} を基準に ±${M.hpRange} まで、${M.hpStep}刻みで補正する（例：コスト3なら ${3*M.hpPerCost-M.hpRange}〜${3*M.hpPerCost+M.hpRange}）。`);
+  P(`- **4番の面**（faces の4つ目）は必ず効果を入れる。ほかの面より強め（下の目安値の「4番」の列）。`);
+  P('- **4番以外で効果を入れる面は、コストと同じ数**（コスト0なら0、コスト5なら5つ全部）。残りは `{"label":"無","eff":[]}`。');
+  P('- 補助の効果は**そのターンだけ**。`turns`・`times` は書かない（回避の `"times":1` だけは例外）。');
+  P(`- 同じ種類の効果（効果・色・対象が同じ）は補助全体で **${M.sameMax}つまで**。全体と単体は別の種類として数える。`);
+  P('- **補助に入れてはいけない効果**：');
+  for(const [k,why] of Object.entries(M.forbid)) P(`  - ${fn(k)}：${why}`);
+  P('  - `evade` 回避：「回数1（`"times":1`）」のときだけ入れられる（リミット1枠）');
+  P('  - `charm` 魅了：「敵サーヴァント単体（`enemy_svt`）・ロール3以下（`"chance":3` 以下）」のときだけ入れられる（リミット1枠）');
+  P(`- **リミット1枠**（補助全体で1つまで。主に4番の面に入れる）：${M.limit1.map(fn).join('・')}・回避(1回)・魅了(ロール3以下)`);
+  P(`- **リミット2枠**（補助全体で2つまで。主に4番の面に入れる）：${M.limit2.map(fn).join('・')}`);
+  P('');
+  P('### 補助の目安値');
+  P('');
+  P(`値はこれ以下にする。コスト${M.star5Cost}以上は★5の列。味方単体（\`ally_svt\`）にするときは「単体なら」の分だけ上げてよい。`);
+  P('');
+  P('| 効果 | ★4以下 4番以外 | ★4以下 4番 | ★5 4番以外 | ★5 4番 | 単体なら |');
+  P('|---|---|---|---|---|---|');
+  for(const [k,r] of Object.entries(M.ref)){ const fk=k.split('_')[0], col=/_(R|B|G)$/.exec(k);
+    P(`| ${r.name}（\`${fk}\`${col?` \`"color":"${col[1]}"\``:''}） | ${r.vals[0]} | ${r.vals[1]} | ${r.vals[2]} | ${r.vals[3]} | ${r.single?'+'+r.single:'—'} |`); }
+  P('');
+  P('表にない効果（クリティカル威力・弱体など）は、表の近い効果と同じくらいの強さにする。');
+  P('');
+  P('## 2. 令呪の上限（守ること）');
+  P('');
+  P('申請ツールは、これを超えると「強すぎ注意」を出します。');
+  P('');
+  P(`- 1つの令呪の効果は **${SL.maxEffs}つまで**。効果時間は **${SL.maxTurns}T まで**（強化は 1T が基本）。`);
+  for(const [k,why] of Object.entries(SL.forbid)) P(`- ${fn(k)}：${why}`);
+  P('- 最大HPぶんのダメージ（`"max":true`）は入れない。');
+  P('- 自分側への代償（自分・自軍への弱体や自傷）は上限の対象外。');
+  P('');
+  P('**強い効果**');
+  P('');
+  P('| 効果 | 時間・回数 | 敵全体にかけるとき |');
+  P('|---|---|---|');
+  for(const [k,st] of Object.entries(SL.strong)) P(`| ${fn(k)} | ${st.turns}Tか${st.times}回まで | ${st.allChance?`chance ${st.allChance}以下`:'—'} |`);
+  P('');
+  P('**値の上限**（単体＝`ally_svt`・`svt`・`enemy_svt`・`self` など / 全体＝`ally_all`・`enemy_all`・`enemy_both`）');
+  P('');
+  P('| 効果 | 単体 | 全体 |');
+  P('|---|---|---|');
+  for(const [k,[a,b]] of Object.entries(SL.val)) if(G.FX[k]) P(`| ${fn(k)} | ${a}${k==='dmg'?`（敵マスター \`enemy_master\` は ${SL.dmgMaster}）`:''} | ${b} |`);
+  P('');
+  P('### 汎用令呪の例（値の目安。名前は自由に変えてよい）');
+  P('');
+  for(const s of G.SPELL_TPL) P(`- ${s.name}（${s.tgt}）：${et(s.eff)}　\`${JSON.stringify(s.eff.map(({k,t,v,...r})=>({k,t,v:v||0,...r})))}\``);
+  P('');
+  P(`### 今のマスターの例（原作を除く ${orig.length}人。強さの保証ではない）`);
+  P('');
+  for(const m of orig){
+    const on=m.faces.map((f,i)=>f.eff.some(e=>e.k!=='desc')?i+1:0).filter(Boolean);
+    P(`- **${m.name}**（コスト${m.cost}・HP${m.hp}）補助の当たり：${on.join('・')||'なし'}番　4番「${m.faces[3].label}」${et(m.faces[3].eff)}　令呪：${m.spells.map(s=>`「${s.name}」${et(s.eff)}`).join('　')}`);
+  }
+  P('');
+  P('## 3. 効果の対象（t、マスター用）');
+  P('');
+  P('| キー | 意味 |');
+  P('|---|---|');
+  const note={svt:'（補助では自軍サーヴァント全員。令呪では1騎を選ぶ）',self:`（${T.player}自身）`,ally_all:`（${T.player}も含む）`,enemy_all:`（敵${T.player}には当たらない）`,master:'（スター獲得専用）'};
+  for(const t of G.TGT_BY_CTX.master) P(`| \`${t}\` | ${G.mTLabel(t)}${note[t]||''} |`);
+  P('');
+  P('## 4. 効果の一覧（k、マスターで使えるもの）');
+  P('');
+  P('書式：`{"k":キー, "t":対象, "v":値, "turns":ターン, "times":回数, "chance":成功ロール}`。値を使わない効果も `"v":0`。補助では turns・times を書かない。');
+  P('');
+  for(const [g,ks] of G.FX_GROUPS){
+    const list=ks.filter(k=>G.FX[k]&&k!=='desc'&&G.fxOnlyIn(k,'master')); if(!list.length) continue;
+    P(`### ${g}`);
+    P('');
+    for(const k of list){ const f=G.FX[k], kind=f.inst?'即時':f.buff===true?'強化':f.buff===false?'弱体':'—';
+      const need=k==='cardUp'||k==='cardDown'||k==='cardConv'?'。color 必須（R/B/G）':f.trait?'。trait 必須':'';
+      P(`- **\`${k}\` ${f.name}**（${kind}）${G.FX_HELP[k]?' — '+G.FX_HELP[k]:''}　値：${f.val?(VAL[k]||'値'):'使わない（0）'}${need}${M.forbid[k]?'　**補助には入れない**':''}`); }
+    P('');
+  }
+  P('## 5. その他の決まり');
+  P('');
+  P(`- **セリフ**（lines）：${Object.entries(G.MASTER_LINE_KEYS).map(([k,n])=>`\`${k}\`＝${n}`).join('、')}。それぞれ文字列の配列。面・令呪だけの専用セリフは、その面・令呪に \`"line":["…"]\``);
+  P(`- **使用済みのID**（サーヴァントとも重複不可）：${[...MASTERS.map(m=>m.id),...G.ALL_UNITS.map(u=>u.id)].join(', ')}`);
+  P('');
+  return L.join('\n');
+}
+
 // ---- 検査 ----
 function check(file){
   let t=fs.readFileSync(file,'utf8').trim(), raw;
   t=t.replace(/^```[a-z]*\s*/i,'').replace(/```\s*$/,''); // コードブロックの囲みは外す
   try{ raw=JSON.parse(t); }catch(e){ const a=t.search(/[\[{]/), b=Math.max(t.lastIndexOf(']'),t.lastIndexOf('}')); try{ raw=JSON.parse(t.slice(a,b+1)); }catch(e2){ console.log('✖ JSONとして読めません：'+e2.message); process.exit(1); } }
   if(!Array.isArray(raw)) raw=[raw];
+  if(raw.some(x=>x&&x.spells)) return checkMasters(raw);
   const units=raw.map(x=>G.normalizeUnit(x)), all=[...G.ALL_UNITS,...units];
   let bad=0, much=0;
   // 正規化で消えた項目（スペルミスなど）を見つける
@@ -229,9 +326,27 @@ function check(file){
     const cmp=G.refCompare(u); if(!cmp.length){ console.log('  （このコストの基準値はありません）'); return; }
     for(const x of cmp) console.log(`  ${x.ok===false?'↕':x.ok?'○':'・'} ${x.label} ${x.val}${x.note?'：'+x.note:''}`);
   });
-  if(much) console.log(`
-強すぎ注意 ${much}件。資料の「強さの上限」を超えています（読み込みはできますが、申請では直すよう頼まれます）。`);
+  if(much) console.log(`\n強すぎ注意 ${much}件。資料の「強さの上限」を超えています（読み込みはできますが、申請では直すよう頼まれます）。`);
   console.log(bad?`\nエラー ${bad}件。エディタでは読み込めますが、直さないとゲームに反映できません。`:'\nエラーなし。エディタの「1体を読み込み」で取り込めます。バランスは node tools/ref-check.js --add '+file+' で確かめられます。');
+  process.exit(bad?1:0);
+}
+
+// マスターの検査（spells がある JSON）：validateMasters（マスターシート）＋令呪の強すぎ注意（spellLimits）
+function checkMasters(raw){
+  const ms=raw.map(x=>G.normalizeMaster(x)), all=[...MASTERS,...ms];
+  const known=new Set(['id','name','cls','cost','hp','fit','link','memo','wip','lines','faces','spells','master']);
+  raw.forEach((x,i)=>{ const extra=Object.keys(x).filter(k=>!known.has(k)); if(extra.length) console.log(`⚠ ${ms[i].name||i}：使われない項目 ${extra.join(', ')}`); });
+  const issues=G.validateMasters(all,G.ALL_UNITS);
+  let bad=0, big=0, much=0;
+  ms.forEach((m,mi)=>{
+    const i=MASTERS.length+mi, its=[...issues.filter(x=>x.i===i),...G.spellLimits(m)];
+    console.log(`\n■ ${m.name}（${m.id}）${G.TERMS.player} コスト${m.cost} HP${m.hp}`);
+    if(!its.length) console.log('  エラー・注意なし');
+    for(const x of its){ console.log(`  ${x.level==='error'?'✖':x.level==='big'?'‼':'⚠'} ${x.msg}`); if(x.level==='error') bad++; if(x.level==='big') big++; if(/^強すぎ注意/.test(x.msg)) much++; }
+  });
+  if(big) console.log(`\nマスターシートの決まりに反する所 ${big}件（‼）。直してください。`);
+  if(much) console.log(`\n強すぎ注意 ${much}件。資料の「令呪の上限」を超えています。`);
+  console.log(bad?`\nエラー ${bad}件。`:`\nエラーなし。エディタの「${G.TERMS.player}」で読み込めます。`);
   process.exit(bad?1:0);
 }
 
@@ -252,5 +367,17 @@ else {
     '## 見本（template.json）','','```json',rd('template.json'),'```','',
     '## 設定シートの書き方（キャラクターの設定はこの形で送ると伝わりやすい）','',down(rd('sheet.md').replace(/^# .*\n+(> .*\n)*/,'')).trim(),''].join('\n');
   fs.writeFileSync(path.join(dir,'kit.md'),kit);
-  console.log('書き出しました：docs/llm/reference.md, docs/llm/kit.md');
+  // マスター用：master-reference.md と master-kit.md（作り方は kit.md と同じ）
+  const mref=mmd();
+  fs.writeFileSync(path.join(dir,'master-reference.md'),mref+'\n');
+  const mp=rd('master-prompt.md'), mbody=mp.slice(mp.search(/^## ここからプロンプト$/m)).replace(/^.*\n/,'').trim();
+  const mkit=['# PENSABA DUEL マスター作成キット','',
+    '> このファイル1つを AI（ChatGPT・Claude・Gemini など）に渡してから、作ってほしいマスター（泥ペンマス）の設定を送ってください。',
+    '> AI が返した JSON は、申請ツール（submit.html）に貼り付けて検査してから Discord で申請します。','',
+    '## 指示（AI はこの章に従うこと）','',mbody.replace(/`master-reference\.md`/g,'「資料」の章').replace(/`master-template\.json`/g,'「見本」の章').replace(/`master-kit\.md`/g,'このキット'),'',
+    '## 資料','',down(mref.replace(/^# .*\n+(> .*\n)*/,'')).trim(),'',
+    '## 見本（master-template.json）','','```json',rd('master-template.json'),'```','',
+    '## 設定シートの書き方（マスターの設定はこの形で送ると伝わりやすい）','',down(rd('master-sheet.md').replace(/^# .*\n+(> .*\n)*/,'')).trim(),''].join('\n');
+  fs.writeFileSync(path.join(dir,'master-kit.md'),mkit);
+  console.log('書き出しました：docs/llm/reference.md, kit.md, master-reference.md, master-kit.md');
 }

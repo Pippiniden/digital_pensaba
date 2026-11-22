@@ -1,7 +1,8 @@
 'use strict';
 /* =====================================================================
    サーヴァント申請ツール（submit.html）
-   AI が書いたサーヴァントの JSON を貼り付け → 検査（validateUnits・基準値との比較）→ プレビュー
+   AI が書いたサーヴァントの JSON を貼り付け → 検査（validateUnits・強すぎ注意 refLimits・基準値との比較）→ プレビュー
+   マスターの JSON（spells がある）も貼れる：検査（validateMasters・令呪の強すぎ注意 spellLimits）と一覧表示だけ（編集・勝率の測定はない）
    → 勝率の測定（submit-worker.js）→ 申請用の JSON 保存・Discord に貼る文・AI に直してもらう文をコピー
    申請そのものは Discord で行う（このページは何も送信しない）
    読み込み順：rules → units → masters → common → unit-ref → ref-units → submit
@@ -11,6 +12,10 @@ const SUB_N=3000;                                    // 勝率の測定：環境
 const SUB_CHUNK=250;                                 // 1回のワーカー仕事の試合数
 const OFFICIAL=normalizeUnits(DEFAULT_UNITS);        // 今のキャラ（js/units.js）。ID の重複を見る
 const KNOWN_KEYS=new Set(['id','name','cls','traits','cost','hp','fit','link','memo','wip','lines','condLines','faces','skills','ult']);
+// マスター（spells がある JSON）も受け付ける：検査（validateMasters＋令呪の強すぎ注意）とプレビューだけ。編集フォーム・勝率の測定はない
+const OFFICIAL_M=(typeof DEFAULT_MASTERS!=='undefined'?DEFAULT_MASTERS:[]).map(normalizeMaster);
+const KNOWN_KEYS_M=new Set(['id','name','cls','cost','hp','fit','link','memo','wip','lines','faces','spells','master']);
+const isM=i=>!!(S.units[i]&&S.units[i].master);
 const S={ raw:[], units:[], extra:[], rate:[], stale:[], busy:false, dirty:false, more:new Set(), tab:[], face:[] };   // tab[i]＝開いているタブ / face[i]＝編集中の出目   // more＝「詳しく」を開いている効果（'体:パス'）   // rate[i] = {A:{n,w}, S:{n,w}, done, total} | undefined / stale[i]＝測ったあとに編集した / dirty＝編集した
 
 const $=s=>document.querySelector(s);
@@ -30,7 +35,7 @@ function parseSrc(text){
   }
   if(!Array.isArray(raw)) raw=[raw];
   if(!raw.length||raw.some(x=>!x||typeof x!=='object')) throw new Error('データが空です');
-  if(raw.some(x=>!x.faces||!x.skills||!x.ult)) throw new Error(`${TERMS.unit}のデータではありません（faces・skills・ult が必要です）`);
+  if(raw.some(x=>!x.faces||!(x.spells||(x.skills&&x.ult)))) throw new Error(`${TERMS.unit}・${TERMS.player}のデータではありません（${TERMS.unit}は faces・skills・ult、${TERMS.player}は faces・spells が必要です）`);
   return raw;
 }
 
@@ -38,17 +43,18 @@ function runCheck(){
   if(S.dirty&&!confirm('下で編集した内容は消えて、貼り付けた文の内容に戻ります。よろしいですか？')) return;
   try{ S.raw=parseSrc($('#src').value); }
   catch(e){ S.raw=[]; S.units=[]; $('#out').innerHTML=''; return msg(e.message,true); }
-  S.units=S.raw.map(normalizeUnit);
-  S.extra=S.raw.map(x=>Object.keys(x).filter(k=>!KNOWN_KEYS.has(k)));
+  S.units=S.raw.map(x=>x.spells?normalizeMaster(x):normalizeUnit(x));
+  S.extra=S.raw.map(x=>Object.keys(x).filter(k=>!(x.spells?KNOWN_KEYS_M:KNOWN_KEYS).has(k)));
   S.rate=[]; S.dirty=false; S.more.clear(); S.tab=[]; S.face=[];
   msg(`${S.units.length}体を読み込みました。下で名前や数値を直せます`);
   draw();
 }
 
 // 編集中のデータは形が崩れていることがあるので、検査・保存の前に正規化する
-const unitN=i=>normalizeUnit(S.units[i]);
+const unitN=i=>isM(i)?normalizeMaster(S.units[i]):normalizeUnit(S.units[i]);
 // その体の検査結果（エラー・注意）。今のキャラと一緒に検証して、ID の重複も見る。強すぎ注意（refLimits）も足す
 function issuesOf(i){
+  if(isM(i)) return [...validateMasters([...OFFICIAL_M,unitN(i)],OFFICIAL).filter(x=>x.i===OFFICIAL_M.length), ...spellLimits(unitN(i)).map(x=>({...x,i:OFFICIAL_M.length}))];
   const all=[...OFFICIAL,...S.units.map((u,j)=>unitN(j))];
   return [...validateUnits(all).filter(x=>x.i===OFFICIAL.length+i), ...refLimits(unitN(i)).map(x=>({...x,i:OFFICIAL.length+i}))];
 }
@@ -75,17 +81,42 @@ function refresh(i){
   const sh=$('#share'); if(sh) sh.innerHTML=shareHTML();
 }
 const refreshAll=()=>S.units.forEach((_,j)=>refresh(j));
-function titleHTML(i){ const u=S.units[i]; return `${esc(u.name||'（名前なし）')} <span class="sub">${esc(u.cls)}／コスト${u.cost}／HP${u.hp}／ID ${esc(u.id)}</span>`; }
+function titleHTML(i){ const u=S.units[i];
+  if(isM(i)) return `${esc(u.name||'（名前なし）')} <span class="sub">${TERMS.player}／コスト${u.cost}／HP${u.hp}／ID ${esc(u.id)}</span>`;
+  return `${esc(u.name||'（名前なし）')} <span class="sub">${esc(u.cls)}／コスト${u.cost}／HP${u.hp}／ID ${esc(u.id)}</span>`; }
 function unitHTML(u,i){
   return `<section class="sbox unit" data-u="${i}">
     <h2 id="ttl-${i}">${titleHTML(i)}</h2>
     <div class="cols ecols">
-      <div class="uedit-wrap">${editFormHTML(u,i)}</div>
+      <div class="uedit-wrap">${isM(i)?masterViewHTML(i):editFormHTML(u,i)}</div>
       <aside class="chkpane" id="chk-${i}">${checkHTML(i)}</aside>
     </div>
   </section>`;
 }
+// マスター：補助の6面と令呪の一覧（読むだけ。直すときは「AIに直してもらう文」かエディタで）
+function masterViewHTML(i){
+  const m=unitN(i), et=effs=>effs.length?effsText(effs,null,mTLabel):'無（効果なし）';
+  return `<div class="mview">
+    <p class="sub">${TERMS.player}はここでは直せません。直すときは「AIに直してもらう文」を AI に送るか、エディタで直してください。</p>
+    <h3>補助（鉛筆の6面）</h3>
+    <table class="cmp">${m.faces.map((f,fi)=>`<tr${fi===MSHEET.faceMain?' class="main"':''}><th>${fi+1}${fi===MSHEET.faceMain?'★':''}</th><td><b>${esc(f.label||'')}</b><small>${esc(et(f.eff))}</small></td></tr>`).join('')}</table>
+    <h3>令呪</h3>
+    <table class="cmp">${m.spells.map((s,si)=>`<tr><th>${si+1}画</th><td><b>${esc(s.name||'')}</b><small>${esc(et(s.eff))}</small></td></tr>`).join('')}</table>
+    <h3>セリフ</h3>
+    <table class="cmp">${Object.entries(MASTER_LINE_KEYS).map(([k,n])=>`<tr><th>${esc(n)}</th><td>${m.lines[k].map(esc).join('<br>')||'<span class="sub">なし</span>'}</td></tr>`).join('')}</table>
+    ${m.memo?`<p class="sub">memo：${esc(m.memo)}</p>`:''}
+  </div>`;
+}
+function checkMasterHTML(i){
+  const its=issuesOf(i), icon={error:'✖',big:'‼',warn:'⚠',line:'・'};
+  const list=its.length?`<ul class="iss">${its.map(x=>`<li class="${x.level}">${icon[x.level]||'・'} ${esc(x.msg)}</li>`).join('')}</ul>`:'<p class="ok">エラー・注意はありません</p>';
+  const ex=S.extra[i]&&S.extra[i].length?`<p class="warn">⚠ 使われない項目がありました（読み込みで消えています）：${esc(S.extra[i].join(', '))}</p>`:'';
+  return `<h3>検査 ${cnt(its,'error')?`<span class="tag bad">エラー${cnt(its,'error')}</span>`:'<span class="tag good">エラーなし</span>'}${cnt(its,'big')?`<span class="tag bad">シート違反${cnt(its,'big')}</span>`:''}</h3>
+    ${ex}${list}
+    <p class="sub">‼ はマスターシートの決まりに反する所、⚠ は目安から外れた所・強すぎ注意です。${TERMS.player}の勝率は測れません。</p>`;
+}
 function checkHTML(i){
+  if(isM(i)) return checkMasterHTML(i);
   const u=unitN(i), its=issuesOf(i), cmp=refCompare(u), r=S.rate[i], rr=rateOf(i);
   const icon={error:'✖',warn:'⚠',line:'・'};
   // 指摘を押すと、その入力があるタブ（面なら出目）を開く
@@ -155,12 +186,13 @@ function measure(i){
 
 // ---- 申請用の文 ----
 function discordText(){
-  const L=['【サーヴァント導入申請】'];
+  const L=[`【${S.units.every((u,i)=>isM(i))?TERMS.player:S.units.some((u,i)=>isM(i))?`${TERMS.unit}・${TERMS.player}`:TERMS.unit}導入申請】`];
   S.units.forEach((u,i)=>{
-    const its=issuesOf(i), ng=refCompare(unitN(i)).filter(x=>x.ok===false), rr=S.stale[i]?null:rateOf(i);
-    L.push('',`■ ${u.name}（${u.cls}／コスト${u.cost}）　ID：${u.id}`);
+    const its=issuesOf(i), m=isM(i), ng=m?[]:refCompare(unitN(i)).filter(x=>x.ok===false), rr=m||S.stale[i]?null:rateOf(i);
+    L.push('',`■ ${u.name}（${m?TERMS.player:u.cls}／コスト${u.cost}）　ID：${u.id}`);
     L.push(`・出典：${u.link||'未記入'}`);
-    L.push(`・検査：${cnt(its,'error')?`エラー${cnt(its,'error')}件`:'エラーなし'}${cnt(its,'warn')?`（注意${cnt(its,'warn')}件）`:''}`);
+    L.push(`・検査：${cnt(its,'error')?`エラー${cnt(its,'error')}件`:'エラーなし'}${cnt(its,'big')?`（シート違反${cnt(its,'big')}件）`:''}${cnt(its,'warn')?`（注意${cnt(its,'warn')}件）`:''}`);
+    if(m) return;
     L.push(`・基準値から外れた項目：${ng.length?ng.map(x=>`${x.label} ${x.val}`).join('、'):'なし'}`);
     L.push(`・勝率（${RULESETS.team.name}3対3・CPU同士）：${rr?`${rr.all.toFixed(1)}%（${REF_KITS.A} ${rr.A.toFixed(1)}%／${REF_KITS.S} ${rr.S.toFixed(1)}%、各${rr.n}試合）… ${rr.verdict}`:'未測定'}`);
   });
@@ -168,23 +200,24 @@ function discordText(){
   return L.join('\n');
 }
 function fixText(){
-  const L=['次の検査結果を見て、サーヴァントの JSON を直してください。直した JSON だけを ```json のコードブロック1つで出力してください。'];
+  const what=S.units.every((u,i)=>isM(i))?TERMS.player:S.units.some((u,i)=>isM(i))?`${TERMS.unit}・${TERMS.player}`:TERMS.unit;
+  const L=[`次の検査結果を見て、${what}の JSON を直してください。直した JSON だけを \`\`\`json のコードブロック1つで出力してください。`];
   S.units.forEach((u,i)=>{
-    const its=issuesOf(i), ng=refCompare(unitN(i)).filter(x=>x.ok===false), rr=S.stale[i]?null:rateOf(i);
+    const its=issuesOf(i), ng=isM(i)?[]:refCompare(unitN(i)).filter(x=>x.ok===false), rr=isM(i)||S.stale[i]?null:rateOf(i);
     L.push('',`■ ${u.name}（${u.id}）`);
     if(S.extra[i].length) L.push(`- 使われない項目：${S.extra[i].join(', ')}（資料にない項目は書かない）`);
-    its.forEach(x=>L.push(`- ${x.level==='error'?'エラー':'注意'}：${x.msg}`));
+    its.forEach(x=>L.push(`- ${x.level==='error'?'エラー':x.level==='big'?'マスターシート違反':'注意'}：${x.msg}`));
     ng.forEach(x=>L.push(`- 基準値から外れている：${x.label} ${x.val}${x.note?`（${x.note}）`:''}`));
     if(rr&&rr.verdict!=='目安どおり') L.push(`- 勝率が ${rr.all.toFixed(1)}% で${rr.verdict}です（目安 50%±3%）。${rr.verdict==='強め'?'スキルの効果の数や値、HP・ダメージを少し下げて':'HP・ダメージやスキルを少し上げて'}ください。`);
     if(L[L.length-1].startsWith('■')) L.push('- 問題はありません');
   });
   return L.join('\n');
 }
-const fileName=()=>(S.units.length===1?S.units[0].id||'servant':'servants')+'.json';
+const fileName=()=>(S.units.length===1?S.units[0].id||(isM(0)?'master':'servant'):S.units.every((u,i)=>isM(i))?'masters':'servants')+'.json';
 // 書き出す形：既定の画像位置（fit）や空の属性は省く
 function cleanUnit(u){
   const o=JSON.parse(JSON.stringify(u));
-  if(['face','card','np','cut'].every(k=>fitIsDef(o.fit,k))) delete o.fit;
+  if(o.fit&&Object.keys(o.fit).every(k=>fitIsDef(o.fit,k))) delete o.fit;
   if(o.traits&&!o.traits.length) delete o.traits;
   return o;
 }

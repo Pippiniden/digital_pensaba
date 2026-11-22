@@ -24,6 +24,9 @@ header .sub{color:var(--sub);font-size:13px}
 .iss .error{color:#ff8a80}
 .iss .warn{color:var(--warn)}
 .iss .line{color:var(--sub)}
+.iss .big{color:#ffb74d;font-weight:700}
+.mview .cmp tr.main th{color:var(--gold-hi)}
+.mview h3:first-of-type{margin-top:6px}
 .tag{font-size:11.5px;font-family:inherit;padding:1px 8px;border-radius:9px;margin-left:6px;vertical-align:middle}
 .tag.good{background:rgba(71,196,111,.18);color:var(--hp)}
 .tag.bad{background:rgba(226,72,60,.2);color:#ff8a80}

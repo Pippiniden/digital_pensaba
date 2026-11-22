@@ -360,6 +360,37 @@ function checkMasterSheet(m,add){
   if(lim.limit1.length>1) add('big',`リミット1枠の効果が${lim.limit1.length}つ入っています（補助${lim.limit1.map(i=>i+1).join('・')}）。補助全体で1つまで`);
   if(lim.limit2.length>2) add('big',`リミット2枠の効果が${lim.limit2.length}つ入っています（補助${lim.limit2.map(i=>i+1).join('・')}）。補助全体で2つまで`);
 }
+// 令呪の強すぎ注意（MSHEET.spell）：[{level:'warn', msg}]。validateMasters には入れない（今のマスターにも超えるものがあるため）
+// 申請ツール（submit.js）と tools/llm-pack.js --check で使う
+function spellLimits(m){
+  const L=MSHEET.spell, out=[]; if(!L) return out;
+  const add=msg=>out.push({level:'warn',msg:'強すぎ注意：'+msg}), nm=k=>(FX[k]||{}).name||k;
+  const isAll=e=>['ally_all','enemy_all','enemy_both'].includes(e.t); // 令呪の svt は1騎を選ぶ（マスタールールは1騎だけ）ので単体
+  const own=e=>FX[e.k]&&(FX[e.k].buff===false||e.k==='selfDmg')&&['self','svt','ally_svt','ally_all'].includes(e.t); // 自分側への代償は数えない
+  m.spells.forEach((sp,si)=>{
+    const w=`令呪${si+1}`, effs=sp.eff.filter(e=>e.k!=='desc'&&!own(e));
+    if(effs.length>L.maxEffs) add(`${w}：効果は${L.maxEffs}つまでにしてください（今は${effs.length}つ）`);
+    sp.eff.forEach((e,ei)=>{
+      if(own(e)) return;
+      const x=`${w}・効果${ei+1}`, all=isAll(e);
+      if(L.forbid[e.k]) return add(`${x}：${L.forbid[e.k]}`);
+      if(e.turns>L.maxTurns) add(`${x}：効果時間は${L.maxTurns}Tまでにしてください（今は${e.turns}T）`);
+      const st=L.strong[e.k];
+      if(st){
+        const okT=e.turns!=null&&e.turns<=st.turns, okM=e.times!=null&&e.times<=st.times;
+        if(!okT&&!okM) add(`${x}：${nm(e.k)}は ${st.turns}Tか${st.times}回 までにしてください`);
+        if(all&&st.allChance&&!(e.chance>0&&e.chance<=st.allChance)) add(`${x}：${nm(e.k)}を全体にかけるなら確率つき（chance ${st.allChance}以下）にしてください${e.chance?`（今は${e.chance}）`:'（今は必ず成功）'}`);
+      }
+      const v=L.val[e.k];
+      if(v&&typeof e.v==='number'&&!e.max){
+        const lim=e.k==='dmg'&&e.t==='enemy_master'?L.dmgMaster:all?v[1]:v[0];
+        if(Math.abs(e.v)>lim) add(`${x}：${nm(e.k)}${all?'（全体）':e.t==='enemy_master'?`（敵${TERMS.player}）`:''}の値は${lim}までにしてください（今は${e.v}）`);
+      }
+      if(e.k==='dmg'&&e.max) add(`${x}：最大HPぶんのダメージは令呪に入れないでください`);
+    });
+  });
+  return out;
+}
 // units を渡すと、サーヴァントとIDが重なっていないかも確かめる（ゲームはIDでサーヴァント→マスターの順に探すため）
 // level：'error'（反映できない） / 'big'（大警告：シートの決まりに反する） / 'warn'（小警告・注意：シートの目安から外れる）
 function validateMasters(ms,units=[]){

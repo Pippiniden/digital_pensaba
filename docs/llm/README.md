@@ -30,11 +30,20 @@ AI にキャラクターの設定を渡し、ゲームにそのまま読み込�
 | `reference.md` | 基準値・効果の一覧・対象の一覧・今のキャラでの効果の使われ方・クラス・属性・使用済みID | `node tools/llm-pack.js` が作る（手で直さない） |
 | `template.json` | 書式の見本（コスト3・基準どおり。検証エラーなし・勝率約50%） | 手で書く |
 | `sheet.md` | 設定シート（設定の書き方の例） | 手で書く |
+| `master-kit.md` | マスター用に AI に渡す1ファイル（下の2行をまとめたもの） | `node tools/llm-pack.js` が作る |
+| `master-prompt.md` / `master-template.json` / `master-sheet.md` | マスター用の指示・見本（コスト3・シートどおり）・設定シート | 手で書く |
+| `master-reference.md` | マスターシートの決まり（`MSHEET`）・補助の目安値・令呪の上限（`MSHEET.spell`）・汎用令呪（`SPELL_TPL`）・今のマスターの例・対象と効果の一覧・使用済みID | `node tools/llm-pack.js` が作る |
 
 **強すぎ注意**：`js/unit-ref.js` の `UNIT_REF.limits`（スキルに即死を入れない・強い効果は確率つきか 1T・スキルの効果は3つまで・値の上限など）を超えると、申請ツールと `--check` が「強すぎ注意」を出します（`refLimits`、js/ref-units.js）。同じ表が `reference.md` の「強さの上限」に載るので、AI は最初から守ろうとします。エディタには出しません（今のキャラにも上限を超えるものがあるため）。
 
 **基準値（`js/unit-ref.js`）・効果（`js/rules.js` の `FX`）・キャラ（`js/units.js`）・`prompt.md` などを変えたら、`node tools/llm-pack.js` で `reference.md` と `kit.md` を作り直してからプッシュしてください。**
 使用済みIDや「使われ方」も今のキャラから作るので、キャラを追加したときも作り直すと重複IDを防げます。
+
+## マスター（泥ペンマス）
+
+サーヴァントと同じ流れで、`master-kit.md` を AI に渡して作らせ、申請ツールに貼り付けます（`spells` がある JSON はマスターとして扱う）。
+申請ツールでは、マスターシートの決まり（‼。エディタと同じ `validateMasters`）と、令呪の強すぎ注意（⚠。`spellLimits`、common.js。上限は `MSHEET.spell`）を検査し、補助・令呪・セリフを一覧で表示します。マスターは申請ツールの中では編集できず、勝率も測れません。
+手元では `node tools/llm-pack.js --check new.json` で同じ検査ができます。受け取ったらエディタの「マスター」で取り込みます。
 
 ## 注意
 
