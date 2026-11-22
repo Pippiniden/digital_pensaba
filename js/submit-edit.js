@@ -35,14 +35,7 @@ function effListE(i,path,effs,ctx){
 
 // ---- タブ：どの入力がどのタブにあるか（検査の指摘からタブへ飛ぶのにも使う） ----
 const ETABS=[['basic','基本'],['faces','鉛筆の面'],['skills',`スキル・${TERMS.ult}`],['lines','セリフ']];
-function issueTab(x){
-  const m=x.msg||'';
-  if(x.level==='line'||/セリフ/.test(m)) return 'lines';
-  if(/^出目/.test(m)) return 'faces';
-  if(/^スキル/.test(m)||m.startsWith(TERMS.ult)) return 'skills';
-  return 'basic';
-}
-const issueFace=x=>{ const m=/^出目(\d)/.exec(x.msg||''); return m?+m[1]-1:null; };
+const issueTab=issueArea, issueFace=issueFaceNo; // 共通（common.js）
 // 基準値との比較の行 → タブ（HP は基本、宝具はスキル・宝具、ほかは面）
 const cmpTab=x=>x.label==='HP'?'basic':x.label===TERMS.ult?'skills':'faces';
 function tabsHTML(i){
@@ -117,6 +110,9 @@ function editValue(el){
 function editStructural(el){
   const i=+el.dataset.i, u=S.units[i];
   switch(el.dataset.act){
+    case 'cardUpColor': { // カード性能アップ・ダウンの色：その色の既定値を入れる
+      pSet(u,el.dataset.p,el.value); const e=pGet(u,el.dataset.p.replace(/\.color$/,''));
+      if(e&&CARD_DEFS[e.k]&&CARD_DEFS[e.k][e.color]) Object.assign(e,CARD_DEFS[e.k][e.color]); return true; }
     case 'cmdColor': { // コマンドの種類を変える：特殊行動なら技名と効果欄を用意し、R/B/G なら技名を外す
       const p=el.dataset.cp, old=pGet(u,p), c=el.value, base={dmg:old.dmg||0,np:old.np||0,star:old.star||0};
       pSet(u,p,c==='W'?{c:'W',label:old.label||'特殊行動',eff:old.eff||[],...base}:{c,...base,...(old.eff&&old.eff.length?{eff:old.eff}:{})}); return true; }

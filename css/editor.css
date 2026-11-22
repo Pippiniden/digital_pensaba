@@ -74,11 +74,7 @@ label.mini input[type=number]{width:62px}
 .cmdnums{display:flex;gap:6px;flex-wrap:wrap}
 .subcard{border:1px solid var(--line);border-radius:4px;background:rgba(6,13,34,.35);padding:10px;margin-bottom:10px;display:grid;gap:8px}
 .effs{display:grid;gap:6px}
-.eff{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 8px;border:1px dashed var(--line);border-radius:4px;background:var(--panel2)}
-.eff>select{max-width:170px}
-.effops{margin-left:auto;display:flex;gap:2px}
-.effops button{padding:1px 7px;font-size:12px}
-.effprev{flex-basis:100%;font-size:11px;color:var(--sub)}
+.eff{display:block} /* 効果1つの外枠。中身は共通部品（eff-ui.js の .erow、見た目は css/eff-ui.css） */
 .add{justify-self:start}
 .preview{font-size:12px;color:var(--sub);border-top:1px dashed var(--line);padding-top:6px}
 .preview::before{content:'カードの表記：';color:var(--ink)}
@@ -197,9 +193,7 @@ table.simmx td.self{color:var(--sub)}
 .fields label.wide{grid-column:1/-1}
 .ownline{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--sub)}
 .ownline textarea{font-size:12px;resize:vertical;min-height:0}
-.eff .effgrp{max-width:9.5em;color:var(--sub)}
 .eff .traitin{width:7em}
-.eff .desctext{flex:1 1 16em;min-width:0}
 label.mini.chk{cursor:pointer}
 
 .effref{flex-basis:100%;font-size:10.5px;color:var(--sub);opacity:.85;line-height:1.4}.effref:empty{display:none}.effref.over{color:var(--warn);opacity:1}
@@ -258,3 +252,9 @@ label.mini.hasref{display:inline-grid;grid-template-columns:auto auto;justify-co
 .cmded>.uref,.subcard>.uref{display:block}
 .refsum{display:flex;flex-wrap:wrap;gap:4px 18px;margin-top:8px;font-size:12px;color:var(--sub)}.refsum:empty{display:none}
 .refsum b{color:var(--ink);font-weight:600}.refsum .uref{margin-left:6px}
+
+/* フォームのタブ（editor.js の formTabsInit）・検証の指摘から飛ぶ */
+.ftabs{position:sticky;top:0;z-index:3;background:var(--panel2);padding-top:6px}
+.issues li[data-ftab-go]{cursor:pointer}
+.issues li[data-ftab-go]:hover{background:rgba(127,166,255,.08)}
+.facerow.flash{outline:2px solid var(--gold);outline-offset:2px;transition:outline-color .3s}

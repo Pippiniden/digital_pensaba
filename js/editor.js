@@ -179,7 +179,7 @@ function keepScroll(fn){
   window.scrollTo(0,y);
   if(form) requestAnimationFrame(()=>{ form.style.minHeight=''; window.scrollTo(0,y); });
 }
-function light(){ saveDraft(); keepScroll(()=>{ renderList(); renderSide(); renderStatus(); updatePreviews(); }); }
+function light(){ saveDraft(); keepScroll(()=>{ renderList(); renderSide(); renderStatus(); updatePreviews(); updateFormTabs(); }); }
 function full(){ saveDraft(); keepScroll(renderAll); }
 function renderAll(){ renderList(); renderForm(); renderSide(); renderStatus(); }
 
@@ -195,7 +195,7 @@ const issuesNow = ()=>issAll().filter(x=>!isIgn(x));
 // 右の「検証」欄：i＝今のキャラの番号。無視ボタンと、無視した警告（戻せる）つき
 function issBoxHTML(i){
   const all=issAll().filter(x=>x.i===i||x.i===-1), live=all.filter(x=>!isIgn(x)), ign=all.filter(isIgn);
-  return (live.length?`<ul class="issues">${live.map(x=>`<li class="${x.level}">${issLabel(x.level)}：${esc(x.msg)}${x.level==='error'?'':` <button class="small ack" data-act="ack" data-k="${esc(x.k)}" title="確認済みにして表示しない">無視</button>`}</li>`).join('')}</ul>`:'<p class="ok small nm">問題は見つかりませんでした。</p>')
+  return (live.length?`<ul class="issues">${live.map(x=>`<li class="${x.level}"${isM()?'':` data-ftab-go="${issueArea(x)}" data-face="${issueFaceNo(x)??''}" title="押すと直す場所を開きます"`}>${issLabel(x.level)}：${esc(x.msg)}${x.level==='error'?'':` <button class="small ack" data-act="ack" data-k="${esc(x.k)}" title="確認済みにして表示しない">無視</button>`}</li>`).join('')}</ul>`:'<p class="ok small nm">問題は見つかりませんでした。</p>')
    +(ign.length?`<details class="ign"><summary>無視した警告（${ign.length}件）</summary><ul class="issues">${ign.map(x=>`<li class="${x.level}">${issLabel(x.level)}：${esc(x.msg)} <button class="small ack" data-act="unack" data-k="${esc(x.k)}">戻す</button></li>`).join('')}</ul></details>`:'');
 }
 function renderStatus(){
@@ -620,9 +620,38 @@ function renderForm(){
     </div>
     ${cutinEdHTML(u)}
   </section>`;
+  formTabsInit(el);
   ctUpdate(true);
   refUpdate();
 }
+// ---------- フォームのタブ（サーヴァントのみ）：各セクションを見出しでタブに振り分け、開いているタブだけ見せる ----------
+// セクションは全部作って hidden で隠す（カットインのプレビューなど、作り直しを前提にしていない部品をそのまま使うため）
+const FTABS=[['basic','基本・画像'],['faces','鉛筆の面'],['skills',`スキル・${TERMS.ult}`],['lines','セリフ']];
+const FTAB_OF={'基本情報':'basic','画像':'basic','鉛筆の6面':'faces','スキル':'skills',[TERMS.ult]:'skills','セリフ':'lines','条件つきセリフ':'lines'};
+let formTab='basic';
+function formTabsHTML(){
+  const its=issAll().filter(x=>x.i===sel&&!isIgn(x));
+  return FTABS.map(([k,n])=>{ const e=its.filter(x=>x.level==='error'&&issueArea(x)===k).length, w=its.filter(x=>x.level!=='error'&&issueArea(x)===k).length;
+    const badge=e?`<span class="ebadge err" title="エラー">${e}</span>`:w?`<span class="ebadge warn" title="注意・セリフ">${w}</span>`:'';
+    return `<span role="tab" tabindex="0" aria-selected="${k===formTab}" class="etab${k===formTab?' on':''}" data-ftab-go="${k}">${esc(n)}${badge}</span>`; }).join('');
+}
+function formTabsInit(el){
+  el.querySelectorAll(':scope>section.sec').forEach(s=>{ const h=s.querySelector('h2'); s.dataset.ftab=FTAB_OF[h?h.textContent.trim():'']||'basic'; s.hidden=s.dataset.ftab!==formTab; });
+  el.insertAdjacentHTML('afterbegin',`<nav class="etabs ftabs" role="tablist" id="ftabs">${formTabsHTML()}</nav>`);
+}
+function formTabGo(k,face){
+  if(isM()||!FTABS.some(([t])=>t===k)) return;
+  formTab=k;
+  document.querySelectorAll('#form>section.sec').forEach(s=>s.hidden=s.dataset.ftab!==k);
+  const nav=document.querySelector('#ftabs'); if(nav) nav.innerHTML=formTabsHTML();
+  if(k==='skills') ctUpdate(true); // 隠れていた宝具のカットインを測り直す
+  if(face!=null){ const r=document.querySelectorAll('#form .facerow:not(.head)')[face]; if(r){ r.scrollIntoView({block:'center'}); r.classList.add('flash'); setTimeout(()=>r.classList.remove('flash'),1200); return; } }
+  if(nav) nav.scrollIntoView({block:'start'});
+}
+const updateFormTabs=()=>{ const nav=document.querySelector('#ftabs'); if(nav&&!isM()) nav.innerHTML=formTabsHTML(); };
+// タブ・検証の指摘を押したら、そのタブへ（Enter / Space でも）
+document.addEventListener('click',e=>{ const t=e.target.closest('[data-ftab-go]'); if(t&&!e.target.closest('button')) formTabGo(t.dataset.ftabGo,t.dataset.face===undefined||t.dataset.face===''?null:+t.dataset.face); });
+document.addEventListener('keydown',e=>{ const t=e.target; if((e.key==='Enter'||e.key===' ')&&t.dataset&&t.dataset.ftabGo){ e.preventDefault(); t.click(); } });
 // ---------- 基準値（js/unit-ref.js の UNIT_REF）：入力欄の近くに小さく出す参考値。警告はしない ----------
 const refRange = r=>r[0]==null?`～${r[1]}`:r[1]==null?`${r[0]}～`:`${r[0]}～${r[1]}`;
 const refNp = (u,post)=>{ const n=u.faces.filter(f=>(post?f.post:f.pre).c==='B').length, ks=Object.keys(UNIT_REF.np).map(Number); return n?UNIT_REF.np[Math.min(n,Math.max(...ks))]:null; }; // Arts の枚数に合う行
@@ -781,51 +810,26 @@ function condIn(p,e,f,lab){
   const self=f.condUse?`<label class="mini chk" title="攻撃・防御の相手ではなく、この効果が付く本人（例：自分が女性のとき）を条件にします"><input type="checkbox" data-p="${p}.cond.self" data-t="bool" ${c.self?'checked':''}><span>付与先を見る</span></label>`:'';
   return kind+(val?`<label class="mini">${val}</label>`:'')+`<label class="mini chk"><input type="checkbox" data-p="${p}.cond.not" data-t="bool" ${c.not?'checked':''}><span>でないとき</span></label>`+self;
 }
+// 効果1つの行：共通部品 effRowHTML（eff-ui.js）を使う。種類は「効果を選ぶ画面」（EffPick）で選ぶ
+// エディタだけの細かい設定（条件・種類の指定・解除不可・すべての獲得・タイミング・エクストラなし）は「詳しく」の中に出す
+let effMoreOpen=new Set(); // 「詳しく」を開いている効果のパス（キャラを切り替えたら閉じる）
 function effRow(path,j,e,ctx,n,atKind){
   const p=`${path}.${j}`, f=FX[e.k]||{};
-  // 効果は「分類 → 種類」の2段で選ぶ（1つのリストだと長すぎるため。分類は rules.js の FX_GROUPS）
-  const groups=fxGroups().map(([g,ks])=>[g,ks.filter(k=>fxOnlyIn(k,ctx))]).filter(([,ks])=>ks.length);
-  const grp=fxGroupOf(e.k), kinds=(groups.find(([g])=>g===grp)||groups[0])[1];
-  const tg=TGT_BY_CTX[ctx].includes(e.t)?TGT_BY_CTX[ctx]:[...TGT_BY_CTX[ctx],e.t];
-  // 値：最大HPにできる効果（ダメージ・自傷）は「最大HP」にチェックすると値の代わりに対象の最大HP（軽減不可）
-  const val=f.val?(f.maxOk?`${e.max?'':numIn(p+'.v',e.v,e.k==='multiHit'?'回数':'値')}<label class="mini chk" title="値の代わりに対象の最大HPと同じダメージにする（軽減できない）"><input type="checkbox" data-p="${p}.max" data-t="bool" data-act="structural" ${e.max?'checked':''}><span>最大HP</span></label>`
-    :CARD_DEFS[e.k]?numIn(p+'.v',e.v,'威力')+numIn(p+'.np',e.np??0,'NP獲得量')+numIn(p+'.star',e.star??0,'スター発生量') // カード性能アップは3つの値
-    :numIn(p+'.v',e.v,e.k==='multiHit'?'回数':'値')):'';
-  if(e.k==='desc') return `<div class="eff" data-ep="${p}">
-    <select class="effgrp" data-act="effGrp" data-ep="${p}" data-ctx="${ctx}" aria-label="効果の分類">${groups.map(([g,ks])=>opt(g,`${g}（${ks.length}）`,grp)).join('')}</select>
-    <select data-p="${p}.k" data-act="effKind" data-ctx="${ctx}" aria-label="効果の種類">${kinds.map(k=>opt(k,FX[k].name,e.k)).join('')}</select>
-    <input class="desctext" data-p="${p}.text" value="${esc(e.text||'')}" placeholder="説明文（スキル・${TERMS.ult}の説明がこの文章になります）">
-    <span class="effops">
-      <button data-act="effMove" data-path="${path}" data-i="${j}" data-d="-1" ${j?'':'disabled'} title="上へ">↑</button>
-      <button data-act="effMove" data-path="${path}" data-i="${j}" data-d="1" ${j<n-1?'':'disabled'} title="下へ">↓</button>
-      <button data-act="effDel" data-path="${path}" data-i="${j}" title="削除">×</button>
-    </span>
-    <div class="sub small">表示のみ・効果はありません。ほかの効果の説明の代わりに、この文章を出します。</div>
-  </div>`;
-  return `<div class="eff" data-ep="${p}">
-    <select class="effgrp" data-act="effGrp" data-ep="${p}" data-ctx="${ctx}" aria-label="効果の分類">${groups.map(([g,ks])=>opt(g,`${g}（${ks.length}）`,grp)).join('')}</select>
-    <select data-p="${p}.k" data-act="effKind" data-ctx="${ctx}" aria-label="効果の種類">${kinds.map(k=>opt(k,FX[k].name,e.k)).join('')}${kinds.includes(e.k)?'':opt(e.k,(FX[e.k]||{}).name||e.k,e.k)}</select>
-    ${f.copy?`<label class="mini" title="どこから強化・弱体をコピーするか"><span>コピー元</span><select data-p="${p}.from">${[...(FROM_BY_CTX[ctx]||['self']),...((FROM_BY_CTX[ctx]||[]).includes(e.from)?[]:[e.from||'self'])].map(t=>opt(t,FROM_TARGETS[t]||t,e.from||'self')).join('')}</select></label><span class="sub">→ コピー先</span>`:''}
-    ${e.k==='copyRoll'&&ctx==='ult'?`<label class="mini chk" title="ちょうど3回ロールしたあとに行う、宝具の持ち主のエクストラアタック（ブレイブチェイン）をしません"><input type="checkbox" data-p="${p}.noExtra" data-t="bool" ${e.noExtra?'checked':''}><span>エクストラなし</span></label>`:''}
-    ${f.noTgt?'':`<select data-p="${p}.t" aria-label="対象">${tg.map(t=>opt(t,(ctx==='master'?mTLabel(t):TARGETS[t])||t,e.t)).join('')}</select>`}
-    ${val}
-    ${f.inst?'':(f.timesOnly?'':ctx==='master'&&/^faces./.test(path)?faceTurns(p+'.turns',e.turns):optNum(p+'.turns',e.turns,'ターン'))+optNum(p+'.times',e.times,'回数')}
-    ${FX[e.k]&&FX[e.k].color?`<label class="mini"><span>色</span><select data-p="${p}.color" data-t="optstr"${CARD_DEFS[e.k]?` data-act="cardUpColor" title="色を変えると、その色の既定値（威力・NP獲得量・スター発生量）が入ります"`:''}>${CARD_DEFS[e.k]?'':opt('','すべて',e.color||'')}${['R','B','G'].map(c=>opt(c,TERMS[c],e.color)).join('')}</select></label>`:''}
-    ${f.trait?`<label class="mini"><span>対象</span><input class="traitin" list="traitlist" data-p="${p}.trait" data-t="optstr" value="${esc(e.trait||'')}" placeholder="属性・クラス・ID"></label>`:''}
-    ${e.k in VS_KINDS?(()=>{ const bf=VS_KINDS[e.k]; return `<label class="mini"><span>${bf?'強化':'弱体'}</span><select data-p="${p}.vs" data-t="optstr">${opt('',e.k==='atkVs'?'どれでも':'すべて',e.vs||'')}${Object.keys(FX).filter(k=>FX[k].buff===bf).map(k=>opt(k,FX[k].name,e.vs)).join('')}</select></label>`; })():''}
-    ${f.noTgt?'':`<label class="mini"><span>確率</span><select data-p="${p}.chance" data-t="optnum">${opt('','必ず',e.chance??'')}${[1,2,3,4,5].map(k=>opt(k,`ロール${k}以下`,e.chance)).join('')}</select></label>`}
-    ${f.noTgt?'':condIn(p,e,f)}
-    ${f.inst||f.noTgt?'':`<label class="mini chk" title="強化無効・弱体無効で付与を防がれず、強化解除・弱体解除でも消えません。ターンや回数が尽きれば切れます"><input type="checkbox" data-p="${p}.sure" data-t="bool" ${e.sure?'checked':''}><span>解除・無効不可</span></label>`}
-    ${f.allOpt?`<label class="mini chk" title="チェックなし：攻撃で得るNP（コマンド・攻撃時NP・チェイン）だけ減らします。チェックあり：スキル・ターン開始時・被ダメージ時のNP獲得も減らします"><input type="checkbox" data-p="${p}.all" data-t="bool" ${e.all?'checked':''}><span>スキル・毎ターンなども含む</span></label>`:''}
-    ${f.noTgt?'':effAtSel(p,e,atKind)}
-    <span class="effops">
-      <button data-act="effMove" data-path="${path}" data-i="${j}" data-d="-1" ${j?'':'disabled'} title="上へ">↑</button>
-      <button data-act="effMove" data-path="${path}" data-i="${j}" data-d="1" ${j<n-1?'':'disabled'} title="下へ">↓</button>
-      <button data-act="effDel" data-path="${path}" data-i="${j}" title="削除">×</button>
-    </span>
-    <div class="effprev">${esc(fxText(e))}</div>
-    ${ctx==='master'&&/^faces\./.test(path)?`<div class="effref ${refOver(e,path)?'over':''}">${esc(refText(e,path))}</div>`:''}
-  </div>`;
+  const more=[
+    e.k==='copyRoll'&&ctx==='ult'?`<label class="mini chk" title="ちょうど3回ロールしたあとに行う、宝具の持ち主のエクストラアタック（ブレイブチェイン）をしません"><input type="checkbox" data-p="${p}.noExtra" data-t="bool" ${e.noExtra?'checked':''}><span>エクストラなし</span></label>`:'',
+    e.k in VS_KINDS?(()=>{ const bf=VS_KINDS[e.k]; return `<label class="mini"><span>${bf?'強化':'弱体'}の種類</span><select data-p="${p}.vs" data-t="optstr">${opt('',e.k==='atkVs'?'どれでも':'すべて',e.vs||'')}${Object.keys(FX).filter(k=>FX[k].buff===bf).map(k=>opt(k,FX[k].name,e.vs)).join('')}</select></label>`; })():'',
+    f.noTgt?'':condIn(p,e,f),
+    f.inst||f.noTgt?'':`<label class="mini chk" title="強化無効・弱体無効で付与を防がれず、強化解除・弱体解除でも消えません。ターンや回数が尽きれば切れます"><input type="checkbox" data-p="${p}.sure" data-t="bool" ${e.sure?'checked':''}><span>解除・無効不可</span></label>`,
+    f.allOpt?`<label class="mini chk" title="チェックなし：攻撃で得るNP（コマンド・攻撃時NP・チェイン）だけ減らします。チェックあり：スキル・ターン開始時・被ダメージ時のNP獲得も減らします"><input type="checkbox" data-p="${p}.all" data-t="bool" ${e.all?'checked':''}><span>スキル・毎ターンなども含む</span></label>`:'',
+    f.noTgt?'':effAtSel(p,e,atKind),
+  ].join('');
+  const ops=`<button class="small" data-act="effMove" data-path="${path}" data-i="${j}" data-d="-1" ${j?'':'disabled'} title="上へ">↑</button><button class="small" data-act="effMove" data-path="${path}" data-i="${j}" data-d="1" ${j<n-1?'':'disabled'} title="下へ">↓</button>`;
+  const mface=ctx==='master'&&/^faces\./.test(path);
+  return `<div class="eff" data-ep="${p}">${effRowHTML(e,{ ctx, path:p, more:effMoreOpen.has(p), moreHTML:more, ops, traitList:'traitlist',
+    attr:(pp,t)=>`data-p="${pp}" data-t="${t}"`,
+    btn:act=>`data-act="${act}" data-path="${path}" data-i="${j}" data-ctx="${ctx}"`,
+    turnsHTML:mface?faceTurns(p+'.turns',e.turns):null,
+    after:mface?`<div class="effref ${refOver(e,path)?'over':''}">${esc(refText(e,path))}</div>`:'' })}</div>`;
 }
 // 補助の効果に出す、マスターシートの目安（小さく）。path は faces.<面>.eff.<番号>
 const refFace = path=>+path.split('.')[1];
@@ -836,7 +840,7 @@ const cardPreviewHTML=u=>`<span class="ccrow">${['R','B','G'].map(k=>cmdCardHTML
 // 入力中は再描画せず、説明文だけ更新する（入力欄のフォーカスを保つため）
 function updatePreviews(){
   const u=cur(); if(!u) return;
-  document.querySelectorAll('.eff[data-ep]').forEach(el=>{ const e=getPath(u,el.dataset.ep); const pv=el.querySelector('.effprev'); if(e&&pv) pv.textContent=fxText(e); }); // 説明文の行には説明欄（.effprev）がない
+  document.querySelectorAll('.eff[data-ep]').forEach(el=>{ const e=getPath(u,el.dataset.ep); const pv=el.querySelector('.etxt-game'); if(e&&pv) pv.textContent=effRowText(e,isM()?'master':'skill'); }); // 効果の行の「ゲームでの表示」（説明文の行にはない）
   if(isM()){
     document.querySelectorAll('.eff[data-ep^="faces."]').forEach(el=>{ const e=getPath(u,el.dataset.ep), r=el.querySelector('.effref'); if(e&&r){ r.textContent=refText(e,el.dataset.ep); r.classList.toggle('over',refOver(e,el.dataset.ep)); } });
     document.querySelectorAll('[data-prev="mface"]').forEach(el=>el.textContent=mFaceText(u.faces[+el.dataset.i]));
@@ -958,19 +962,12 @@ document.addEventListener('input',e=>{
       if(old) e.cond=old; }
     return full();
   }
-  if(el.dataset.act==='effGrp'){ // 分類を変えたら、その分類の最初の効果にする
-    const e=getPath(cur(),el.dataset.ep), g=fxGroups().find(([n])=>n===el.value), k=g&&g[1].find(k=>fxOnlyIn(k,el.dataset.ctx));
-    if(!e||!k) return;
-    e.k=k; autoEff(e,el.dataset.ctx,el.dataset.ep); if(isM()&&/^faces\./.test(el.dataset.ep)) delete e.turns;
-    return full();
-  }
   if(!el.dataset.p) return;
   setPath(cur(),el.dataset.p,conv(el));
-  if(el.dataset.act==='effKind'){ const ep=el.dataset.p.replace(/\.k$/,''), e=getPath(cur(),ep); autoEff(e,el.dataset.ctx,ep);
-    if(isM()&&/^faces\./.test(el.dataset.p)) delete e.turns; // 補助の効果は既定でそのターンだけ（種類を変えたら1ターンに戻す）
-    return full(); }
   if(el.dataset.act==='cardUpColor'){ const e=getPath(cur(),el.dataset.p.replace(/\.color$/,'')); if(e&&CARD_DEFS[e.k]&&CARD_DEFS[e.k][e.color]) Object.assign(e,CARD_DEFS[e.k][e.color]); return full(); } // 色を変えたら、その色の既定値に
   if(el.dataset.act==='structural') return full();
+  // 効果の行の選択・チェック（対象・確率・最大HPなど）は、値の欄や「詳しく」の見出しが変わるので描き直す
+  if(el.closest('.erow')&&(el.tagName==='SELECT'||el.type==='checkbox')) return full();
   light();
 });
 // JSON読み込みの方法を選ぶ：IDで同じキャラかどうかを判断する
@@ -1050,8 +1047,8 @@ document.addEventListener('click',e=>{
   switch(a){
     case 'ack': acked.add(b.dataset.k); saveAck(); light(); break;
     case 'unack': acked.delete(b.dataset.k); saveAck(); light(); break;
-    case 'tab': if(b.dataset.tab!==tab){ tab=b.dataset.tab==='masters'?'masters':'units'; rollIdx=null; try{ localStorage.setItem('pencilduel.editorTab',tab); }catch(e){} renderAll(); window.scrollTo({top:0}); } break;
-    case 'sel': { // 一覧のスクロール位置は保つ（順番にキャラを見ていくときに先頭へ戻らないように）
+    case 'tab': if(b.dataset.tab!==tab){ effMoreOpen.clear(); tab=b.dataset.tab==='masters'?'masters':'units'; rollIdx=null; try{ localStorage.setItem('pencilduel.editorTab',tab); }catch(e){} renderAll(); window.scrollTo({top:0}); } break;
+    case 'sel': { effMoreOpen.clear(); // 一覧のスクロール位置は保つ（順番にキャラを見ていくときに先頭へ戻らないように）
       const ul=document.querySelector('.ulist'), lt=ul?ul.scrollTop:0;
       setSel(+b.dataset.i); rollIdx=null; renderAll(); window.scrollTo({top:0});
       const u2=document.querySelector('.ulist'); if(u2) u2.scrollTop=lt; break; }
@@ -1067,8 +1064,15 @@ document.addEventListener('click',e=>{
     case 'ctReplay': ctUpdate(true); break;
     case 'mctReplay': mctUpdate(true); break;
     case 'effAdd': { if(!getPath(u,b.dataset.path)) setPath(u,b.dataset.path,[]); getPath(u,b.dataset.path).push(newEff(b.dataset.ctx,b.dataset.path)); full(); break; }
-    case 'effDel': getPath(u,b.dataset.path).splice(+b.dataset.i,1); full(); break;
-    case 'effMove': { const l=getPath(u,b.dataset.path), i=+b.dataset.i, j=i+Number(b.dataset.d); [l[i],l[j]]=[l[j],l[i]]; full(); break; }
+    case 'effDel': getPath(u,b.dataset.path).splice(+b.dataset.i,1); effMoreOpen.clear(); full(); break;
+    case 'effMove': { const l=getPath(u,b.dataset.path), i=+b.dataset.i, j=i+Number(b.dataset.d); [l[i],l[j]]=[l[j],l[i]]; effMoreOpen.clear(); full(); break; }
+    case 'effMore': { const ep=`${b.dataset.path}.${b.dataset.i}`; if(effMoreOpen.has(ep)) effMoreOpen.delete(ep); else effMoreOpen.add(ep); full(); break; }
+    case 'effPick': { // 効果を選ぶ画面（eff-ui.js）を開き、選んだら種類を変えて、その種類らしい値・対象・ターンを入れる
+      const ep=`${b.dataset.path}.${b.dataset.i}`, ef=getPath(u,ep), ctx=b.dataset.ctx; if(!ef) break;
+      EffPick.open({ ctx, cur:ef.k, onPick:k=>{ if(k===ef.k) return; ef.k=k; autoEff(ef,ctx,ep);
+        if(isM()&&/^faces\./.test(ep)) delete ef.turns; // 補助の効果は既定でそのターンだけ（種類を変えたら1ターンに戻す）
+        full(); } });
+      break; }
     case 'applyTpl': {
       if(!confirm(`コスト${u.cost}・${tplKey} のテンプレで、HPと鉛筆の6面を置き換えますか？`)) break;
       const err=applyCardTpl(u); if(err){ toast(err,true); break; }

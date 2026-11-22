@@ -220,3 +220,12 @@ ruby rt{font-size:.5em;letter-spacing:.05em}
 .sklb.ult.R{border-left-color:var(--r)}.sklb.ult.B{border-left-color:var(--b)}.sklb.ult.G{border-left-color:var(--g)}
 .sklb.ult .skln{color:var(--gold-hi)}
 .sklb.ult .sklno{color:#1a1206;border-color:var(--gold-hi);background:linear-gradient(180deg,var(--gold-hi),var(--gold))}
+
+/* ---------- 編集画面のタブ（エディタ・申請ツール共通）。.ebadge＝エラー（赤）・注意（黄）の数 ---------- */
+.etabs{display:flex;flex-wrap:wrap;gap:2px;border-bottom:1px solid var(--gold-lo);margin-bottom:10px}
+.etab{position:relative;padding:7px 14px 6px;font-size:13.5px;color:var(--sub);cursor:pointer;user-select:none;border:1px solid transparent;border-bottom:0;border-radius:3px 3px 0 0;display:inline-flex;align-items:center;gap:6px}
+.etab:hover,.etab:focus-visible{color:var(--ink);outline:0;background:rgba(127,166,255,.06)}
+.etab.on{color:var(--gold-hi);border-color:var(--gold-lo);background:linear-gradient(180deg,rgba(214,178,94,.14),rgba(214,178,94,0));margin-bottom:-1px;border-bottom:1px solid var(--panel)}
+.ebadge{font-size:11px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;display:inline-flex;align-items:center;justify-content:center;font-weight:700}
+.ebadge.err{background:#c9372c;color:#fff}
+.ebadge.warn{background:rgba(240,181,74,.25);color:var(--warn)}

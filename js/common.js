@@ -259,6 +259,16 @@ function checkEffs(effs,ctx,where,add){
   });
 }
 const hasErrors = units=>validateUnits(units).some(x=>x.level==='error');
+// 検証の指摘（validateUnits の1件）が、編集画面のどのタブの入力か：basic 基本 / faces 鉛筆の面 / skills スキル・宝具 / lines セリフ
+// エディタ（editor.js）と申請ツール（submit-edit.js）のタブの印・指摘から飛ぶのに使う
+function issueArea(x){
+  const m=x.msg||'';
+  if(x.level==='line'||/セリフ/.test(m)) return 'lines';
+  if(/^出目/.test(m)) return 'faces';
+  if(/^スキル/.test(m)||m.startsWith(TERMS.ult)) return 'skills';
+  return 'basic';
+}
+const issueFaceNo=x=>{ const m=/^出目(\d)/.exec(x.msg||''); return m?+m[1]-1:null; }; // 鉛筆の面の指摘なら出目（0〜5）
 
 // ---------- マスター（泥ペンマス：マスタールール用） ----------
 // { id, name, cls:'マスター', cost, hp,
