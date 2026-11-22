@@ -289,7 +289,7 @@ function debuffRate(src,e){
   }
   return null;
 }
-// o.tmp：マスターの補助（このターンだけ）。付いた効果は終了フェイズで消える
+// o.tmp：マスターの補助（既定はこのターンだけ）。付いた効果は終了フェイズで消える。面の効果に turns≥2 があれば、自分の終了フェイズをその回数迎えるまで続く
 function applyEffects(src,effs,picked,o={}){
   for(const e of effs){
     if(FX[e.k]&&FX[e.k].noTgt) continue; // 連続攻撃・説明文は効果を持たない（連続攻撃は攻撃側で使う）
@@ -452,7 +452,7 @@ function applyOne0(src,t,e,o={}){
   if(e.sure) inst.sure=true; // 解除・無効の影響を受けない（ターン・回数では切れる）
   if(e.trait) inst.trait=e.trait;
   if(e.cond&&!e.cond.self) inst.cond=e.cond; // 条件つき（使う瞬間に見る効果はダメージ計算で判定）
-  if(o.tmp){ inst.tmp=true; inst.turns=null; } // 補助：このターンの終了フェイズまで
+  if(o.tmp){ inst.tmp=e.turns>1?e.turns:true; inst.turns=null; } // 補助：このターンの終了フェイズまで（turns≥2 なら残り回数。自分の終了フェイズごとに-1）
   t.fx.push(inst);
   if(e.k==='maxHp') t.hp+=e.v; // 最大HPが増えたぶん HP も増える
   log(`${nm(t)}に ${fxText(inst)}`, FX[e.k].buff?'good':'bad');
@@ -897,8 +897,10 @@ function endPhase(){
     dealDamage(u,d,false);
   }));
   hitEffects();
-  // マスターの補助（このターンだけ）の効果を消す
-  ALLM().forEach(u=>{ const t=u.fx.filter(e=>e.tmp); if(t.length){ u.fx=u.fx.filter(e=>!e.tmp); clampHp(u); syncU(u); } });
+  // マスターの補助の効果：このターンだけのものを消し、複数ターンのもの（tmp が数）は残りを-1
+  ALLM().forEach(u=>{ if(!u.fx.some(e=>e.tmp&&e.owner===G.cur)) return;
+    u.fx=u.fx.filter(e=>{ if(!e.tmp||e.owner!==G.cur) return true; if(e.tmp===true||e.tmp<=1) return false; e.tmp--; if(e.tmp<=1) e.tmp=true; return true; });
+    clampHp(u); syncU(u); });
   G.players[G.cur].stars=G.gen; (G.starsGen||(G.starsGen=[0,0]))[G.cur]+=G.gen;
   log(`${esc(G.players[G.cur].name)}：${TERMS.star}を${G.gen}個獲得（次のターンに使用）`);
   ALL().forEach(u=>u.face=null); // このターンの出目・コマンドの表示は次のターンに持ち越さない
@@ -1412,11 +1414,11 @@ const ACTIONS = {
     else toSkillPhase();
   },
   // ---------- マスターフェイズ（マスタールール） ----------
-  // 補助：マスターの鉛筆を振り、出た面の効果をこのターンだけ適用（無なら何も起きない）
+  // 補助：マスターの鉛筆を振り、出た面の効果を適用（既定はこのターンだけ。面の効果に turns があればそのターン数。無なら何も起きない）
   masterSupport(){
     const m=masterReady(); if(!m) return;
     const d=D(m.def), f=roll(), face=d.faces[f];
-    log(`${MASTER_ACTS.support}：${nm(m)} 出目${f+1} → ${face.eff.length?`${face.label?`「${esc(face.label)}」`:''}（このターンのみ）`:'何も起きない'}`, face.eff.length?'good':'sub');
+    log(`${MASTER_ACTS.support}：${nm(m)} 出目${f+1} → ${face.eff.length?`${face.label?`「${esc(face.label)}」`:''}${face.eff.some(e=>e.turns>1)?'':'（このターンのみ）'}`:'何も起きない'}`, face.eff.length?'good':'sub');
     fxEmit({t:'skill',uid:m.uid,head:`${MASTER_ACTS.support}・出目${f+1}`,name:face.eff.length?face.label:'',picked:allLabel(face.eff),
       lines:face.eff.length?effLines(face.eff,null,mTLabel):['何も起きない']});
     if(face.eff.length) say(m,'support',{own:face.line});

@@ -259,7 +259,7 @@ const hasErrors = units=>validateUnits(units).some(x=>x.level==='error');
 
 // ---------- マスター（泥ペンマス：マスタールール用） ----------
 // { id, name, cls:'マスター', cost, hp,
-//   faces:[ {label, eff:Eff[]} ×6 ]   補助：出た面の効果をこのターンだけ適用（eff が空なら「無」）
+//   faces:[ {label, eff:Eff[]} ×6 ]   補助：出た面の効果をこのターンだけ適用（eff が空なら「無」。効果に turns≥2 があればそのターン数＝自分の終了フェイズをその回数迎えるまで）
 //   spells:[ {name, eff:Eff[]} ×3 ] } 令呪：1試合1回、3つから1つ選ぶ
 // 効果の対象は TGT_BY_CTX.master（self＝マスター自身）
 function normalizeMaster(m){
@@ -404,7 +404,7 @@ function mastersToJS(ms){
     '  }'].join('\n')).join(',\n');
   return `'use strict';
 // ${TERMS.player}データ（ペンシルエディタで書き出し）。マスタールール・マスターチームで使う
-// faces : 補助で振る鉛筆の面1〜6。eff が空なら「無」（何も起きない）。効果はそのターンだけ
+// faces : 補助で振る鉛筆の面1〜6。eff が空なら「無」（何も起きない）。効果はそのターンだけ（turns≥2 を書いた効果はそのターン数）
 // spells: 令呪3種
 // lines : セリフ（support=補助 / attack=攻撃 / spell=令呪使用）。faces・spells の line は、その面・令呪だけの専用セリフ（任意）
 // 効果の対象（t）: svt=自軍${TERMS.unit} / self=${TERMS.player}自身 / ally_all=味方全体（${TERMS.player}含む）
@@ -646,7 +646,7 @@ function fxText(e){
     case 'copyRoll': s=FX.copyRoll.name+(e.noExtra?'（エクストラアタックなし）':''); break;
     default: s=FX[e.k]?FX[e.k].name:e.k;
   }
-  const dur=[e.times!=null?`${e.times}回`:'', e.turns!=null?`${e.turns}T`:''].filter(Boolean).join('・');
+  const dur=[e.times!=null?`${e.times}回`:'', e.turns!=null?`${e.turns}T`:typeof e.tmp==='number'?`${e.tmp}T`:''].filter(Boolean).join('・'); // tmp が数＝マスターの補助の複数ターン効果（残り）
   return s+(dur?`(${dur})`:'')+(e.cond?`［${condText(e.cond,FX[e.k]&&FX[e.k].condUse)}］`:'')+(e.chance?`［ロール${e.chance}以下］`:'')+(e.sure?'［解除・無効不可］':'')+(EFF_AT[e.at]&&e.k!=='dmg'?`［${EFF_AT[e.at]}］`:'');
 }
 function tLabel(t,pick){

@@ -429,7 +429,7 @@ function tutorialModalHTML(){
   return `<div class="modal navmodal"><div class="mback" data-ui="closeTutorial"></div><div class="mbody navpanel"><div class="navbar"><button class="back" data-ui="closeTutorial">閉じる</button></div><p class="navtitle">チュートリアル</p>${rulesGuideHTML(false)}${statusGuideHTML(false)}</div></div>`;
 }
 function masterDetailHTML(d,m){
-  const fx=m&&m.fx.length?`<h4>効果</h4><div class="fxs open">${m.fx.map(e=>`<span class="chip fx ${FX[e.k].buff?'buff':'debuff'}">${fxText(e)}${e.tmp?'（このターン）':''}</span>`).join('')}</div>`:'';
+  const fx=m&&m.fx.length?`<h4>効果</h4><div class="fxs open">${m.fx.map(e=>`<span class="chip fx ${FX[e.k].buff?'buff':'debuff'}">${fxText(e)}${e.tmp===true?'（このターン）':''}</span>`).join('')}</div>`:'';
   const P=m&&G.players[m.pid], rs=RULESETS.master;
   return `<div class="udetail">
     <div class="udtop">

@@ -93,7 +93,7 @@ function makeCmd0(t,old){
 }
 function newEff(ctx,path){
   if(ctx==='ult') return {k:'dmg',t:'target',v:80};
-  if(ctx==='master') return /^spells\./.test(path||'')?{k:'atk',t:'ally_svt',v:20,turns:1}:{k:'atk',t:'ally_svt',v:20}; // 令呪の継続効果は1ターン、補助の面はそのターンだけ（ターン数なし）
+  if(ctx==='master') return /^spells\./.test(path||'')?{k:'atk',t:'ally_svt',v:20,turns:1}:{k:'atk',t:'ally_svt',v:20}; // 令呪の継続効果は1ターン、補助の面は既定でそのターンだけ（ターン数なし＝1ターン）
   if(ctx==='special') return {k:'heal',t:'self',v:20};
   return {k:'atk',t:'self',v:10,turns:3};
 }
@@ -455,7 +455,7 @@ function renderMasterForm(el){
       <button class="small" data-act="fitReset" data-k="face">リセット</button></div></div>
   </section>
   <section class="sec"><h2>補助（${TERMS.player}の鉛筆の6面）</h2>
-    <p class="sub small nm">${TERMS.player}フェイズの「補助」で振り、出た面の効果を<b>そのターンだけ</b>適用します。効果のない面は「無」（何も起きない）。「敵${TERMS.player}」へのダメージは、相手が令呪1画で防げます。</p>
+    <p class="sub small nm">${TERMS.player}フェイズの「補助」で振り、出た面の効果を<b>そのターンだけ</b>適用します（効果ごとの「ターン」で2ターン以上にもできます）。効果のない面は「無」（何も起きない）。「敵${TERMS.player}」へのダメージは、相手が令呪1画で防げます。</p>
     <div class="mfaceed">${m.faces.map((f,i)=>`<div class="mfacerow">
       <span class="die">${i+1}</span>
       <div class="mfbody"><input data-p="faces.${i}.label" value="${esc(f.label)}" placeholder="面の名前（効果がなければ「無」）">
@@ -520,6 +520,8 @@ const opt=(v,label,c)=>`<option value="${esc(v)}" ${String(v)===String(c??'')?'s
 const numIn=(p,v,label,ref)=>`<label class="mini${ref?' hasref':''}"><span>${label}</span><input type="number" data-p="${p}" data-t="num" value="${v}">${ref?`<small class="uref" data-uref="${ref}" data-rp="${p}"></small>`:''}</label>`;
 const memoIn=d=>`<label class="wide">メモ（ゲーム中では使いません）<textarea data-p="memo" data-t="optstr" rows="${Math.max(2,String(d.memo||'').split(String.fromCharCode(10)).length)}" placeholder="調整の意図や、あとで直したいところなど">${esc(d.memo||'')}</textarea></label>`;
 const optNum=(p,v,label)=>`<label class="mini"><span>${label}</span><input type="number" min="0" data-p="${p}" data-t="optnum" value="${v??''}" placeholder="-"></label>`;
+// マスターの補助の面のターン数：空＝1ターン（このターンだけ・既定）。2以上は自分の終了フェイズをその回数迎えるまで
+const faceTurns=(p,v)=>`<label class="mini" title="既定はこのターンだけ。2ターン以上なら、自分の終了フェイズをその回数迎えるまで続きます"><span>ターン</span><select data-p="${p}" data-t="optnum">${opt('','1（このターン）',v>1?v:'')}${[2,3,4,5].map(n=>opt(n,`${n}`,v)).join('')}${v>5?opt(v,`${v}`,v):''}</select></label>`;
 
 function renderForm(){
   const u=cur(), el=document.querySelector('#form');
@@ -804,7 +806,7 @@ function effRow(path,j,e,ctx,n,atKind){
     ${e.k==='copyRoll'&&ctx==='ult'?`<label class="mini chk" title="ちょうど3回ロールしたあとに行う、宝具の持ち主のエクストラアタック（ブレイブチェイン）をしません"><input type="checkbox" data-p="${p}.noExtra" data-t="bool" ${e.noExtra?'checked':''}><span>エクストラなし</span></label>`:''}
     ${f.noTgt?'':`<select data-p="${p}.t" aria-label="対象">${tg.map(t=>opt(t,(ctx==='master'?mTLabel(t):TARGETS[t])||t,e.t)).join('')}</select>`}
     ${val}
-    ${f.inst?'':(f.timesOnly||(ctx==='master'&&/^faces./.test(path))?'':optNum(p+'.turns',e.turns,'ターン'))+optNum(p+'.times',e.times,'回数')}
+    ${f.inst?'':(f.timesOnly?'':ctx==='master'&&/^faces./.test(path)?faceTurns(p+'.turns',e.turns):optNum(p+'.turns',e.turns,'ターン'))+optNum(p+'.times',e.times,'回数')}
     ${FX[e.k]&&FX[e.k].color?`<label class="mini"><span>色</span><select data-p="${p}.color" data-t="optstr">${opt('','すべて',e.color||'')}${['R','B','G'].map(c=>opt(c,TERMS[c],e.color)).join('')}</select></label>`:''}
     ${f.trait?`<label class="mini"><span>対象</span><input class="traitin" list="traitlist" data-p="${p}.trait" data-t="optstr" value="${esc(e.trait||'')}" placeholder="属性・クラス・ID"></label>`:''}
     ${e.k in VS_KINDS?(()=>{ const bf=VS_KINDS[e.k]; return `<label class="mini"><span>${bf?'強化':'弱体'}</span><select data-p="${p}.vs" data-t="optstr">${opt('',e.k==='atkVs'?'どれでも':'すべて',e.vs||'')}${Object.keys(FX).filter(k=>FX[k].buff===bf).map(k=>opt(k,FX[k].name,e.vs)).join('')}</select></label>`; })():''}
@@ -831,7 +833,7 @@ const cardPreviewHTML=u=>`<span class="ccrow">${['R','B','G'].map(k=>cmdCardHTML
 // 入力中は再描画せず、説明文だけ更新する（入力欄のフォーカスを保つため）
 function updatePreviews(){
   const u=cur(); if(!u) return;
-  document.querySelectorAll('.eff[data-ep]').forEach(el=>{ const e=getPath(u,el.dataset.ep); if(e) el.querySelector('.effprev').textContent=fxText(e); });
+  document.querySelectorAll('.eff[data-ep]').forEach(el=>{ const e=getPath(u,el.dataset.ep); const pv=el.querySelector('.effprev'); if(e&&pv) pv.textContent=fxText(e); }); // 説明文の行には説明欄（.effprev）がない
   if(isM()){
     document.querySelectorAll('.eff[data-ep^="faces."]').forEach(el=>{ const e=getPath(u,el.dataset.ep), r=el.querySelector('.effref'); if(e&&r){ r.textContent=refText(e,el.dataset.ep); r.classList.toggle('over',refOver(e,el.dataset.ep)); } });
     document.querySelectorAll('[data-prev="mface"]').forEach(el=>el.textContent=mFaceText(u.faces[+el.dataset.i]));
@@ -962,7 +964,7 @@ document.addEventListener('input',e=>{
   if(!el.dataset.p) return;
   setPath(cur(),el.dataset.p,conv(el));
   if(el.dataset.act==='effKind'){ const ep=el.dataset.p.replace(/\.k$/,''), e=getPath(cur(),ep); autoEff(e,el.dataset.ctx,ep);
-    if(isM()&&/^faces\./.test(el.dataset.p)) delete e.turns; // 補助の効果はそのターンだけ（ターン数は使わない）
+    if(isM()&&/^faces\./.test(el.dataset.p)) delete e.turns; // 補助の効果は既定でそのターンだけ（種類を変えたら1ターンに戻す）
     return full(); }
   if(el.dataset.act==='structural') return full();
   light();

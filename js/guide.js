@@ -108,7 +108,7 @@ function rulesGuideBody(){
       ${(RULESETS.simple.hcapBonus||[]).map((b,i,a)=>`<dt>コスト差${b.gap}${i===a.length-1?'以上':''}</dt><dd>${TERMS.ascFull}済みに加えて、攻撃ダメージ+${b.atk}・獲得${TERMS.gauge}+${b.np}%${b.hp?`・最大HP+${b.hp}`:''}。</dd>`).join('')}</dl>
       <p>ハンデはいつでも解除できない固定ボーナスです。画面の「ハンデ戦」ボタンでオン・オフを切り替えられます。</p>`),
     gSub(`${TERMS.player}ルール`,`<p>${TERMS.player}ルールでは、行動回数のあとに${TERMS.player}フェイズがあり、次から1つ選べます。</p>
-      <dl><dt>${MASTER_ACTS.support}</dt><dd>鉛筆を振り、出た面の効果をそのターンだけ受ける。</dd>
+      <dl><dt>${MASTER_ACTS.support}</dt><dd>鉛筆を振り、出た面の効果をそのターンだけ受ける（面によっては数ターン続く）。</dd>
       <dt>${MASTER_ACTS.attack}</dt><dd>相手の${TERMS.player}か${TERMS.unit}を攻撃（コスト×倍率のダメージ）。</dd>
       <dt>${MASTER_ACTS.spell}</dt><dd>1試合1回、3つの効果から1つ。宣言して次のフェイズに使うか、スターを払ってすぐ使う。</dd>
       <dt>${MASTER_ACTS.evac}</dt><dd>次の相手ターン、相手の${TERMS.player}攻撃と全体攻撃を受けない。</dd></dl>
