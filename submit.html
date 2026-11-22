@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>サーヴァント申請ツール</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Noto+Serif+JP:wght@600;700;900&display=swap">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/submit.css">
+<link rel="stylesheet" href="css/buttons.css">
+</head>
+<body>
+<header>
+  <h1>SERVANT SUBMIT</h1><span class="sub">サーヴァント申請ツール</span>
+  <span class="grow"></span>
+  <a class="btn" href="index.html">ゲームへ</a>
+  <a class="btn" href="editor.html">エディタへ</a>
+</header>
+<main class="sbm">
+  <section class="sbox">
+    <h2>1. AI にデータを作ってもらう</h2>
+    <ol class="steps">
+      <li><a href="docs/llm/kit.md" download="pensaba-kit.md">申請キット（kit.md）</a>をダウンロードして、ChatGPT・Claude・Gemini などの AI に渡します（プロジェクトの資料に入れるか、チャットに添付）。</li>
+      <li>作ってほしいキャラクターの設定を AI に送ります。キャラシートの貼り付けで大丈夫です。書く項目に迷ったら<a href="docs/llm/sheet.md" download="pensaba-sheet.md">設定シート</a>を使ってください。</li>
+      <li>AI が返した JSON（<code>{</code> で始まる文字の固まり）を、下の欄にそのまま貼り付けます。前後の文章が混ざっていてもかまいません。</li>
+    </ol>
+  </section>
+
+  <section class="sbox">
+    <h2>2. 貼り付けて検査</h2>
+    <textarea id="src" spellcheck="false" placeholder="ここに AI の出力を貼り付け"></textarea>
+    <div class="row">
+      <button class="primary" data-act="check">検査する</button>
+      <button data-act="file">ファイルから読み込む</button>
+      <input type="file" id="file" accept=".json,.txt,.md,application/json,text/plain" hidden>
+      <span id="msg" class="msg"></span>
+    </div>
+  </section>
+
+  <div id="out"></div>
+</main>
+<script src="js/rules.js"></script>
+<script src="js/units.js"></script>
+<script src="js/masters.js"></script>
+<script src="js/common.js"></script>
+<script src="js/unit-ref.js"></script>
+<script src="js/ref-units.js"></script>
+<script src="js/submit.js"></script>
+</body>
+</html>

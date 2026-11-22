@@ -16,8 +16,8 @@ const store=()=>({getItem(){return null},setItem(){},removeItem(){}});
 const ctx={console,Math,Date,JSON,localStorage:store(),sessionStorage:store(),document:{addEventListener(){}},setTimeout(){return 0},clearTimeout(){}};
 ctx.window=ctx; vm.createContext(ctx);
 let src='';
-for(const f of ['rules','units','masters','common','unit-ref','engine','guide']) src+=fs.readFileSync(path.join(ROOT,'js',f+'.js'),'utf8')+'\n;\n';
-vm.runInContext(src+'function render(){}\nthis.__G={FX,FX_GROUPS,FX_HELP,TARGETS,TGT_BY_CTX,PICKS,COND_KINDS,EFF_AT,LINE_KEYS,LINE_MIN,CLASSES,UNIT_REF,TERMS,RULES,VS_KINDS,FROM_BY_CTX,CARD_UP_DEF,CANON_UNIT_IDS,ALL_UNITS,normalizeUnit,validateUnits};',ctx,{filename:'game.js'});
+for(const f of ['rules','units','masters','common','unit-ref','ref-units','engine','guide']) src+=fs.readFileSync(path.join(ROOT,'js',f+'.js'),'utf8')+'\n;\n';
+vm.runInContext(src+'function render(){}\nthis.__G={FX,FX_GROUPS,FX_HELP,TARGETS,TGT_BY_CTX,PICKS,COND_KINDS,EFF_AT,LINE_KEYS,LINE_MIN,CLASSES,UNIT_REF,TERMS,RULES,VS_KINDS,FROM_BY_CTX,CARD_UP_DEF,CANON_UNIT_IDS,ALL_UNITS,normalizeUnit,validateUnits,refCompare};',ctx,{filename:'game.js'});
 const G=ctx.__G, R=G.UNIT_REF;
 const COL={R:'Buster',B:'Arts',G:'Quick'};
 
@@ -197,15 +197,8 @@ function check(file){
     const i=G.ALL_UNITS.length+ui, its=issues.filter(x=>x.i===i);
     console.log(`\n■ ${u.name}（${u.id}）コスト${u.cost} ${u.cls}`);
     for(const x of its){ console.log(`  ${x.level==='error'?'✖':x.level==='warn'?'⚠':'・'} ${x.msg}`); if(x.level==='error') bad++; }
-    const c=u.cost; if(!R.hp[c]){ console.log('  （このコストの基準値はありません）'); return; }
-    const pre=u.faces.filter(f=>f.pre.c!=='ASC'), sum=k=>pre.reduce((a,f)=>a+(f[k].dmg||0),0), cmp=(v,[lo,hi])=>lo!=null&&v<lo?`↓下限${lo}より低い`:hi!=null&&v>hi?`↑上限${hi}より高い`:'○';
-    console.log(`  HP ${u.hp}：${cmp(u.hp,R.hp[c])}`);
-    console.log(`  通常合計攻撃力 ${sum('pre')}：${cmp(sum('pre'),R.total[c])}　／　再臨後 ${sum('post')}（基準 +${R.postAdd[c]} なら ${sum('pre')+R.postAdd[c]}）`);
-    pre.forEach((f,fi)=>{ const x=f.pre; if(R.dmg[x.c]&&R.dmg[x.c][c]){ const r=cmp(x.dmg,R.dmg[x.c][c]); if(r!=='○') console.log(`  ${COL[x.c]} ${x.dmg}：${r}`); } });
-    const arts=pre.filter(f=>f.pre.c==='B'), nr=R.np[Math.min(3,arts.length)];
-    if(nr){ const np=arts.reduce((a,f)=>a+f.pre.np,0), npp=arts.reduce((a,f)=>a+f.post.np,0); console.log(`  NP合計 ${np}% → ${npp}%：再臨前 ${np>nr.preMax?`↑上限${nr.preMax}より高い`:'○'}／再臨後 ${npp>nr.postMax?`↑上限${nr.postMax}より高い`:'○'}`); }
-    const asc=u.faces.find(f=>f.pre.c==='ASC'); if(asc) console.log(`  4番の面（再臨後）：${asc.post.c==='W'?`特殊行動「${asc.post.label}」`:COL[asc.post.c]||asc.post.c} ダメージ${asc.post.dmg||0}（基準 弱${R.ascFace.dmg[c].weak}／中${R.ascFace.dmg[c].mid}／強${R.ascFace.dmg[c].strong}）`);
-    const dm=u.ult.eff.filter(e=>e.k==='dmg'); if(dm.length) console.log(`  宝具 ${dm.map(e=>`${e.t==='enemy_all'?'全体':'単体'}${e.max?'最大HP':e.v}`).join('＋')}（基準 全体${R.ult.all[c]}／単体${R.ult.one[c]}。追加効果があるなら低め）`);
+    const cmp=G.refCompare(u); if(!cmp.length){ console.log('  （このコストの基準値はありません）'); return; }
+    for(const x of cmp) console.log(`  ${x.ok===false?'↕':x.ok?'○':'・'} ${x.label} ${x.val}${x.note?'：'+x.note:''}`);
   });
   console.log(bad?`\nエラー ${bad}件。エディタでは読み込めますが、直さないとゲームに反映できません。`:'\nエラーなし。エディタの「1体を読み込み」で取り込めます。バランスは node tools/ref-check.js --add '+file+' で確かめられます。');
   process.exit(bad?1:0);
@@ -213,8 +206,20 @@ function check(file){
 
 if(opt('--check')) check(opt('--check'));
 else {
-  const out=path.join(ROOT,'docs','llm','reference.md');
-  fs.mkdirSync(path.dirname(out),{recursive:true});
-  fs.writeFileSync(out,md()+'\n');
-  console.log('書き出しました：'+path.relative(ROOT,out));
+  const dir=path.join(ROOT,'docs','llm'), rd=f=>fs.readFileSync(path.join(dir,f),'utf8').replace(/\r\n/g,'\n').trim();
+  fs.mkdirSync(dir,{recursive:true});
+  const ref=md();
+  fs.writeFileSync(path.join(dir,'reference.md'),ref+'\n');
+  // kit.md：AI に1つで渡せるように、プロンプト本文・資料・見本・設定シートをつなげたもの（申請ツールからダウンロードする）
+  const prompt=rd('prompt.md'), body=prompt.slice(prompt.search(/^## ここからプロンプト$/m)).replace(/^.*\n/,'').trim(); // 「## ここからプロンプト」の行より下
+  const down=s=>s.replace(/^(#{1,5}) /gm,'#$1 '); // 見出しを1段下げて、kit の中の章に収める
+  const kit=['# PENSABA DUEL サーヴァント作成キット','',
+    '> このファイル1つを AI（ChatGPT・Claude・Gemini など）に渡してから、作ってほしいキャラクターの設定を送ってください。',
+    '> AI が返した JSON は、申請ツール（submit.html）に貼り付けて検査してから Discord で申請します。','',
+    '## 指示（AI はこの章に従うこと）','',body.replace(/`reference\.md`/g,'「資料」の章').replace(/`template\.json`/g,'「見本」の章'),'',
+    '## 資料','',down(ref.replace(/^# .*\n+(> .*\n)*/,'')).replace(/`node tools\/llm-pack\.js`/g,'').trim(),'',
+    '## 見本（template.json）','','```json',rd('template.json'),'```','',
+    '## 設定シートの書き方（キャラクターの設定はこの形で送ると伝わりやすい）','',down(rd('sheet.md').replace(/^# .*\n+(> .*\n)*/,'')).trim(),''].join('\n');
+  fs.writeFileSync(path.join(dir,'kit.md'),kit);
+  console.log('書き出しました：docs/llm/reference.md, docs/llm/kit.md');
 }

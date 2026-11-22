@@ -1,6 +1,7 @@
 # サーヴァント作成プロンプト
 
-> AI（LLM）に、このファイル全文と `reference.md`・`template.json`・記入した設定シート（`sheet.md`）を渡してください。
+> ふつうは、これと資料・見本・設定シートをまとめた `kit.md`（`node tools/llm-pack.js` が作る）を AI に渡します。
+> 個別に渡すなら、このファイル全文と `reference.md`・`template.json`・設定（`sheet.md` の形）を渡してください。
 > 「## ここからプロンプト」より下が、AI に読ませる本文です。
 
 ## ここからプロンプト
