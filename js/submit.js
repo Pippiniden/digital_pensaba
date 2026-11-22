@@ -94,11 +94,19 @@ function checkHTML(i){
       <tr class="${rr.verdict==='目安どおり'?'ok':'ng'}"><th>平均</th><td><b>${rr.all.toFixed(1)}%</b> … ${rr.verdict}<small>目安 50%±3%。各${rr.n}試合</small></td></tr></table>`
     : r&&!r.complete?`<p class="sub">測定中… ${r.done}/${r.total}</p><div class="bar"><i style="width:${Math.round(100*r.done/r.total)}%"></i></div>`
     : S.stale&&S.stale[i]?'<p class="warn">内容を変えたので、勝率を測り直してください。</p>'
-    : `<p class="sub">基準どおりのテスト用${TERMS.unit}だけの環境（今のキャラは入れない）に1体入れて、CPU同士で戦わせた勝率を出します。</p>`;
+    : '';
+  // 測っているルール（ref-units.js の refMeasure と sim.js の simGame / SIM_LEVEL に合わせる）
+  const rule=`<details class="rulenote"><summary>どんなルールで測っているか</summary><ul>
+      <li><b>${RULESETS.team.name}</b>（3対3・合計コスト${RULES.costCap}・${TERMS.player}なし）</li>
+      <li>このキャラ＋ランダムな味方2騎 vs 合計コストが同じ3騎</li>
+      <li>味方・相手は、基準値どおりに作ったテスト用${TERMS.unit}30体（コスト1〜5 × カード構成6種）だけ。今のキャラは入れない</li>
+      <li>両方とも CPU「つよい（先読みなし）」</li>
+      <li>テスト用${TERMS.unit}の${TERMS.ult}が全員「全体」の場合と、全員「単体」の場合で${SUB_N}試合ずつ測り、平均を出す</li>
+      <li>目安は 50%±3%。1対1（シンプル）や${TERMS.player}ありのルールでは測っていない</li></ul></details>`;
   return `<h3>検査 ${cnt(its,'error')?`<span class="tag bad">エラー${cnt(its,'error')}</span>`:'<span class="tag good">エラーなし</span>'}</h3>
     ${ex}${list}
     <h3>基準値との比較</h3>${cmpT}
-    <h3>勝率</h3>${rateT}
+    <h3>勝率 <span class="sub">${RULESETS.team.name}（3対3）・CPU同士</span></h3>${rateT}${rule}
     <div class="row"><button data-act="measure" data-i="${i}" ${S.busy||cnt(its,'error')?'disabled':''}>${rr?'もう一度測る':'勝率を測る'}</button>
       ${cnt(its,'error')?'<span class="sub">エラーを直すと測れます</span>':''}</div>
     <details class="prev"><summary>スキル・${TERMS.ult}の説明文（ゲームでの表示）</summary>${skillListHTML(u,true)}</details>`;
@@ -151,7 +159,7 @@ function discordText(){
     L.push(`・出典：${u.link||'未記入'}`);
     L.push(`・検査：${cnt(its,'error')?`エラー${cnt(its,'error')}件`:'エラーなし'}${cnt(its,'warn')?`（注意${cnt(its,'warn')}件）`:''}`);
     L.push(`・基準値から外れた項目：${ng.length?ng.map(x=>`${x.label} ${x.val}`).join('、'):'なし'}`);
-    L.push(`・勝率：${rr?`${rr.all.toFixed(1)}%（${REF_KITS.A} ${rr.A.toFixed(1)}%／${REF_KITS.S} ${rr.S.toFixed(1)}%、各${rr.n}試合）… ${rr.verdict}`:'未測定'}`);
+    L.push(`・勝率（${RULESETS.team.name}3対3・CPU同士）：${rr?`${rr.all.toFixed(1)}%（${REF_KITS.A} ${rr.A.toFixed(1)}%／${REF_KITS.S} ${rr.S.toFixed(1)}%、各${rr.n}試合）… ${rr.verdict}`:'未測定'}`);
   });
   L.push('',`（${fileName()} を添付します）`);
   return L.join('\n');
