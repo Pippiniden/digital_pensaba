@@ -1268,7 +1268,7 @@ const DEFAULT_UNITS = [
     "ult":{"name":"八咫鏡","c":"G","eff":[{"k":"star","t":"master","v":15},{"k":"defDown","t":"enemy_all","v":50,"turns":2,"color":"G"},{"k":"dmg","t":"enemy_all","v":230}],"ruby":"やたのかがみ"}
   },
   {
-    "id":"brunhild", "name":"ブリュンヒルト", "cls":"ランサー", "cost":4, "hp":760,
+    "id":"brunhild", "name":"ブリュンヒルト", "cls":"ランサー", "cost":4, "hp":790,
     "traits":["女性","中立","中庸","地","人型","ドイツ"],
     "fit":{"face":{"x":50,"y":17,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":16,"z":105},"cut":{"x":0,"y":-3,"z":89}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%d6%a5%ea%a5%e5%a5%f3%a5%d2%a5%eb%a5%c8%28%c1%e4%29",
@@ -1292,11 +1292,11 @@ const DEFAULT_UNITS = [
       {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":2},"post":{"c":"G","dmg":50,"np":0,"star":4}}
     ],
     "skills":[
-      {"name":"女傑の覇力","eff":[{"k":"atk","t":"self","v":20,"turns":3},{"k":"debuffImmune","t":"self","v":0,"turns":3},{"k":"maxHp","t":"self","v":150,"turns":5}],"rank":"EX"},
+      {"name":"女傑の覇力","eff":[{"k":"ignoreDef","t":"self","v":0,"turns":3},{"k":"atk","t":"self","v":20,"turns":3},{"k":"debuffImmune","t":"self","v":0,"turns":3},{"k":"heal","t":"self","v":100}],"rank":"EX"},
       {"name":"破瓜なき操","eff":[{"k":"atk","t":"self","v":20,"turns":3,"color":"R"},{"k":"atkTrait","t":"self","v":30,"turns":3,"trait":"男性","cond":{"k":"trait","v":"男性"}},{"k":"defTrait","t":"self","v":30,"turns":3,"trait":"男性"}],"rank":"A","line":["女に負ける訳がない……などと考えてはいないだろうな？"]},
       {"name":"威猛き女王の恋","eff":[{"k":"taunt","t":"picked","v":0,"turns":1},{"k":"np","t":"self","v":40},{"k":"heal","t":"self","v":120}],"rank":"E","pick":"enemy"}
     ],
-    "ult":{"name":"死かふたりが婚姻わるか","c":"R","eff":[{"k":"ignoreDef","t":"self","v":0,"turns":1},{"k":"npPow","t":"self","v":30,"turns":1},{"k":"dmg","t":"target","v":70},{"k":"npPow","t":"self","v":30,"turns":1},{"k":"dmg","t":"target","v":70},{"k":"npPow","t":"self","v":30,"turns":3},{"k":"dmg","t":"target","v":70}],"ruby":"ブリュンヒルト・フェアローブング"}
+    "ult":{"name":"死かふたりが婚姻わるか","c":"R","eff":[{"k":"pierce","t":"self","v":0,"turns":1},{"k":"npPow","t":"self","v":30,"turns":1},{"k":"dmg","t":"target","v":100},{"k":"multiHit","t":"self","v":3}],"ruby":"ブリュンヒルト・フェアローブング"}
   },
   {
     "id":"nileus", "name":"ニレウス", "cls":"シャインチェイサー", "cost":1, "hp":500,
@@ -1840,9 +1840,8 @@ const DEFAULT_UNITS = [
     "ult":{"name":"隠されしは神秘の砦","c":"B","eff":[{"k":"stun","t":"target","v":0,"turns":1},{"k":"dmg","t":"target","v":450}],"ruby":"ザ・シークレット・カストディアン"}
   },
   {
-    "id":"brunhild2", "name":"ブリュンヒルト", "cls":"アサシン", "cost":4, "hp":750,
+    "id":"brunhild2", "name":"ブリュンヒルト", "cls":"アサシン", "cost":4, "hp":800,
     "traits":["女性","混沌","中庸","地","ドイツ","アイスランド","人型","竜"],
-    "fit":{"face":{"x":50,"y":25,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":29,"z":86},"cut":{"x":0,"y":2,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%d6%a5%ea%a5%e5%a5%f3%a5%d2%a5%eb%a5%c8",
     "lines":{
       "start":[],
@@ -1866,8 +1865,40 @@ const DEFAULT_UNITS = [
     "skills":[
       {"name":"凶行の魔手","eff":[{"k":"regenStar","t":"self","v":6,"turns":3},{"k":"atk","t":"self","v":40,"turns":3,"color":"G"},{"k":"critPow","t":"self","v":50,"turns":3,"color":"G"}],"rank":"A"},
       {"name":"破瓜なき操","eff":[{"k":"np","t":"ally_all","v":10},{"k":"atk","t":"ally_other","v":20,"turns":3},{"k":"onAtkStar","t":"ally_other","v":3,"turns":3},{"k":"atkDown","t":"self","v":20,"turns":3}],"rank":"B"},
-      {"name":"盲目なる王妃の恋","eff":[{"k":"strip","t":"enemy_all","v":0,"vs":"taunt"},{"k":"np","t":"picked","v":-10},{"k":"np","t":"self","v":10},{"k":"defDown","t":"picked","v":10,"turns":3},{"k":"heal","t":"self","v":100}],"rank":"EX","pick":"enemy"}
+      {"name":"盲目なる王妃の恋","eff":[{"k":"strip","t":"enemy_all","v":0,"vs":"taunt"},{"k":"np","t":"picked","v":10},{"k":"np","t":"self","v":10},{"k":"defDown","t":"picked","v":10,"turns":3},{"k":"heal","t":"self","v":100}],"rank":"EX","pick":"enemy"}
     ],
-    "ult":{"name":"嘆き廻れ、愛憎の連鎖","c":"G","eff":[{"k":"stun","t":"target","v":0,"turns":1},{"k":"atkTrait","t":"self","v":50,"turns":1,"trait":"善"},{"k":"dmg","t":"target","v":400},{"k":"defDown","t":"target","v":30,"turns":3,"color":"G"}],"ruby":"カッツェン・ディ・トーリヒカイト"}
+    "ult":{"name":"嘆き廻れ、愛憎の連鎖","c":"G","eff":[{"k":"stun","t":"target","v":0,"turns":1},{"k":"atkTrait","t":"self","v":50,"turns":1,"trait":"アーサー","cond":{"k":"trait","v":"悪","not":true}},{"k":"dmg","t":"target","v":400},{"k":"defDown","t":"target","v":30,"turns":3,"color":"G"}],"ruby":"カッツェン・ディ・トーリヒカイト","pick":"enemy"}
+  },
+  {
+    "id":"fredegund", "name":"フレデグンド", "cls":"アサシン", "cost":2, "hp":410,
+    "traits":["人型","女性","混沌","悪","人","フランス"],
+    "fit":{"face":{"x":50,"y":17,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":11,"z":91},"cut":{"x":0,"y":0,"z":92}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%a5%d5%a5%ec%a5%c7%a5%b0%a5%f3%a5%c9",
+    "memo":"低火力のバステバラ撒き\n全体即死出すクソキャラのため全体勝率は控えめに\n毒は被弾NP上昇が無いので使い方によっては有用",
+    "lines":{
+      "start":["ちょっと！　こんなことはわたくしの仕事ではなくってよ！？","アサシン、フレデグンド。参上いたしましたわ。"],
+      "attack":["近寄らないで！","お行きなさい。","隙だらけでしてよ！"],
+      "extra":["さぁ、頽れなさい！　許しを乞うのです！"],
+      "damage":["きゃあああっ！？","お、お助けなさいな～～～！！！"],
+      "skill":["おーっほっほっほ！","まったく、手がかかりますわね。"],
+      "np":["姿無き刃、我が忠実なる影の下僕たちよ！　標的はあれですわ、切り刻んで差し上げなさい！　『私の忠実な毒刃よ』！"],
+      "npDamage":["きゃあああっ！？"],
+      "defeat":["もう……惨めな泥の中は嫌……","嘘よ……わたくしが戦場で死ぬなんて……"],
+      "win":["おーほほほほ、いい気味ですわ～"]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":50,"np":0,"star":0},"post":{"c":"R","dmg":70,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":40,"np":15,"star":0},"post":{"c":"B","dmg":50,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":40,"np":15,"star":0},"post":{"c":"B","dmg":50,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"ASC"},"post":{"c":"W","label":"暗殺プラン","eff":[{"k":"poison","t":"enemy_all","v":20,"turns":3,"chance":4}],"dmg":10,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":4},"post":{"c":"G","dmg":50,"np":0,"star":6}},
+      {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":4},"post":{"c":"G","dmg":40,"np":0,"star":6}}
+    ],
+    "skills":[
+      {"name":"戦闘続行","eff":[{"k":"guts","t":"self","v":100,"turns":5}],"rank":"A"},
+      {"name":"毒の刃","eff":[{"k":"poison","t":"picked","v":25,"turns":3}],"rank":"D","pick":"enemy"},
+      {"name":"仕切り直し","eff":[{"k":"cleanse","t":"self","v":0},{"k":"evade","t":"self","v":0,"turns":1}],"rank":"A"}
+    ],
+    "ult":{"name":"私の忠実な毒刃よ","c":"G","eff":[{"k":"dmg","t":"enemy_all","v":30},{"k":"poison","t":"enemy_all","v":40,"turns":3,"chance":4},{"k":"instantDeath","t":"enemy_all","v":0,"chance":1}],"ruby":"オンブル・ヴニムーズ・エ・フィデル"}
   }
 ];
