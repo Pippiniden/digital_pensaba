@@ -20,6 +20,7 @@ for(const f of ['rules','units','masters','common','unit-ref','ref-units','engin
 vm.runInContext(src+'function render(){}\nthis.__G={FX,FX_GROUPS,FX_HELP,TARGETS,TGT_BY_CTX,PICKS,COND_KINDS,EFF_AT,LINE_KEYS,LINE_MIN,CLASSES,UNIT_REF,TERMS,RULES,VS_KINDS,FROM_BY_CTX,CARD_UP_DEF,CARD_DOWN_DEF,CANON_UNIT_IDS,ALL_UNITS,normalizeUnit,validateUnits,refCompare,refLimits,MSHEET,SPELL_TPL,MASTER_LINE_KEYS,DEFAULT_MASTERS,CANON_MASTER_IDS,normalizeMaster,validateMasters,spellLimits,normEff,effsText,mTLabel,fxOnlyIn};',ctx,{filename:'game.js'});
 const G=ctx.__G, R=G.UNIT_REF;
 const COL={R:'Buster',B:'Arts',G:'Quick'};
+const SITE='https://pippiniden.github.io/digital_pensaba/'; // 公開版（キットの頭に、もう片方のキットと申請ツールへのリンクを書く）
 
 // 値（v）の意味。ここにない効果は「値」とだけ書く
 const VAL={
@@ -361,7 +362,8 @@ else {
   const down=s=>s.replace(/^(#{1,5}) /gm,'#$1 '); // 見出しを1段下げて、kit の中の章に収める
   const kit=['# PENSABA DUEL サーヴァント作成キット','',
     '> このファイル1つを AI（ChatGPT・Claude・Gemini など）に渡してから、作ってほしいキャラクターの設定を送ってください。',
-    '> AI が返した JSON は、申請ツール（submit.html）に貼り付けて検査してから Discord で申請します。','',
+    `> AI が返した JSON は、申請ツール（${SITE}submit.html ）に貼り付けて検査してから Discord で申請します。`,
+    `> マスター（泥ペンマス）を作るときは、こちらではなくマスター作成キット（${SITE}docs/llm/master-kit.md ）を使ってください。`,'',
     '## 指示（AI はこの章に従うこと）','',body.replace(/`reference\.md`/g,'「資料」の章').replace(/`template\.json`/g,'「見本」の章'),'',
     '## 資料','',down(ref.replace(/^# .*\n+(> .*\n)*/,'')).replace(/`node tools\/llm-pack\.js`/g,'').trim(),'',
     '## 見本（template.json）','','```json',rd('template.json'),'```','',
@@ -373,7 +375,8 @@ else {
   const mp=rd('master-prompt.md'), mbody=mp.slice(mp.search(/^## ここからプロンプト$/m)).replace(/^.*\n/,'').trim();
   const mkit=['# PENSABA DUEL マスター作成キット','',
     '> このファイル1つを AI（ChatGPT・Claude・Gemini など）に渡してから、作ってほしいマスター（泥ペンマス）の設定を送ってください。',
-    '> AI が返した JSON は、申請ツール（submit.html）に貼り付けて検査してから Discord で申請します。','',
+    `> AI が返した JSON は、申請ツール（${SITE}submit.html ）に貼り付けて検査してから Discord で申請します。`,
+    `> サーヴァントを作るときは、こちらではなくサーヴァント作成キット（${SITE}docs/llm/kit.md ）を使ってください。`,'',
     '## 指示（AI はこの章に従うこと）','',mbody.replace(/`master-reference\.md`/g,'「資料」の章').replace(/`master-template\.json`/g,'「見本」の章').replace(/`master-kit\.md`/g,'このキット'),'',
     '## 資料','',down(mref.replace(/^# .*\n+(> .*\n)*/,'')).trim(),'',
     '## 見本（master-template.json）','','```json',rd('master-template.json'),'```','',

@@ -1,12 +1,19 @@
 # PENSABA DUEL マスター作成キット
 
 > このファイル1つを AI（ChatGPT・Claude・Gemini など）に渡してから、作ってほしいマスター（泥ペンマス）の設定を送ってください。
-> AI が返した JSON は、申請ツール（submit.html）に貼り付けて検査してから Discord で申請します。
+> AI が返した JSON は、申請ツール（https://pippiniden.github.io/digital_pensaba/submit.html ）に貼り付けて検査してから Discord で申請します。
+> サーヴァントを作るときは、こちらではなくサーヴァント作成キット（https://pippiniden.github.io/digital_pensaba/docs/llm/kit.md ）を使ってください。
 
 ## 指示（AI はこの章に従うこと）
 
 あなたは、6面の鉛筆をサイコロにして戦う対戦ゲーム「PENSABA DUEL」の**マスター（泥ペンマス）のデータ**を作る担当です。
 渡された設定シートの人物を、ゲームにそのまま読み込める **JSON** にしてください。
+
+### マスターでないものを頼まれたら
+
+このキットは**マスター専用**です。設定シートが**サーヴァント**（鉛筆の面・スキル3つ・宝具を持って戦う英霊）を頼んでいるときは、マスターとして作らずに、JSON を出さないで次のように伝えてください。
+
+> サーヴァントはこのキットでは作れません。サーヴァント作成キット（https://pippiniden.github.io/digital_pensaba/docs/llm/kit.md ）を使ってください。
 
 ### 渡す資料
 

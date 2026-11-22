@@ -4,7 +4,7 @@ AI にキャラクターの設定を渡し、ゲームにそのまま読み込�
 
 ## 申請する人の流れ
 
-1. 申請ツール（`submit.html`。公開版は https://pippiniden.github.io/digital_pensaba/submit.html ）を開き、**申請キット（`kit.md`）** をダウンロードする。
+1. 申請ツール（`submit.html`。公開版は https://pippiniden.github.io/digital_pensaba/submit.html ）を開き、**申請キット（`kit.md`）** をダウンロードする（マスターなら `master-kit.md`）。
 2. ChatGPT・Claude・Gemini などの AI に `kit.md` を渡し（プロジェクトの資料に入れるか、チャットに添付）、キャラクターの設定を送る。キャラシートの貼り付けでよい。
 3. AI が返した JSON を申請ツールに貼り付けて「検査する」。エラー・基準値との比較・鉛筆の面とスキルのプレビューが出る。
 4. 「勝率を測る」で強さを確かめる（基準どおりのテスト用キャラだけの環境に1体入れて、各3000試合。今のキャラは対戦に入れない。目安 50%±3%）。

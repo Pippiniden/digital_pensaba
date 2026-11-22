@@ -1,6 +1,7 @@
 # 設定シート
 
 > AI に作ってほしいキャラクターの設定を書いて、`prompt.md` と一緒に渡してください。
+> マスター（泥ペンマス）を頼むときは、こちらではなく [マスター設定シート](master-sheet.md)（https://pippiniden.github.io/digital_pensaba/docs/llm/master-sheet.md ）を使ってください。
 > 空欄やわからない項目は「おまかせ」と書けば、AI が決めます。複数体を頼むときは、このシートを人数分つなげてください。
 
 ## 基本
