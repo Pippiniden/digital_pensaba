@@ -62,10 +62,6 @@ header .sub{color:var(--sub);font-size:13px}
 .cmdrow{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:flex-end;padding-left:6px;border-left:3px solid var(--w)}
 .cmdrow.cmd-R{border-color:var(--r)} .cmdrow.cmd-B{border-color:var(--b)} .cmdrow.cmd-G{border-color:var(--g)}
 .effs{display:flex;flex-direction:column;gap:4px;margin-top:4px;align-items:flex-start}
-.eff{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:flex-end;padding:4px 6px;background:rgba(6,13,34,.45);border-radius:3px;width:100%}
-.eff select.ek{max-width:170px}
-.eff .etext{flex:1 1 100%;font-size:11.5px;color:var(--sub)}
-.eff button.x{padding:2px 8px;margin-left:auto}
 .eblk{padding:6px 0 10px;border-bottom:1px dashed rgba(42,71,133,.6)}
 .eblk:last-child{border-bottom:0}
 .eno{color:var(--gold-hi);font-family:var(--serif);min-width:36px;align-self:center}

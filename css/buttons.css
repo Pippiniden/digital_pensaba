@@ -155,3 +155,7 @@ button.danger:hover:not(:disabled){border-color:var(--r);box-shadow:var(--btn-ri
 .sn-slot b{color:var(--gold-hi)}
 .sn-slot span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .sn-slot small{color:var(--sub)}
+
+/* 効果の種類ボタン（eff-ui.js）：選択欄のように見せる。押すと効果を選ぶ画面が開く */
+button.ekbtn{padding:3px 8px 3px 10px;font-size:13px;letter-spacing:0;color:var(--gold-hi);background:#060d22;border-color:var(--gold-lo);box-shadow:none;gap:6px}
+button.ekbtn .ekarrow{color:var(--sub);font-size:11px}

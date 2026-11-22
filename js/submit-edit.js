@@ -14,33 +14,18 @@ function pSet(o,p,v){ const ks=p.split('.'), last=ks.pop(), t=ks.reduce((a,k)=>a
 const eAttr=(i,p,t)=>`data-i="${i}" data-p="${esc(p)}" data-t="${t}"`;
 const eOpt=(v,label,cur)=>`<option value="${esc(v)}"${String(v)===String(cur??'')?' selected':''}>${esc(label)}</option>`;
 function eNum(i,p,v,label,w=''){ return `<label class="ef"><span>${label}</span><input type="number" class="${w}" ${eAttr(i,p,'num')} value="${esc(v??0)}"></label>`; }
-function eOptNum(i,p,v,label){ return `<label class="ef"><span>${label}</span><input type="number" class="n2" min="1" ${eAttr(i,p,'optnum')} value="${esc(v??'')}" placeholder="—"></label>`; }
 function eTxt(i,p,v,label,cls='',ph=''){ return `<label class="ef ${cls}"><span>${label}</span><input ${eAttr(i,p,'str')} value="${esc(v??'')}" placeholder="${esc(ph)}"></label>`; }
 
 // 場所ごとの効果の追加時の初期値
 const EFF_NEW={ skill:{k:'atk',t:'self',v:20,turns:3}, ult:{k:'dmg',t:'enemy_all',v:200}, special:{k:'atk',t:'self',v:10,turns:1} };
 
-// ---- 効果1つ ----
+// ---- 効果1つ：共通部品 effRowHTML（eff-ui.js）を使う ----
+// その効果の持ち主（スキル・宝具）の「対象の選び方」。面の効果には無い
+const ownerPick=(u,path)=>{ const m=/^(skills.d+|ult).eff$/.exec(path); return m?pGet(u,m[1]+'.pick'):undefined; };
 function effRowE(i,path,j,e,ctx){
-  const p=`${path}.${j}`, f=FX[e.k]||{};
-  const kinds=fxGroups().map(([g,ks])=>[g,ks.filter(k=>fxOnlyIn(k,ctx))]).filter(([,ks])=>ks.length);
-  const kSel=`<select class="ek" data-i="${i}" data-act="effKind" data-ep="${p}" data-ctx="${ctx}" aria-label="効果の種類">${kinds.map(([g,ks])=>`<optgroup label="${esc(g)}">${ks.map(k=>eOpt(k,FX[k].name,e.k)).join('')}</optgroup>`).join('')}${FX[e.k]&&kinds.some(([,ks])=>ks.includes(e.k))?'':eOpt(e.k,(FX[e.k]||{}).name||e.k,e.k)}</select>`;
-  if(e.k==='desc') return `<div class="eff">${kSel}${eTxt(i,p+'.text',e.text,'説明文','wide')}<button class="small x" data-act="effDel" data-i="${i}" data-path="${path}" data-j="${j}" title="この効果を消す">×</button></div>`;
-  const tg=TGT_BY_CTX[ctx].includes(e.t)?TGT_BY_CTX[ctx]:[...TGT_BY_CTX[ctx],e.t];
-  const parts=[kSel];
-  if(f.copy) parts.push(`<label class="ef"><span>コピー元</span><select ${eAttr(i,p+'.from','str')}>${(FROM_BY_CTX[ctx]||['self']).map(t=>eOpt(t,FROM_TARGETS[t],e.from||'self')).join('')}</select></label>`);
-  if(!f.noTgt) parts.push(`<label class="ef"><span>${f.copy?'コピー先':'対象'}</span><select ${eAttr(i,p+'.t','str')}>${tg.map(t=>eOpt(t,TARGETS[t]||t,e.t)).join('')}</select></label>`);
-  if(e.k==='cardUp') parts.push(eNum(i,p+'.v',e.v,'威力','n3'),eNum(i,p+'.np',e.np,'NP','n2'),eNum(i,p+'.star',e.star,'スター','n2'));
-  else if(f.val&&!e.max) parts.push(eNum(i,p+'.v',e.v,e.k==='multiHit'?'回数':'値','n3'));
-  if(f.maxOk) parts.push(`<label class="ef chk"><input type="checkbox" data-act="effMax" ${eAttr(i,p+'.max','bool')} ${e.max?'checked':''}><span>最大HP</span></label>`);
-  if(!f.inst){ if(!f.timesOnly) parts.push(eOptNum(i,p+'.turns',e.turns,'ターン')); parts.push(eOptNum(i,p+'.times',e.times,'回数')); }
-  if(f.color) parts.push(`<label class="ef"><span>色</span><select ${eAttr(i,p+'.color','optstr')}>${e.k==='cardUp'||e.k==='cardConv'?'':eOpt('','すべて',e.color||'')}${['R','B','G'].map(c=>eOpt(c,TERMS[c],e.color)).join('')}</select></label>`);
-  if(f.trait) parts.push(eTxt(i,p+'.trait',e.trait,'特攻・特防の相手','','属性・クラス・ID'));
-  if(!f.noTgt) parts.push(`<label class="ef"><span>確率</span><select ${eAttr(i,p+'.chance','optnum')}>${eOpt('','必ず',e.chance??'')}${[1,2,3,4,5].map(k=>eOpt(k,`ロール${k}以下`,e.chance)).join('')}</select></label>`);
-  const keep=['cond','vs','at','sure','all'].filter(k=>e[k]!=null);
-  if(keep.length) parts.push(`<span class="sub" title="条件・タイミングなどはエディタで変えられます">＋${keep.length}項目の設定あり</span>`);
-  parts.push(`<button class="small x" data-act="effDel" data-i="${i}" data-path="${path}" data-j="${j}" title="この効果を消す">×</button>`);
-  return `<div class="eff">${parts.join('')}<div class="etext">${esc(effsText([normEff(e)]))}</div></div>`;
+  const p=`${path}.${j}`;
+  return effRowHTML(e,{ ctx, path:p, attr:(pp,t)=>eAttr(i,pp,t), more:S.more.has(i+':'+p), pick:ownerPick(S.units[i],path),
+    btn:act=>`data-act="${act}" data-i="${i}" data-path="${path}" data-j="${j}" data-ctx="${ctx}"` });
 }
 function effListE(i,path,effs,ctx){
   return `<div class="effs">${(effs||[]).map((e,j)=>effRowE(i,path,j,e,ctx)).join('')}<button class="small" data-act="effAdd" data-i="${i}" data-path="${path}" data-ctx="${ctx}">＋効果</button></div>`;
@@ -101,23 +86,6 @@ function editValue(el){
 function editStructural(el){
   const i=+el.dataset.i, u=S.units[i];
   switch(el.dataset.act){
-    case 'effKind': { // 効果の種類を変える：対象・値などを新しい種類に合う形に整える
-      const p=el.dataset.ep, ctx=el.dataset.ctx, old=pGet(u,p), k=el.value, f=FX[k], ne={k,t:old.t,v:f.val?((FX[old.k]||{}).val&&old.v?old.v:10):0}; // 値のない効果から変えたときは仮に10
-      if(!f.noTgt&&!TGT_BY_CTX[ctx].includes(ne.t)) ne.t=TGT_BY_CTX[ctx][0];
-      // 弱体は敵へ、強化は味方へ（逆向きになっていたら直す。スキルの敵単体は「対象の選び方」が要るので敵全体にする）
-      const foe=['enemy_all','target'].includes(ne.t)||(ne.t==='picked'&&['enemy','any'].includes(pGet(u,p.replace(/\.eff\.\d+$/,'.pick'))));
-      if(f.buff===false&&!foe) ne.t=ctx==='skill'?'enemy_all':'target';
-      if(f.buff===true&&foe) ne.t='self';
-      if(k==='star'||k==='starLoss') ne.t=k==='star'?'master':(TGT_BY_CTX[ctx].includes('picked')?'picked':'enemy_all');
-      if(!f.inst){ if(old.turns&&!f.timesOnly) ne.turns=old.turns; if(old.times) ne.times=old.times; if(!ne.turns&&!ne.times) ne[f.timesOnly?'times':'turns']=f.timesOnly?1:3; }
-      if(!f.noTgt&&old.chance) ne.chance=old.chance;
-      if(f.color&&(old.color||k==='cardUp'||k==='cardConv')) ne.color=old.color||'R';
-      if(k==='cardUp') Object.assign(ne,{v:CARD_UP_DEF[ne.color].v,np:CARD_UP_DEF[ne.color].np,star:CARD_UP_DEF[ne.color].star});
-      if(f.trait) ne.trait=old.trait||'';
-      if(f.copy) ne.from='self';
-      if(k==='desc') ne.text=old.text||'';
-      pSet(u,p,ne); return true; }
-    case 'effMax': pSet(u,el.dataset.p,editValue(el)); return true;
     case 'cmdColor': { // コマンドの種類を変える：特殊行動なら技名と効果欄を用意し、R/B/G なら技名を外す
       const p=el.dataset.cp, old=pGet(u,p), c=el.value, base={dmg:old.dmg||0,np:old.np||0,star:old.star||0};
       pSet(u,p,c==='W'?{c:'W',label:old.label||'特殊行動',eff:old.eff||[],...base}:{c,...base,...(old.eff&&old.eff.length?{eff:old.eff}:{})}); return true; }
@@ -125,8 +93,13 @@ function editStructural(el){
   return false;
 }
 function editClick(b){
-  const i=+b.dataset.i, u=S.units[i];
-  if(b.dataset.act==='effAdd'){ const p=b.dataset.path; let a=pGet(u,p); if(!a){ pSet(u,p,[]); a=pGet(u,p); } a.push({...EFF_NEW[b.dataset.ctx]}); return i; }
-  if(b.dataset.act==='effDel'){ pGet(u,b.dataset.path).splice(+b.dataset.j,1); return i; }
+  const i=+b.dataset.i, u=S.units[i], path=b.dataset.path, p=path&&path+'.'+b.dataset.j;
+  switch(b.dataset.act){
+    case 'effAdd': { let a=pGet(u,path); if(!a){ pSet(u,path,[]); a=pGet(u,path); } a.push({...EFF_NEW[b.dataset.ctx]}); return i; }
+    case 'effDel': pGet(u,path).splice(+b.dataset.j,1); S.more.clear(); return i;
+    case 'effMore': S.more.has(i+':'+p)?S.more.delete(i+':'+p):S.more.add(i+':'+p); return i;
+    case 'effPick': { const old=pGet(u,p), ctx=b.dataset.ctx; // 選ぶ画面を開き、選んだら種類を変えてフォームを作り直す
+      EffPick.open({ ctx, cur:old.k, onPick:k=>{ if(k===old.k) return; pSet(u,p,effKindChange(old,k,ctx,ownerPick(u,path))); edited(i,true); } }); return null; }
+  }
   return null;
 }

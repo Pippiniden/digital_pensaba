@@ -11,7 +11,7 @@ const SUB_N=3000;                                    // 勝率の測定：環境
 const SUB_CHUNK=250;                                 // 1回のワーカー仕事の試合数
 const OFFICIAL=normalizeUnits(DEFAULT_UNITS);        // 今のキャラ（js/units.js）。ID の重複を見る
 const KNOWN_KEYS=new Set(['id','name','cls','traits','cost','hp','fit','link','memo','wip','lines','condLines','faces','skills','ult']);
-const S={ raw:[], units:[], extra:[], rate:[], stale:[], busy:false, dirty:false };   // rate[i] = {A:{n,w}, S:{n,w}, done, total} | undefined / stale[i]＝測ったあとに編集した / dirty＝編集した
+const S={ raw:[], units:[], extra:[], rate:[], stale:[], busy:false, dirty:false, more:new Set() };   // more＝「詳しく」を開いている効果（'体:パス'）   // rate[i] = {A:{n,w}, S:{n,w}, done, total} | undefined / stale[i]＝測ったあとに編集した / dirty＝編集した
 
 const $=s=>document.querySelector(s);
 const msg=(t,bad)=>{ const m=$('#msg'); m.textContent=t; m.classList.toggle('bad',!!bad); };
@@ -40,7 +40,7 @@ function runCheck(){
   catch(e){ S.raw=[]; S.units=[]; $('#out').innerHTML=''; return msg(e.message,true); }
   S.units=S.raw.map(normalizeUnit);
   S.extra=S.raw.map(x=>Object.keys(x).filter(k=>!KNOWN_KEYS.has(k)));
-  S.rate=[]; S.dirty=false;
+  S.rate=[]; S.dirty=false; S.more.clear();
   msg(`${S.units.length}体を読み込みました。下で名前や数値を直せます`);
   draw();
 }
@@ -217,7 +217,7 @@ document.addEventListener('input',e=>{
   if(el.tagName==='SELECT'||el.type==='checkbox') return; // 選択・チェックは change で受ける
   pSet(S.units[+el.dataset.i],el.dataset.p,editValue(el)); edited(+el.dataset.i,false);
   // 効果の値なら、その効果の説明文（ゲームでの表示）も直す
-  const row=el.closest('.eff'), tx=row&&row.querySelector('.etext'), ef=row&&pGet(S.units[+el.dataset.i],el.dataset.p.replace(/\.[^.]+$/,''));
+  const row=el.closest('.erow'), tx=row&&row.querySelector('.etxt-game'), ef=row&&pGet(S.units[+el.dataset.i],el.dataset.p.replace(/\.[^.]+$/,''));
   if(tx&&ef&&FX[ef.k]) tx.textContent=effsText([normEff(ef)]);
 });
 document.addEventListener('change',e=>{
@@ -228,6 +228,9 @@ document.addEventListener('change',e=>{
   if(el.dataset.act){ if(editStructural(el)) edited(i,true); return; }
   if(el.dataset.p&&(el.tagName==='SELECT'||el.type==='checkbox')){
     pSet(S.units[i],el.dataset.p,editValue(el));
-    edited(i,el.dataset.p.endsWith('.pick')||el.dataset.p.endsWith('.color')?false:/\.(t|from)$/.test(el.dataset.p)); // 対象を変えると効果の説明が変わるので作り直す
+    // 対象を「選んだ1体」にしたのに、スキル・宝具の「対象の選び方」が未設定なら、弱体は敵単体・それ以外は味方単体にする
+    const m=/^(skills\.\d+|ult)\.eff\.\d+\.t$/.exec(el.dataset.p);
+    if(m&&el.value==='picked'&&!pGet(S.units[i],m[1]+'.pick')){ const e=pGet(S.units[i],el.dataset.p.replace(/\.t$/,'')); pSet(S.units[i],m[1]+'.pick',FX[e.k]&&FX[e.k].buff===false?'enemy':'ally'); msg('「対象の選び方」も合わせて設定しました'); }
+    edited(i,!!el.closest('.erow')); // 効果の選択・チェックは、説明文や「詳しく」の見出しが変わるので作り直す
   }
 });
