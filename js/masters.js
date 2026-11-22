@@ -418,5 +418,57 @@ const DEFAULT_MASTERS = [
       {"name":"蛹は羽化せず","eff":[{"k":"heal","t":"ally_svt","v":200}]},
       {"name":"擬似宇宙・災厄世界","eff":[{"k":"dmg","t":"enemy_both","v":80},{"k":"curse","t":"enemy_both","v":0,"times":1,"chance":3}]}
     ]
+  },
+  {
+    "id":"m_medoisan", "name":"めどいさん", "cost":3, "hp":350,
+    "fit":{"face":{"x":50,"y":11,"z":100},"np":{"x":50,"y":28,"z":105},"cut":{"x":0,"y":7,"z":100}},
+    "lines":{"support":["はぁ……めど……"],"attack":[],"spell":[]},
+    "faces":[
+      {"label":"おさぼり","eff":[]},
+      {"label":"バール持ってください","eff":[{"k":"atk","t":"svt","v":10}]},
+      {"label":"ちこいさんお願いします","eff":[{"k":"dmg","t":"enemy_master","v":80}]},
+      {"label":"めどいので掃除","eff":[{"k":"cleanse","t":"svt","v":0},{"k":"heal","t":"svt","v":30}]},
+      {"label":"カップ麺にご飯いれたやつ","eff":[{"k":"heal","t":"svt","v":30}]},
+      {"label":"お昼寝","eff":[]}
+    ],
+    "spells":[
+      {"name":"霊子譲渡","eff":[{"k":"np","t":"ally_svt","v":30}]},
+      {"name":"応急手当","eff":[{"k":"heal","t":"ally_svt","v":200}]},
+      {"name":"たまには本気出す","eff":[{"k":"atk","t":"ally_all","v":20,"turns":1},{"k":"actsUp","t":"ally_all","v":1,"turns":1}]}
+    ]
+  },
+  {
+    "id":"m_hidoisan", "name":"ひどいさん", "cost":1, "hp":999,
+    "fit":{"np":{"x":50,"y":20,"z":105},"cut":{"x":0,"y":7,"z":100}},
+    "faces":[
+      {"label":"無","eff":[],"line":["何も出来ないなんてひどいですー"]},
+      {"label":"","eff":[{"k":"def","t":"ally_svt","v":10},{"k":"def","t":"self","v":150}]},
+      {"label":"無","eff":[],"line":["何も出来ないなんてひどいですー"]},
+      {"label":"秘術","eff":[{"k":"def","t":"ally_all","v":20},{"k":"def","t":"self","v":150}]},
+      {"label":"無","eff":[],"line":["何も出来ないなんてひどいですー"]},
+      {"label":"無","eff":[],"line":["何も出来ないなんてひどいですー"]}
+    ],
+    "spells":[
+      {"name":"イシスの雨","eff":[{"k":"cleanse","t":"ally_svt","v":0},{"k":"actsUp","t":"ally_svt","v":1,"times":1}]},
+      {"name":"生存への布石","eff":[{"k":"debuffImmune","t":"ally_svt","v":0,"times":1},{"k":"actsUp","t":"ally_svt","v":1,"times":1}]},
+      {"name":"全体回復","eff":[{"k":"heal","t":"ally_all","v":100}]}
+    ]
+  },
+  {
+    "id":"m_itaisan", "name":"マスターロード・ペイン", "cost":4, "hp":350,
+    "fit":{"face":{"x":50,"y":12,"z":100},"cut":{"x":0,"y":6,"z":100}},
+    "faces":[
+      {"label":"ノートを確認中","eff":[],"line":["主殿！ この技の読み方はなんですか？"]},
+      {"label":"七ツ夜ノ死刀","eff":[{"k":"atk","t":"svt","v":10}],"line":["吾は面影糸を巣と張る蜘蛛！"]},
+      {"label":"冥キ混沌ヨ来タレ","eff":[{"k":"onAtkNp","t":"svt","v":5}],"line":["さぁ、生を謳歌せよ！"]},
+      {"label":"影ヲ追フ者","eff":[{"k":"atk","t":"svt","v":30},{"k":"heal","t":"svt","v":80}]},
+      {"label":"零式・無限剣刃","eff":[{"k":"heal","t":"svt","v":30}],"line":["我の身体は無限のツルギで出来ている！"]},
+      {"label":"其は夢幻の理想郷","eff":[{"k":"dmg","t":"enemy_svt","v":80}],"line":["我が栄光のアルカディアよ！"]}
+    ],
+    "spells":[
+      {"name":"カイザースラウテルン","eff":[{"k":"dmg","t":"enemy_svt","v":80}],"line":["奈落より這い山河を越え大路にて判を下す！"]},
+      {"name":"メルトダウン","eff":[{"k":"atkDown","t":"enemy_all","v":40,"turns":1}]},
+      {"name":"シュヴァルツ・ゲシュヒテ","eff":[{"k":"atk","t":"ally_svt","v":40,"turns":1},{"k":"selfDmg","t":"ally_svt","v":50}],"line":["主殿、深淵の魔導書の開帳を！"]}
+    ]
   }
 ];
