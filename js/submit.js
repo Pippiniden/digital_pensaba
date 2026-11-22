@@ -11,7 +11,7 @@ const SUB_N=3000;                                    // 勝率の測定：環境
 const SUB_CHUNK=250;                                 // 1回のワーカー仕事の試合数
 const OFFICIAL=normalizeUnits(DEFAULT_UNITS);        // 今のキャラ（js/units.js）。ID の重複を見る
 const KNOWN_KEYS=new Set(['id','name','cls','traits','cost','hp','fit','link','memo','wip','lines','condLines','faces','skills','ult']);
-const S={ raw:[], units:[], extra:[], rate:[], stale:[], busy:false, dirty:false, more:new Set() };   // more＝「詳しく」を開いている効果（'体:パス'）   // rate[i] = {A:{n,w}, S:{n,w}, done, total} | undefined / stale[i]＝測ったあとに編集した / dirty＝編集した
+const S={ raw:[], units:[], extra:[], rate:[], stale:[], busy:false, dirty:false, more:new Set(), tab:[], face:[] };   // tab[i]＝開いているタブ / face[i]＝編集中の出目   // more＝「詳しく」を開いている効果（'体:パス'）   // rate[i] = {A:{n,w}, S:{n,w}, done, total} | undefined / stale[i]＝測ったあとに編集した / dirty＝編集した
 
 const $=s=>document.querySelector(s);
 const msg=(t,bad)=>{ const m=$('#msg'); m.textContent=t; m.classList.toggle('bad',!!bad); };
@@ -40,7 +40,7 @@ function runCheck(){
   catch(e){ S.raw=[]; S.units=[]; $('#out').innerHTML=''; return msg(e.message,true); }
   S.units=S.raw.map(normalizeUnit);
   S.extra=S.raw.map(x=>Object.keys(x).filter(k=>!KNOWN_KEYS.has(k)));
-  S.rate=[]; S.dirty=false; S.more.clear();
+  S.rate=[]; S.dirty=false; S.more.clear(); S.tab=[]; S.face=[];
   msg(`${S.units.length}体を読み込みました。下で名前や数値を直せます`);
   draw();
 }
@@ -71,6 +71,7 @@ function drawUnit(i){
 function refresh(i){
   const c=document.querySelector(`#chk-${i}`); if(c) c.innerHTML=checkHTML(i);
   const t=document.querySelector(`#ttl-${i}`); if(t) t.innerHTML=titleHTML(i);
+  const tb=document.querySelector(`#etabs-${i}`); if(tb) tb.innerHTML=tabsHTML(i); // タブのエラー・注意の印
   const sh=$('#share'); if(sh) sh.innerHTML=shareHTML();
 }
 const refreshAll=()=>S.units.forEach((_,j)=>refresh(j));
@@ -87,9 +88,11 @@ function unitHTML(u,i){
 function checkHTML(i){
   const u=unitN(i), its=issuesOf(i), cmp=refCompare(u), r=S.rate[i], rr=rateOf(i);
   const icon={error:'✖',warn:'⚠',line:'・'};
-  const list=its.length?`<ul class="iss">${its.map(x=>`<li class="${x.level}">${icon[x.level]||'・'} ${esc(x.msg)}</li>`).join('')}</ul>`:'<p class="ok">エラー・注意はありません</p>';
+  // 指摘を押すと、その入力があるタブ（面なら出目）を開く
+  const go=(tab,face)=>`data-act="goIssue" data-i="${i}" data-tab="${tab}" data-face="${face??''}" role="button" tabindex="0" title="押すと直す場所を開きます"`;
+  const list=its.length?`<ul class="iss">${its.map(x=>`<li class="${x.level}" ${go(issueTab(x),issueFace(x))}>${icon[x.level]||'・'} ${esc(x.msg)}</li>`).join('')}</ul>`:'<p class="ok">エラー・注意はありません</p>';
   const ex=S.extra[i]&&S.extra[i].length?`<p class="warn">⚠ 使われない項目がありました（読み込みで消えています）：${esc(S.extra[i].join(', '))}</p>`:'';
-  const cmpT=cmp.length?`<table class="cmp">${cmp.map(x=>`<tr class="${x.ok===false?'ng':x.ok?'ok':''}"><td>${x.ok===false?'↕':x.ok?'○':'・'}</td><th>${esc(x.label)}</th><td>${esc(x.val)}${x.note?`<small>${esc(x.note)}</small>`:''}</td></tr>`).join('')}</table>`:'<p class="sub">このコストの基準値はありません</p>';
+  const cmpT=cmp.length?`<table class="cmp">${cmp.map(x=>`<tr class="${x.ok===false?'ng':x.ok?'ok':''}" ${go(cmpTab(x))}><td>${x.ok===false?'↕':x.ok?'○':'・'}</td><th>${esc(x.label)}</th><td>${esc(x.val)}${x.note?`<small>${esc(x.note)}</small>`:''}</td></tr>`).join('')}</table>`:'<p class="sub">このコストの基準値はありません</p>';
   const rateT=rr?`<table class="cmp rate"><tr><th>${REF_KITS.A}</th><td>${rr.A.toFixed(1)}%</td></tr><tr><th>${REF_KITS.S}</th><td>${rr.S.toFixed(1)}%</td></tr>
       <tr class="${rr.verdict==='目安どおり'?'ok':'ng'}"><th>平均</th><td><b>${rr.all.toFixed(1)}%</b> … ${rr.verdict}<small>目安 50%±3%。各${rr.n}試合</small></td></tr></table>`
     : r&&!r.complete?`<p class="sub">測定中… ${r.done}/${r.total}</p><div class="bar"><i style="width:${Math.round(100*r.done/r.total)}%"></i></div>`
@@ -233,4 +236,10 @@ document.addEventListener('change',e=>{
     if(m&&el.value==='picked'&&!pGet(S.units[i],m[1]+'.pick')){ const e=pGet(S.units[i],el.dataset.p.replace(/\.t$/,'')); pSet(S.units[i],m[1]+'.pick',FX[e.k]&&FX[e.k].buff===false?'enemy':'ally'); msg('「対象の選び方」も合わせて設定しました'); }
     edited(i,!!el.closest('.erow')); // 効果の選択・チェックは、説明文や「詳しく」の見出しが変わるので作り直す
   }
+});
+// タブ・鉛筆の面・検査の指摘など（ボタンでない押せる要素）は Enter / Space でも押せるようにする
+document.addEventListener('keydown',e=>{
+  if(EffPick.o) return;
+  const t=e.target;
+  if((e.key==='Enter'||e.key===' ')&&t.dataset&&t.dataset.act&&!/^(BUTTON|INPUT|SELECT|TEXTAREA)$/.test(t.tagName)){ e.preventDefault(); t.click(); }
 });
