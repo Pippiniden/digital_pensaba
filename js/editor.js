@@ -960,6 +960,33 @@ document.addEventListener('input',e=>{
   if(el.closest('.erow')&&(el.tagName==='SELECT'||el.type==='checkbox')) return full();
   light();
 });
+// 一覧CSVの書き出し：サーヴァントとマスターは別ファイル。原作キャラは常に除く。制作中は選べる（既定は除外）
+function askCsv(){
+  const dlg=document.querySelector('#impdlg');
+  const pool=(L,canon)=>L.filter(x=>!canon.includes(x.id));
+  const sets=[{k:'u',label:'サーヴァント',un:'体',file:'pencil-servants.csv',L:pool(units,CANON_UNIT_IDS)},
+              {k:'m',label:TERMS.player,un:'人',file:'pencil-masters.csv',L:pool(masters,CANON_MASTER_IDS)}];
+  const draw=()=>{
+    const inc=!!(dlg.querySelector('#csvWip')||{}).checked;
+    dlg.innerHTML=`<h3>実装済みキャラの一覧をCSVで書き出し</h3>
+      <p class="sub">名前・クラス・コストの3列です。公開用のキャラ一覧に使えます。原作キャラは含みません。</p>
+      <label class="csvopt"><input type="checkbox" id="csvWip" ${inc?'checked':''}> 制作中のキャラも含める</label>
+      <div class="impbtns">
+        ${sets.map(s=>`<button data-csv="${s.k}">${s.label}の一覧を書き出し（${s.L.filter(x=>inc||!x.wip).length}${s.un}）</button>`).join('')}
+        <button data-csv="cancel">閉じる</button>
+      </div>`;
+  };
+  draw();
+  dlg.onchange=ev=>{ if(ev.target.id==='csvWip') draw(); };
+  dlg.onclick=ev=>{
+    const b=ev.target.closest('[data-csv]'); if(!b) return;
+    if(b.dataset.csv==='cancel'){ dlg.close(); return; }
+    const s=sets.find(x=>x.k===b.dataset.csv), inc=dlg.querySelector('#csvWip').checked;
+    downloadText(s.file,rosterCSV(s.L,inc),'text/csv');
+    toast(`${s.label}${s.L.filter(x=>inc||!x.wip).length}${s.un}の一覧を書き出しました（制作中は${inc?'含む':'除外'}）`);
+  };
+  dlg.showModal();
+}
 // JSON読み込みの方法を選ぶ：IDで同じキャラかどうかを判断する
 function askImport(inc,fname){
   const L=list(), un=isM()?'人':'体', ids=new Set(L.map(x=>x.id));
@@ -1104,9 +1131,7 @@ document.addEventListener('click',e=>{
     case 'exportJS': { const wn=list().filter(x=>x.wip).length, ex=wn?`（制作中の${wn}${isM()?'人':'体'}は除外）`:'';
       if(isM()){ downloadText('masters.js',mastersToJS(masters),'text/javascript'); toast('js/masters.js と置き換えると、標準データとして公開できます'+ex); break; }
       downloadText('units.js',unitsToJS(units),'text/javascript'); toast('js/units.js と置き換えると、標準データとして公開できます'+ex); break; }
-    case 'exportCSV': { const inc=document.querySelector('#csvWip').checked, L=list(), n=L.filter(x=>inc||!x.wip).length;
-      downloadText(isM()?'pencil-masters.csv':'pencil-servants.csv',rosterCSV(L,inc),'text/csv');
-      toast(`${isM()?TERMS.player:'サーヴァント'}${n}${isM()?'人':'体'}の一覧をCSVで書き出しました（${inc?'制作中を含む':'制作中は除外'}）`); break; }
+    case 'csvOpen': askCsv(); break;
     case 'exportJSON': if(isM()){ downloadText('pencil-masters.json',JSON.stringify(masters,null,2),'application/json'); break; }
       downloadText('pencil-units.json',JSON.stringify(units,null,2),'application/json'); break;
     case 'import': document.querySelector('#file').click(); break;
