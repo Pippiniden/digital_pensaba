@@ -98,7 +98,7 @@ function refLimits(u){
     if(s){
       const all=isAll(e), tc=all&&s.allTurns!=null?s.allTurns:s.turns, mc=all&&s.allTimes!=null?s.allTimes:s.times, cc=all&&s.allChance!=null?s.allChance:s.chance;
       // ターンと回数はどちらか一方が上限内ならよい（回避3回、のように回数で区切る書き方もあるため）
-      const okT=tc!=null&&e.turns!=null&&e.turns<=tc, okM=mc!=null&&e.times!=null&&e.times<=mc;
+      const okT=tc!=null&&e.turns>0&&e.turns<=tc, okM=mc!=null&&e.times!=null&&e.times<=mc;
       if((tc!=null||mc!=null)&&!okT&&!okM) add(`${w}：${nm(e.k)}${all?'（全体）':''}は ${[tc!=null?`${tc}T`:'',mc!=null?`${mc}回`:''].filter(Boolean).join('か')} までにしてください`);
       if(cc!=null&&!(e.chance>0&&e.chance<=cc)) add(`${w}：${nm(e.k)}${all?'（全体）':''}は確率つき（chance ${cc}以下）にしてください${e.chance?`（今は${e.chance}）`:'（今は必ず成功）'}`);
     }

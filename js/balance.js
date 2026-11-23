@@ -55,6 +55,7 @@ function loadData(kind){
   d.errors=[...validateUnits(d.units).filter(x=>x.level==='error').map(x=>(x.i>=0&&d.units[x.i]?`${d.units[x.i].name||d.units[x.i].id}：`:'')+x.msg),
             ...validateMasters(d.masters,d.units).filter(x=>x.level==='error').map(x=>(x.i>=0&&d.masters[x.i]?`${d.masters[x.i].name||d.masters[x.i].id}：`:'マスター：')+x.msg)];
   try{ d.same=kind==='public'||(JSON.stringify(d.units)===JSON.stringify(defU())&&JSON.stringify(d.masters)===JSON.stringify(defM())); }catch(e){ d.same=false; }
+  d.units=d.units.filter(u=>!u.enemy); // エネミー専用（シナリオ・ボス用）は対戦検証に入れない
   return d;
 }
 function setSrc(kind){ B.src=kind; B.data=loadData(kind); B.uIdx=new Map(B.data.units.map(u=>[u.id,u])); B.dataVer=(B.dataVer||0)+1; B.A={ids:[],m:null}; B.B={ids:[],m:null}; saveSet(); }
@@ -272,7 +273,7 @@ function startRun(){
     if(goal){ run.bySub=new Map(); ts.forEach(t=>taskSubs(t,view).forEach(k=>{ let a=run.bySub.get(k); if(!a) run.bySub.set(k,a=[]); a.push(t); })); } };
   load(mk(p.tasks));
   const nW=Math.max(1,Math.min(maxWorkers(),run.queue.length));
-  B.run=run;
+  B.run=run; B.freeze=false;
   B.res={goal,rounds:1,byKey:new Map(),view,rule:B.rule,src:B.src,n:B.n,k:B.k,filter:B.filter,opp:B.opp,level:B.level,handicap:useHandicap()&&B.view!=='master',vs:B.vs,mcol:{...B.mcol},cmin:B.cmin,
     data:B.data,items:[],log:B.detail?[]:null,logGames:0,done:false,teams:p.teams,excl:eu().length<B.data.units.length||em().length<B.data.masters.length};
   const R=B.res, hcap=R.handicap;
@@ -334,9 +335,10 @@ function startRun(){
   keepAwake(true);
   renderProg(); renderRes(); renderCtl();
 }
-function finish(){ B.res.ms=Date.now()-B.run.t0; B.res.done=true; stopRun(); renderProg(); renderRes(); renderCtl(); setTitle('✔ 完了'); }
+function finish(){ B.freeze=false; B.res.ms=Date.now()-B.run.t0; B.res.done=true; stopRun(); renderProg(); renderRes(); renderCtl(); setTitle('✔ 完了'); }
 let pending=false;
-function schedule(){ if(pending) return; pending=true; setTimeout(()=>{ pending=false; renderProg(); renderRes(); },250); }
+// B.freeze：実行中に「表示を止める」を押した状態。計算は続け、結果の表だけ描き直さない（進み具合のバーは更新する）
+function schedule(){ if(pending) return; pending=true; setTimeout(()=>{ pending=false; renderProg(); if(!B.freeze) renderRes(); },250); }
 
 // ---------- 画面：操作部 ----------
 const seg=(key,opts,cur)=>`<div class="seg">${opts.map(([v,l])=>`<button class="${v===cur?'on':''}" data-b="set" data-k="${key}" data-v="${esc(v)}" ${B.run?'disabled':''}>${l}</button>`).join('')}</div>`;
@@ -434,12 +436,14 @@ function renderProg(){
   const r=B.run; if(!r){ $('#prog').innerHTML=''; return; }
   setTitle(r.goal?`${r.need.length-(r.lag?r.left:r.need.length)}/${r.need.length} 検証中`:`${Math.round(r.done/Math.max(1,r.total)*100)}% 検証中`);
   const el=(Date.now()-r.t0)/1000, eta=r.done?el/r.done*(r.total-r.done):0;
+  // 画面の右下に浮かせる（下位の行を見ているときも押せるように）
+  const fz=B.res&&B.res.items.length?`<div class="freeze">${B.freeze?'<span class="small">結果の表示を止めています（計算は続いています）</span>':''}<button class="small ${B.freeze?'primary':''}" data-b="freeze">${B.freeze?'▶ 表示を再開':'⏸ 表示を止める'}</button></div>`:'';
   if(r.goal){ // 目標の誤差つき：届いた人数と、いちばん広い誤差
     const w=r.worst, n=r.need.length, left=r.lag?r.left:n, wt=w&&isFinite(w.v)?`いちばん広い誤差 ±${w.v.toFixed(1)}%（${esc(w.name)}）`:'';
-    $('#prog').innerHTML=`<div class="progbar"><i style="width:${(n-left)/Math.max(1,n)*100}%"></i><span>目標 ±${r.goal}% に到達 ${n-left} / ${n}　${r.games.toLocaleString()}試合　${wt}（経過${el<90?Math.round(el)+'秒':Math.round(el/60)+'分'}）</span></div>`;
+    $('#prog').innerHTML=`<div class="progbar"><i style="width:${(n-left)/Math.max(1,n)*100}%"></i><span>目標 ±${r.goal}% に到達 ${n-left} / ${n}　${r.games.toLocaleString()}試合　${wt}（経過${el<90?Math.round(el)+'秒':Math.round(el/60)+'分'}）</span></div>${fz}`;
     return;
   }
-  $('#prog').innerHTML=`<div class="progbar"><i style="width:${r.done/r.total*100}%"></i><span>${r.done} / ${r.total} 対戦${r.done?`（残り約${eta<90?Math.round(eta)+'秒':Math.round(eta/60)+'分'}）`:''}</span></div>`;
+  $('#prog').innerHTML=`<div class="progbar"><i style="width:${r.done/r.total*100}%"></i><span>${r.done} / ${r.total} 対戦${r.done?`（残り約${eta<90?Math.round(eta)+'秒':Math.round(eta/60)+'分'}）`:''}</span></div>${fz}`;
 }
 
 // ---------- 画面：結果 ----------
@@ -689,7 +693,8 @@ document.addEventListener('click',e=>{
     case 'set': { const v=d.v; B[d.k]=v; if(d.k==='rule'||d.k==='view'){ B.A={ids:[],m:null}; B.B={ids:[],m:null}; } saveSet(); break; }
     case 'run': startRun(); return;
     case 'csv': case 'sum': saveDetail(d.b); return;
-    case 'stop': stopRun(); setTitle('中止'); if(B.res&&!B.res.done) B.res.stopped=true; renderProg(); renderRes(); break;
+    case 'freeze': B.freeze=!B.freeze; renderProg(); if(!B.freeze) renderRes(); return;
+    case 'stop': B.freeze=false; stopRun(); setTitle('中止'); if(B.res&&!B.res.done) B.res.stopped=true; renderProg(); renderRes(); break;
     case 'bld': { const T=B[d.k], i=T.ids.indexOf(d.id); if(i>=0) T.ids.splice(i,1); else if(rs().partyMax===1) T.ids=[d.id]; else T.ids.push(d.id); break; }
     case 'bldClear': B[d.k]={ids:[],m:null}; break;
     case 'bldRandom': { // 上限に収まるランダムな編成（マスター込み）

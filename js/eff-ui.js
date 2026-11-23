@@ -149,13 +149,13 @@ function effKindChange(old,k,ctx,pick){
 // o = { ctx, path:'skills.0.eff.0', attr:(path,type)=>属性文字列, btn:(act)=>属性文字列（data-act など）, more:詳しくを開いているか, pick:持ち主の対象の選び方,
 //       moreHTML:詳しくの中に足す入力（エディタの条件・タイミングなど。渡すとそれらの設定もここで変えられる扱いになる）,
 //       turnsHTML:ターンの入力の差し替え（マスターの補助の面）, ops:×の前に足すボタン（↑↓など）, after:行の最後に足すHTML, traitList:特攻の相手の候補の datalist の id }
-//   attr の type：num / optnum / str / optstr / bool（使う側で値に直す）
+//   attr の type：num / optnum / optnum0（0も残す） / str / optstr / bool（使う側で値に直す）
 //   「色」（カード性能アップ・ダウン）の選択には data-act="cardUpColor" が付く（色を変えたら、その色の既定値を入れるのは使う側）
 const EFF_KEPT={cond:'条件',at:'タイミング',sure:'解除・無効不可',vs:'種類の指定',all:'すべての獲得',noExtra:'エクストラなし'}; // 詳しくの中の設定（入っていたら見出しに出す）
 function effRowHTML(e,o){
   const f=FX[e.k]||{}, p=o.path, A=o.attr, B=o.btn, ctx=o.ctx, card=!!CARD_DEFS[e.k];
   const opt=(v,label,cur)=>`<option value="${esc(v)}"${String(v)===String(cur??'')?' selected':''}>${esc(label)}</option>`;
-  const num=(sub,v,label,cls='n3',t='num')=>`<label class="ein"><input type="number" class="${cls}" ${A(p+'.'+sub,t)} value="${esc(v??'')}"${t==='optnum'?' placeholder="—" min="1"':''}><span>${label}</span></label>`;
+  const num=(sub,v,label,cls='n3',t='num')=>`<label class="ein"><input type="number" class="${cls}" ${A(p+'.'+sub,t)} value="${esc(v??'')}"${t==='optnum'?' placeholder="—" min="1"':t==='optnum0'?' placeholder="—" min="0" title="0＝ターン無制限（回数を使い切るまで）"':''}><span>${label}</span></label>`;
   const kindBtn=`<button class="ekbtn" ${B('effPick')} title="効果の種類を選ぶ（検索できます）">${esc(f.name||e.k)}<span class="ekarrow">▾</span></button>`;
   const tail=`${o.ops||''}<button class="small x" ${B('effDel')} title="この効果を消す">×</button>`;
   if(e.k==='desc') return `<div class="erow"><div class="eline">${kindBtn}<label class="ein grow"><input ${A(p+'.text','str')} value="${esc(e.text||'')}" placeholder="スキル・${TERMS.ult}の説明文（ほかの効果の説明の代わりに出る）"></label>${tail}</div>${o.after||''}</div>`;
@@ -170,7 +170,7 @@ function effRowHTML(e,o){
   if(e.k==='cardConv') L.push(`<label class="ein"><span>→</span><select ${A(p+'.color','str')} aria-label="変換先の色">${['R','B','G'].map(c=>opt(c,TERMS[c],e.color||'R')).join('')}</select></label>`);
   if(f.trait) L.push(`<label class="ein"><span>相手：</span><input class="mid" ${o.traitList?`list="${o.traitList}" `:''}${A(p+'.trait','str')} value="${esc(e.trait||'')}" placeholder="属性・クラス・ID"></label>`);
   if(f.maxOk) L.push(`<label class="ein chk"><input type="checkbox" ${A(p+'.max','bool')} ${e.max?'checked':''}><span>最大HPぶん</span></label>`);
-  if(!f.inst&&!f.noTgt){ if(!f.timesOnly) L.push(o.turnsHTML!=null?o.turnsHTML:num('turns',e.turns,'ターン','n2','optnum')); L.push(num('times',e.times,'回','n2','optnum')); }
+  if(!f.inst&&!f.noTgt){ if(!f.timesOnly) L.push(o.turnsHTML!=null?o.turnsHTML:num('turns',e.turns,'ターン','n2','optnum0')); L.push(num('times',e.times,'回','n2','optnum')); }
   // 詳しく：あまり使わない設定。設定されているものは見出しに出す
   const colorOpt=f.color&&!card&&e.k!=='cardConv';
   const kept=Object.keys(EFF_KEPT).filter(k=>e[k]!=null&&e[k]!==false);

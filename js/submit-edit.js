@@ -98,7 +98,7 @@ function editValue(el){
   const t=el.dataset.t, v=el.type==='checkbox'?el.checked:el.value;
   switch(t){
     case 'num': return Number(v)||0;
-    case 'optnum': return v===''?undefined:Number(v);
+    case 'optnum': case 'optnum0': return v===''?undefined:Number(v);
     case 'optstr': return String(v).trim()?String(v).trim():undefined;
     case 'lines': return String(v).split('\n').map(x=>x.trim()).filter(Boolean);
     case 'list': return [...new Set(String(v).split(/[、,，\s]+/).map(x=>x.trim()).filter(Boolean))];

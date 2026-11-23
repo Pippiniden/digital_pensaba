@@ -39,6 +39,7 @@ function conv(el){
   switch(el.dataset.t){
     case 'num': return v===''?0:Number(v);
     case 'optnum': return v===''||!(Number(v)>0)?undefined:Number(v);
+    case 'optnum0': return v===''||!(Number(v)>=0)?undefined:Number(v); // 0 も残す（効果のターン数：0＝ターン無制限）
     case 'optstr': return v===''?undefined:v;
     case 'lines': return v.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
     case 'optlines': { const a=v.split(/\r?\n/).map(x=>x.trim()).filter(Boolean); return a.length?a:undefined; } // 専用セリフ（空なら項目ごと消す）
@@ -402,7 +403,7 @@ function renderList(){
       if(hid(u)) return '';
       const e=iss.filter(x=>x.i===i&&x.level==='error').length, w=iss.filter(x=>x.i===i&&x.level==='warn').length, bg=iss.filter(x=>x.i===i&&x.level==='big').length, ln=iss.filter(x=>x.i===i&&x.level==='line').length;
       return `<button class="uitem ${i===si?'on':''}" data-act="sel" data-i="${i}">
-        ${isM()?'':clsBadge(u.cls,true)}${faceImg(u,'face xs')}<span class="uname">${esc(u.name)||'（名前なし）'}</span>${u.wip?'<span class="wipbadge" title="制作中：js書き出しに含まれません">制作中</span>':''}<span class="sub small">C${u.cost}</span>
+        ${isM()?'':clsBadge(u.cls,true)}${faceImg(u,'face xs')}<span class="uname">${esc(u.name)||'（名前なし）'}</span>${u.wip?'<span class="wipbadge" title="制作中：js書き出しに含まれません">制作中</span>':''}${u.enemy?`<span class="wipbadge enemybadge" title="エネミー専用：通常の編成には出ません">${esc(ENEMY_KINDS[u.enemy]||'')}</span>`:''}<span class="sub small">C${u.cost}</span>
         ${e?`<span class="dot err" title="エラー${e}件">${e}</span>`:bg?`<span class="dot big" title="大警告${bg}件${w?`・小警告${w}件`:''}">${bg}</span>`:w?`<span class="dot wrn" title="${isM()?'小警告':'注意'}${w}件">${w}</span>`:ln?`<span class="dot lin" title="セリフ${ln}件">${ln}</span>`:''}</button>`;
     }).join('')}</div>
     <div class="row">
@@ -525,7 +526,7 @@ const numIn=(p,v,label,ref)=>`<label class="mini${ref?' hasref':''}"><span>${lab
 const memoIn=d=>`<label class="wide">メモ（ゲーム中では使いません）<textarea data-p="memo" data-t="optstr" rows="${Math.max(2,String(d.memo||'').split(String.fromCharCode(10)).length)}" placeholder="調整の意図や、あとで直したいところなど">${esc(d.memo||'')}</textarea></label>`;
 const optNum=(p,v,label)=>`<label class="mini"><span>${label}</span><input type="number" min="0" data-p="${p}" data-t="optnum" value="${v??''}" placeholder="-"></label>`;
 // マスターの補助の面のターン数：空＝1ターン（このターンだけ・既定）。2以上は自分の終了フェイズをその回数迎えるまで
-const faceTurns=(p,v)=>`<label class="mini" title="既定はこのターンだけ。2ターン以上なら、自分の終了フェイズをその回数迎えるまで続きます"><span>ターン</span><select data-p="${p}" data-t="optnum">${opt('','1（このターン）',v>1?v:'')}${[2,3,4,5].map(n=>opt(n,`${n}`,v)).join('')}${v>5?opt(v,`${v}`,v):''}</select></label>`;
+const faceTurns=(p,v)=>`<label class="mini" title="既定はこのターンだけ。2ターン以上なら、自分の終了フェイズをその回数迎えるまで続きます。0はターンでは消えません（回数を使い切るまで）"><span>ターン</span><select data-p="${p}" data-t="optnum0">${opt('','1（このターン）',v>1||v===0?v:'')}${opt(0,'0（ターン無制限）',v===0?0:'')}${[2,3,4,5].map(n=>opt(n,`${n}`,v)).join('')}${v>5?opt(v,`${v}`,v):''}</select></label>`;
 
 function renderForm(){
   const u=cur(), el=document.querySelector('#form');
@@ -540,8 +541,10 @@ function renderForm(){
       <label>クラス<span class="clsin"><span data-clsprev>${clsIconTag(u.cls)}</span><input data-p="cls" list="classlist" value="${esc(u.cls)}"></span>
         <small>一覧から選ぶか、オリジナルのクラス名を入力（相性はなし）</small>
         <datalist id="classlist">${CLASSES.map(c=>`<option value="${esc(c)}">${CLASSES_BASIC.includes(c)?'基本':'エクストラ'}</option>`).join('')}</datalist></label>
-      <label>コスト<input type="number" min="0" max="${RULES.costCap}" data-p="cost" data-t="num" value="${u.cost}"></label>
+      <label>コスト<input type="number" min="0" ${u.enemy?'':`max="${RULES.costCap}"`} data-p="cost" data-t="num" value="${u.cost}"></label>
       <label>HP<input type="number" min="1" step="5" data-p="hp" data-t="num" value="${u.hp}"><small class="uref" data-uref="hp"></small></label>
+      <label>エネミー専用<select data-p="enemy" data-t="optstr" data-act="structural">${opt('','なし（通常のキャラ）',u.enemy||'')}${Object.entries(ENEMY_KINDS).map(([k,v])=>opt(k,v,u.enemy||'')).join('')}</select>
+        <small>雑魚・ボスは通常の編成・図鑑に出ず、シナリオの相手などでだけ使います。ボスはボスレイド・聖杯戦争のボスにも登場します（コスト上限なし）</small></label>
       <label class="wide">属性（複数可）<input data-p="traits" data-t="tags" value="${esc((u.traits||[]).join('、'))}" placeholder="例：竜、騎乗、王、人型">
         <small>読点・カンマ・空白で区切る。特攻・特防の判定に使います${allTraits().length?`（使用中：${esc(allTraits().join('・'))}）`:''}</small></label>
       <label class="wide">キャラクター設定のリンク（任意）<input type="url" data-p="link" data-t="optstr" value="${esc(u.link||'')}" placeholder="https://…">

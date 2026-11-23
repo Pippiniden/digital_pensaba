@@ -74,6 +74,7 @@ function normEff(e){
   e=e||{};
   const o={k:String(e.k||'atk'), t:String(e.t||'self'), v:num(e.v)};
   for(const k of ['turns','times','chance']) if(num(e[k])>0) o[k]=num(e[k]);
+  if(e.turns!=null&&e.turns!==''&&num(e.turns,-1)===0) o.turns=0; // 0ターン＝ターン経過では消えない（回数だけで消える。マスターの補助の面でも、そのターンで消えない）
   if(['R','B','G'].includes(e.color)) o.color=e.color;
   if(CARD_DEFS[o.k]){ o.np=num(e.np); o.star=num(e.star); } // カード性能アップ・ダウン：v＝威力 / np＝NP獲得量 / star＝スター発生量
   // vs：弱体状態特攻の対象の弱体 / 弱体無効＝防ぐ弱体の種類 / 強化無効＝防ぐ強化の種類（未指定＝すべて）
@@ -131,6 +132,7 @@ function normalizeUnit(u){
   const condLines=(Array.isArray(u.condLines)?u.condLines:[]).map(c=>normCondLine(c)).filter(Boolean);
   return { id:String(u.id||''), name:String(u.name||''), cls:normClass(u.cls), traits:normTraits(u.traits), cost:num(u.cost), hp:num(u.hp,100),
     ...(u.wip?{wip:true}:{}), // 制作中：js 書き出し（units.js）に含めない
+    ...(ENEMY_KINDS[u.enemy]?{enemy:u.enemy}:{}), // エネミー専用（mob＝雑魚 / boss＝ボス）：通常の編成には出ない
     ...(typeof u.memo==='string'&&u.memo.trim()?{memo:u.memo}:{}), // メモ：エディタ用の覚え書き（ゲーム中では使わない）
     fit:normFit(u.fit), ...(normLink(u.link)?{link:normLink(u.link)}:{}), lines, ...(condLines.length?{condLines}:{}), faces, skills, ult:Object.assign({name:String(ult.name||''), c:String(ult.c||'R'), eff:(ult.eff||[]).map(normEff)}, String(ult.ruby||'').trim()?{ruby:String(ult.ruby).trim()}:{}, Number.isInteger(ult.br)&&ult.br>=0?{br:ult.br}:{}, PICKS[ult.pick]&&ult.pick?{pick:ult.pick}:{}) };
 }
@@ -172,7 +174,7 @@ function validateUnits(units){
     for(const [k,n] of Object.entries(LINE_MIN)) if(u.lines[k].length && u.lines[k].length<n) add('line',`${LINE_KEYS[k]}のセリフは${n}種類以上にしてください（今は${u.lines[k].length}種類）`);
     if(!(u.hp>0)) add('error','HPは1以上にしてください');
     if(!(u.cost>=0)) add('error','コストは0以上にしてください');
-    if(u.cost>RULES.costCap) add('error',`コストが上限${RULES.costCap}を超えているため編成できません`);
+    if(u.cost>RULES.costCap&&!u.enemy) add('error',`コストが上限${RULES.costCap}を超えているため編成できません`); // エネミー専用は編成しないので上限なし
 
     const ascN=u.faces.filter(f=>f.pre.c==='ASC').length;
     if(!ascN&&u.skills[2]&&u.skills[2].eff.length) add('warn',`${TERMS.asc}面がないため、スキル3が使えません`);
@@ -236,8 +238,8 @@ function checkEffs(effs,ctx,where,add){
     }
     if(e.t==='master'&&e.k!=='star'&&e.k!=='starLoss') add('warn',`${w}：${TERMS.player}が対象だと、${TERMS.star}獲得以外は効果がありません`);
     if(FX[e.k].val&&e.v===0&&!e.max) add('warn',`${w}：値が0です`);
-    if(!FX[e.k].inst&&!FX[e.k].perm&&e.turns==null&&e.times==null) add('warn',`${w}：効果時間がないため、ずっと続きます`);
-    if(FX[e.k].timesOnly&&e.turns!=null) add('warn',`${w}：${FX[e.k].name}は回数で指定します（ターンは使われません）`);
+    if(!FX[e.k].inst&&!FX[e.k].perm&&(e.turns==null||e.turns===0)&&e.times==null) add('warn',`${w}：効果時間がないため、ずっと続きます`);
+    if(FX[e.k].timesOnly&&e.turns) add('warn',`${w}：${FX[e.k].name}は回数で指定します（ターンは使われません）`);
     if(e.k==='instantDeath'&&['self','ally_all','ally_other'].includes(e.t)) add('warn',`${w}：味方に即死効果がかかります`);
     if(e.chance&&e.chance>=6) add('warn',`${w}：ロール6以下は必ず成功します`);
     if(e.k==='confuse'&&e.v>=6) add('warn',`${w}：混乱の値はロールの出目（1〜5）です。6以上は毎ターン必ず行動不能になります`);
@@ -382,7 +384,7 @@ function spellLimits(m){
       if(e.turns>L.maxTurns) add(`${x}：効果時間は${L.maxTurns}Tまでにしてください（今は${e.turns}T）`);
       const st=L.strong[e.k];
       if(st){
-        const okT=e.turns!=null&&e.turns<=st.turns, okM=e.times!=null&&e.times<=st.times;
+        const okT=e.turns>0&&e.turns<=st.turns, okM=e.times!=null&&e.times<=st.times;
         if(!okT&&!okM) add(`${x}：${nm(e.k)}は ${st.turns}Tか${st.times}回 までにしてください`);
         if(all&&st.allChance&&!(e.chance>0&&e.chance<=st.allChance)) add(`${x}：${nm(e.k)}を全体にかけるなら確率つき（chance ${st.allChance}以下）にしてください${e.chance?`（今は${e.chance}）`:'（今は必ず成功）'}`);
       }
@@ -495,6 +497,7 @@ function unitsToJS(units){
     '  {',
     `    "id":${j(u.id)}, "name":${j(u.name)}, "cls":${j(u.cls)}, "cost":${u.cost}, "hp":${u.hp},`,
     ...(u.traits&&u.traits.length?[`    "traits":${j(u.traits)},`]:[]),
+    ...(u.enemy?[`    "enemy":${j(u.enemy)},`]:[]),
     ...(['face','card','np','cut'].every(k=>fitIsDef(u.fit,k))?[]:[`    "fit":${j(u.fit)},`]),
     ...(u.link?[`    "link":${j(u.link)},`]:[]),
     ...(u.memo?[`    "memo":${j(u.memo)},`]:[]),
@@ -710,7 +713,7 @@ function fxText(e){
     case 'copyRoll': s=FX.copyRoll.name+(e.noExtra?'（エクストラアタックなし）':''); break;
     default: s=FX[e.k]?FX[e.k].name:e.k;
   }
-  const dur=[e.times!=null?`${e.times}回`:'', e.turns!=null?`${e.turns}T`:typeof e.tmp==='number'?`${e.tmp}T`:''].filter(Boolean).join('・'); // tmp が数＝マスターの補助の複数ターン効果（残り）
+  const dur=[e.times!=null?`${e.times}回`:'', e.turns===0?'ターン無制限':e.turns!=null?`${e.turns}T`:typeof e.tmp==='number'?`${e.tmp}T`:''].filter(Boolean).join('・'); // tmp が数＝マスターの補助の複数ターン効果（残り）
   return s+(dur?`(${dur})`:'')+(e.cond?`［${condText(e.cond,FX[e.k]&&FX[e.k].condUse)}］`:'')+(e.chance?`［ロール${e.chance}以下］`:'')+(e.sure?'［解除・無効不可］':'')+(EFF_AT[e.at]&&e.k!=='dmg'?`［${EFF_AT[e.at]}］`:'');
 }
 function tLabel(t,pick){

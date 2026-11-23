@@ -13,7 +13,7 @@ const SIM_NS = [100,300,500,1000,3000];
 const SIM_EXCL_KEY = 'pencilduel.simExclude';
 SIM.exclOpen = false;
 SIM.excl = new Set(readJSON(SIM_EXCL_KEY)||[]);
-const simExcluded = u=>SIM.excl.has(u.id);
+const simExcluded = u=>SIM.excl.has(u.id)||!!u.enemy; // エネミー専用は対戦検証に入れない
 
 const simDlg = ()=>document.querySelector('#simdlg');
 const simU = id=>units.find(u=>u.id===id);

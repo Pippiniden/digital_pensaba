@@ -60,7 +60,7 @@ Scenario: game adds (after game-ui / tapfx) scenarios/index.js → scenario-core
 
 ## 4. Core concepts (details → `docs/agents/data-model.md`, `docs/agents/rules-spec.md`)
 
-- **Character**: `{id, name, cls, traits?, cost, hp, fit?, link?, lines, condLines?, faces[6], skills[3], ult}`. `normalizeUnit()` **drops unknown fields** — adding a field means touching `normalizeUnit`, `unitsToJS`, editor `newUnit`/`renderForm`, `validateUnits`, `units.js`.
+- **Character**: `{id, name, cls, traits?, enemy?, cost, hp, fit?, link?, lines, condLines?, faces[6], skills[3], ult}`. `enemy` (`'mob'`/`'boss'`, `ENEMY_KINDS`) = enemy-only: not in `UNITS` (normal selection), only `D()` / scenarios; bosses also appear in raids. `normalizeUnit()` **drops unknown fields** — adding a field means touching `normalizeUnit`, `unitsToJS`, editor `newUnit`/`renderForm`, `validateUnits`, `units.js`.
 - **Effect** `Eff = {k, t, v, turns?, times?, chance?, ...}`: `k` is a key of `FX`, `t` a key of `TARGETS` (allowed set by `TGT_BY_CTX`).
 - **Runtime unit** `makeUnit()`; look up the definition with `D(id)`, a unit with `U(uid)`. Read max HP via `maxHp(u)`, never `D(u.def).hp`.
 - **Rules** (`G.rule`, via `ruleset()`): `team` (3v3, cost 10), `simple` (1v1), `master` (simple + master), `mteam` (team + master, cost 13). No class matchups.

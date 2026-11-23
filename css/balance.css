@@ -29,6 +29,7 @@ details.excl[open] summary{margin-bottom:6px}
 .progbar{position:relative;height:22px;border:1px solid var(--line);border-radius:4px;background:var(--panel2);overflow:hidden}
 .progbar i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,var(--gold-lo),var(--gold));transition:width .2s}
 .progbar span{position:relative;display:block;text-align:center;font-size:12px;line-height:20px}
+.freeze{position:fixed;right:16px;bottom:16px;z-index:50;display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel2);box-shadow:0 4px 14px rgba(0,0,0,.45)}
 .sums{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch;margin-bottom:8px}
 .sum{display:flex;flex-direction:column;align-items:center;padding:6px 14px;border:1px solid var(--line);border-radius:4px;background:var(--panel2);min-width:110px}
 .sum b{font-size:22px;line-height:1.2}

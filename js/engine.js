@@ -9,12 +9,13 @@
 let UNITS=[], MASTERS=[], UNIT_SOURCE='default', UNIT_BROKEN=false, MASTER_SOURCE='default', MASTER_BROKEN=false;
 let ALL_UNITS=[], ALL_MASTERS=[]; // 原作キャラも含む全員（D() の引き当て用）。UNITS / MASTERS は設定で原作キャラを除いたもの
 function reloadUnits(){ const r=loadUnits(); ALL_UNITS=r.units; UNIT_SOURCE=r.source; UNIT_BROKEN=!!r.broken; const mr=loadMasters(ALL_UNITS); ALL_MASTERS=mr.masters; MASTER_SOURCE=mr.source; MASTER_BROKEN=!!mr.broken;
-  const nc=noCanon(); UNITS=nc?ALL_UNITS.filter(u=>!CANON_UNIT_IDS.includes(u.id)):ALL_UNITS; MASTERS=nc?ALL_MASTERS.filter(m=>!CANON_MASTER_IDS.includes(m.id)):ALL_MASTERS;
+  const nc=noCanon(); UNITS=ALL_UNITS.filter(u=>!u.enemy&&!(nc&&CANON_UNIT_IDS.includes(u.id))); MASTERS=nc?ALL_MASTERS.filter(m=>!CANON_MASTER_IDS.includes(m.id)):ALL_MASTERS;
+  // ↑ エネミー専用（u.enemy）は UNITS（編成の一覧）に出さない。ALL_UNITS には残すので D() では引ける
   // シナリオ専用キャラ：同じ id は差し替え、新しい id は D() で引けるようにだけする（編成の一覧には出さない。出すのは G.scn.pool）
   if(XUNITS.length||XMASTERS.length){ const mix=(base,x)=>[...x,...base.filter(b=>!x.some(y=>y.id===b.id))], swap=(list,x)=>list.map(b=>x.find(y=>y.id===b.id)||b);
-    UNITS=swap(UNITS,XUNITS); MASTERS=swap(MASTERS,XMASTERS); ALL_UNITS=mix(ALL_UNITS,XUNITS); ALL_MASTERS=mix(ALL_MASTERS,XMASTERS); }
+    UNITS=swap(UNITS,XUNITS).filter(u=>!u.enemy); MASTERS=swap(MASTERS,XMASTERS); ALL_UNITS=mix(ALL_UNITS,XUNITS); ALL_MASTERS=mix(ALL_MASTERS,XMASTERS); }
   // オンライン対戦のゲスト：対戦中はホストから届いたデータだけを使う（net.js の setNetData）
-  if(NETDATA){ UNITS=ALL_UNITS=NETDATA.units; MASTERS=ALL_MASTERS=NETDATA.masters; }
+  if(NETDATA){ ALL_UNITS=NETDATA.units; UNITS=ALL_UNITS.filter(u=>!u.enemy); MASTERS=ALL_MASTERS=NETDATA.masters; }
 }
 let NETDATA=null;
 function setNetData(d){ NETDATA=d||null; reloadUnits(); }
@@ -464,13 +465,13 @@ function applyOne0(src,t,e,o={}){
     if(e.sure) inst.sure=true;
     t.fx.push(inst); log(`${nm(t)}に ${fxText(inst)}`,'bad'); return;
   }
-  const inst={k:e.k,v:e.v,color:e.color||null,turns:e.turns??null,times:e.times??null,owner:src.pid};
+  const inst={k:e.k,v:e.v,color:e.color||null,turns:e.turns||null,times:e.times??null,owner:src.pid};
   if(e.vs) inst.vs=e.vs;
   if(CARD_PART[e.k]){ inst.np=e.np||0; inst.star=e.star||0; } // カード性能アップ・ダウン：NP獲得量・スター発生量
   if(e.sure) inst.sure=true; // 解除・無効の影響を受けない（ターン・回数では切れる）
   if(e.trait) inst.trait=e.trait;
   if(e.cond&&!e.cond.self) inst.cond=e.cond; // 条件つき（使う瞬間に見る効果はダメージ計算で判定）
-  if(o.tmp){ inst.tmp=e.turns>1?e.turns:true; inst.turns=null; } // 補助：このターンの終了フェイズまで（turns≥2 なら残り回数。自分の終了フェイズごとに-1）
+  if(o.tmp&&e.turns!==0){ inst.tmp=e.turns>1?e.turns:true; inst.turns=null; } // turns:0（ターン無制限）は回数だけで消える。補助：このターンの終了フェイズまで（turns≥2 なら残り回数。自分の終了フェイズごとに-1）
   t.fx.push(inst);
   if(e.k==='maxHp') t.hp+=e.v; // 最大HPが増えたぶん HP も増える
   log(`${nm(t)}に ${fxText(inst)}`, FX[e.k].buff?'good':'bad');
@@ -1025,7 +1026,8 @@ function arcadeStage(){
 // 倍率 hp は自軍3騎のときの値。自軍が少ない（聖杯戦争で仲間を増やさなかった）ときは、増えるぶんを人数に合わせて減らす
 function bossStage(A,df){
   const mine=new Set(A.picks), seen=new Set(A.seen||[]), all=ROSTER().filter(d=>!mine.has(d.id)&&!d.spells);
-  const top=Math.max(0,...all.map(d=>d.cost)), big=all.filter(d=>d.cost>=Math.min(RAID.minCost,top));
+  const eb=ALL_UNITS.filter(d=>d.enemy==='boss'&&!mine.has(d.id)); // エネミー専用のボスはコストに関係なく候補
+  const top=Math.max(0,...all.map(d=>d.cost)), big=[...all.filter(d=>d.cost>=Math.min(RAID.minCost,top)),...eb];
   const pool=big.filter(d=>!seen.has(d.id)), c=(pool.length?pool:big.length?big:UNITS)[Math.floor(Math.random()*(pool.length||big.length||UNITS.length))];
   const i=A.stage, raid=arcadeKind(A)==='raid', cfg=raid?{hp:df.hp[i],atk:df.atk[i],np:df.np,acts:df.acts}:df.boss, n=Math.max(1,A.picks.length);
   const mult=Math.max(1,1+(cfg.hp-1)*Math.min(3,n)/3); // 3騎なら hp 倍、1騎なら増えるぶんが1/3
@@ -1261,14 +1263,16 @@ function setupRandomCost(pid,team,only,want,rnd){
     for(const m of mpool){
       const mc=m?m.cost:0, found=[];
       for(let t=0;t<400;t++){
-        const pool=[...spool].sort(()=>Math.random()-.5), n=1+Math.floor(Math.random()*max), p=[]; let s=0;
-        for(const d of pool){ if(p.length>=n) break; if(s+d.cost+mc<=cap){ p.push(d.id); s+=d.cost; } }
+        const pool=[...spool].sort(()=>Math.random()-.5), p=[]; let s=0;
+        for(const d of pool){ if(p.length>=max) break; if(s+d.cost+mc<=cap){ p.push(d.id); s+=d.cost; } }
         if(p.length) found.push({ids:p,m:m&&m.id,c:s+mc});
       }
       cands.push(...found);
     }
   }
   if(!cands.length){ G.setupMsg='選べる編成がありません'; return; }
+  // チームは満員（partyMax 騎）の編成を優先する（コスト10で 5＋5 の2騎だけ、などにしない）
+  if(team&&!fixedS&&cands.some(x=>x.ids.length===max)) cands.splice(0,cands.length,...cands.filter(x=>x.ids.length===max));
   const gap=Math.min(...cands.map(x=>Math.abs(x.c-want))), top=cands.filter(x=>Math.abs(x.c-want)===gap), c=rnd(top);
   G.picks[pid]=c.ids.slice();
   if(team) G.picks[pid].sort((a,b)=>D(b).hp-D(a).hp);
@@ -1366,7 +1370,7 @@ const ACTIONS = {
     if(masterRule()&&MASTERS.length&&only!=='svt') G.mpicks[pid]=rnd(MASTERS).id;
     const room=costCap()-(team?mcost(pid):0); // チームはマスターのコストを引いた残りで編成
     let best=[];
-    for(let t=0;t<50;t++){
+    for(let t=0;t<200;t++){
       const pool=[...UNITS].sort(()=>Math.random()-.5), p=[];
       for(const d of pool){ if(p.length<ruleset().partyMax && sumCost(p)+d.cost<=room) p.push(d.id); }
       if(p.length>best.length) best=p;
@@ -1550,7 +1554,7 @@ const ACTIONS = {
   masterSupport(){
     const m=masterReady(); if(!m) return;
     const d=D(m.def), f=roll(), face=d.faces[f];
-    log(`${MASTER_ACTS.support}：${nm(m)} 出目${f+1} → ${face.eff.length?`${face.label?`「${esc(face.label)}」`:''}${face.eff.some(e=>e.turns>1)?'':'（このターンのみ）'}`:'何も起きない'}`, face.eff.length?'good':'sub');
+    log(`${MASTER_ACTS.support}：${nm(m)} 出目${f+1} → ${face.eff.length?`${face.label?`「${esc(face.label)}」`:''}${face.eff.some(e=>e.turns>1||e.turns===0)?'':'（このターンのみ）'}`:'何も起きない'}`, face.eff.length?'good':'sub');
     fxEmit({t:'skill',uid:m.uid,head:`${MASTER_ACTS.support}・出目${f+1}`,name:face.eff.length?face.label:'',picked:allLabel(face.eff),
       lines:face.eff.length?effLines(face.eff,null,mTLabel):['何も起きない']});
     if(face.eff.length) say(m,'support',{own:face.line});

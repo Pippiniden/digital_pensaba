@@ -262,3 +262,4 @@ label.mini.hasref{display:inline-grid;grid-template-columns:auto auto;justify-co
 .issues li[data-ftab-go]{cursor:pointer}
 .issues li[data-ftab-go]:hover{background:rgba(127,166,255,.08)}
 .facerow.flash{outline:2px solid var(--gold);outline-offset:2px;transition:outline-color .3s}
+.wipbadge.enemybadge{background:#8a2f3a}
