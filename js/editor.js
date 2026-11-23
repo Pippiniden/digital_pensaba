@@ -1104,6 +1104,9 @@ document.addEventListener('click',e=>{
     case 'exportJS': { const wn=list().filter(x=>x.wip).length, ex=wn?`（制作中の${wn}${isM()?'人':'体'}は除外）`:'';
       if(isM()){ downloadText('masters.js',mastersToJS(masters),'text/javascript'); toast('js/masters.js と置き換えると、標準データとして公開できます'+ex); break; }
       downloadText('units.js',unitsToJS(units),'text/javascript'); toast('js/units.js と置き換えると、標準データとして公開できます'+ex); break; }
+    case 'exportCSV': { const inc=document.querySelector('#csvWip').checked, L=list(), n=L.filter(x=>inc||!x.wip).length;
+      downloadText(isM()?'pencil-masters.csv':'pencil-servants.csv',rosterCSV(L,inc),'text/csv');
+      toast(`${isM()?TERMS.player:'サーヴァント'}${n}${isM()?'人':'体'}の一覧をCSVで書き出しました（${inc?'制作中を含む':'制作中は除外'}）`); break; }
     case 'exportJSON': if(isM()){ downloadText('pencil-masters.json',JSON.stringify(masters,null,2),'application/json'); break; }
       downloadText('pencil-units.json',JSON.stringify(units,null,2),'application/json'); break;
     case 'import': document.querySelector('#file').click(); break;

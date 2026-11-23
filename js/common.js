@@ -527,6 +527,12 @@ function parseUnitsFile(text){
   if(a<0||b<a) throw new Error('サーヴァントの配列が見つかりません');
   return normalizeUnits(JSON.parse(t.slice(a,b+1)));
 }
+// 公開用の一覧CSV（名前・クラス・コスト）。includeWip=false なら制作中を除く。Excel で文字化けしないよう BOM 付き・CRLF
+function rosterCSV(list,includeWip){
+  const q=s=>{ s=String(s==null?'':s); return /[",\r\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
+  const rows=(list||[]).filter(x=>includeWip||!x.wip).map(x=>[x.name,x.cls,x.cost].map(q).join(','));
+  return '﻿'+['名前,クラス,コスト',...rows].join('\r\n')+'\r\n';
+}
 function downloadText(name,text,type='text/plain'){
   const url=URL.createObjectURL(new Blob([text],{type:type+';charset=utf-8'}));
   const a=document.createElement('a'); a.href=url; a.download=name;
