@@ -60,12 +60,46 @@ function scheduleCpu(){
   }, G.phase==='setup'?500:G.phase==='draft'?900:G.speed);
 }
 // カード変換（使用時に選ぶ）の色：そのユニットに乗っている色指定の強化（攻撃+・NP獲得・スター発生・クリティカル威力）が一番多い色。同点は Buster。弱い設定ではランダム
+// つよい以上（CONV_EV）：このターンに変換される味方（スキルの対象）で見込みを比べ、いちばん得な色（convGain）。見込みがどの色も0なら旧判断
+let CONV_EV = true;
 function cpuPickColor(u,easy){
   const cols=['R','B','G'];
   if(easy) return cols[Math.floor(rnd01()*3)];
+  if(CONV_EV&&cpuHard()&&G.pending&&G.pending.colorPick){
+    const s=D(u.def).skills[G.pending.si], picked=s.pick?cpuPickTarget(u.uid,G.pending.si,false):null;
+    const ts=s.eff.filter(e=>e.k==='cardConvPick').flatMap(e=>resolveTargets(u,e.t,picked));
+    const g=cols.map(c=>[c,convGain(ts,c)]).sort((a,b)=>b[1]-a[1]);
+    if(g[0][1]>0) return g[0][0];
+  }
   const sc=c=>u.fx.filter(e=>e.color===c&&FX[e.k]&&FX[e.k].buff===true).reduce((s,e)=>s+(e.v||1),0);
   return cols.map(c=>[c,sc(c)]).sort((a,b)=>b[1]-a[1])[0][0];
 }
+// カード変換の今ターンの見込み（ダメージ換算）：ts のコマンドを c に変えたときと変えないときの差。
+// 期待ダメージ（Busterチェイン・Busterのクリティカル・色つきの攻撃強化込み＝cmdValue）＋ NP（Artsチェイン・色つき攻撃時NP）×1.5 ＋ スター（Quickチェイン・色つき攻撃時スター）×1.3。
+// 宝具のターン・攻撃しない味方には0。重みと点数（convScore）は先読みの解析で決めた：つよい同士 6000試合の 9343場面で、使わない／変換なし／R／B／G を
+// それぞれ64回ずつ決着まで試した勝率差を当てはめると、NP 1 ≒ ダメージ1.5、スター1 ≒ ダメージ1.3。見込み100 ≒ 勝率+4〜5%
+function convGain(ts,c){
+  if(G.ult) return 0;
+  const tgt=[...alive(1-G.cur)].filter(x=>!x.master).sort((a,b)=>maxHp(b)-maxHp(a))[0]; if(!tgt) return 0;
+  const stars=G.players[G.cur].stars, RGB=['R','B','G'], slots=[];
+  Object.entries(G.alloc).forEach(([uid,n])=>{ const x=U(uid); if(x&&!x.out&&x.pid===G.cur) for(let i=0;i<n;i++) slots.push(x); });
+  if(!slots.length||!ts.some(t=>slots.includes(t))) return 0;
+  const cardSum=(x,col,k)=>x.fx.filter(e=>e.k==='cardUp'&&e.color===col).reduce((s,e)=>s+(e[k]||0),0);
+  const ev=cc=>{
+    const per=slots.map(x=>{ const cs=[0,1,2,3,4,5].map(f=>{ const m=cmdOf(x,f); return cc&&ts.includes(x)&&RGB.includes(m.c)?{...m,c:cc}:m; });
+      const p={}; RGB.forEach(k=>p[k]=cs.filter(m=>m.c===k).length/6);
+      const col=(k,card)=>cs.reduce((s,m)=>s+(RGB.includes(m.c)&&m.dmg>0?mods(x,k,m.c).sum+cardSum(x,m.c,card):0),0)/6;
+      return {v:cs.reduce((s,m)=>s+cmdValue(x,m,stars,tgt),0)/6, p, np:col('onAtkNp','np'), st:col('onAtkStar','star')}; });
+    const pc=k=>slots.length===3?per.reduce((m,s)=>m*s.p[k],1):0;
+    const dmg=per.reduce((s,x)=>s+x.v,0)+pc('R')*RULES.chainR*3;
+    const np=pc('B')*RULES.chainB*new Set(slots).size+per.reduce((s,x)=>s+x.np,0);
+    const st=pc('G')*RULES.chainG+per.reduce((s,x)=>s+x.st,0);
+    return dmg+np*1.5+st*1.3;
+  };
+  return ev(c)-ev(null);
+}
+// 見込み（ダメージ換算）→ 点数。36で3点（変換だけで使う）。見込み0以下（宝具のターン・3回そろわない）は0
+const convScore = g=>Math.max(0,Math.min(4,g/12));
 function cpuDecide(){
   const easy=G.level==='easy';
   switch(G.phase){
@@ -594,7 +628,11 @@ function cpuEffScore(u,effs,picked,si){
       case 'buffDown': sc+=selfDraw(foes,ts,1.5); break;
       case 'critMult': sc+=acting&&!G.ult&&critLevel(stars)>=3?3:0; break;
       case 'healBlock': sc+=foes.some(t=>hpR(t)<.7||t.fx.some(x=>x.k==='regenHp'))?2:1; break;
-      case 'cardConv': case 'cardConvPick': sc+=acting?1.5:.5; break;
+      // カード変換：つよい以上は今ターンの見込み（convGain）。使用時に選ぶ変換はいちばん得な色で見る。
+      // 解析（上の convGain）：宝具のターンや変換した味方が1〜2回しか行動しないときに使うと 0〜-3%、3回行動（チェインがそろう）なら +2〜5%
+      case 'cardConv': case 'cardConvPick':
+        if(CONV_EV&&cpuHard()){ sc+=convScore(Math.max(...(e.k==='cardConv'?[e.color]:['R','B','G']).map(c=>convGain(ts,c)))); break; }
+        sc+=acting?1.5:.5; break;
       case 'buffExtend': sc+=ts.some(t=>t.fx.some(x=>FX[x.k].buff===true&&x.turns!=null))?2:0; break;
       case 'ascend': { // 再臨できる味方がいれば価値あり。スキル3が未使用ならさらに高い（再臨でそのターンから使える）。再臨済みだけなら使わない
         const can=ts.filter(t=>t.pid===u.pid&&!t.master&&!t.out&&!t.asc);
