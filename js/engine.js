@@ -37,7 +37,7 @@ function newGame(o={}){
     // evac：退避中（次の相手ターンの間） / zeroNext：前のターンの行動回数が0だった（次の行動回数+1）
     players:[{name:TERMS.player+'1',party:[],stars:0,master:null,spell:null,evac:false,zeroNext:false},{name:TERMS.player+'2',party:[],stars:0,master:null,spell:null,evac:false,zeroNext:false}],
     cur:0, turn:0, actRolled:false, maxActs:{}, alloc:{}, rolled:[], ult:null, target:null,
-    gen:0, pending:null, copy:null, guard:null, hcap:null, /* boost：陣営ごとの常時補正 [P1,P2]（ボスレイドのボス・聖杯戦争の報酬。boostOf） */ boost:[null,null], mastered:false, ultDone:false, ultNp:null, log:[], winner:null, dealt:[0,0], dealtO:[0,0],
+    gen:0, pending:null, copy:null, guard:null, hcap:null, /* boost：陣営ごとの常時補正 [P1,P2]（ボスレイドのボス・聖杯戦争の報酬。boostOf） */ boost:[null,null], mastered:false, ultDone:false, log:[], winner:null, dealt:[0,0], dealtO:[0,0],
     // リザルト用の記録：stats＝ユニットごと（uid） / tl＝ターンごとの与ダメージ [P1,P2] / chains＝陣営ごとのチェイン回数 / starsGen＝発生スター合計
     stats:{}, tl:[], chains:[{R:0,B:0,G:0,brave:0},{R:0,B:0,G:0,brave:0}], starsGen:[0,0] };
   FXQ.length=0; for(const k in FXHOLD) delete FXHOLD[k]; FXHIDE.clear(); KO_PEND.length=0; for(const k in KO_BY) delete KO_BY[k]; LAST_KO[0]=LAST_KO[1]=null;
@@ -754,6 +754,7 @@ function resolveUlt(u,tgt,picked){
   const ud=D(u.def).ult;
   if(picked===undefined) picked=G.ultPick?U(G.ultPick):null;
   log(`${nm(u)}の${TERMS.ult}「${esc(ud.name)}」！`,'good');
+  u.np=0; syncU(u); // 宝具を撃った時点でNPを全部払う（使用予定の間は減らさない）
   fxEmit({t:'cutin',uid:u.uid,title:ud.name,ruby:ud.ruby,br:ud.br,col:ud.c});
   say(u,'np',{other:tgt});
   st(u).ults++;
@@ -909,7 +910,7 @@ function bossRage(){
   });
 }
 function beginTurn(){
-  Object.assign(G,{phase:'actRoll',actRolled:false,maxActs:{},alloc:{},rolled:[],ult:null,ultSup:false,ultPick:null,ultNp:null,target:null,targetAll:false,gen:0,pending:null,copy:null,guard:null,mastered:false,ultDone:false,spellPick:null});
+  Object.assign(G,{phase:'actRoll',actRolled:false,maxActs:{},alloc:{},rolled:[],ult:null,ultSup:false,ultPick:null,target:null,targetAll:false,gen:0,pending:null,copy:null,guard:null,mastered:false,ultDone:false,spellPick:null});
   const P=G.players[G.cur];
   if(P.evac){ P.evac=false; log(`${esc(P.name)}の${TERMS.player}が退避から戻った`,'sub'); }
   log(`━ ターン${G.turn}：${esc(G.players[G.cur].name)} ━`,'h');
@@ -1153,11 +1154,11 @@ function startUlt(u,picked){
   const uid=u.uid;
   if(masterRule()&&!D(u.def).ult.eff.some(e=>e.k==='dmg'||e.t==='target'||e.k==='copyRoll'||(FX[e.k]&&FX[e.k].copy&&e.from==='target'))){ // 攻撃対象（t:'target'）を使う効果がある宝具は補助扱いにせず、通常どおり攻撃対象を選ぶ（選ばないと対象なしで不発になる）
     // マスタールール：ダメージのない宝具は使用予定にして、スキルフェイズを終えるとき（skillDone）に行動回数-1で発動する。それまでは取り消せる
-    G.ult=uid; G.ultSup=true; G.ultPick=picked?picked.uid:null; G.ultNp=u.np; u.np=0; syncU(u);
+    G.ult=uid; G.ultSup=true; G.ultPick=picked?picked.uid:null; // NP は発動したときに払う（resolveUlt）
     log(`${nm(u)}が${TERMS.ult}「${esc(D(u.def).ult.name)}」を使用予定${picked?`（対象：${nm(picked)}）`:''}（スキルフェイズを終えると発動します）`,'good');
     return;
   }
-  G.ult=uid; G.ultPick=picked?picked.uid:null; G.ultNp=u.np; u.np=0; syncU(u);
+  G.ult=uid; G.ultPick=picked?picked.uid:null; // NP は発動したときに払う（resolveUlt）。予約中にNPを増やしても、発動で全部使う
   log(`${nm(u)}が${TERMS.ult}「${esc(D(u.def).ult.name)}」を使用${picked?`（対象：${nm(picked)}）`:''}（このターンの行動になります）`,'good');
 }
 function doSkill(u,si,picked,color){
@@ -1668,15 +1669,15 @@ const ACTIONS = {
   // 宝具の取り消し（スキルフェイズの間だけ。使ったNPを戻す）
   cancelUlt(){
     if(G.phase!=='skill'||G.pending||!G.ult) return;
-    const u=U(G.ult); u.np=Math.min(RULES.gaugeMax,u.np+(G.ultNp??RULES.ultCost));
-    G.ult=null; G.ultPick=null; G.ultNp=null; G.ultSup=false; syncU(u);
+    const u=U(G.ult); // NP はまだ払っていないので戻すものはない
+    G.ult=null; G.ultPick=null; G.ultSup=false;
     log(`${nm(u)}の${TERMS.ult}の使用を取り消した`,'sub');
   },
   skillDone(){
     if(G.phase!=='skill'||G.pending) return;
     if(G.ult&&G.ultSup){ // マスタールールの補助宝具：ここで発動し、行動回数-1
       const u=U(G.ult), picked=G.ultPick?U(G.ultPick):null;
-      G.ult=null; G.ultPick=null; G.ultNp=null; G.ultSup=false; G.ultDone=true;
+      G.ult=null; G.ultPick=null; G.ultSup=false; G.ultDone=true;
       resolveUlt(u,null,picked);
       const top=Object.entries(G.alloc).filter(([,n])=>n>0).sort((a,b)=>b[1]-a[1])[0];
       if(top){ G.alloc[top[0]]--; log(`補助${TERMS.ult}のため行動回数-1（${dn(U(top[0]))}）`,'sub'); }

@@ -31,7 +31,7 @@ function skillBtns(u,d){
     return `<span class="skw" title="${esc(tip)}"><button class="sk ${used?'used':''} ${locked?'locked':''}" data-a="useSkill" data-uid="${u.uid}" data-si="${i}" ${ok?'':'disabled'}><i>S${i+1}</i><span>${locked?'🔒':''}${skillNameHTML(s)}</span></button></span>`;
   }).join('');
   if(G.ult===u.uid&&G.phase==='skill'){ // 使用予定の宝具：押すと取り消し（スキルフェイズの間だけ）
-    return `<div class="sks">${sk}<span class="skw" title="${TERMS.ult}の使用を取り消して${TERMS.gauge}を戻す"><button class="sk np ${d.ult.c} ready" data-a="cancelUlt" ${own?'':'disabled'}><i>取消</i><span>${ultNameHTML(d.ult)}</span></button></span></div>`;
+    return `<div class="sks">${sk}<span class="skw" title="${TERMS.ult}の使用を取り消す（${TERMS.gauge}は発動したときに使う）"><button class="sk np ${d.ult.c} ready" data-a="cancelUlt" ${own?'':'disabled'}><i>取消</i><span>${ultNameHTML(d.ult)}</span></button></span></div>`;
   }
   const ready=u.np>=RULES.ultCost&&!u.out, ok=own&&canUlt(u)&&!G.ult&&!G.ultDone&&ready;
   const tip=`${TERMS.ult}「${d.ult.name}」 [${TERMS[d.ult.c]}] ${effsText(d.ult.eff,d.ult.pick)}（${TERMS.gauge}${RULES.ultCost}%で使用可）`;
@@ -205,7 +205,7 @@ function promptHTML(){
         ? `<p class="hl">「${esc(pendingSkill().name)}」：変換先のカードの色を選んでください</p><div class="row">${['R','B','G'].map(c=>`<button class="primary" data-a="skillColor" data-c="${c}">${TERMS[c]}</button>`).join('')}</div><button class="ghost" data-a="cancelPick">キャンセル</button>`
         : G.pending
         ? `<p class="hl">「${esc(pendingSkill().name)}」の対象を選んでください${G.pending.color?`（カード変換：${TERMS[G.pending.color]}）`:''}</p><button class="ghost" data-a="cancelPick">キャンセル</button>`
-        : `<p>スキル・${TERMS.ult}を使えます。${TERMS.ult}は${TERMS.gauge}${RULES.ultCost}%以上・1ターン1回。</p>${G.ult?`<p class="hl">${nm(U(G.ult))}が${TERMS.ult}を使用予定 <button class="small ghost" data-a="cancelUlt" title="${TERMS.gauge}を戻して取り消します（このフェイズの間だけ）">取り消す</button></p>`:''}<button class="primary big" data-a="skillDone">${G.ult?(G.ultSup?`${TERMS.ult}を発動して行動決定へ`:'攻撃対象の選択へ'):'行動決定へ'}</button>`;
+        : `<p>スキル・${TERMS.ult}を使えます。${TERMS.ult}は${TERMS.gauge}${RULES.ultCost}%以上・1ターン1回。</p>${G.ult?`<p class="hl">${nm(U(G.ult))}が${TERMS.ult}を使用予定 <button class="small ghost" data-a="cancelUlt" title="取り消します（このフェイズの間だけ。${TERMS.gauge}は発動したときに使うので減りません）">取り消す</button></p>`:''}<button class="primary big" data-a="skillDone">${G.ult?(G.ultSup?`${TERMS.ult}を発動して行動決定へ`:'攻撃対象の選択へ'):'行動決定へ'}</button>`;
     case 'action': {
       const left=remainingRolls();
       if(G.copy) return `<p class="hl">${nm(U(G.copy.uid))}：ロールする${TERMS.unit}を選んでください（敵味方どちらでも・${TERMS.asc}後コマンドを使用）</p>`;
