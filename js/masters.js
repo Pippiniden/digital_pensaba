@@ -431,6 +431,10 @@ const DEFAULT_MASTERS = [
     "fit":{"face":{"x":50,"y":30,"z":100},"np":{"x":50,"y":18,"z":105}},
     "link":"https://seesaawiki.jp/kagemiya/d/%bc%d5%c6%f9%ba%d7%a4%ce%cb%e2%bd%f7%a5%a6%a5%eb%a5%b7%a5%e5%a5%e9",
     "lines":{"support":["行きなさい、サーヴァント","これが効率というものよ"],"attack":["切り刻んであげるわ！"],"spell":["古の術式を見よ！"]},
+    "condLines":[
+      {"key":"start","who":"enemy","cond":{"k":"id","v":"m_ursula"},"lines":["なっ……あれは……私！？"]},
+      {"key":"start","who":"enemy","cond":{"k":"id","v":"liza"},"lines":["……嫌な思い出があるわね、あの顔と胸は"]}
+    ],
     "faces":[
       {"label":"無","eff":[]},
       {"label":"切断魔術","eff":[{"k":"dmg","t":"enemy_master","v":80},{"k":"healBlock","t":"enemy_master","v":0}]},
@@ -447,12 +451,14 @@ const DEFAULT_MASTERS = [
   },
   {
     "id":"m_roswitha", "name":"ロズヴィータ・ネーベルク・レーゲンフェルト", "cost":4, "hp":360,
+    "fit":{"np":{"x":50,"y":45,"z":105}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%ed%a5%ba%a5%f4%a5%a3%a1%bc%a5%bf%a1%a6%a5%cd%a1%bc%a5%d9%a5%eb%a5%af%a1%a6%a5%ec%a1%bc%a5%b2%a5%f3%a5%d5%a5%a7%a5%eb%a5%c8",
+    "lines":{"start":["あの...もう帰っていいですか？","ひぃぃぃぃ！！！！","ふええええ...帰りたい...早く帰りたぁい...！"],"support":["すぐに楽にしてあげますよぉ...","は、早く死んでくださいよぉ！！"],"attack":["Gift　des　Todes！！","Todes！Todes！Todes！！！！"],"spell":["令呪を持って命じますぅ...！"],"win":["もう、動かない方がいいですよ？無理に回路と刻印を回すと負荷で...ほら、だから言ったのに...","か、勝ちましたぁ...あっ、早く痕跡を処理しないと...！酸毒...酸毒..."],"defeat":["痛いよぉ...なんでこんな目にぃぃぃぃ！！","ぴぎゃああ！！このままじゃ...死ぬ！し、死にたくないですぅぅ！！","せ、戦略的撤退ですぅぅ！！","せめて...自分の部屋の中で死にたかった..."]},
     "faces":[
       {"label":"苦痛の増加","eff":[{"k":"defDown","t":"enemy_svt","v":20}]},
       {"label":"呪詛の炸裂","eff":[{"k":"dmg","t":"enemy_svt","v":80}]},
       {"label":"幻妖穿窬","eff":[{"k":"poison","t":"enemy_svt","v":40,"turns":3}]},
-      {"label":"狭霧に霞む","eff":[{"k":"evade","t":"ally_svt","v":0,"times":1}]},
+      {"label":"狭霧に霞む","eff":[{"k":"evade","t":"ally_svt","v":0,"times":1}],"line":["───Der　nebel　fallt"]},
       {"label":"心筋の呪縛","eff":[{"k":"dmg","t":"enemy_master","v":100}]},
       {"label":"頼むから死んでくださいぃ！！","eff":[{"k":"desc","t":"self","v":0,"text":"ロズヴィータは怯えながらも、高度な呪殺の準備を進めている..."}]}
     ],
@@ -460,6 +466,24 @@ const DEFAULT_MASTERS = [
       {"name":"醜穢澱濘","eff":[{"k":"stun","t":"enemy_svt","v":0,"turns":1,"chance":4},{"k":"buffImmune","t":"enemy_svt","v":0,"turns":1,"times":1}]},
       {"name":"腐蝕霊症","eff":[{"k":"erosion","t":"enemy_svt","v":0,"turns":1,"times":3}]},
       {"name":"肉體溶媒","eff":[{"k":"dmg","t":"enemy_master","v":150}]}
+    ]
+  },
+  {
+    "id":"m_uzumebi", "name":"埋火", "cost":1, "hp":100,
+    "fit":{"face":{"x":50,"y":19,"z":100},"np":{"x":50,"y":32,"z":81}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%cb%e4%b2%d0",
+    "faces":[
+      {"label":"無","eff":[]},
+      {"label":"無","eff":[]},
+      {"label":"無","eff":[]},
+      {"label":"","eff":[{"k":"onAtkNp","t":"svt","v":10}]},
+      {"label":"無","eff":[]},
+      {"label":"","eff":[{"k":"onAtkNp","t":"ally_svt","v":10}]}
+    ],
+    "spells":[
+      {"name":"のじゃの雄叫び","eff":[{"k":"np","t":"ally_svt","v":50},{"k":"hitNpSeal","t":"ally_svt","v":0,"turns":1}]},
+      {"name":"のじゃの頑張り","eff":[{"k":"evade","t":"ally_svt","v":0,"turns":1},{"k":"actsUp","t":"ally_svt","v":1,"times":1}]},
+      {"name":"のじゃの居眠り","eff":[{"k":"actsUp","t":"ally_svt","v":3,"times":1}]}
     ]
   },
   {

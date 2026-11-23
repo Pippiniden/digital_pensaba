@@ -1932,8 +1932,9 @@ const DEFAULT_UNITS = [
     "ult":{"name":"私の忠実な毒刃よ","c":"G","eff":[{"k":"dmg","t":"enemy_all","v":30},{"k":"poison","t":"enemy_all","v":40,"turns":3,"chance":4},{"k":"instantDeath","t":"enemy_all","v":0,"chance":1}],"ruby":"オンブル・ヴニムーズ・エ・フィデル"}
   },
   {
-    "id":"conall", "name":"コナル・ケルナッハ", "cls":"セイバー", "cost":2, "hp":450,
+    "id":"conall", "name":"コナル・ケルナッハ", "cls":"アーチャー", "cost":2, "hp":450,
     "traits":["男性","秩序","中庸","アイルランド","ケルト","天"],
+    "fit":{"face":{"x":50,"y":6,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":0,"z":105},"cut":{"x":-2,"y":0,"z":92}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%b3%a5%ca%a5%eb%a1%a6%a5%b1%a5%eb%a5%ca%a5%c3%a5%cf",
     "lines":{
       "start":["挑むってこたあ覚悟しているんだろうな？","ひーふーみー…取りがいのある首が多いねえ"],
