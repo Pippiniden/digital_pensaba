@@ -1302,11 +1302,11 @@ const DEFAULT_UNITS = [
       {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":2},"post":{"c":"G","dmg":50,"np":0,"star":4}}
     ],
     "skills":[
-      {"name":"女傑の覇力","eff":[{"k":"ignoreDef","t":"self","v":0,"turns":3},{"k":"atk","t":"self","v":20,"turns":3},{"k":"debuffImmune","t":"self","v":0,"turns":3},{"k":"heal","t":"self","v":100}],"rank":"EX"},
+      {"name":"女傑の覇力","eff":[{"k":"atk","t":"self","v":20,"turns":3},{"k":"debuffImmune","t":"self","v":0,"turns":3},{"k":"maxHp","t":"self","v":150,"turns":5}],"rank":"EX"},
       {"name":"破瓜なき操","eff":[{"k":"atk","t":"self","v":20,"turns":3,"color":"R"},{"k":"atkTrait","t":"self","v":30,"turns":3,"trait":"男性","cond":{"k":"trait","v":"男性"}},{"k":"defTrait","t":"self","v":30,"turns":3,"trait":"男性"}],"rank":"A","line":["女に負ける訳がない……などと考えてはいないだろうな？"]},
       {"name":"威猛き女王の恋","eff":[{"k":"taunt","t":"picked","v":0,"turns":1},{"k":"np","t":"self","v":40},{"k":"heal","t":"self","v":120}],"rank":"E","pick":"enemy"}
     ],
-    "ult":{"name":"死かふたりが婚姻わるか","c":"R","eff":[{"k":"pierce","t":"self","v":0,"turns":1},{"k":"npPow","t":"self","v":30,"turns":1},{"k":"dmg","t":"target","v":100},{"k":"multiHit","t":"self","v":3}],"ruby":"ブリュンヒルト・フェアローブング"}
+    "ult":{"name":"死かふたりが婚姻わるか","c":"R","eff":[{"k":"ignoreDef","t":"self","v":0,"turns":1},{"k":"npPow","t":"self","v":30,"turns":1},{"k":"dmg","t":"target","v":70},{"k":"npPow","t":"self","v":30,"turns":1},{"k":"dmg","t":"target","v":70},{"k":"npPow","t":"self","v":30,"turns":1},{"k":"dmg","t":"target","v":70}],"ruby":"ブリュンヒルト・フェアローブング"}
   },
   {
     "id":"nileus", "name":"ニレウス", "cls":"シャインチェイサー", "cost":1, "hp":500,
@@ -1366,7 +1366,9 @@ const DEFAULT_UNITS = [
       {"key":"extra","who":"other","cond":{"k":"id","v":"arianrhod"},"lines":["俺様に勝てるつもりかよ、処女姉！","ぎゃーははは！！　俺様の強さは知ってんだろ！！","ここらで諦めやがれ！"]},
       {"key":"win","who":"other","cond":{"k":"id","v":"arianrhod"},"lines":["さーて、まずはスェウの認知からしてもらうか！","けっけっけ、そんな無防備でいいのかぁ、処女姉！","いいか、アイツは俺様とてめーのガキだ！！","ったく、やりにきぃぜ。おい、立てるか？　心配かけさせんじゃねーや姉ちゃん"]},
       {"key":"defeat","who":"other","cond":{"k":"id","v":"arianrhod"},"lines":["げぇーっ！？　処女姉に負けるなんてありえねえ！","ちいっとからかい過ぎたか……！？","だーっ！！！　わかったよ、降参だ姉ちゃん！！","っきしょう……処女姉にゃ強く出れる気分じゃねーな、今日は……"]},
-      {"key":"attack","who":"other","cond":{"k":"id","v":"arianrhod"},"lines":["おらぁっ！","超雷撃！","超爆炎！","超暗黒！"]}
+      {"key":"attack","who":"other","cond":{"k":"id","v":"arianrhod"},"lines":["おらぁっ！","超雷撃！","超爆炎！","超暗黒！"]},
+      {"key":"start","who":"enemy","cond":{"k":"id","v":"m_seimei"},"lines":["なんだあのやかましいおっさんは……親の顔が見てみたいぜ"]},
+      {"key":"win","who":"enemy","cond":{"k":"id","v":"m_seimei"},"lines":["声のでけえナルシストはモテねえんだよ、筋肉オヤジ！！"]}
     ],
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
@@ -1887,7 +1889,7 @@ const DEFAULT_UNITS = [
     "skills":[
       {"name":"凶行の魔手","eff":[{"k":"regenStar","t":"self","v":6,"turns":3},{"k":"atk","t":"self","v":40,"turns":3,"color":"G"},{"k":"critPow","t":"self","v":50,"turns":3,"color":"G"}],"rank":"A"},
       {"name":"破瓜なき操","eff":[{"k":"np","t":"ally_all","v":10},{"k":"atk","t":"ally_other","v":20,"turns":3},{"k":"onAtkStar","t":"ally_other","v":3,"turns":3},{"k":"atkDown","t":"self","v":20,"turns":3}],"rank":"B"},
-      {"name":"盲目なる王妃の恋","eff":[{"k":"strip","t":"enemy_all","v":0,"vs":"taunt"},{"k":"np","t":"picked","v":10},{"k":"np","t":"self","v":10},{"k":"defDown","t":"picked","v":10,"turns":3},{"k":"heal","t":"self","v":100}],"rank":"EX","pick":"enemy"}
+      {"name":"盲目なる王妃の恋","eff":[{"k":"strip","t":"enemy_all","v":0,"vs":"taunt"},{"k":"np","t":"picked","v":-10},{"k":"np","t":"self","v":10},{"k":"defDown","t":"picked","v":10,"turns":3},{"k":"heal","t":"self","v":100}],"rank":"EX","pick":"enemy"}
     ],
     "ult":{"name":"嘆き廻れ、愛憎の連鎖","c":"G","eff":[{"k":"stun","t":"target","v":0,"turns":1},{"k":"atkTrait","t":"self","v":50,"turns":3,"trait":"善"},{"k":"dmg","t":"target","v":400},{"k":"defDown","t":"target","v":30,"turns":3,"color":"G"}],"ruby":"カッツェン・ディ・トーリヒカイト"}
   },
@@ -1928,5 +1930,35 @@ const DEFAULT_UNITS = [
       {"name":"仕切り直し","eff":[{"k":"cleanse","t":"self","v":0},{"k":"heal","t":"self","v":200}],"rank":"A"}
     ],
     "ult":{"name":"私の忠実な毒刃よ","c":"G","eff":[{"k":"dmg","t":"enemy_all","v":30},{"k":"poison","t":"enemy_all","v":40,"turns":3,"chance":4},{"k":"instantDeath","t":"enemy_all","v":0,"chance":1}],"ruby":"オンブル・ヴニムーズ・エ・フィデル"}
+  },
+  {
+    "id":"conall", "name":"コナル・ケルナッハ", "cls":"セイバー", "cost":2, "hp":450,
+    "traits":["男性","秩序","中庸","アイルランド","ケルト","天"],
+    "link":"https://seesaawiki.jp/kagemiya/d/%a5%b3%a5%ca%a5%eb%a1%a6%a5%b1%a5%eb%a5%ca%a5%c3%a5%cf",
+    "lines":{
+      "start":[],
+      "attack":[],
+      "extra":[],
+      "damage":[],
+      "skill":[],
+      "np":[],
+      "npDamage":[],
+      "defeat":[],
+      "win":[]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":50,"np":0,"star":0},"post":{"c":"R","dmg":70,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"R","dmg":50,"np":0,"star":0},"post":{"c":"R","dmg":80,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":30,"np":15,"star":0},"post":{"c":"B","dmg":40,"np":20,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"B","dmg":50,"np":10,"star":0,"eff":[{"k":"cleanse","t":"self","v":0}]}},
+      {"acts":3,"pre":{"c":"G","dmg":20,"np":0,"star":1},"post":{"c":"G","dmg":30,"np":0,"star":2}},
+      {"acts":1,"pre":{"c":"G","dmg":20,"np":0,"star":1},"post":{"c":"G","dmg":30,"np":0,"star":2}}
+    ],
+    "skills":[
+      {"name":"仕切り直し","eff":[{"k":"cleanse","t":"self","v":0},{"k":"heal","t":"self","v":100}],"rank":"B"},
+      {"name":"境界の守護者","eff":[{"k":"def","t":"self","v":20,"turns":3},{"k":"atk","t":"self","v":20,"turns":3}],"rank":"A"},
+      {"name":"頭蓋の杯","eff":[{"k":"np","t":"self","v":30},{"k":"debuffImmune","t":"self","v":0,"times":3},{"k":"heal","t":"self","v":80}],"rank":"EX"}
+    ],
+    "ult":{"name":"穿ち貫く脳漿弾","c":"R","eff":[{"k":"sureHit","t":"self","v":0,"times":1},{"k":"dmg","t":"target","v":300},{"k":"dmg","t":"target","v":50,"chance":4}],"ruby":"タスラム","pick":"enemy"}
   }
 ];

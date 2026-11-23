@@ -10,7 +10,7 @@ const DEFAULT_MASTERS = [
   {
     "id":"m_rin", "name":"遠坂凛", "cost":5, "hp":500,
     "fit":{"face":{"x":50,"y":31,"z":100}},
-    "lines":{"support":["行くわよっ！"],"attack":[],"spell":[]},
+    "lines":{"support":["行くわよっ！"]},
     "faces":[
       {"label":"連環腿","eff":[{"k":"dmg","t":"enemy_master","v":100}],"line":["絶対領域っ！"]},
       {"label":"宝石魔術・強化","eff":[{"k":"atk","t":"ally_svt","v":20,"color":"B"}]},
@@ -131,6 +131,10 @@ const DEFAULT_MASTERS = [
     "id":"m_kota", "name":"一文字コータ", "cost":3, "hp":300,
     "fit":{"face":{"x":50,"y":0,"z":100},"np":{"x":50,"y":15,"z":85}},
     "link":"https://seesaawiki.jp/kagemiya/d/%b0%ec%ca%b8%bb%fa%a5%b3%a1%bc%a5%bf",
+    "lines":{"win":["これがサーヴァントの真の力だ！"],"defeat":["つ、強いっ。オレじゃ敵わないのか……？"]},
+    "condLines":[
+      {"key":"start","who":"enemy","cond":{"k":"id","v":"m_shadowkaiser"},"lines":["サーヴァントは友達だ！　お前みたいなやつには負けてたまるか！"]}
+    ],
     "faces":[
       {"label":"みんな、ぶっとばせ！","eff":[{"k":"atk","t":"svt","v":30,"color":"R"}],"line":["一気にぶっとばしてやれ！","サーヴァントバトル！　コマンド・オーダー！"]},
       {"label":"応援","eff":[{"k":"desc","t":"svt","v":0,"text":"コータは精一杯応援している"}],"line":["みんな、がんばってくれ！"]},
@@ -150,6 +154,12 @@ const DEFAULT_MASTERS = [
     "fit":{"face":{"x":50,"y":0,"z":100},"np":{"x":50,"y":3,"z":105},"cut":{"x":0,"y":9,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%b7%a5%e3%a5%c9%a5%a6%a5%ab%a5%a4%a5%b6%a1%bc",
     "lines":{"support":["サーヴァントバトル、コマンド・オーダー！","ゆけっ、我が傀儡よ！","ハッハッハッハ……"],"attack":["聖杯戦争は命のやり取りなのだ！"],"spell":["サーヴァントなど勝つための道具にすぎん！","こうなっては令呪を使うほかあるまい！"]},
+    "condLines":[
+      {"key":"start","who":"enemy","cond":{"k":"id","v":"m_kota"},"lines":["これは命を賭けた殺し合いなのだよ！　子供は家でおとなしくしていろ！"]},
+      {"key":"start","who":"enemy","cond":{"k":"id","v":"m_masaru"},"lines":["これは命を賭けた殺し合いなのだよ！　子供は家でおとなしくしていろ！"]},
+      {"key":"defeat","who":"enemy","cond":{"k":"id","v":"m_kota"},"lines":["バカなっ！　私がこんな子供に負けるだとっ！？"]},
+      {"key":"defeat","who":"enemy","cond":{"k":"id","v":"m_masaru"},"lines":["バカな……！　コータならいざ知らず、貴様のような子供に……！"]}
+    ],
     "faces":[
       {"label":"無","eff":[]},
       {"label":"シャドウフレイム","eff":[{"k":"dmg","t":"enemy_all","v":15}],"line":["ハッハッハッハ……焼け焦げろ！"]},
@@ -258,7 +268,7 @@ const DEFAULT_MASTERS = [
     "id":"m_jubiro", "name":"石鷹授比郎", "cost":1, "hp":250,
     "fit":{"face":{"x":50,"y":0,"z":100},"np":{"x":50,"y":8,"z":105},"cut":{"x":0,"y":8,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%c0%d0%c2%eb%bc%f8%c8%e6%cf%ba",
-    "lines":{"support":["こいつぁスゲェ！！なんて入り組んだストーリーと謎だ！！","この聖杯戦争に！！俺達の骨を埋めてやろうじゃねぇかぁ！！","この戦争に勝てないと心が折れたら、逃げ時だぜ？"],"attack":[],"spell":["先の詠める漫画なんざつまらないにもほどがあるだろうがァァアアア！！！","この聖杯戦争ッ！！”俺に描かせろ”ッッッ！！！！"]},
+    "lines":{"support":["こいつぁスゲェ！！なんて入り組んだストーリーと謎だ！！","この聖杯戦争に！！俺達の骨を埋めてやろうじゃねぇかぁ！！","この戦争に勝てないと心が折れたら、逃げ時だぜ？"],"spell":["先の詠める漫画なんざつまらないにもほどがあるだろうがァァアアア！！！","この聖杯戦争ッ！！”俺に描かせろ”ッッッ！！！！"]},
     "faces":[
       {"label":"","eff":[{"k":"atk","t":"ally_svt","v":40,"color":"R"},{"k":"onAtkNp","t":"ally_svt","v":10}]},
       {"label":"","eff":[]},
@@ -277,6 +287,12 @@ const DEFAULT_MASTERS = [
     "id":"m_seimei", "name":"安倍晴明", "cost":5, "hp":500,
     "fit":{"face":{"x":50,"y":0,"z":119},"np":{"x":50,"y":9,"z":105}},
     "link":"https://seesaawiki.jp/kagemiya/d/%b0%c2%c7%dc%c0%b2%cc%c0",
+    "lines":{"start":["フハハハハ！！　我こそは、至高の陰陽術師！！　安倍晴明である！！"],"win":["ふははははは！！　当然のように！！　大勝利！！"],"defeat":["おのれおのれおのれー！！"]},
+    "condLines":[
+      {"key":"start","who":"enemy","cond":{"k":"cls","v":"キャスター"},"lines":["西洋魔術など気に食わぬ！　魔術師はとっとと去ねぃ！！"]},
+      {"key":"start","who":"enemy","cond":{"k":"id","v":"m_kuzunoha"},"lines":["母上ェ！？　何故ここにおられるのだァァ！！"]},
+      {"key":"start","who":"enemy","cond":{"k":"id","v":"yorimitsu"},"lines":["頼光ォ！！　千年ぶりよのう！！！"]}
+    ],
     "faces":[
       {"label":"鉄拳","eff":[{"k":"dmg","t":"enemy_master","v":100}],"line":["ふはははは！　貴様に術など不要！"]},
       {"label":"鉄拳","eff":[{"k":"dmg","t":"enemy_master","v":100}],"line":["ふはははは！　貴様に術など不要！"]},
@@ -295,6 +311,11 @@ const DEFAULT_MASTERS = [
     "id":"m_kuzunoha", "name":"葛の葉", "cost":1, "hp":100,
     "fit":{"face":{"x":50,"y":0,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%b3%eb%a4%ce%cd%d5",
+    "lines":{"start":["なんじゃそうぞうしいのう"],"win":["わらわの勝ちじゃ！"]},
+    "condLines":[
+      {"key":"start","who":"enemy","cond":{"k":"id","v":"m_seimei"},"lines":["ほんに可愛い息子じゃのう。ほれ、わらわが勝ったらいなりをたんまり頼むぞい"]},
+      {"key":"start","who":"other","cond":{"k":"trait","v":"悪"},"lines":["これはちと見過ごしてやれんのう……"]}
+    ],
     "faces":[
       {"label":"無","eff":[],"line":["わはは、このマンガは面白いのう！"]},
       {"label":"狸丼","eff":[{"k":"heal","t":"ally_svt","v":30}],"line":["狸丼さんや、おやつを持ってきてたもれ"]},
@@ -341,7 +362,7 @@ const DEFAULT_MASTERS = [
     ],
     "spells":[
       {"name":"戦魔女の嘶き","eff":[{"k":"actsUp","t":"svt","v":3,"turns":1},{"k":"onAtkStar","t":"svt","v":8,"turns":1},{"k":"defDown","t":"svt","v":20,"turns":1}]},
-      {"name":"秘蔵の宝石","eff":[{"k":"cardUp","t":"ally_svt","v":40,"color":"B","turns":1,"np":10,"star":2},{"k":"np","t":"svt","v":25}]},
+      {"name":"秘蔵の宝石","eff":[{"k":"cardUp","t":"ally_svt","v":40,"turns":1,"color":"B","np":10,"star":2},{"k":"np","t":"svt","v":25}]},
       {"name":"大神慟哭・三弦狂騒","eff":[{"k":"stun","t":"enemy_all","v":0,"turns":1,"chance":2},{"k":"charm","t":"enemy_all","v":0,"turns":1,"chance":4},{"k":"defDown","t":"enemy_all","v":20,"turns":1}]}
     ]
   },
@@ -367,6 +388,7 @@ const DEFAULT_MASTERS = [
     "id":"m_chudovishche", "name":"チュドーヴィシチェ", "cost":2, "hp":240,
     "fit":{"face":{"x":50,"y":16,"z":100},"np":{"x":50,"y":0,"z":77},"cut":{"x":0,"y":1,"z":87}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%c1%a5%e5%a5%c9%a1%bc%a5%f4%a5%a3%a5%b7%a5%c1%a5%a7",
+    "lines":{"start":["キュィィ……キィィィィ"],"win":["キュイイイイイイン！！！"]},
     "faces":[
       {"label":"にじり寄り","eff":[]},
       {"label":"咀嚼","eff":[{"k":"dmg","t":"enemy_master","v":70}]},
@@ -385,7 +407,11 @@ const DEFAULT_MASTERS = [
     "id":"m_natsume", "name":"千速棗", "cost":3, "hp":400,
     "fit":{"face":{"x":50,"y":15,"z":100},"np":{"x":50,"y":11,"z":105},"cut":{"x":0,"y":0,"z":93}},
     "link":"https://seesaawiki.jp/kagemiya/d/%c0%e9%c2%ae%dc%a7",
-    "lines":{"support":["ほら、頑張んなよ","私の足が必要かい？"],"attack":["仙道ドライブキーック！","仙道オーバードライブキーック！","足癖が悪くてね！"],"spell":[]},
+    "lines":{"start":["ハハッ、荒っぽいな！"],"support":["ほら、頑張んなよ","私の足が必要かい？"],"attack":["仙道ドライブキーック！","仙道オーバードライブキーック！","足癖が悪くてね！"],"win":["何百年か生きた分、私の方が薄皮一枚上だったな"],"defeat":["死ぬ前に逃げるのが長生きの秘訣だ！"]},
+    "condLines":[
+      {"key":"start","who":"enemy","cond":{"k":"id","v":"m_seimei"},"lines":["あいつのご先祖さまかよ！　生きてたんかワレ！"]},
+      {"key":"start","who":"ally","cond":{"k":"id","v":"hangaku"},"lines":["噂に聞きし坂額御前――味方にいるなんてかしこまちゃうね"]}
+    ],
     "faces":[
       {"label":"無","eff":[]},
       {"label":"神行法","eff":[{"k":"onAtkNp","t":"ally_svt","v":5},{"k":"star","t":"master","v":5}]},
@@ -420,9 +446,26 @@ const DEFAULT_MASTERS = [
     ]
   },
   {
+    "id":"m_roswitha", "name":"ロズヴィータ・ネーベルク・レーゲンフェルト", "cost":4, "hp":360,
+    "link":"https://seesaawiki.jp/kagemiya/d/%a5%ed%a5%ba%a5%f4%a5%a3%a1%bc%a5%bf%a1%a6%a5%cd%a1%bc%a5%d9%a5%eb%a5%af%a1%a6%a5%ec%a1%bc%a5%b2%a5%f3%a5%d5%a5%a7%a5%eb%a5%c8",
+    "faces":[
+      {"label":"苦痛の増加","eff":[{"k":"defDown","t":"enemy_svt","v":20}]},
+      {"label":"呪詛の炸裂","eff":[{"k":"dmg","t":"enemy_svt","v":80}]},
+      {"label":"幻妖穿窬","eff":[{"k":"poison","t":"enemy_svt","v":40,"turns":3}]},
+      {"label":"狭霧に霞む","eff":[{"k":"evade","t":"ally_svt","v":0,"times":1}]},
+      {"label":"心筋の呪縛","eff":[{"k":"dmg","t":"enemy_master","v":100}]},
+      {"label":"頼むから死んでくださいぃ！！","eff":[{"k":"desc","t":"self","v":0,"text":"ロズヴィータは怯えながらも、高度な呪殺の準備を進めている..."}]}
+    ],
+    "spells":[
+      {"name":"醜穢澱濘","eff":[{"k":"stun","t":"enemy_svt","v":0,"turns":1,"chance":4},{"k":"buffImmune","t":"enemy_svt","v":0,"turns":1,"times":1}]},
+      {"name":"腐蝕霊症","eff":[{"k":"erosion","t":"enemy_svt","v":0,"turns":1,"times":3}]},
+      {"name":"肉體溶媒","eff":[{"k":"dmg","t":"enemy_master","v":150}]}
+    ]
+  },
+  {
     "id":"m_medoisan", "name":"めどいさん", "cost":3, "hp":350,
     "fit":{"face":{"x":50,"y":11,"z":100},"np":{"x":50,"y":28,"z":105},"cut":{"x":0,"y":7,"z":100}},
-    "lines":{"support":["はぁ……めど……"],"attack":[],"spell":[]},
+    "lines":{"support":["はぁ……めど……"]},
     "faces":[
       {"label":"おさぼり","eff":[]},
       {"label":"バール持ってください","eff":[{"k":"atk","t":"svt","v":40,"color":"R"},{"k":"critPow","t":"ally_svt","v":30},{"k":"cardDown","t":"ally_svt","v":10,"color":"G","np":0,"star":2}]},
