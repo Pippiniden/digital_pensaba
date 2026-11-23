@@ -472,6 +472,7 @@ function renderMasterForm(el){
       <span class="linelab">${lab}<span class="sub small" data-linecount="${k}">${m.lines[k].length}件</span></span>
       <textarea data-p="lines.${k}" data-t="lines" rows="${Math.max(2,m.lines[k].length)}" placeholder="${esc(lab)}のセリフ">${esc(m.lines[k].join(String.fromCharCode(10)))}</textarea></label>`).join('')}</div>
   </section>
+  ${condLinesSecHTML(m)}
   <section class="sec"><h2>令呪</h2>
     <p class="sub small nm">マスタールールは1試合1回・3つから1つ。マスターチームは3画で、同じ効果は1回まで（使うと行動回数-1）。マスターチームでは「自軍${TERMS.unit}」の効果は選んだ1騎にかかります。</p>
     ${m.spells.map((s,i)=>`<div class="subcard">
@@ -575,20 +576,7 @@ function renderForm(){
       <span class="linelab">${lab}${LINE_MIN[k]?`<small>（${LINE_MIN[k]}種類以上）</small>`:''}<span class="sub small" data-linecount="${k}">${u.lines[k].length}件</span></span>
       <textarea data-p="lines.${k}" data-t="lines" rows="${Math.max(2,LINE_MIN[k]||0,u.lines[k].length)}" placeholder="${esc(lab)}のセリフ">${esc(u.lines[k].join(String.fromCharCode(10)))}</textarea></label>`).join('')}</div>
   </section>
-  <section class="sec"><h2>条件つきセリフ</h2>
-    <p class="sub small nm">相手や味方・敵の属性・クラス・状態・HP・キャラクターによって、場面ごとに専用のセリフを出します。上にあるものから順に見て、最初に条件を満たしたものを使い、どれも満たさなければ上の通常セリフを使います（スキル・鉛筆の面の専用セリフがあればそちらが優先）。「相手・対象」は、攻撃の対象・攻撃してきた相手・スキルの対象です（戦闘開始は敵の先頭）。</p>
-    ${(u.condLines||[]).map((c,i)=>`<div class="subcard condline">
-      <div class="row">
-        <label class="mini"><span>場面</span><select data-p="condLines.${i}.key" data-act="structural">${Object.entries(LINE_KEYS).map(([k,v])=>opt(k,v,c.key)).join('')}</select></label>
-        <label class="mini"><span>条件を見る人</span><select data-p="condLines.${i}.who" data-act="structural">${Object.keys(LINE_WHO).map(k=>opt(k,lineWhoLabel(c.key,k),c.who)).join('')}</select></label>
-        ${condIn(`condLines.${i}`,c,{},lineWhoLabel(c.key,c.who||'other'))}
-        <span class="effbtns"><button data-act="clMove" data-i="${i}" data-d="-1" title="上へ">↑</button><button data-act="clMove" data-i="${i}" data-d="1" title="下へ">↓</button><button data-act="clDel" data-i="${i}" title="削除">×</button></span>
-      </div>
-      <p class="sub small nm clprev">${esc(clPrevText(c))}</p>
-      <textarea data-p="condLines.${i}.lines" data-t="lines" rows="${Math.max(2,(c.lines||[]).length)}" placeholder="この条件のときのセリフ。1行に1つ">${esc((c.lines||[]).join(String.fromCharCode(10)))}</textarea>
-    </div>`).join('')}
-    <button class="small add" data-act="clAdd">＋ 条件つきセリフ</button>
-  </section>
+  ${condLinesSecHTML(u)}
   <section class="sec"><h2>鉛筆の6面</h2>
     <p class="sub small nm">行動回数は行動回数決定フェイズで、コマンドは行動決定フェイズで使います。${RULES.actsTable?'行動回数は全サーヴァント共通の値です。':''}${TERMS.ascFull}面は${TERMS.asc}前に1つ置くのが基本です（霊基再臨しないサーヴァントは置かなくてもかまいません）。</p>
     <div class="faceed">
@@ -1058,7 +1046,7 @@ document.addEventListener('click',e=>{
     case 'dup': { const L=list(), i=selIdx(), c=clone(u); c.id=uniqueId(c.id); c.name+='（コピー）'; L.splice(i+1,0,c); setSel(i+1); full(); break; }
     case 'del': if(confirm(`「${u.name||'名前なし'}」を削除しますか？`)){ const L=list(), i=selIdx(); L.splice(i,1); setSel(Math.max(0,Math.min(i,L.length-1))); rollIdx=null; full(); } break;
     case 'move': { const L=list(), i=selIdx(), j=i+Number(b.dataset.d); if(j<0||j>=L.length) break; [L[i],L[j]]=[L[j],L[i]]; setSel(j); full(); break; }
-    case 'clAdd': { if(!u.condLines) u.condLines=[]; u.condLines.push({key:'attack',who:'other',cond:{k:'trait',v:'神性'},lines:[]}); full(); break; }
+    case 'clAdd': { if(!u.condLines) u.condLines=[]; u.condLines.push(u.master?{key:'start',who:'enemy',cond:{k:'id',v:(units[0]||{}).id||''},lines:[]}:{key:'attack',who:'other',cond:{k:'trait',v:'神性'},lines:[]}); full(); break; }
     case 'clDel': u.condLines.splice(+b.dataset.i,1); full(); break;
     case 'clMove': { const l=u.condLines, i=+b.dataset.i, j=i+Number(b.dataset.d); if(j<0||j>=l.length) break; [l[i],l[j]]=[l[j],l[i]]; full(); break; }
     case 'fitReset': { u.fit[b.dataset.k]={...FIT_DEF[b.dataset.k]}; full(); break; }
@@ -1136,11 +1124,29 @@ boot();
 
 // 条件つきセリフの「どんなときに出るか」の文（例：戦闘開始：味方に黒咲恵梨佳がいる場合）。
 // 場面・条件を変えたら全体を描き直さずにこの行だけ更新する（値の反映は先に走る change の処理に任せる）
-function clPrevText(c){ return `${LINE_KEYS[c.key]||''}：${condLineText(c,v=>([...units,...masters].find(x=>x.id===v)||{}).name||v)}`; }
+// 条件つきセリフの欄（サーヴァント・マスター共通。マスターは場面が MASTER_LINE_KEYS）
+function condLinesSecHTML(u){
+  const M=!!u.master, keys=M?MASTER_LINE_KEYS:LINE_KEYS;
+  return `<section class="sec"><h2>条件つきセリフ</h2>
+    <p class="sub small nm">相手や味方・敵の属性・クラス・状態・HP・キャラクターによって、場面ごとに専用のセリフを出します。上にあるものから順に見て、最初に条件を満たしたものを使い、どれも満たさなければ上の通常セリフを使います（${M?'補助の面・令呪':'スキル・鉛筆の面'}の専用セリフがあればそちらが優先）。${M?`「相手・対象」は、攻撃・令呪の対象です（戦闘開始は敵の先頭、勝利は最後に倒した相手、敗北は勝った相手の先頭）。${TERMS.player}のセリフは、同じ場面の${TERMS.unit}のセリフより先に出ます。`:'「相手・対象」は、攻撃の対象・攻撃してきた相手・スキルの対象です（戦闘開始は敵の先頭）。'}</p>
+    ${(u.condLines||[]).map((c,i)=>`<div class="subcard condline">
+      <div class="row">
+        <label class="mini"><span>場面</span><select data-p="condLines.${i}.key" data-act="structural">${Object.entries(keys).map(([k,v])=>opt(k,v,c.key)).join('')}</select></label>
+        <label class="mini"><span>条件を見る人</span><select data-p="condLines.${i}.who" data-act="structural">${Object.keys(LINE_WHO).map(k=>opt(k,lineWhoLabel(c.key,k,M),c.who)).join('')}</select></label>
+        ${condIn(`condLines.${i}`,c,{},lineWhoLabel(c.key,c.who||'other',M))}
+        <span class="effbtns"><button data-act="clMove" data-i="${i}" data-d="-1" title="上へ">↑</button><button data-act="clMove" data-i="${i}" data-d="1" title="下へ">↓</button><button data-act="clDel" data-i="${i}" title="削除">×</button></span>
+      </div>
+      <p class="sub small nm clprev">${esc(clPrevText(c,M))}</p>
+      <textarea data-p="condLines.${i}.lines" data-t="lines" rows="${Math.max(2,(c.lines||[]).length)}" placeholder="この条件のときのセリフ。1行に1つ">${esc((c.lines||[]).join(String.fromCharCode(10)))}</textarea>
+    </div>`).join('')}
+    <button class="small add" data-act="clAdd">＋ 条件つきセリフ</button>
+  </section>`;
+}
+function clPrevText(c,M){ return `${(M?MASTER_LINE_KEYS:LINE_KEYS)[c.key]||''}：${condLineText(c,v=>([...units,...masters].find(x=>x.id===v)||{}).name||v,M)}`; }
 function syncClPrev(e){
   if(!e.target.closest||!e.target.closest('.condline')) return;
   setTimeout(()=>{ const u=cur(); if(!u||!u.condLines) return;
-    document.querySelectorAll('.condline .clprev').forEach((el,i)=>{ const c=u.condLines[i]; if(c) el.textContent=clPrevText(c); }); });
+    document.querySelectorAll('.condline .clprev').forEach((el,i)=>{ const c=u.condLines[i]; if(c) el.textContent=clPrevText(c,!!u.master); }); });
 }
 document.addEventListener('input',syncClPrev);
 document.addEventListener('change',syncClPrev);

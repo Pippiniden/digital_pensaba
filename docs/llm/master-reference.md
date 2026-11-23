@@ -271,6 +271,6 @@
 
 ## 5. その他の決まり
 
-- **セリフ**（lines）：`support`＝補助、`attack`＝攻撃（マスタールール）、`spell`＝令呪使用。それぞれ文字列の配列。面・令呪だけの専用セリフは、その面・令呪に `"line":["…"]`
+- **セリフ**（lines）：`start`＝戦闘開始、`support`＝補助、`attack`＝攻撃（マスタールール）、`spell`＝令呪使用、`win`＝勝利、`defeat`＝敗北。それぞれ文字列の配列。面・令呪だけの専用セリフは、その面・令呪に `"line":["…"]`
 - **使用済みのID**（サーヴァントとも重複不可）：m_rin, m_kiritsugu, m_shirou, m_ritsuka, m_celenike, m_shinji, m_kariya, m_kota, m_shadowkaiser, m_masaru, m_erika, m_seiji, m_antonia, m_ssetsuna, m_jubiro, m_seimei, m_kuzunoha, m_kiri, m_isla, m_ophelia, m_chudovishche, m_natsume, m_ursula, m_medoisan, m_hidoisan, m_itaisan, artoria, emiya, cu, medusa, medea, kojiro, heracles, hassan, mash, kagemiya, odysseus, lancelot, connla, athelstan, mnesarete, hanzo, neoptolemus, titus, yorimitsu, lucan, almeida, tezcatlipoca, ahotoria, bartholomew, utixorabbit, kalki, lamorak, guillaume, vercingetorix, hangaku, adonis, ceryneia, hughes, necho1, croesus, croesusalter, logistilla, odysseiya, magoichi, brunhild, nileus, gwydion, arianrhod, tomiko, himetsuru, saishoku, liza, ursula, victy, maximinus, chiriduka, sulla, themistocles, ethelfleda, phaethon, chimaira, chief, brunhild2, fredegund
 

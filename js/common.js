@@ -46,8 +46,10 @@ function condText(c,use){
 //   味方・敵（ally / enemy）：「味方に黒咲恵梨佳がいる場合」「〔竜〕属性の相手がいる場合」
 const CL_OTHER = { start:'相手の先頭', attack:'対象', extra:'対象', np:'対象', skill:'対象', damage:'攻撃してきた相手', npDamage:'攻撃してきた相手', defeat:'倒した相手', win:'最後に倒した相手' };
 // 条件を見る人（who）の表示名。'other' だけは場面で指すものが変わる（敗退＝とどめを刺した相手 / 勝利＝最後に倒した相手）
-const lineWhoLabel=(key,who)=>who==='other'?(key==='defeat'||key==='win'?CL_OTHER[key]:LINE_WHO.other):(LINE_WHO[who]||'');
-function condLineText(cl,nameOf){
+// マスターの場面の「相手・対象」（m＝マスターのセリフのとき）
+const CL_OTHER_M = { start:'相手の先頭', support:'対象', attack:'攻撃の対象', spell:'対象', win:'最後に倒した相手', defeat:'勝った相手の先頭' };
+const lineWhoLabel=(key,who,m)=>who==='other'?(m?CL_OTHER_M[key]||LINE_WHO.other:key==='defeat'||key==='win'?CL_OTHER[key]:LINE_WHO.other):(LINE_WHO[who]||'');
+function condLineText(cl,nameOf,m){
   const c=cl&&cl.cond; if(!c) return '';
   const nmOf=nameOf||(v=>((typeof D==='function'&&D(v))||{}).name||v), not=!!c.not, v=c.v;
   const X={ id:nmOf(v), cls:v, trait:`〔${v}〕属性`,
@@ -65,7 +67,7 @@ function condLineText(cl,nameOf){
     case 'self': return one('自分');
     case 'ally': return any('味方');
     case 'enemy': return any('相手');
-    default: return one(CL_OTHER[cl.key]||'相手');
+    default: return one((m?CL_OTHER_M:CL_OTHER)[cl.key]||'相手');
   }
 }
 function normEff(e){
@@ -126,17 +128,18 @@ function normalizeUnit(u){
   const ult=u.ult||{};
   const ln=u.lines||{};
   const lines=Object.fromEntries(Object.keys(LINE_KEYS).map(k=>[k,strList(ln[k])]));
-  const condLines=(Array.isArray(u.condLines)?u.condLines:[]).map(normCondLine).filter(Boolean);
+  const condLines=(Array.isArray(u.condLines)?u.condLines:[]).map(c=>normCondLine(c)).filter(Boolean);
   return { id:String(u.id||''), name:String(u.name||''), cls:normClass(u.cls), traits:normTraits(u.traits), cost:num(u.cost), hp:num(u.hp,100),
     ...(u.wip?{wip:true}:{}), // 制作中：js 書き出し（units.js）に含めない
     ...(typeof u.memo==='string'&&u.memo.trim()?{memo:u.memo}:{}), // メモ：エディタ用の覚え書き（ゲーム中では使わない）
     fit:normFit(u.fit), ...(normLink(u.link)?{link:normLink(u.link)}:{}), lines, ...(condLines.length?{condLines}:{}), faces, skills, ult:Object.assign({name:String(ult.name||''), c:String(ult.c||'R'), eff:(ult.eff||[]).map(normEff)}, String(ult.ruby||'').trim()?{ruby:String(ult.ruby).trim()}:{}, Number.isInteger(ult.br)&&ult.br>=0?{br:ult.br}:{}, PICKS[ult.pick]&&ult.pick?{pick:ult.pick}:{}) };
 }
 // 条件つきセリフ：{key:LINE_KEYS のキー, who:LINE_WHO のキー, cond:Cond, lines:string[]}。上にあるものから順に見て、最初に条件を満たしたものを使う。不正なら null
-function normCondLine(c){
+// keys：場面の一覧（マスターは MASTER_LINE_KEYS）
+function normCondLine(c,keys=LINE_KEYS){
   c=c||{};
   const cond=normCond(c.cond), lines=strList(c.lines);
-  if(!LINE_KEYS[c.key]||!cond||!lines.length) return null;
+  if(!keys[c.key]||!cond||!lines.length) return null;
   return { key:c.key, who:LINE_WHO[c.who]?c.who:'other', cond, lines };
 }
 // キャラクター設定へのリンク：http(s) のURLだけ受け付ける（それ以外は空）
@@ -281,11 +284,12 @@ function normalizeMaster(m){
   const faces=Array.from({length:6},(_,i)=>{ const f=(m.faces||[])[i]||{}; return {label:String(f.label||''), eff:(f.eff||[]).map(normEff), ...own(f)}; });
   const spells=Array.from({length:3},(_,i)=>{ const s=(m.spells||[])[i]||{}; return {name:String(s.name||''), eff:(s.eff||[]).map(normEff), ...own(s)}; });
   const ln=m.lines||{};
+  const condLines=(Array.isArray(m.condLines)?m.condLines:[]).map(c=>normCondLine(c,MASTER_LINE_KEYS)).filter(Boolean);
   return { id:String(m.id||''), name:String(m.name||''), cls:TERMS.player, traits:[], cost:num(m.cost), hp:num(m.hp,100), master:true,
     ...(m.wip?{wip:true}:{}), // 制作中：js 書き出し（masters.js）に含めない
     ...(typeof m.memo==='string'&&m.memo.trim()?{memo:m.memo}:{}), // メモ：エディタ用の覚え書き（ゲーム中では使わない）
     ...(normLink(m.link)?{link:normLink(m.link)}:{}),
-    fit:normFit(m.fit), lines:Object.fromEntries(Object.keys(MASTER_LINE_KEYS).map(k=>[k,strList(ln[k])])), faces, spells };
+    fit:normFit(m.fit), lines:Object.fromEntries(Object.keys(MASTER_LINE_KEYS).map(k=>[k,strList(ln[k])])), ...(condLines.length?{condLines}:{}), faces, spells };
 }
 // ---------- 泥ペンマスシート（MSHEET）に沿った警告と目安 ----------
 // 補助の効果が「入れてはいけない」「リミット枠」のどれに当たるか。{c:'forbid'|'limit1'|'limit2', msg} または null
@@ -438,7 +442,8 @@ function mastersToJS(ms){
     ...(['face','np','cut'].every(k=>fitIsDef(m.fit,k))?[]:[`    "fit":${j(Object.fromEntries(['face','np','cut'].filter(k=>!fitIsDef(m.fit,k)).map(k=>[k,m.fit[k]])))},`]),
     ...(m.link?[`    "link":${j(m.link)},`]:[]),
     ...(m.memo?[`    "memo":${j(m.memo)},`]:[]),
-    ...(Object.keys(MASTER_LINE_KEYS).some(k=>m.lines[k].length)?[`    "lines":${j(Object.fromEntries(Object.keys(MASTER_LINE_KEYS).map(k=>[k,m.lines[k]])))},`]:[]),
+    ...(Object.keys(MASTER_LINE_KEYS).some(k=>m.lines[k].length)?[`    "lines":${j(Object.fromEntries(Object.keys(MASTER_LINE_KEYS).filter(k=>m.lines[k].length).map(k=>[k,m.lines[k]])))},`]:[]),
+    ...(m.condLines&&m.condLines.length?[`    "condLines":[`,m.condLines.map(c=>`      ${j(c)}`).join(',\n'),'    ],']:[]),
     '    "faces":[',
     m.faces.map(f=>`      ${j({label:f.label,eff:f.eff,...(f.line?{line:f.line}:{})})}`).join(',\n'),
     '    ],',

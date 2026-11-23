@@ -712,7 +712,7 @@ function zukanLinesHTML(d){
     if(c&&c.line&&c.line.length&&!(w==='post'&&f.pre&&f.pre.line===c.line)) own.push([`鉛筆の面${i+1}（${wl}）${c.label?`：${c.label}`:''}`,c.line]); }));
   const ownHTML=own.length?`<h4>行動限定のセリフ</h4><div class="zlines">${own.map(([t,l])=>`<details><summary>${esc(t)}<small class="sub">${l.length}件</small></summary><ul>${l.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></details>`).join('')}</div>`:'';
   if(!rows.length) return ownHTML;
-  const cl=c=>condLineText(c); // 例：味方に黒咲恵梨佳がいる場合
+  const cl=c=>condLineText(c,null,d.master); // 例：味方に黒咲恵梨佳がいる場合
   // 同じ条件文のものは1つにまとめる（出てきた順）
   const condGroups=c=>{ const m=new Map(); c.forEach(x=>{ const t=cl(x); m.set(t,(m.get(t)||[]).concat(x.lines)); }); return [...m]; };
   return `<h4>セリフ</h4><div class="zlines">${rows.map(([k,label,l,c])=>`<details><summary>${esc(label)}<small class="sub">${l.length+c.reduce((n,x)=>n+x.lines.length,0)}件</small></summary>

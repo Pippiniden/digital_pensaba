@@ -832,7 +832,9 @@ function startGame(){
   } while(r0===r1);
   G.cur=r0>r1?0:1; G.turn=1;
   log(`${esc(G.players[G.cur].name)} が先攻`,'good');
-  [G.cur,1-G.cur].forEach(pid=>{ const f=G.players[pid].party[0]; say(f,'start',{other:G.players[1-pid].party[0]}); });
+  // マスターがいればマスター → 先頭のサーヴァントの順（マスターは start のセリフがあるときだけ喋る）
+  [G.cur,1-G.cur].forEach(pid=>{ const f=G.players[pid].party[0], o=G.players[1-pid].party[0], m=masterOf(pid);
+    if(m&&!m.out) say(m,'start',{other:o}); say(f,'start',{other:o}); });
   beginTurn();
 }
 // シンプルルールのハンデ戦：コスト差が handicapAsc 以上なら、低コスト側を最初から霊基再臨済みにする
@@ -927,7 +929,12 @@ function checkWin(){
 function win(pid){ const first=G.winner==null; G.winner=pid; G.phase='over';
   if(first&&typeof recordMatch==='function'&&!(typeof cpuInRollout!=='undefined'&&cpuInRollout)) recordMatch(); // 戦績（records.js。ゲーム画面だけ）
   log(`${esc(G.players[pid].name)} の勝利！`,'good');
-  phaseFx(G.mode==='cpu'?(pid===0?'VICTORY':'DEFEAT'):'WINNER',G.mode==='cpu'?'':`${G.players[pid].name}の勝利`,{big:true,pid,end:true}); const w=alive(pid)[0]; if(w) say(w,'win',{other:LAST_KO[1-pid]||null}); }
+  phaseFx(G.mode==='cpu'?(pid===0?'VICTORY':'DEFEAT'):'WINNER',G.mode==='cpu'?'':`${G.players[pid].name}の勝利`,{big:true,pid,end:true});
+  // 勝った側のマスター → 勝った側のサーヴァント → 負けた側のマスター（敗北）の順。マスターはセリフがあるときだけ喋る
+  const w=alive(pid)[0], m=masterOf(pid), lm=masterOf(1-pid);
+  if(m&&!m.out) say(m,'win',{other:LAST_KO[1-pid]||null});
+  if(w) say(w,'win',{other:LAST_KO[1-pid]||null});
+  if(lm) say(lm,'defeat',{other:w||null}); }
 // ---------- アーケード（CPUと連戦。ARCADE＝rules.js） ----------
 // 流れ：chooseMode(arcade) → 編成（プレイヤーだけ）→ phase 'stage'（ステージ紹介）→ arcadeGo で対戦 → 勝ったら arcadeNext で次の 'stage' …
 // G.arcade：diff＝難易度 / stage＝今のステージ（0始まり）/ picks・mpick＝プレイヤーの編成（全ステージ共通）/ leads＝これまでの相手の先頭 / results＝終わったステージの記録
@@ -1108,7 +1115,7 @@ function useSpell(m,i,picked){
   log(`${nm(m)}：「${esc(s.name)}」${picked?` → ${nm(picked)}`:''}`,'good');
   fxEmit({t:'cutin',uid:m.uid,title:s.name,col:'Y',top:'令呪発動'}); // 宝具と同じカットイン（金背景は暫定）
   fxEmit({t:'skill',uid:m.uid,head:'令呪',name:s.name,picked:picked?D(picked.def).name:allLabel(s.eff),lines:effLines(s.eff,null,spellTgt)});
-  say(m,'spell',{own:s.line});
+  say(m,'spell',{own:s.line,other:picked||null});
   P.spellUsed[i]=true; P.spellLeft--; P.spell=null;
   return masterEffects(m,s.eff,{},picked);
 }
@@ -1450,7 +1457,7 @@ const ACTIONS = {
     const em=masterOf(1-G.cur), t=to==='master'?em:alive(1-G.cur)[0];
     if(!t||t.out) return;
     const dmg=masterAtkDmg(m,t);
-    log(`${MASTER_ACTS.attack}：${nm(m)} → ${nm(t)}`,''); say(m,'attack');
+    log(`${MASTER_ACTS.attack}：${nm(m)} → ${nm(t)}`,''); say(m,'attack',{other:t});
     if(t.master&&G.players[t.pid].evac){ log(`${nm(t)}は退避中のため当たらない`,'sub'); fxEmit({t:'dmg',uid:t.uid,text:'退避'}); masterDone(); return; }
     // マスターからマスターへの攻撃は、相手が令呪1画でサーヴァントに守らせて無効にできる（宣言中は不可）
     if(t.master&&dmg>0&&canGuardSpell(t.pid)){ G.guard={kind:'spell',dmg}; G.phase='guard'; return; }
