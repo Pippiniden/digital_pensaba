@@ -1936,15 +1936,15 @@ const DEFAULT_UNITS = [
     "traits":["男性","秩序","中庸","アイルランド","ケルト","天"],
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%b3%a5%ca%a5%eb%a1%a6%a5%b1%a5%eb%a5%ca%a5%c3%a5%cf",
     "lines":{
-      "start":[],
-      "attack":[],
-      "extra":[],
-      "damage":[],
-      "skill":[],
-      "np":[],
-      "npDamage":[],
-      "defeat":[],
-      "win":[]
+      "start":["挑むってこたあ覚悟しているんだろうな？","ひーふーみー…取りがいのある首が多いねえ"],
+      "attack":["おらよ！","喰らいな！","潰れろ！"],
+      "extra":["その首級…貰い受ける！"],
+      "damage":["ちっ！"],
+      "skill":["さてどうしてくるか","おら来いよ！"],
+      "np":["痛えだけじゃ済みはしねえ…魔神すらぶち抜く魔弾を味わいな！『穿ち貫く脳漿弾』！"],
+      "npDamage":["があ！？効いたぜ…"],
+      "defeat":["ちっ…格好がつかねえな","悪いな主君…しくじった"],
+      "win":["勝利の異名は伊達じゃねえよ","さてさて首級ちょうだ…分かってるってやりゃあしねえよ！"]
     },
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":50,"np":0,"star":0},"post":{"c":"R","dmg":70,"np":0,"star":0}},
@@ -1959,6 +1959,6 @@ const DEFAULT_UNITS = [
       {"name":"境界の守護者","eff":[{"k":"def","t":"self","v":20,"turns":3},{"k":"atk","t":"self","v":20,"turns":3}],"rank":"A"},
       {"name":"頭蓋の杯","eff":[{"k":"np","t":"self","v":30},{"k":"debuffImmune","t":"self","v":0,"times":3},{"k":"heal","t":"self","v":80}],"rank":"EX"}
     ],
-    "ult":{"name":"穿ち貫く脳漿弾","c":"R","eff":[{"k":"sureHit","t":"self","v":0,"times":1},{"k":"dmg","t":"target","v":300},{"k":"dmg","t":"target","v":50,"chance":4}],"ruby":"タスラム","pick":"enemy"}
+    "ult":{"name":"穿ち貫く脳漿弾","c":"R","eff":[{"k":"sureHit","t":"self","v":0,"times":1},{"k":"dmg","t":"target","v":300},{"k":"dmg","t":"target","v":50,"chance":4}],"ruby":"タスラム"}
   }
 ];
