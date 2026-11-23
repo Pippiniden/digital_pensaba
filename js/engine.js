@@ -130,7 +130,8 @@ const U = uid=>ALLM().find(u=>u.uid===uid);
 const alive = pid=>G.players[pid].party.filter(u=>!u.out);
 const roll = ()=>Math.floor(Math.random()*6);       // 面index(0-5)、出目は+1
 const has = (u,k)=>u.fx.some(e=>e.k===k);
-const disabled = u=>has(u,'stun')||has(u,'charm');           // 行動・スキル・宝具すべて不可
+const DISABLE_FX = ['stun','charm','petrify','bind','sleep']; // 行動不能になる弱体
+const disabled = u=>u.fx.some(e=>DISABLE_FX.includes(e.k));  // 行動・スキル・宝具すべて不可
 const canSkill = u=>!u.out&&!disabled(u)&&!has(u,'sealSkill');
 const canUlt = u=>!u.out&&!disabled(u)&&!has(u,'sealUlt')&&(!D(u.def).ult.pick||skillCands(u,D(u.def).ult).length>0); // 対象を選ぶ宝具は、選べる相手がいること
 const fmt = n=>Number.isInteger(n)?n:Math.round(n*10)/10;
@@ -207,6 +208,12 @@ function consume(u,list){
 // 被弾時にNPが増えなくなる弱体（呪い・被弾NP上昇封印）。回数があるものを先に使う
 const npSealFx = u=>u.fx.find(e=>e.k==='curse')||u.fx.find(e=>e.k==='hitNpSeal'&&e.times!=null)||u.fx.find(e=>e.k==='hitNpSeal');
 const dotVal = e=>e.v||RULES.dot; // 毒・やけどの値（0は旧データなので RULES.dot）
+// 受けるHP回復の量：HP回復量アップ(+x%)・ダウン(-x%)を足し引きして掛ける（0未満にはならない）。回数つきなら1回消費
+function healAmt(u,v){
+  const up=mods(u,'healUp'), dn=mods(u,'healDown'), p=up.sum-dn.sum;
+  consume(u,[...up.list,...dn.list]);
+  return p?Math.max(0,Math.round(v*(100+p)/100)):v;
+}
 // src：'atk'＝攻撃で得るNP（コマンド・攻撃時NP・チェイン）/ 'other'＝スキル・ターン開始時・被弾時など。NP獲得量ダウンは増える分から引く（0未満にはしない。all なら other も対象）
 function addNp(u,v,src){
   if(u.out) return;
@@ -316,13 +323,15 @@ function applyEffects(src,effs,picked,o={}){
     resolveTargets(src,e.t,picked).forEach(t=>{
       if(condAtApply(e)&&!condOk(e.cond,t)){ log(`${nm(t)}：条件（${condText(e.cond)}）を満たさないため「${fxName(e)}」は効果なし`,'sub'); return; }
       // 弱体耐性ダウン：対象が受ける弱体（確率つきのみ）の判定ロールをN+xにする
-      const rd=(FX[e.k]&&FX[e.k].buff===false&&e.chance)?mods(t,'debuffResDown'):null;
-      const useRd=!!(rd&&rd.list.length);
+      // 弱体耐性アップ（debuffRes）は逆に N-x にする（両方あれば相殺）
+      const dbf=FX[e.k]&&FX[e.k].buff===false&&e.chance;
+      const rd=dbf?mods(t,'debuffResDown'):null, ru=dbf?mods(t,'debuffRes'):null;
+      const useRd=!!(rd&&(rd.list.length||ru.list.length));
       const useRate=!!(rate&&(t.pid!==src.pid)===rate.foe&&(e.chance||rate.dn));
       if(useRate||useRd){ // 敵への弱体／味方への強化：成功率アップ／ダウンで判定をずらす
         if(useRate) rate.used=true;
-        const need=Math.max(0,Math.min(6,(e.chance||6)+(useRate?rate.up-rate.dn:0)+(useRd?rd.sum:0)));
-        if(useRd) consume(t,rd.list);
+        const need=Math.max(0,Math.min(6,(e.chance||6)+(useRate?rate.up-rate.dn:0)+(useRd?rd.sum-ru.sum:0)));
+        if(useRd) consume(t,[...rd.list,...ru.list]);
         if(need<6&&!chanceRoll(e,t,need)) return;
       } else if(e.chance&&!chanceRoll(e,t)) return;
       if(e.k==='dmg'){ if(src.master) fixedHit(src,t,effVal(e,t)); return; } // 宝具のダメージは resolveUlt で処理
@@ -391,8 +400,8 @@ function applyOne0(src,t,e,o={}){
     if(g){ consume(t,[g]); log(`${nm(t)}は${FX[gk].name}で「${FX[e.k].name}」を防いだ`,'sub'); return; }
   }
   switch(e.k){
-    case 'heal': if(has(t,'healBlock')){ log(`${nm(t)}は回復無効でHPが回復しない`,'sub'); return; }
-      t.hp=Math.min(maxHp(t),t.hp+e.v); log(`${nm(t)} HP${e.v}回復`,'good'); return;
+    case 'heal': { if(has(t,'healBlock')){ log(`${nm(t)}は回復無効でHPが回復しない`,'sub'); return; }
+      const v=healAmt(t,e.v); t.hp=Math.min(maxHp(t),t.hp+v); log(`${nm(t)} HP${v}回復${v!==e.v?`（回復量${e.v}→${v}）`:''}`,'good'); return; }
     case 'np': addNp(t,e.v,'other'); log(`${nm(t)} ${TERMS.gauge}${e.v>=0?'+':''}${e.v}%`); return;
     case 'star': changeStars(t.pid,e.v); return;
     case 'starLoss': changeStars(t.pid,-e.v); return;
@@ -494,6 +503,8 @@ function dealDamage(u,dmg,isHit,o={}){
   u.hp=hp1;
   if(ko){ markKiller(u,o.att||o.src); if(!gutsHold(u)){ retreat(u); return; } } // ガッツ：一連の攻撃が終わるまでHP0で踏みとどまる
   if(isHit){
+    // 睡眠：攻撃でダメージを受けると解ける（解除不可（sure）の睡眠は解けない）
+    if(dmg>0&&u.fx.some(e=>e.k==='sleep'&&!e.sure)){ u.fx=u.fx.filter(e=>e.k!=='sleep'||e.sure); log(`${nm(u)}は攻撃を受けて目を覚ました`,'sub'); }
     // 被ダメージ時NP（onHitNp）も被弾のたびにここで加算する（被ダメージ時スターだけは終了フェイズの hitEffects）
     const c=npSealFx(u), hn=mods(u,'onHitNp');
     if(c){ consume(u,[c]); log(`${nm(u)}は${FX[c.k].name}で${TERMS.gauge}が増えない`,'sub'); if(hn.list.length) consume(u,hn.list); }
@@ -628,15 +639,16 @@ function attackHit(att,cmd,tgt,o,lab){
     }
     if(crit){
       sa.crits++;
-      const cp=mods(att,'critPow',cmd.c), cm=att.fx.filter(e=>e.k==='critMult');
+      const cp=mods(att,'critPow',cmd.c), cpd=mods(att,'critPowDown',cmd.c), cm=att.fx.filter(e=>e.k==='critMult');
+      const pw=cp.sum-cpd.sum; // クリティカル威力ダウン：増加量から引く（増加量は0未満にしない）
       if(cm.length){ // クリティカル倍率：+30/+60・色バフ2倍の代わりに、ここまでのダメージ×x%（威力+は最後に加算）
-        const pct=Math.max(...cm.map(e=>e.v)), add=Math.round(dmg*pct/100)-dmg+cp.sum;
-        dmg+=add; note.push(`クリ×${pct}%${cp.sum?`+${cp.sum}`:''}`); cons(att,cm);
+        const pct=Math.max(...cm.map(e=>e.v)), add=Math.max(0,Math.round(dmg*pct/100)-dmg+pw);
+        dmg+=add; note.push(`クリ×${pct}%${pw?`${pw>0?'+':''}${pw}`:''}`); cons(att,cm);
       } else {
-        const add=(cmd.c==='R'?RULES.critDmgR:RULES.critDmg)+cp.sum+colorBuff;
-        dmg+=add; note.push(`クリ+${add}${colorBuff?`(色バフ+${colorBuff}含む)`:''}`);
+        const add=Math.max(0,(cmd.c==='R'?RULES.critDmgR:RULES.critDmg)+pw+colorBuff);
+        dmg+=add; note.push(`クリ+${add}${colorBuff?`(色バフ+${colorBuff}含む)`:''}${cpd.sum?`(威力ダウン-${cpd.sum}含む)`:''}`);
       }
-      cons(att,cp.list);
+      cons(att,[...cp.list,...cpd.list]);
     }
   }
   // 6. 最終ダメージ（クリティカルとオーバーキルは重複：獲得NP・発生スターがそれぞれ2倍）
@@ -767,6 +779,9 @@ function resolveUlt(u,tgt,picked){
           const m=dmgMods(u,t,ud.c), up=mods(u,'npPow'), dn=mods(u,'npPowDown');
           [...m.usedA,...up.list,...dn.list].forEach(x=>usedA.add(x)); usedT=m.usedT;
           dmg=applyPct(Math.max(0,e.v+m.sum+up.sum-dn.sum),m.pct);
+          // 宝具被ダメージ-：受ける側の宝具ダメージを減らす（被ダメージ減少無視なら見ない）
+          const nd=has(u,'ignoreDef')?null:mods(t,'npDef');
+          if(nd&&nd.list.length){ dmg=Math.max(0,dmg-nd.sum); usedT=[...usedT,...nd.list]; }
         }
         if(t.master&&e.t==='enemy_all'){ log(`→ ${nm(t)}${lab}：<b>${fmt(dmg)}</b>ダメージ`); dealDamage(t,dmg,false,{np:true,src:u}); continue; }
         const b=blocked(u,t,(x,l)=>l.forEach(y=>usedA.add(y)));
@@ -876,7 +891,7 @@ function beginTurn(){
 // ターン開始時○○：手番側の生存サーヴァントに付いているものが発動（スターはこのターンの手持ちに加わる）
 function turnStartEffects(){
   alive(G.cur).forEach(u=>{
-    const h=mods(u,'regenHp').sum, n=mods(u,'regenNp').sum, s=mods(u,'regenStar').sum;
+    const h0=mods(u,'regenHp').sum, h=h0?healAmt(u,h0):0, n=mods(u,'regenNp').sum, s=mods(u,'regenStar').sum;
     if(h&&has(u,'healBlock')) log(`${nm(u)}は回復無効でターン開始時に回復しない`,'sub');
     else if(h&&u.hp<maxHp(u)){ const v=Math.min(h,maxHp(u)-u.hp); u.hp+=v; log(`${nm(u)} ターン開始時：HP${v}回復`,'good'); fxEmit({t:'pop',uid:u.uid,text:`HP+${v}`,cls:'heal'}); }
     if(n){ addNp(u,n,'other'); log(`${nm(u)} ターン開始時：${TERMS.gauge}+${n}%`,'good'); }
@@ -900,7 +915,7 @@ function endPhase(){
   // 弱体ダメージ：攻防補正・無敵・回避・クリティカルの影響なし。弱体無効で防がれる。毒・やけどはそれぞれ重複せず最大値
   pids.forEach(pid=>alive(pid).forEach(u=>{
     const top=k=>Math.max(0,...u.fx.filter(e=>e.k===k).map(dotVal));
-    let ps=top('poison'), bs=top('burn')*(has(u,'spread')?2:1), ds=mods(u,'drain').sum;
+    let ps=top('poison')*(has(u,'erosion')?2:1), bs=top('burn')*(has(u,'spread')?2:1), ds=mods(u,'drain').sum; // 蝕毒＝毒2倍 / 延焼＝やけど2倍
     // 弱体無効：種類指定なし＝すべて防ぐ（1回消費）／種類指定あり＝その弱体ダメージだけ防ぐ
     const blockDot=(k,v)=>{ if(!v) return v; const g=u.fx.find(e=>e.k==='debuffImmune'&&(!e.vs||e.vs===k)); if(!g) return v; consume(u,[g]); log(`${nm(u)}は${FX.debuffImmune.name}で${FX[k].name}ダメージを防いだ`,'sub'); return 0; };
     ps=blockDot('poison',ps); bs=blockDot('burn',bs); ds=blockDot('drain',ds);
@@ -1394,7 +1409,9 @@ const ACTIONS = {
     const second=ruleset().secondBonus&&G.turn===2?1:0;
     alive(G.cur).forEach(u=>{
       let m=0;
+      const cf=u.fx.find(e=>e.k==='confuse');
       if(disabled(u)){ u.face=null; log(`${nm(u)}は行動不能`,'bad'); }
+      else if(cf&&(consume(u,[cf]),chanceRoll(cf,u,Math.min(6,cf.v||3)))){ u.face=null; log(`${nm(u)}は混乱していて行動できない`,'bad'); syncU(u); } // 混乱：ロールv以下（0なら3以下）でこのターン行動不能
       else {
         const f=roll(); u.face={i:f,kind:'acts'}; rolls.push({uid:u.uid,f});
         const fear=has(u,'fear')?1:0, dn=mods(u,'actsDown').sum, up=mods(u,'actsUp'); consume(u,up.list); syncU(u);

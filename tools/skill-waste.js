@@ -81,6 +81,11 @@ const body=function(N,ONLY,LEVEL,LOOK){
     sealSkill:(t)=>!t.used.some((x,i)=>!x&&(i<2||t.asc))?'敵に未使用スキルがない':null,
     npPowDown:(t,e)=>oneTurn(e)&&t.np<60?'敵のNPが低い（1ターン・60%未満）':null,
     spread:(t,e)=>!has(t,'burn')&&!sameSkillGives(e,'burn')?'やけどがない':null,
+    erosion:(t,e)=>!has(t,'poison')&&!sameSkillGives(e,'poison')?'毒がない':null,
+    healUp:(t)=>has(t,'healBlock')?'回復無効中':null,
+    critPowDown:(t,e)=>oneTurn(e)&&G.players[t.pid].stars<=0?'敵のスターが0（1ターン）':null,
+    npDef:(t,e,u)=>!enemiesOf(u).some(x=>!x.master&&D(x.def).ult.eff.some(y=>y.k==='dmg'))?'ダメージ宝具を持つ敵がいない':oneTurn(e)&&!ultSoon(u)?'敵の宝具が来ない（1ターン）':guardShadowed(t,u),
+    debuffRes:(t,e,u)=>!enemyHas(u,x=>FX[x.k]&&FX[x.k].buff===false&&x.chance&&x.t!=='self'&&!String(x.t).startsWith('ally'))?'確率つきの弱体を使う敵がいない':null,
     critDown:(t,e)=>oneTurn(e)&&G.players[t.pid].stars<=0?'敵のスターが0（1ターン）':null,
     curse:(t)=>has(t,'hitNpSeal')?'すでに被弾NP封印中':null,
     hitNpSeal:(t)=>has(t,'curse')||has(t,'hitNpSeal')?'すでに呪い・被弾NP封印中':null,
@@ -113,6 +118,7 @@ const body=function(N,ONLY,LEVEL,LOOK){
     // 敵に付けた弱体
     atkDown:attacks, atkPctDown:attacks, starDown:normalAtk, npGainDown:attacks, cardDown:attacks, critDown:(h,ev)=>normalAtk(h,ev)&&ev.stars>0,
     npPowDown:(h,ev)=>attacks(h,ev)&&ev.ult, defDown:hit, curse:hit, hitNpSeal:hit,
+    critPowDown:(h,ev)=>normalAtk(h,ev)&&ev.stars>0, npDef:(h,ev)=>hit(h,ev)&&ev.ult,
     sealUlt:(h,ev)=>ev.type==='skillPhase'&&ev.pid===h.pid&&h.np>=READY, sealSkill:(h,ev)=>ev.type==='skillPhase'&&ev.pid===h.pid&&h.used.some((x,i)=>!x&&(i<2||h.asc)),
   };
   const res={};

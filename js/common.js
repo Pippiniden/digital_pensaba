@@ -240,6 +240,7 @@ function checkEffs(effs,ctx,where,add){
     if(FX[e.k].timesOnly&&e.turns!=null) add('warn',`${w}：${FX[e.k].name}は回数で指定します（ターンは使われません）`);
     if(e.k==='instantDeath'&&['self','ally_all','ally_other'].includes(e.t)) add('warn',`${w}：味方に即死効果がかかります`);
     if(e.chance&&e.chance>=6) add('warn',`${w}：ロール6以下は必ず成功します`);
+    if(e.k==='confuse'&&e.v>=6) add('warn',`${w}：混乱の値はロールの出目（1〜5）です。6以上は毎ターン必ず行動不能になります`);
     if(e.k==='cardConv'&&!e.color) add('error',`${w}：カード変換は変換先の色を指定してください`);
     if(CARD_DEFS[e.k]&&!e.color) add('error',`${w}：${FX[e.k].name}は色を指定してください`);
     if(CARD_DEFS[e.k]&&!(e.v>0)&&!(e.np>0)&&!(e.star>0)) add('warn',`${w}：${FX[e.k].name}の威力・NP獲得量・スター発生量がすべて0です`);
@@ -651,6 +652,12 @@ function fxText(e){
     case 'buffUp': s=`強化成功率アップ(ロール+${e.v})`; break;
     case 'debuffUp': s=`弱体成功率アップ(ロール+${e.v})`; break;
     case 'debuffResDown': s=`弱体耐性ダウン(受ける弱体のロール+${e.v})`; break;
+    case 'debuffRes': s=`弱体耐性アップ(受ける弱体のロール-${e.v})`; break;
+    case 'healUp': s=`HP回復量+${e.v}%`; break;
+    case 'healDown': s=`HP回復量-${e.v}%`; break;
+    case 'critPowDown': s=`クリティカル威力-${e.v}${col}`; break;
+    case 'npDef': s=`${TERMS.ult}被ダメージ-${e.v}`; break;
+    case 'confuse': s=`混乱(ロール${e.v||3}以下で行動不能)`; break;
     case 'debuffDown': s=`弱体成功率ダウン(ロール-${e.v})`; break;
     case 'buffDown': s=`強化成功率ダウン(ロール-${e.v})`; break;
     case 'poison': s=`毒${e.v||RULES.dot}`; break;

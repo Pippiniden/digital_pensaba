@@ -101,10 +101,11 @@ function newEff(ctx,path){
 // 値の目安（なければ20）。FX_VAL_MASTER＝マスターの補助・令呪で別の値を使うもの
 const FX_VAL = { atk:20, cardUp:30, cardDown:30, atkDown:10, atkPct:20, atkPctDown:20, def:10, defDown:10, critPow:30, critMult:200, guts:100, critRoll:1, debuffUp:1, buffUp:1, debuffDown:1, debuffResDown:1, buffDown:1, critDown:1, starDown:2, npGainDown:5, nullUnder:30,
   onAtkStar:3, onAtkNp:10, actsUp:1, actsDown:1, regenHp:20, regenNp:5, regenStar:2, atkVs:50, atkTrait:50, defTrait:50, counter:20, onHitNp:10, hitNpUp:10, onHitStar:3,
-  maxHp:100, poison:20, burn:20, drain:20, heal:100, np:20, star:5, starLoss:5, buffExtend:1, skillCharge:1, dmg:200, selfDmg:20, npPow:80, npPowDown:50, multiHit:2 };
+  maxHp:100, poison:20, burn:20, drain:20, heal:100, np:20, star:5, starLoss:5, buffExtend:1, skillCharge:1, dmg:200, selfDmg:20, npPow:80, npPowDown:50, multiHit:2,
+  debuffRes:1, healUp:30, healDown:30, critPowDown:30, npDef:50, confuse:3 };
 const FX_VAL_MASTER = { heal:30, dmg:50, star:5 };
 // 1ターンで足りる効果（ほかは3ターン）
-const FX_TURN1 = ['evade','invul','pierce','sureHit','stun','sealSkill','sealUlt','charm','fear','ignoreDef','actsDown','taunt'];
+const FX_TURN1 = ['evade','invul','pierce','sureHit','stun','petrify','bind','sleep','confuse','sealSkill','sealUlt','charm','fear','ignoreDef','actsDown','taunt'];
 // 対象の側：ally＝味方側（既定は自分） / enemy＝敵側 / master＝マスター（スター） / selfOnly＝自分だけ
 const FX_SIDE = { star:'master', starLoss:'enemy', strip:'enemy', instantDeath:'enemy', dmg:'enemy', selfDmg:'selfOnly', copyRoll:'selfOnly', copyBuff:'selfOnly', copyDebuff:'enemy' };
 // 状態コピーのコピー元の既定（強化は敵から自分へ、弱体は自分から敵へ）

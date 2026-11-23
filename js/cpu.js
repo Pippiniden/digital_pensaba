@@ -494,6 +494,12 @@ let SKILL_SENSE = true;
 // 防御無視は殴る予定の相手が防御を持っているときだけ。当てはまるキャラが少ないので全体の差は小さい（旧版との対戦 各約5.4万試合：team 50.22%・mteam 50.34%（±0.42）、スキル全体が無駄 0.3%）
 let SKILL_V2 = true;
 const selfDraw=(foes,ts,v)=>foes.length?v:SKILL_V2&&ts.length?0:-1; // 弱体：敵に入れば v、自分側だけならデメリットなので0（旧：-1）
+// HP回復の手段がある（毎ターン回復が付いている／未使用のスキル・宝具に回復がある）。マスターは見ない
+const cpuHealSrc=x=>{ if(x.master) return false; const d=D(x.def), hk=e=>e.k==='heal'||e.k==='regenHp';
+  return has(x,'regenHp')||d.skills.some((s,i)=>!x.used[i]&&(i<2||x.asc)&&s.eff.some(hk))||d.ult.eff.some(hk); };
+// 確率つきの弱体（敵に向けたもの）を、未使用のスキルか宝具に持っている
+const cpuChanceDebuffer=x=>{ if(x.master) return false; const d=D(x.def), hit=e=>FX[e.k]&&FX[e.k].buff===false&&e.chance&&!['self','ally_all','ally_other'].includes(e.t);
+  return d.skills.some((s,i)=>!x.used[i]&&s.eff.some(hit))||d.ult.eff.some(hit); };
 // 効果の並び（スキル・令呪）の「今使う価値」。si はスキル番号（スキル以外は -1）
 function cpuEffScore(u,effs,picked,si){
   const allies=alive(u.pid), enemies=alive(1-u.pid), stars=G.players[u.pid].stars;
@@ -519,6 +525,23 @@ function cpuEffScore(u,effs,picked,si){
       case 'fear': case 'actsDown': case 'sealSkill': sc+=foes.length?2:-1; break;
       case 'sealUlt': sc+=foes.some(t=>t.np>=RULES.ultCost-30)?4:foes.length?1:-1; break;
       case 'spread': sc+=foes.some(t=>has(t,'burn'))?2:.5; break;
+      // 新しい効果の使いどき：つよい同士・同じ編成のミラー戦（全キャラのスキル1をその効果だけのスキルにして、各案4000試合）で決めた。数字は案の側の勝率（相手は旧判断）
+      // 蝕毒：毒が付いている敵がいる（同じスキルで毒も付ける）ならすぐ使う。旧（2点＝実質使わない）より 66.5%。毒がなくても使う案と同じ勝率なので、無駄打ちしない方を採用
+      case 'erosion': sc+=!foes.length?-1:foes.some(t=>has(t,'poison'))||effs.some(x=>x.k==='poison')?3.5:.5; break;
+      // 弱体耐性アップ：すぐ使う 50.8% ／ 使わない 51.0% ／ 確率つき弱体を持つ敵がいるときだけ 50.4%（差なし）。小さな加点にとどめる
+      case 'debuffRes': sc+=foes.length?-1:enemies.some(x=>cpuChanceDebuffer(x))?1.5:.3; break;
+      // HP回復量アップ：減っている味方がいて回復の手段（同じスキル・未使用の回復スキル・毎ターン回復）があるとき 63.7%（すぐ 61.3% ／ HP70%未満の味方がいるとき 60.5%）
+      case 'healUp': { if(foes.length){ sc-=1; break; } const al=alive(u.pid).filter(t=>!t.master);
+        sc+=al.some(t=>maxHp(t)-t.hp>=70)&&(effs.some(x=>x.k==='heal'||x.k==='regenHp')||al.some(cpuHealSrc))?3.5:al.some(t=>hpR(t)<.7)?3:.3; break; }
+      // HP回復量ダウン：すぐ使う 69.6%（敵が減ってから 50.5% ／ 敵が回復しそうなとき 49.6%：敵の回復は減ったらすぐ来るので、待つと間に合わない）。回復の手段がある敵がいれば先に使う
+      case 'healDown': sc+=selfDraw(foes,ts,foes.some(cpuHealSrc)?3.5:.5); break;
+      // クリティカル威力ダウン：敵のスター6個以上で使う 52.1%（すぐ 50.8% ／ 11個以上 51.4% ／ 使わない 48.7%）
+      case 'critPowDown': sc+=selfDraw(foes,ts,foes.some(t=>G.players[t.pid].stars>=6)?3:.5); break;
+      // 宝具被ダメージ-：敵が宝具を撃てる（NP100%）ときに使う 56.9%（NP70%以上 51.9% ／ すぐ 44.9% ／ 使わない 45.1%）
+      case 'npDef': sc+=foes.length?-1:enemies.some(x=>!x.master&&x.np>=RULES.ultCost&&canUlt(x))?4:enemies.some(x=>!x.master&&x.np>=70)?1:0; break;
+      // 混乱：チームは旧判断（2点＝ふだんは使わず、倒れそうなときに使う）がいちばんよかった（すぐ 48.0% ／ 3ターン目から 47.0% ／ 敵NP100% 42.6% ／ 使わない 41.2%）。
+      // 1騎のルールはすぐ使う方がよい（旧判断に 54.2%）
+      case 'confuse': sc+=!SKILL_SENSE||foes.some(t=>!has(t,'debuffImmune')&&!has(t,'mentalImmune'))?(ruleset().partyMax===1?3:2):-1; break;
       case 'instantDeath': sc+=foes.length?5:-5; break;
       case 'drain': sc+=foes.length?2:-1; break;
       case 'cleanseMental': sc+=ts.some(t=>t.fx.some(x=>FX[x.k].mental))?3:0; break;
@@ -580,7 +603,7 @@ function cpuEffScore(u,effs,picked,si){
       case 'cleanse': sc+=ts.some(t=>t.fx.some(x=>e.vs?x.k===e.vs:FX[x.k].buff===false))?2:0; break;
       case 'np': sc+=ts.some(t=>t.np<RULES.ultCost&&t.np+e.v>=RULES.ultCost)?4:ts.some(t=>t.np<RULES.ultCost)?1.5:0; break;
       case 'star': sc+=cpuHard()?starSkillScore(e.v,u.pid):G.ult?.5:2; break;
-      case 'stun': case 'charm': sc+=!SKILL_SENSE||foes.some(t=>!has(t,'debuffImmune')&&!(FX[e.k].mental&&has(t,'mentalImmune')))?3:-1; break; // 条件つき（特定の相手だけ）は対象がいなければ使わない
+      case 'stun': case 'charm': case 'petrify': case 'bind': case 'sleep': sc+=!SKILL_SENSE||foes.some(t=>!has(t,'debuffImmune')&&!(FX[e.k].mental&&has(t,'mentalImmune')))?3:-1; break; // 条件つき（特定の相手だけ）は対象がいなければ使わない
       case 'poison': case 'burn': sc+=ts.some(t=>!has(t,e.k))?2:0; break;
       case 'curse': case 'hitNpSeal': case 'atkDown': case 'atkPctDown': sc+=2; break;
       case 'strip': sc+=ts.some(t=>t.fx.some(x=>e.vs?x.k===e.vs:FX[x.k].buff))?2:0; break;
@@ -633,7 +656,8 @@ function cpuPickKind(cands,s,k){
   if(k.includes('copyRoll')){ const avg=x=>D(x.def).faces.reduce((s2,f)=>s2+(isCopyCmd(f.post)?0:f.post.dmg||0),0); return [...cands].sort((a,b)=>avg(b)-avg(a))[0]; } // 再臨後コマンドの平均ダメージが高い相手の鉛筆
   if(k.includes('heal')||k.includes('cleanse')) return [...cands].sort((a,b)=>hpR(a)-hpR(b))[0];
   if(k.includes('np')){ const below=cands.filter(c=>c.np<RULES.ultCost); return [...(below.length?below:cands)].sort((a,b)=>b.np-a.np)[0]; }
-  if(['stun','charm','fear','sealSkill','sealUlt','instantDeath'].some(x=>k.includes(x))) return [...cands].sort((a,b)=>b.np-a.np||b.hp-a.hp)[0];
+  if(['stun','charm','petrify','bind','sleep','confuse','fear','sealSkill','sealUlt','instantDeath'].some(x=>k.includes(x))) return [...cands].sort((a,b)=>b.np-a.np||b.hp-a.hp)[0];
+  if(k.includes('erosion')&&!k.includes('poison')){ const c=cands.filter(x=>has(x,'poison')); if(c.length) return [...c].sort((a,b)=>b.hp-a.hp)[0]; }
   if(k.includes('poison')||k.includes('burn')){ const c=cands.filter(x=>!has(x,'poison')&&!has(x,'burn')); return [...(c.length?c:cands)].sort((a,b)=>b.hp-a.hp)[0]; }
   return null;
 }
@@ -677,8 +701,10 @@ let TGT_GUARD = true; // 通常攻撃の対象選び（脅威度）：回避・�
 // 通常攻撃が通る割合：攻撃 hits 回のうち、回避・無敵の回数ぶん（回数なしは全部）が防がれる
 function atkPass(t,hits){ if(!hits) return 1; const g=t.fx.filter(x=>x.k==='invul'||x.k==='evade').reduce((s,x)=>s+(x.times==null?Infinity:x.times),0); return Math.max(0,hits-Math.min(g,hits))/hits; }
 const cpuThreat = t=>avgDmg(t)*1.5+ultPower(t)*.3+40;
+// 睡眠中の敵は殴ると目を覚ますので、倒せないなら起きている敵を狙う（ミラー戦4000試合：51.5%、狙いを変えないと 49.4%）
 function cpuThreatTarget(){
-  const c=cpuTargetCands();
+  let c=cpuTargetCands();
+  if(c.length>1&&c.some(t=>has(t,'sleep'))){ const aw=c.filter(t=>!t.fx.some(e=>e.k==='sleep'&&!e.sure)||estDamage(t)>=t.hp); if(aw.length) c=aw; }
   const hits=G.ult?D(U(G.ult).def).ult.eff.filter(e=>e.k==='dmg').length*hitsOf(D(U(G.ult).def).ult.eff):G.rolled.reduce((s,r)=>s+(r.cmd.dmg>0?hitsOf(r.cmd.eff):0),0);
   let best=c[0], bs=-Infinity;
   for(const t of c){

@@ -52,6 +52,9 @@ const EFF_ALIAS={
   dmg:'だめーじ ダメージ 攻撃 こうげき', multiHit:'れんぞく 連続 れんげき', selfDmg:'じしょう 自傷', counter:'はんげき 反撃 かうんたー', maxHp:'さいだいHP 最大HP',
   cardUp:'かーど カード性能 ばすたー あーつ くいっく', cardDown:'かーど カード性能 だうん ばすたー あーつ くいっく', cardConv:'かーどへんかん カード変換', aoeNormal:'ぜんたい 全体化', aoe:'ぜんたい 全体化', desc:'せつめい 説明',
   debuffImmune:'じゃくたいむこう 弱体無効', buffImmune:'きょうかむこう 強化無効', healBlock:'かいふくふか 回復不可',
+  erosion:'しょくどく 蝕毒 どく 毒', debuffRes:'じゃくたいたいせい 弱体耐性', healUp:'かいふくりょう 回復量', healDown:'かいふくりょう 回復量 だうん',
+  critPowDown:'くりてぃかる クリ だうん', npDef:'ほうぐ 宝具 ぼうぎょ 防御 たいしゅくせい 対粛正', petrify:'せきか 石化 行動不能', bind:'こうそく 拘束 行動不能',
+  sleep:'すいみん 睡眠 ねむり 眠り 行動不能', confuse:'こんらん 混乱 行動不能',
 };
 const effKana=s=>String(s||'').toLowerCase().replace(/[ァ-ヶ]/g,c=>String.fromCharCode(c.charCodeAt(0)-0x60)).replace(/\s+/g,'');
 function effMatch(k,q){
@@ -122,6 +125,7 @@ document.addEventListener('keydown',e=>{
 function effKindChange(old,k,ctx,pick){
   const f=FX[k], of=FX[old.k]||{}, tg=TGT_BY_CTX[ctx];
   const ne={k,t:old.t,v:f.val?(of.val&&old.v?old.v:10):0}; // 値のない効果から変えたときは仮に10
+  if(k==='confuse'&&old.k!=='confuse') ne.v=3; // 混乱の値はロールの出目（1〜6）
   if(!f.noTgt&&!tg.includes(ne.t)) ne.t=tg[0];
   // 弱体は敵へ、強化は味方へ（逆向きになっていたら直す。スキルで敵1体を狙うには「対象の選び方」が要るので敵全体にする）
   const foe=['enemy_all','target'].includes(ne.t)||(ne.t==='picked'&&['enemy','any'].includes(pick));

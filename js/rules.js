@@ -119,8 +119,9 @@ const DRAFT = { pool:{ solo:6, team:12 }, masters:4 };
 const MSHEET = {
   hpPerCost:100, hpRange:100, hpStep:50, sameMax:3, star5Cost:5, faceMain:3,
   forbid:{ np:'NPの即時増加は補助に入れられません（「攻撃時NP+x%(1回)」などにしてください）', invul:'無敵は補助に入れられません（令呪クラスの効果です）',
-    stun:'スタンは補助に入れられません（令呪クラスの効果です）', instantDeath:'即死は入れられません' },
-  limit1:['cleanse','strip','actsUp','fear'],   // ＋ 回避(1回)・魅了(ロール3以下の敵単体)
+    stun:'スタンは補助に入れられません（令呪クラスの効果です）', petrify:'石化は補助に入れられません（令呪クラスの効果です）',
+    bind:'拘束は補助に入れられません（令呪クラスの効果です）', sleep:'睡眠は補助に入れられません（令呪クラスの効果です）', instantDeath:'即死は入れられません' },
+  limit1:['cleanse','strip','actsUp','fear','confuse'],   // ＋ 回避(1回)・魅了(ロール3以下の敵単体)
   limit2:['buffImmune','debuffImmune','deathImmune','stripImmune','npDownImmune','starLossImmune'],
   single:['ally_svt','enemy_svt'],
   ref:{
@@ -148,6 +149,7 @@ const MSHEET = {
     // 強い効果：turns・times の上限（どちらか一方が上限内ならよい）と、全体にかけるときの確率の上限（ロールN以下）
     strong:{ stun:{turns:1,times:1,allChance:2}, charm:{turns:1,times:1,allChance:2}, fear:{turns:1,times:1,allChance:2},
       sealSkill:{turns:1,times:1,allChance:2}, sealUlt:{turns:1,times:1,allChance:2}, buffImmune:{turns:1,times:1,allChance:2},
+      petrify:{turns:1,times:1,allChance:2}, bind:{turns:1,times:1,allChance:2}, sleep:{turns:1,times:1,allChance:2}, confuse:{turns:1,times:1,allChance:2},
       invul:{turns:1,times:1}, evade:{turns:1,times:1} },
     // 値の上限 [単体, 全体]。dmg の単体は敵サーヴァント（敵マスターは dmgMaster）
     val:{ atk:[60,40], np:[50,20], heal:[300,150], npPow:[100,80], critPow:[100,50], critRoll:[4,2], actsUp:[3,1], onAtkNp:[20,10],
@@ -261,6 +263,9 @@ const FX = {
   debuffUp:{name:'弱体成功率アップ',buff:true,val:true},     // 自分が敵に付ける弱体の判定ロール（ロールN以下）をN+xにする（成功率ダウンと相殺）
   ignoreDef:{name:'被ダメージ減少無視',buff:true},           // 相手の[被ダメージ-x]を受けずに攻撃
   buffUp:{name:'強化成功率アップ',buff:true,val:true},       // 自分が味方（自分含む）に付ける確率つきの強化の判定ロールをN+xにする（強化成功率ダウンと相殺）
+  debuffRes:{name:'弱体耐性アップ',buff:true,val:true},       // 自分が受ける確率つきの弱体の判定ロールをN-xにする（弱体耐性ダウンと相殺。「必ず」の弱体には効かない）
+  healUp:{name:'HP回復量アップ',buff:true,val:true},          // 受けるHP回復（即時・ターン開始時）が+x%
+  npDef:{name:'宝具被ダメージ-',buff:true,val:true},          // 宝具のダメージ1回ごとに-x（被ダメージ減少無視で無視される）
   debuffImmune:{name:'弱体無効',buff:true},                  // 弱体効果・弱体ダメージを受けない
   mentalImmune:{name:'精神異常無効',buff:true},              // 精神異常(mental)の弱体を受けない
   nullUnder:{name:'ダメージ無効(x以下)',buff:true,val:true},  // 攻撃1回ごとの最終ダメージがx以下なら0にする（弱体ダメージには効かない）
@@ -298,12 +303,18 @@ const FX = {
   spread:{name:'延焼',buff:false},                           // やけどのダメージ2倍
   curse:{name:'呪い',buff:false,timesOnly:true},             // 被弾時にNPが増えない。重ねると回数が増える
   hitNpSeal:{name:'被弾NP上昇封印',buff:false},               // 被弾時にNPが増えない（呪いと違い、ターン・回数どちらでも指定できる。回数を指定すると防ぐたびに減る）
+  erosion:{name:'蝕毒',buff:false},                          // 毒のダメージ2倍（延焼の毒版）
   stun:{name:'スタン',buff:false}, charm:{name:'魅了',buff:false,mental:true},
+  // 行動不能の種類（スタンと同じく行動・スキル・宝具すべて不可）。睡眠は精神異常で、攻撃でダメージを受けると解ける
+  petrify:{name:'石化',buff:false}, bind:{name:'拘束',buff:false}, sleep:{name:'睡眠',buff:false,mental:true},
+  confuse:{name:'混乱',buff:false,val:true,mental:true},     // 行動回数決定のたびに1d6を振り、v以下（0なら3以下）ならそのターン行動不能（最大行動回数0）
   fear:{name:'恐怖',buff:false,mental:true},                             // 行動回数-1
   actsDown:{name:'最大行動回数-',buff:false,val:true},                   // 次の行動回数決定で最大行動回数から値ぶん減らす（0未満にはならない・重ねると合計・精神異常ではない）
   drain:{name:'HP減少',buff:false,val:true,perm:true},      // ターン終了時に値ぶんの弱体ダメージ。重複する（合計）。永続でよい
   sealSkill:{name:'スキル封印',buff:false}, sealUlt:{name:'宝具封印',buff:false},
   critDown:{name:'クリティカル率ダウン',buff:false,val:true},
+  critPowDown:{name:'クリティカル威力ダウン',buff:false,val:true,color:true}, // クリティカル時のダメージ増加量-x（増加量は0未満にならない）
+  healDown:{name:'HP回復量ダウン',buff:false,val:true},       // 受けるHP回復（即時・ターン開始時）が-x%（0未満にはならない）
   npGainDown:{name:'NP獲得量ダウン',buff:false,val:true,allOpt:true}, // 攻撃で得るNP（コマンド・攻撃時NP・チェイン）が1回ごとに x 減る（0未満にはならない）。all なら スキル・ターン開始時・被弾時などの獲得も対象
   starDown:{name:'スター発生数ダウン',buff:false,val:true},          // 攻撃1回で発生するスターが x 個減る
   // カード性能ダウン：カード性能アップの弱体版。色（必須）のコマンドの 威力(v)＝攻撃ダメージ-・NP獲得量(np)・スター発生量(star) をまとめて下げる（1回の攻撃ごと）。既定値は CARD_DOWN_DEF
@@ -363,9 +374,9 @@ const LINE_WHO = { other:'相手・対象', self:'自分', ally:'味方のだれ
 ['atk','atkDown','atkPct','atkPctDown','def','defDown'].forEach(k=>{ if(FX[k]) FX[k].condUse=true; });
 const FX_GROUPS = [
   ['攻撃強化', ['atk','atkPct','npPow','atkVs','atkTrait','ignoreDef','sureHit','pierce','critPow','critMult','critRoll','debuffUp','buffUp','cardConv','cardConvPick','onAtkStar','onAtkNp','cardUp','aoeNormal']],
-  ['防御・耐性', ['def','defTrait','evade','invul','guts','taunt','nullUnder','counter','maxHp','debuffImmune','mentalImmune','deathImmune','stripImmune','npDownImmune','starLossImmune']],
-  ['継続・ターン', ['actsUp','regenHp','regenNp','regenStar','onHitNp','hitNpUp','onHitStar']],
-  ['弱体', ['atkDown','atkPctDown','npPowDown','defDown','critDown','starDown','npGainDown','cardDown','debuffDown','debuffResDown','buffDown','poison','burn','spread','drain','curse','hitNpSeal','stun','charm','fear','actsDown','sealSkill','sealUlt','healBlock','buffImmune']],
+  ['防御・耐性', ['def','defTrait','npDef','evade','invul','guts','taunt','nullUnder','counter','maxHp','debuffRes','debuffImmune','mentalImmune','deathImmune','stripImmune','npDownImmune','starLossImmune']],
+  ['継続・ターン', ['actsUp','regenHp','healUp','regenNp','regenStar','onHitNp','hitNpUp','onHitStar']],
+  ['弱体', ['atkDown','atkPctDown','npPowDown','defDown','critDown','critPowDown','starDown','npGainDown','cardDown','debuffDown','debuffResDown','buffDown','poison','erosion','burn','spread','drain','curse','hitNpSeal','stun','petrify','bind','sleep','charm','confuse','fear','actsDown','sealSkill','sealUlt','healBlock','healDown','buffImmune']],
   ['回復・即時', ['heal','np','star','starLoss','cleanse','cleanseMental','strip','buffExtend','skillCharge','ascend','copyBuff','copyDebuff']],
   ['攻撃・特殊', ['dmg','multiHit','aoe','selfDmg','instantDeath','copyRoll']],
   ['表示', ['desc']],

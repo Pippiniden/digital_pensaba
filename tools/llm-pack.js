@@ -39,6 +39,8 @@ const VAL={
   heal:'HP v回復', np:'NP +v%（マイナスで減らす）', star:'スター v個（対象は master）', starLoss:'スター v個を失わせる（対象は master 以外の敵）',
   buffExtend:'強化の残りターン+v', skillCharge:'使用済みスキルを v個戻す', dmg:'vダメージ（宝具のダメージ）', multiHit:'攻撃を v回（2〜10）',
   selfDmg:'自分などへ vダメージ（固定）', npPow:'宝具ダメージ+v', npPowDown:'宝具ダメージ-v',
+  debuffRes:'受ける弱体の判定ロール-v', healUp:'受けるHP回復+v%', healDown:'受けるHP回復-v%', critPowDown:'クリティカルのダメージ増加-v',
+  npDef:'受ける宝具ダメージ-v（1回ごと）', confuse:'行動回数決定のたびにロールv以下なら行動不能（1〜5。3が目安）',
 };
 const CTX_NAME={skill:'スキル',ult:G.TERMS.ult,special:'特殊行動・カードの付加効果',master:G.TERMS.player};
 
