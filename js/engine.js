@@ -36,7 +36,7 @@ function newGame(o={}){
     // evac：退避中（次の相手ターンの間） / zeroNext：前のターンの行動回数が0だった（次の行動回数+1）
     players:[{name:TERMS.player+'1',party:[],stars:0,master:null,spell:null,evac:false,zeroNext:false},{name:TERMS.player+'2',party:[],stars:0,master:null,spell:null,evac:false,zeroNext:false}],
     cur:0, turn:0, actRolled:false, maxActs:{}, alloc:{}, rolled:[], ult:null, target:null,
-    gen:0, pending:null, copy:null, guard:null, hcap:null, mastered:false, ultDone:false, ultNp:null, log:[], winner:null, dealt:[0,0], dealtO:[0,0],
+    gen:0, pending:null, copy:null, guard:null, hcap:null, /* boost：陣営ごとの常時補正 [P1,P2]（ボスレイドのボス・聖杯戦争の報酬。boostOf） */ boost:[null,null], mastered:false, ultDone:false, ultNp:null, log:[], winner:null, dealt:[0,0], dealtO:[0,0],
     // リザルト用の記録：stats＝ユニットごと（uid） / tl＝ターンごとの与ダメージ [P1,P2] / chains＝陣営ごとのチェイン回数 / starsGen＝発生スター合計
     stats:{}, tl:[], chains:[{R:0,B:0,G:0,brave:0},{R:0,B:0,G:0,brave:0}], starsGen:[0,0] };
   FXQ.length=0; for(const k in FXHOLD) delete FXHOLD[k]; FXHIDE.clear(); KO_PEND.length=0; for(const k in KO_BY) delete KO_BY[k]; LAST_KO[0]=LAST_KO[1]=null;
@@ -224,7 +224,7 @@ function addNp(u,v,src){
   u.np=Math.max(0,Math.min(RULES.gaugeMax,u.np+v));
 }
 // 最大HP（定義のHP＋最大HP+の合計）。最大HP+が切れたら HP を最大値まで下げる（1未満にはしない）
-const maxHp = u=>D(u.def).hp+mods(u,'maxHp').sum+(costBonus(u)?costBonus(u).hp:0)+(hasHcap(u)?(G.hcap.hp||0):0);
+const maxHp = u=>D(u.def).hp+mods(u,'maxHp').sum+(costBonus(u)?costBonus(u).hp:0)+(hasHcap(u)?(G.hcap.hp||0):0)+((boostOf(u)||{}).hp||0);
 function clampHp(u){ if(!u.out&&u.hp>maxHp(u)) u.hp=Math.max(1,maxHp(u)); }
 // スターの獲得：手番側はこのターンの発生スター（G.gen）、相手側は手持ちに直接加える
 function gainStars(pid,v){ if(pid===G.cur) G.gen+=v; else G.players[pid].stars+=v; }
@@ -393,6 +393,7 @@ function applyOne(src,t,e,o={}){ applyOne0(src,t,e,o); syncU(t); }
 function applyOne0(src,t,e,o={}){
   if(t.master&&mTeam()&&FX[e.k].buff===false){ log(`${nm(t)}は${TERMS.unit}に守られていて弱体を受けない`,'sub'); return; } // マスターチーム：マスターは弱体を受けない
   if(!e.sure&&immuneTo(t,e.k,e)) return; // sure＝強化無効・弱体無効で防がれない
+  if(e.k==='instantDeath'&&(boostOf(t)||{}).boss){ log(`${nm(t)}はボスのため即死しない`,'sub'); return; } // ボスレイドのボス：即死無効
   { // 即時効果への無効（強化解除・即死・NP減少・スター消失）。NP減少・スター消失は敵からのものだけ防ぐ
     const hostile=src&&src.pid!==t.pid;
     const gk=e.k==='strip'?'stripImmune':e.k==='instantDeath'?'deathImmune':e.k==='np'&&e.v<0&&hostile?'npDownImmune':e.k==='starLoss'&&hostile?'starLossImmune':null;
@@ -546,7 +547,7 @@ const applyPct = (d,pct)=>pct?Math.max(0,Math.round(d*(100+pct)/100)):d;
 function dmgMods(att,tgt,color){
   const a=modsC(att,'atk',color,tgt), ad=modsC(att,'atkDown',color,tgt), pa=modsC(att,'atkPct',color,tgt), pd=modsC(att,'atkPctDown',color,tgt);
   // ハンデの攻撃ダメージ+ も足す
-  let sum=a.sum-ad.sum+(hasHcap(att)?G.hcap.atk:0)+(costBonus(att)?costBonus(att).atk:0); const usedA=[...a.list,...ad.list,...pa.list,...pd.list], usedT=[];
+  let sum=a.sum-ad.sum+(hasHcap(att)?G.hcap.atk:0)+(costBonus(att)?costBonus(att).atk:0)+boostAtk(att); const usedA=[...a.list,...ad.list,...pa.list,...pd.list], usedT=[];
   if(tgt&&!tgt.out){
     // 弱体状態特攻：対象が指定の弱体（vs 未指定なら何か1つ）を受けていれば加算
     const vs=att.fx.filter(e=>e.k==='atkVs'&&tgt.fx.some(x=>e.vs?x.k===e.vs:FX[x.k].buff===false));
@@ -834,7 +835,7 @@ function ascend(u){ u.asc=true; fxEmit({t:'pop',uid:u.uid,text:TERMS.ascFull,cls
 function startGame(){
   G.players.forEach((P,pid)=>{ P.party=G.picks[pid].map((id,i)=>makeUnit(pid,i,id)); P.stars=0;
     P.master=masterRule()&&G.mpicks[pid]?makeMaster(pid,G.mpicks[pid]):null; P.spell=null; P.spellLeft=ruleset().spells||1; P.spellUsed=[false,false,false]; P.evac=false; P.zeroNext=false; });
-  applyHandicap();
+  applyHandicap(); applyBoost();
   if(ruleset().costBonus) G.players.forEach((P,pid)=>{ P.party.forEach(u=>{ u.hp=maxHp(u); }); const t=P.party[0]&&costBonusText(P.party[0]); if(t) log(`${esc(P.name)}：${TERMS.player}のコスト${mcost(pid)}（基準${ruleset().costBonus.base}）→ ${TERMS.unit}は ${t}`,'h'); });
   log('先攻・後攻の決定','h');
   let r0,r1;
@@ -873,13 +874,46 @@ function applyHandicap(){
 const hasHcap = u=>!!G.hcap&&G.hcap.pid===u.pid&&!u.master;
 const hcapText = ()=>G.hcap?`攻撃ダメージ+${G.hcap.atk}・獲得${TERMS.gauge}+${G.hcap.np}%${G.hcap.hp?`・最大HP+${G.hcap.hp}`:''}`:'';
 // 攻撃・被弾・チェインで得るNPに、ハンデのNP獲得量アップを掛ける（スキルなどで直接増えるNPには掛けない）
-const npRate = (u,v)=>hasHcap(u)&&G.hcap.np?Math.round(v*(100+G.hcap.np)/100):v;
+const npRate = (u,v)=>{ const r=(hasHcap(u)?G.hcap.np||0:0)+((boostOf(u)||{}).np||0); return r?Math.round(v*(100+r)/100):v; }; // 陣営の補正（boost）の獲得NP+% も足す
+// ---------- 陣営ごとの常時補正（ボスレイドのボス・聖杯戦争の報酬と相手の補正。RAID / ROGUE＝rules.js） ----------
+// G.boost[pid]＝{label, hp, atk, np, npStart, stars, acts, asc, boss, rage, raged}
+//   hp＝最大HP+ / atk＝攻撃ダメージ+ / np＝獲得NP+%（攻撃・被弾・チェイン）/ npStart＝開始時のNP / stars＝開始時のスター / acts＝最大行動回数+ / asc＝最初から霊基再臨
+//   boss＝ボス（即死無効。HPが rage.at 以下になったターンの始めに一度だけ怒り＝弱体解除＋以降 攻撃ダメージ+rage.atk。raged＝怒り済み）
+// fx ではないので、強化解除・弱体解除・弱体状態特攻の対象にならない。マスターには掛からない
+const boostOf = u=>!!u&&!u.master&&u.pid!=null&&G.boost?G.boost[u.pid]||null:null;
+const boostAtk = u=>{ const b=boostOf(u); return b?(b.atk||0)+(b.raged&&b.rage?b.rage.atk||0:0):0; };
+function boostText(b){
+  if(!b) return '';
+  const p=[b.hp?`最大HP+${b.hp}`:'', b.atk||b.raged?`攻撃ダメージ+${(b.atk||0)+(b.raged&&b.rage?b.rage.atk||0:0)}`:'', b.np?`獲得${TERMS.gauge}+${b.np}%`:'', b.acts?`最大行動回数+${b.acts}`:'',
+    b.npStart?`開始時${TERMS.gauge}+${b.npStart}%`:'', b.stars?`開始時${TERMS.star}+${b.stars}`:'', b.boss?'即死無効':'', b.raged?'怒り':''].filter(Boolean);
+  return p.join('・');
+}
+// 試合開始時：最大HPを反映し、開始時のNP・スター・霊基再臨を与える
+function applyBoost(){
+  G.players.forEach((P,pid)=>{ const b=G.boost&&G.boost[pid]; if(!b) return;
+    P.party.forEach(u=>{ u.hp=maxHp(u); if(b.npStart) u.np=Math.min(RULES.gaugeMax,u.np+b.npStart); });
+    if(b.stars) P.stars+=b.stars;
+    log(`${esc(P.name)}：${esc(b.label||'補正')} → ${TERMS.unit}は ${boostText(b)}`,'h');
+    if(b.asc) P.party.forEach(u=>{ if(!u.asc) ascend(u); });
+  });
+}
+// ボスの怒り：手番の始めに、HPが半分（rage.at）以下のボスがいれば一度だけ
+function bossRage(){
+  G.players.forEach((P,pid)=>{ const b=G.boost&&G.boost[pid]; if(!b||!b.boss||b.raged||!b.rage) return;
+    const u=P.party.find(x=>!x.out&&x.hp<=maxHp(x)*b.rage.at); if(!u) return;
+    b.raged=true; u.fx=u.fx.filter(x=>x.sure||FX[x.k].buff!==false); syncU(u);
+    log(`${nm(u)}が怒り状態になった！ 弱体をすべて解除し、攻撃ダメージ+${b.rage.atk}`,'bad');
+    phaseFx('RAGE',`${D(u.def).name}の怒り`,{pid});
+    fxEmit({t:'pop',uid:u.uid,text:'怒り',cls:'asc'});
+  });
+}
 function beginTurn(){
   Object.assign(G,{phase:'actRoll',actRolled:false,maxActs:{},alloc:{},rolled:[],ult:null,ultSup:false,ultPick:null,ultNp:null,target:null,targetAll:false,gen:0,pending:null,copy:null,guard:null,mastered:false,ultDone:false,spellPick:null});
   const P=G.players[G.cur];
   if(P.evac){ P.evac=false; log(`${esc(P.name)}の${TERMS.player}が退避から戻った`,'sub'); }
   log(`━ ターン${G.turn}：${esc(G.players[G.cur].name)} ━`,'h');
   phaseFx(`TURN ${G.turn}`,`${G.players[G.cur].name}の手番`,{big:true,pid:G.cur});
+  bossRage(); // ボスレイド：HPが半分以下になったボスは怒る
   // ① ターン開始：ターン開始時○○ を発動してから、このプレイヤーが付与した効果の残りターン-1
   turnStartEffects();
   ALLM().forEach(u=>{
@@ -954,8 +988,15 @@ function win(pid){ const first=G.winner==null; G.winner=pid; G.phase='over';
 // 流れ：chooseMode(arcade) → 編成（プレイヤーだけ）→ phase 'stage'（ステージ紹介）→ arcadeGo で対戦 → 勝ったら arcadeNext で次の 'stage' …
 // G.arcade：diff＝難易度 / stage＝今のステージ（0始まり）/ picks・mpick＝プレイヤーの編成（全ステージ共通）/ leads＝これまでの相手の先頭 / results＝終わったステージの記録
 // エンドレス（ARCADE.diffs[].endless）はステージ数の上限なし。CPUの強さは levels を順に使い、使い切ったら最後の強さのまま
+// kind：'arcade'＝アーケード / 'raid'＝ボスレイド（RAID）/ 'rogue'＝聖杯戦争（ROGUE）。難易度の設定は arcadeDf()（どれも levels の数がステージ数）
+const ARC_KINDS = { arcade:{name:'アーケード', cfg:()=>ARCADE}, raid:{name:'ボスレイド', cfg:()=>RAID}, rogue:{name:'聖杯戦争', cfg:()=>ROGUE} };
+const arcadeKind = (A=G.arcade)=>A&&ARC_KINDS[A.kind]?A.kind:'arcade';
+const arcadeDf = (A=G.arcade)=>{ const C=ARC_KINDS[arcadeKind(A)].cfg(); return C.diffs[A.diff]||C.diffs.normal; };
+const arcadeName = ()=>arcadeEndless()?'エンドレス':ARC_KINDS[arcadeKind()].name;
 const arcadeEndless = ()=>!!G.arcade&&!!G.arcade.endless;
-const arcadeStages = ()=>arcadeEndless()?Infinity:ARCADE.stages;
+const arcadeStages = ()=>arcadeEndless()?Infinity:arcadeDf().levels.length;
+// ボス戦のステージか（ボスレイドは全部、聖杯戦争は最後だけ）
+const arcadeBossAt = (A,i)=>arcadeKind(A)==='raid'||(arcadeKind(A)==='rogue'&&i===arcadeDf(A).levels.length-1);
 const arcadeLevel = (df,i)=>df.levels[Math.min(i,df.levels.length-1)];
 const arcadeLast = ()=>!!G.arcade&&G.arcade.stage>=arcadeStages()-1;
 // コンティニュー：負けたステージを同じ相手でやり直す（回数は G.arcade.continues。総合リザルトに出す）。エンドレスでは不可
@@ -965,8 +1006,12 @@ const arcadeCanContinue = ()=>!!G.arcade&&G.phase==='over'&&G.winner!==0&&!arcad
 // 残りで同じコストの編成が作れなくなったら seen を空にして次の周（A.lap）へ。2周目からはプレイヤーの編成も解禁
 const arcadeAvoid = A=>[...(A.seen||[]),...(A.lap?[]:[...A.picks,A.mpick].filter(Boolean))];
 function arcadeStage(){
-  const A=G.arcade, df=ARCADE.diffs[A.diff], delta=A.stage===0?df.first||0:0;
+  const A=G.arcade, df=arcadeDf(A), K=arcadeKind(A), delta=K==='rogue'?(df.delta||[])[A.stage]||0:A.stage===0?df.first||0:0;
   G.level=arcadeLevel(df,A.stage); G.setupPid=1; G.phase='setup';
+  A.foe=null; G.boost=[arcadeBoost(A),null];
+  if(arcadeBossAt(A,A.stage)){ bossStage(A,df); return; }
+  if(K==='rogue'&&df.foe&&(df.foe.atk||df.foe.hp)) A.foe={label:`STAGE ${A.stage+1} の補正`, atk:df.foe.atk*A.stage, hp:df.foe.hp*A.stage};
+  G.boost[1]=A.foe&&(A.foe.atk||A.foe.hp)?{...A.foe}:null;
   for(let t=0;t<4;t++){
     if(ACTIONS.setupCpu({how:'same',delta,avoid:arcadeAvoid(A)})===false){ A.seen=[]; A.lap=(A.lap||0)+1; ACTIONS.setupCpu({how:'same',delta,avoid:arcadeAvoid(A)}); }
     if(!A.leads.slice(-4).includes(G.picks[1][0])) break;
@@ -976,20 +1021,52 @@ function arcadeStage(){
   G.setupMsg=''; G.phase='stage';
 }
 // 決着したステージの記録（総合リザルト用）
+// ボス戦：ボス（コスト RAID.minCost 以上・これまでに出ていない・自軍にいない）を1騎選び、補正（G.boost[1]）を付けてステージ紹介へ
+// 倍率 hp は自軍3騎のときの値。自軍が少ない（聖杯戦争で仲間を増やさなかった）ときは、増えるぶんを人数に合わせて減らす
+function bossStage(A,df){
+  const mine=new Set(A.picks), seen=new Set(A.seen||[]), all=ROSTER().filter(d=>!mine.has(d.id)&&!d.spells);
+  const top=Math.max(0,...all.map(d=>d.cost)), big=all.filter(d=>d.cost>=Math.min(RAID.minCost,top));
+  const pool=big.filter(d=>!seen.has(d.id)), c=(pool.length?pool:big.length?big:UNITS)[Math.floor(Math.random()*(pool.length||big.length||UNITS.length))];
+  const i=A.stage, raid=arcadeKind(A)==='raid', cfg=raid?{hp:df.hp[i],atk:df.atk[i],np:df.np,acts:df.acts}:df.boss, n=Math.max(1,A.picks.length);
+  const mult=Math.max(1,1+(cfg.hp-1)*Math.min(3,n)/3); // 3騎なら hp 倍、1騎なら増えるぶんが1/3
+  A.foe={label:'ボス', boss:true, asc:true, hp:Math.round(c.hp*(mult-1)/10)*10, atk:cfg.atk||0, np:cfg.np||0, acts:cfg.acts||0, rage:{...RAID.rage}, raged:false};
+  G.picks[1]=[c.id]; G.mpicks[1]=null; G.boost[1]={...A.foe};
+  A.leads.push(c.id); A.seen=[...(A.seen||[]),c.id];
+  G.setupMsg=''; G.phase='stage';
+}
+// 聖杯戦争：自軍の補正＝選んだ強化（A.perks）の合計。ほかのモードは null
+function arcadeBoost(A){
+  if(arcadeKind(A)!=='rogue'||!A.perks||!A.perks.length) return null;
+  const b={label:'聖杯の加護'};
+  A.perks.forEach(k=>{ const p=ROGUE.perks[k]; if(p) ['hp','atk','np','npStart','stars'].forEach(f=>{ if(p[f]) b[f]=(b[f]||0)+p[f]; }); });
+  return b;
+}
+// 聖杯戦争の報酬の候補：start＝最初の1騎（サーヴァントだけ）。以降は、3騎未満でコストが足りればサーヴァント2騎＋強化1つ、それ以外は強化だけ
+function rogueOffer(A,start){
+  const shuf=a=>a.map(x=>[Math.random(),x]).sort((p,q)=>p[0]-q[0]).map(p=>p[1]), own=new Set(A.picks), room=costCap()-sumCost(A.picks);
+  const units=shuf(ROSTER().filter(d=>!own.has(d.id)&&!d.spells&&d.cost<=room)).map(d=>({unit:d.id}));
+  const perks=shuf(Object.keys(ROGUE.perks)).map(k=>({perk:k})), n=ROGUE.offer||3;
+  if(start) return units.slice(0,n);
+  const u=A.picks.length<ruleset().partyMax?units.slice(0,n-1):[];
+  return [...u,...perks].slice(0,n);
+}
 function arcadeRec(){
   const us=[...G.players[0].party,...(G.players[0].master?[G.players[0].master]:[])], S=u=>(G.stats&&G.stats[u.uid])||{}, sum=k=>us.reduce((s,u)=>s+(S(u)[k]||0),0);
   return {level:G.level, win:G.winner===0, turn:G.turn, dealt:G.dealt[0], taken:sum('taken'), kills:sum('kills'), maxHit:Math.max(0,...us.map(u=>S(u).maxHit||0)),
     lost:G.players[0].party.filter(u=>u.out).length, enemy:G.picks[1].slice(), emaster:G.mpicks[1], ecost:sumCost(G.picks[1])+mcost(1),
-    units:us.map(u=>({id:u.def, dealt:S(u).dealt||0, kills:S(u).kills||0}))};
+    units:us.map(u=>({id:u.def, dealt:S(u).dealt||0, kills:S(u).kills||0})), boss:!!(G.boost&&G.boost[1]&&G.boost[1].boss)};
 }
 // 終わったステージすべての記録（決着済みの今のステージを含む）
 const arcadeResults = ()=>G.arcade?[...G.arcade.results,...(G.phase==='over'?[arcadeRec()]:[])]:[];
 const arcadeCfg = level=>({mode:'cpu', level, cpu:[false,true], names:['あなた','CPU']});
-function arcadeStart(diff,endless){
-  if(!ARCADE.rules.includes(G.rule)) G.rule=ARCADE.rules[0];
-  const d=ARCADE.diffs[diff]?diff:'normal';
-  G.arcade={diff:d, endless:!!endless, stage:0, picks:[], mpick:null, leads:[], seen:[], lap:0, results:[], continues:0};
-  applyMode(arcadeCfg(ARCADE.diffs[d].levels[0]));
+function arcadeStart(diff,endless,kind){
+  const K=ARC_KINDS[kind]?kind:'arcade', C=ARC_KINDS[K].cfg();
+  if(K!=='arcade') G.rule=C.rule; else if(!ARCADE.rules.includes(G.rule)) G.rule=ARCADE.rules[0];
+  const d=C.diffs[diff]?diff:'normal';
+  // perks＝聖杯戦争で選んだ強化 / offer＝報酬の候補（phase 'reward'）/ foe＝今のステージの相手の補正（コンティニューで使い回す）
+  G.arcade={kind:K, diff:d, endless:K==='arcade'&&!!endless, stage:0, picks:[], mpick:null, leads:[], seen:[], lap:0, results:[], continues:0, perks:[], offer:null, foe:null};
+  applyMode(arcadeCfg(C.diffs[d].levels[0]));
+  if(K==='rogue'){ G.arcade.offer=rogueOffer(G.arcade,true); G.setupPid=0; G.phase='reward'; } // 聖杯戦争：編成の代わりに最初の1騎を選ぶ
 }
 // ---------- シナリオの戦闘（scenario.js が act('scnBattle',spec) で始める） ----------
 // spec：{title, rule, level, cap, mode:'keep'|'choose'|'fixed', lock:[id], mlock:id, pool:[id], prev:{picks,mpick}, enemy:[id], emaster:id, ename, loseGo}
@@ -1207,6 +1284,7 @@ const ACTIONS = {
     if(G.phase!=='mode') return;
     if(mode==='draft'){ applyMode({mode:'cpu', level:CPU_LEVELS[level]?level:'normal', cpu:[false,true], names:['あなた','CPU']}); draftStart(); return; } // ドラフト：編成の代わりに候補を取り合う
     if(mode==='arcade'){ arcadeStart(diff,endless==='1'||endless===true); return; }
+    if(mode==='raid'||mode==='rogue'){ arcadeStart(diff,false,mode); return; } // ボスレイド・聖杯戦争（試験版）
     if(mode==='watch'){ const lv=l=>CPU_LEVELS[l]?l:'normal'; applyMode({mode, level:lv(level), levels:[lv(level),lv(level2)], cpu:[true,true], names:['CPU 1','CPU 2']}); return; } // 観戦：編成は人が選ぶ。強さはCPUごと
     applyMode(mode==='cpu'
       ? {mode, level:CPU_LEVELS[level]?level:'normal', cpu:[false,true], names:['あなた','CPU']}
@@ -1219,8 +1297,8 @@ const ACTIONS = {
     same=!!same&&G.phase==='over';
     const okU=ids=>ids.length>0&&ids.every(id=>UNITS.some(u=>u.id===id)), okM=id=>!masterRule()||MASTERS.some(m=>m.id===id);
     if(G.arcade){ // アーケード：同じ難易度で最初から。same は編成を飛ばして STAGE 1 の紹介へ
-      const A=G.arcade, speed=G.speed; newGame(keepRule()); arcadeStart(A.diff,A.endless); G.speed=speed;
-      if(same&&okU(A.picks)&&okM(A.mpick)){ G.picks[0]=A.picks.slice(); G.mpicks[0]=A.mpick; G.arcade.picks=A.picks.slice(); G.arcade.mpick=A.mpick; arcadeStage(); }
+      const A=G.arcade, speed=G.speed; newGame(keepRule()); arcadeStart(A.diff,A.endless,A.kind); G.speed=speed;
+      if(same&&arcadeKind(A)!=='rogue'&&okU(A.picks)&&okM(A.mpick)){ G.picks[0]=A.picks.slice(); G.mpicks[0]=A.mpick; G.arcade.picks=A.picks.slice(); G.arcade.mpick=A.mpick; arcadeStage(); }
       return;
     }
     const cfg={mode:G.mode, level:G.level, levels:G.levels, cpu:G.cpu, speed:G.speed, names:G.players.map(p=>p.name)}, picks=G.picks.map(p=>p.slice()), mp=G.mpicks.slice();
@@ -1384,9 +1462,26 @@ const ACTIONS = {
     const A=G.arcade; if(!A||G.phase!=='over'||G.winner!==0||arcadeLast()) return;
     const next={...A, stage:A.stage+1, results:[...A.results,arcadeRec()]}, speed=G.speed;
     newGame(keepRule()); G.arcade=next;
-    applyMode({...arcadeCfg(arcadeLevel(ARCADE.diffs[next.diff],next.stage)), speed});
+    applyMode({...arcadeCfg(arcadeLevel(arcadeDf(next),next.stage)), speed});
     G.picks[0]=next.picks.slice(); G.mpicks[0]=next.mpick;
+    if(arcadeKind(next)==='rogue'){ next.offer=rogueOffer(next,false); G.setupPid=0; G.phase='reward'; return; } // 聖杯戦争：次の前に報酬を選ぶ
     arcadeStage();
+  },
+  // 聖杯戦争：報酬を1つ選ぶ（i＝候補の番号）。最初の1騎もこれで選ぶ。選んだら次のステージの紹介へ
+  rogueReward({i}={}){
+    const A=G.arcade; if(!A||G.phase!=='reward'||!A.offer) return;
+    const o=A.offer[Number(i)]; if(!o) return;
+    if(o.unit){ const d=D(o.unit);
+      if(!d||A.picks.includes(o.unit)||A.picks.length>=ruleset().partyMax||sumCost(A.picks)+d.cost>costCap()) return;
+      A.picks=[...A.picks,o.unit];
+    } else if(ROGUE.perks[o.perk]) A.perks=[...(A.perks||[]),o.perk];
+    else return;
+    A.offer=null; G.picks[0]=A.picks.slice(); arcadeStage();
+  },
+  // 聖杯戦争：自軍の並び順を変える（押したサーヴァントを先頭に）。報酬選び・ステージ紹介のとき
+  rogueLead({id}={}){
+    const A=G.arcade; if(!A||arcadeKind(A)!=='rogue'||!['reward','stage'].includes(G.phase)||!A.picks.includes(id)) return;
+    A.picks=[id,...A.picks.filter(x=>x!==id)]; G.picks[0]=A.picks.slice();
   },
   // アーケード：負けたステージを同じ相手でやり直す（ステージ紹介から）
   arcadeContinue(){
@@ -1395,6 +1490,7 @@ const ACTIONS = {
     newGame(keepRule()); G.arcade=next;
     applyMode({...arcadeCfg(level), speed});
     G.picks=[next.picks.slice(),ep]; G.mpicks=[next.mpick,em];
+    G.boost=[arcadeBoost(next),next.foe?{...next.foe,raged:false}:null]; // 補正（ボス・報酬）も同じものを付け直す
     G.setupPid=1; G.setupMsg=''; G.phase='stage';
   },
   rollActs(){
@@ -1415,8 +1511,9 @@ const ACTIONS = {
       else {
         const f=roll(); u.face={i:f,kind:'acts'}; rolls.push({uid:u.uid,f});
         const fear=has(u,'fear')?1:0, dn=mods(u,'actsDown').sum, up=mods(u,'actsUp'); consume(u,up.list); syncU(u);
-        m=Math.max(0,Math.min(RULES.actionsMax, faceActs(D(u.def),f)+bonus+late+zero+second+up.sum-fear-dn));
-        log(`${nm(u)} 出目${f+1} → 最大行動${m}${bonus?`（${TERMS.out}ボーナス+${bonus}）`:''}${late?'（3ターン目後攻から+1）':''}${zero?'（前ターン0回行動+1）':''}${second?'（後攻の初ターン+1）':''}${up.sum?`（最大行動回数+${up.sum}）`:''}${fear?'（恐怖-1）':''}${dn?`（最大行動回数-${dn}）`:''}`, m?'':'bad');
+        const ba=(boostOf(u)||{}).acts||0; // ボスなど陣営の補正
+        m=Math.max(0,Math.min(RULES.actionsMax, faceActs(D(u.def),f)+bonus+late+zero+second+up.sum+ba-fear-dn));
+        log(`${nm(u)} 出目${f+1} → 最大行動${m}${ba?`（ボス+${ba}）`:''}${bonus?`（${TERMS.out}ボーナス+${bonus}）`:''}${late?'（3ターン目後攻から+1）':''}${zero?'（前ターン0回行動+1）':''}${second?'（後攻の初ターン+1）':''}${up.sum?`（最大行動回数+${up.sum}）`:''}${fear?'（恐怖-1）':''}${dn?`（最大行動回数-${dn}）`:''}`, m?'':'bad');
       }
       G.maxActs[u.uid]=m; const a=Math.min(m,left); G.alloc[u.uid]=a; left-=a;
     });

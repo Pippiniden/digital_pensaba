@@ -942,3 +942,25 @@ body[data-screen="stage"] #app{display:flex;padding:14px}
   .dsides{flex-wrap:wrap;gap:6px}
   .draft .sdetail{display:none} /* 狭い画面では ⓘ で詳細ウィンドウを開く */
 }
+
+/* ---------- ボスレイド・聖杯戦争（試験版） ---------- */
+.beta{margin-left:6px;padding:0 5px;font:700 10px var(--serif);letter-spacing:.08em;vertical-align:middle;border:1px solid var(--gold-lo);border-radius:2px;color:var(--gold-hi);opacity:.85}
+.pboss{position:absolute;top:4px;right:4px;z-index:2;font:700 10px var(--serif);letter-spacing:.1em;padding:0 5px;border-radius:2px;color:#fff;background:linear-gradient(180deg,#8a2a3a,#5a1424);border:1px solid #d9a0a8}
+.pboss.rage{background:linear-gradient(180deg,#d0402a,#7a1a10);box-shadow:0 0 8px rgba(255,90,60,.8)}
+.arc-boost{margin:0;font-size:11px;color:var(--sub);line-height:1.4}
+.rw-note{margin:6px auto 14px;max-width:620px}
+.rw-cards{display:flex;flex-wrap:wrap;justify-content:center;gap:14px}
+.rwcard{flex-direction:column;gap:4px;width:180px;padding:10px 10px 12px;text-align:center}
+.rwcard small{font:700 10px var(--serif);letter-spacing:.2em;color:var(--sub)}
+.rwcard b{font:700 15px var(--serif)}
+.rw-sub{font-size:11px;color:var(--sub)}
+.rw-pt{position:relative;display:block;width:100%;aspect-ratio:1;overflow:hidden;border-radius:3px;background:var(--panel2)}
+.rw-ic{display:grid;place-items:center;width:100%;aspect-ratio:1;font-size:56px;color:var(--gold-hi);text-shadow:0 0 18px rgba(246,227,161,.7)}
+.rw-party{margin-top:18px}
+.rw-party>small{font:700 11px var(--serif);letter-spacing:.1em;color:var(--sub)}
+.rw-mems{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;margin-top:6px}
+.rw-mem{gap:6px;padding:3px 10px 3px 3px}
+.rw-mem .pimg{position:static;inset:auto;width:30px;height:30px;border-radius:2px;object-fit:cover}
+.rw-mem span{font-size:12px}
+.arc:not(.still) .rwcard{animation:arcPop .45s cubic-bezier(.2,.9,.3,1.2) both}
+@media (max-width:640px){.rwcard{width:calc(50% - 10px)}.rw-ic{font-size:40px}}

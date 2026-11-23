@@ -105,6 +105,37 @@ const ARCADE = { rules:['team','mteam'], stages:5, diffs:{
   // エンドレスは難易度とは別に選ぶ（G.arcade.endless）：負けるまで続く。levels を順に使い、使い切ったら最後の強さのまま。コンティニューなし
 } };
 
+// ---------- ボスレイド（試験版。CPUのボス1騎 vs 自軍3騎の連戦。アーケードの仕組みを使う：G.arcade.kind==='raid'） ----------
+// levels：ステージごとのCPUの強さ（数がステージ数）／ hp：ボスの最大HPの倍率（元のHP×倍率）／ atk：攻撃ダメージ+ ／ np：獲得NP+% ／ acts：最大行動回数+
+// ボスは即死無効・最初から霊基再臨済み。HPが rage.at 以下になったターンの始めに一度だけ「怒り」：弱体をすべて解除して、以降は攻撃ダメージ+rage.atk
+// minCost：ボスに選ぶサーヴァントのコストの下限（いなければいちばん高いコスト）。負けてもコンティニューできる（回数は総合リザルトに出る）
+const RAID = { rule:'team', minCost:4, rage:{at:.5, atk:30}, diffs:{
+  // 目安（node tools/check.js --modes-only。自軍は CPU つよい）：1戦ごとの勝率 イージー 約80→60% / ノーマル 約75→60% / ハード 約50→30% / ルナティック 約30→20%
+  // acts（最大行動回数+1）はとても強い（ほかが同じで勝率が 40%→15% ほど下がる）ので、使うなら HP・攻撃を下げる
+  easy:   { name:'イージー',     levels:['easy','easy','normal'],     hp:[2,2.25,2.5],    atk:[0,0,10],   np:0,  acts:0 },
+  normal: { name:'ノーマル',     levels:['normal','normal','normal'], hp:[2.25,2.5,2.75], atk:[0,10,15],  np:10, acts:0 },
+  hard:   { name:'ハード',       levels:['hard','hard','hard'],       hp:[2.25,2.5,2.5],  atk:[10,10,20], np:20, acts:0 },
+  lunatic:{ name:'ルナティック', levels:['expert','expert','expert'], hp:[2.25,2.5,2.75], atk:[10,10,20], np:20, acts:0 },
+} };
+
+// ---------- 聖杯戦争（ローグライト・試験版。アーケードの仕組みを使う：G.arcade.kind==='rogue'） ----------
+// 最初は候補 offer 騎から1騎だけ選んで始め、勝つたびに報酬を1つ選ぶ（新しいサーヴァントの加入＝コスト上限まで3騎、または perks の強化）。
+// 相手は自軍と同じ人数・合計コスト＋delta[ステージ]。foe＝相手の補正（ステージ番号×値）。最終ステージは boss（ボスレイドと同じボス。hp は自軍3騎のときの倍率で、人数が少ないと下がる）
+// 負けてもコンティニューできる（報酬はそのまま。回数は総合リザルトに出る）
+const ROGUE = { rule:'team', offer:3,
+  perks:{
+    atk:    { name:'攻撃ダメージ+20', atk:20 },
+    hp:     { name:'最大HP+120', hp:120 },
+    np:     { name:'獲得NP+20%', np:20 },
+    npStart:{ name:'開始時NP+30%', npStart:30 },
+    stars:  { name:'開始時スター+5', stars:5 },
+  },
+  diffs:{
+    easy:   { name:'イージー',     levels:['easy','easy','easy','normal','normal','normal','normal'], delta:[0,0,0,0,0,1,0], foe:{atk:0,hp:0},  boss:{hp:2,   atk:0, np:0, acts:0} },
+    normal: { name:'ノーマル',     levels:['easy','normal','normal','normal','hard','hard','hard'],   delta:[0,0,0,1,1,1,0], foe:{atk:3,hp:20}, boss:{hp:2.25,atk:0, np:10,acts:0} },
+    hard:   { name:'ハード',       levels:['normal','hard','hard','hard','hard','expert','expert'],   delta:[0,0,1,1,1,2,0], foe:{atk:5,hp:30}, boss:{hp:2.5, atk:10,np:20,acts:0} },
+  } };
+
 // ---------- ドラフト（候補を交互に取り合って編成する。対CPU） ----------
 // pool：候補に出すサーヴァントの数（solo＝1騎のルール / team＝3騎のルール）／ masters：候補に出すマスターの数（マスターのいるルールだけ）
 const DRAFT = { pool:{ solo:6, team:12 }, masters:4 };
