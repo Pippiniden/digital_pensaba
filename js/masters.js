@@ -218,14 +218,14 @@ const DEFAULT_MASTERS = [
       {"label":"","eff":[{"k":"onAtkStar","t":"ally_svt","v":4}]},
       {"label":"","eff":[{"k":"onAtkStar","t":"ally_svt","v":4}]},
       {"label":"","eff":[{"k":"onAtkStar","t":"ally_svt","v":4}]},
-      {"label":"","eff":[{"k":"cardUp","t":"ally_svt","v":50,"color":"R","np":0,"star":1}]},
+      {"label":"","eff":[{"k":"cardUp","t":"ally_svt","v":60,"color":"R","np":0,"star":1}]},
       {"label":"","eff":[{"k":"cardUp","t":"ally_svt","v":40,"color":"R","np":0,"star":1}]},
       {"label":"","eff":[{"k":"cardUp","t":"ally_svt","v":40,"color":"R","np":0,"star":1}]}
     ],
     "spells":[
       {"name":"竜の心臓","eff":[{"k":"np","t":"ally_svt","v":50},{"k":"hitNpSeal","t":"ally_svt","v":0,"turns":1,"sure":true}]},
-      {"name":"EMCカートリッジ","eff":[{"k":"critRoll","t":"svt","v":2,"turns":1},{"k":"critPow","t":"svt","v":30,"turns":1}]},
-      {"name":"Quad_Burst","eff":[{"k":"dmg","t":"enemy_svt","v":180},{"k":"selfDmg","t":"self","v":100}]}
+      {"name":"EMCカートリッジ","eff":[{"k":"critRoll","t":"svt","v":3,"turns":1}]},
+      {"name":"Quad_Burst","eff":[{"k":"dmg","t":"enemy_svt","v":200},{"k":"selfDmg","t":"self","v":100}]}
     ]
   },
   {
@@ -446,7 +446,7 @@ const DEFAULT_MASTERS = [
     "spells":[
       {"name":"混沌再臨","eff":[{"k":"skillCharge","t":"ally_svt","v":1}]},
       {"name":"蛹は羽化せず","eff":[{"k":"heal","t":"ally_svt","v":200}]},
-      {"name":"擬似宇宙・災厄世界","eff":[{"k":"dmg","t":"enemy_both","v":80},{"k":"curse","t":"enemy_both","v":0,"times":1,"chance":3}]}
+      {"name":"擬似宇宙・災厄世界","eff":[{"k":"dmg","t":"enemy_both","v":60},{"k":"curse","t":"enemy_both","v":0,"times":1,"chance":3}]}
     ]
   },
   {
@@ -472,18 +472,19 @@ const DEFAULT_MASTERS = [
     "id":"m_uzumebi", "name":"埋火", "cost":1, "hp":100,
     "fit":{"face":{"x":50,"y":19,"z":100},"np":{"x":50,"y":32,"z":81}},
     "link":"https://seesaawiki.jp/kagemiya/d/%cb%e4%b2%d0",
+    "lines":{"start":["ゆーものじゃにしてやるのじゃ","埋火はのじゃである。名前ではあんまり呼ばれない","のーっじゃっじゃっじゃっ"],"attack":["のじゃサンダー、びびびび"],"win":["報酬としていちごみるくを所望するのじゃ"],"defeat":["たとえのじゃが倒されても第二第三ののじゃが……ぐでー"]},
     "faces":[
-      {"label":"無","eff":[]},
-      {"label":"無","eff":[]},
-      {"label":"無","eff":[]},
-      {"label":"","eff":[{"k":"onAtkNp","t":"svt","v":10}]},
-      {"label":"無","eff":[]},
-      {"label":"","eff":[{"k":"onAtkNp","t":"ally_svt","v":10}]}
+      {"label":"なじゃー","eff":[{"k":"desc","t":"self","v":0,"text":"なじゃのなはなめろうのな"}],"line":["なっとうのなかもしれないのじゃ"]},
+      {"label":"にじゃー","eff":[{"k":"desc","t":"self","v":0,"text":"忍者ののじゃ、略してにじゃ"}],"line":["土遁・冬眠の術なのじゃ。すやー"]},
+      {"label":"ぬじゃー","eff":[{"k":"desc","t":"self","v":0,"text":"のじゃはぬじゃの中でも最強"}],"line":["ぬじゃとはいったい……？"]},
+      {"label":"一個飛ばしてのじゃなのじゃ！","eff":[{"k":"onAtkNp","t":"ally_svt","v":10}],"line":["サーヴァントバトル、コマンド・ノージャー！"]},
+      {"label":"そして寝るのじゃ","eff":[{"k":"desc","t":"self","v":0,"text":"のじゃはのじゃのじゃと寝ている"}],"line":["のじゃー(寝言)"]},
+      {"label":"いちごみるく","eff":[{"k":"heal","t":"ally_svt","v":30}],"line":["おすそ分けなのじゃ。ぐびぐび"]}
     ],
     "spells":[
-      {"name":"のじゃの雄叫び","eff":[{"k":"np","t":"ally_svt","v":50},{"k":"hitNpSeal","t":"ally_svt","v":0,"turns":1}]},
-      {"name":"のじゃの頑張り","eff":[{"k":"evade","t":"ally_svt","v":0,"turns":1},{"k":"actsUp","t":"ally_svt","v":1,"times":1}]},
-      {"name":"のじゃの居眠り","eff":[{"k":"actsUp","t":"ally_svt","v":3,"times":1}]}
+      {"name":"のじゃの王者、略してのじゃ","eff":[{"k":"np","t":"ally_svt","v":50},{"k":"hitNpSeal","t":"ally_svt","v":0,"turns":1,"sure":true}],"line":["実は油性マジックで描いたやつなのじゃ"]},
+      {"name":"八雷神ぱぅわー","eff":[{"k":"evade","t":"ally_svt","v":0,"turns":1},{"k":"actsUp","t":"ally_svt","v":1,"times":1}],"line":["ノジャニウムを補給するのじゃ"]},
+      {"name":"のじゃ大爆発","eff":[{"k":"selfDmg","t":"self","v":50},{"k":"dmg","t":"enemy_both","v":100}],"line":["の゛じ゛ゃ゛あ゛あ゛あ゛あ゛あ゛💥゛"]}
     ]
   },
   {
