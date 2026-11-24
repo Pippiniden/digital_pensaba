@@ -480,6 +480,7 @@ function renderMasterForm(el){
     ${m.spells.map((s,i)=>`<div class="subcard">
       <div class="row"><b>令呪${i+1}</b></div>
       <div class="fields"><label>名前<input data-p="spells.${i}.name" value="${esc(s.name)}"></label>
+        <label>ルビ（任意）<input data-p="spells.${i}.ruby" value="${esc(s.ruby||'')}" placeholder="よみがな"></label>
         <label>汎用令呪から入力<select data-spl="${i}"><option value="">（選ぶと名前と効果を置き換えます）</option>${SPELL_TPL.map((t,k)=>opt(k,spellTplLabel(t),'')).join('')}</select></label></div>
       ${effList(`spells.${i}.eff`,s.eff,'master')}
       <div class="preview mprev" data-prev="spell" data-i="${i}">${esc(effsText(s.eff,null,mTLabel))}</div>
@@ -735,7 +736,7 @@ function ctMeasure(){
 // マスターの令呪カットイン：プレビュー（令呪1の名前・金色）。顔アップ位置の変更は作り直さず値だけ差し替える
 function mctUpdate(force){
   const m=cur(), box=document.querySelector('[data-mctprev]'); if(!m||!isM()||!box) return;
-  const sp=m.spells[0]||{name:''}, ult={name:sp.name,c:'Y'}, key=JSON.stringify([m.id,sp.name]), old=box.querySelector('.ct');
+  const sp=m.spells[0]||{name:''}, ult={name:sp.name,ruby:sp.ruby,c:'Y'}, key=JSON.stringify([m.id,sp.name,sp.ruby]), old=box.querySelector('.ct');
   if(!force&&old&&box.dataset.key===key){
     ['x','y','z'].forEach(a=>{ old.style.setProperty('--g'+a,m.fit.np[a]+'%'); old.style.setProperty('--c'+a,m.fit.cut[a]); }); return; }
   box.dataset.key=key;

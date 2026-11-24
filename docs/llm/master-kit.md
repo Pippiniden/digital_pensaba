@@ -79,7 +79,7 @@
 
 - 形は `{"id","name","cost","hp","memo","lines":{support,attack,spell},"faces":[6個],"spells":[3個]}`。`cls` や `traits` は書かない。
 - `faces` は必ず6個、各面は `{"label":"面の名前","eff":[…]}`。効果がない面も `"label":"無","eff":[]` と書く。
-- `spells` は必ず3個、各令呪は `{"name":"令呪の名前","eff":[…]}`。
+- `spells` は必ず3個、各令呪は `{"name":"令呪の名前","eff":[…]}`。読みを付けたいときは `"ruby":"よみがな"` を足せる（任意。カットインで名前の上に出る）。
 - 効果：`{"k":キー,"t":対象,"v":値}`。値を使わない効果も `"v":0` と書く。`"chance":N` は「ロールN以下で成功」。
 - 対象は資料の「対象（マスター用）」から選ぶ。サーヴァント用の `picked`・`target`・`ally_other` は使えない。
 - 敵1体を狙うなら `enemy_svt`、味方1騎を選ぶなら `ally_svt`。スター獲得（`star`）の対象は `master`。
@@ -240,7 +240,7 @@
 - キャンプファイヤー（味方全体）：味方全体：クリティカル威力+50(1T)　`[{"k":"critPow","t":"ally_all","v":50,"turns":1}]`
 - サバイバルキット（味方単体）：選んだ自軍サーヴァント：弱体解除 ／ 選んだ自軍サーヴァント：NP+10%　`[{"k":"cleanse","t":"ally_svt","v":0},{"k":"np","t":"ally_svt","v":10}]`
 
-#### 今のマスターの例（原作を除く 19人。強さの保証ではない）
+#### 今のマスターの例（原作を除く 21人。強さの保証ではない）
 
 - **一文字コータ**（コスト3・HP300）補助の当たり：1・3・4・6番　4番「必殺の作戦だ！」選んだ自軍サーヴァント：攻撃ダメージ+30(Buster) ／ 選んだ自軍サーヴァント：Arts攻撃時：NP+10% ／ 選んだ自軍サーヴァント：Quick攻撃時：スター4個発生　令呪：「コマンド：リカバリー」選んだ自軍サーヴァント：HP200回復　「コマンド：オーバーパワー」選んだ自軍サーヴァント：NP+15% ／ 自軍サーヴァント：宝具威力+70(1T)　「コマンド：スピーダー」選んだ自軍サーヴァント：回避(1T) ／ 選んだ自軍サーヴァント：最大行動回数+1(1回)
 - **シャドウカイザー**（コスト4・HP350）補助の当たり：2・3・4・5・6番　4番「シャドウインパルス」選んだ敵サーヴァント：80ダメージ ／ 選んだ敵サーヴァント：被ダメージ+10　令呪：「ダークブレイザー」選んだ敵サーヴァント：スタン(1T)　「ミラージュソード」敵マスター：150ダメージ　「シャドウコマンダー」選んだ自軍サーヴァント：必中(1T) ／ 選んだ自軍サーヴァント：最大行動回数+1(1回)
@@ -258,6 +258,8 @@
 - **チュドーヴィシチェ**（コスト2・HP240）補助の当たり：2・4・5番　4番「咀嚼」選んだ敵サーヴァント：80ダメージ ／ 自身：HP40回復　令呪：「繧ｿ繝吶Ν」敵マスター：100ダメージ ／ 自身：HP50回復　「4B494C4C」選んだ敵サーヴァント：80ダメージ ／ 自身：HP50回復　「ｻ爨ﾋ､ｿ､､」選んだ敵サーヴァント：攻撃ダメージ-30(1T) ／ 選んだ敵サーヴァント：恐怖(1T)［ロール3以下］
 - **千速棗**（コスト3・HP400）補助の当たり：2・3・4・5番　4番「天速星」選んだ自軍サーヴァント：攻撃時：スター5個発生 ／ 選んだ自軍サーヴァント：攻撃時：NP+10% ／ 選んだ自軍サーヴァント：攻撃ダメージ+20(Quick) ／ 選んだ自軍サーヴァント：Quick攻撃時：NP+5% ／ 選んだ自軍サーヴァント：クリティカル率アップ(Lv+1)　令呪：「韋駄天夏目」選んだ自軍サーヴァント：回避(1T) ／ 選んだ自軍サーヴァント：最大行動回数+1(1回)　「仙人の知恵」選んだ自軍サーヴァント：回避(1回・3T) ／ 選んだ自軍サーヴァント：最大行動回数+1(1回)　「よくわかんないけど仙丹」選んだ自軍サーヴァント：ガッツ(HP200)(1回・1T) ／ 選んだ自軍サーヴァント：NP+15%
 - **ウルシュラ・ムラチニク**（コスト4・HP380）補助の当たり：2・3・4・5・6番　4番「混沌解放」敵全体（サーヴァント＋マスター）：40ダメージ　令呪：「混沌再臨」選んだ自軍サーヴァント：使用済みスキル1個を再使用可能に　「蛹は羽化せず」選んだ自軍サーヴァント：HP200回復　「擬似宇宙・災厄世界」敵全体（サーヴァント＋マスター）：80ダメージ ／ 敵全体（サーヴァント＋マスター）：呪い(1回)［ロール3以下］
+- **ロズヴィータ・ネーベルク・レーゲンフェルト**（コスト4・HP360）補助の当たり：1・2・3・4・5番　4番「狭霧に霞む」選んだ自軍サーヴァント：回避(1回)　令呪：「醜穢澱濘」選んだ敵サーヴァント：スタン(1T)［ロール4以下］ ／ 選んだ敵サーヴァント：強化無効(1回・1T)　「腐蝕霊症」選んだ敵サーヴァント：蝕毒(3回・1T)　「肉體溶媒」敵マスター：150ダメージ
+- **埋火**（コスト1・HP100）補助の当たり：4・6番　4番「」自軍サーヴァント：攻撃時：NP+10%　令呪：「のじゃの雄叫び」選んだ自軍サーヴァント：NP+50% ／ 選んだ自軍サーヴァント：被弾NP上昇封印(1T)　「のじゃの頑張り」選んだ自軍サーヴァント：回避(1T) ／ 選んだ自軍サーヴァント：最大行動回数+1(1回)　「のじゃの居眠り」選んだ自軍サーヴァント：最大行動回数+3(1回)
 - **めどいさん**（コスト3・HP350）補助の当たり：2・3・4・5番　4番「めどいので今のうちにお掃除」自軍サーヴァント：弱体解除 ／ 自軍サーヴァント：HP60回復　令呪：「霊子譲渡」選んだ自軍サーヴァント：NP+30%　「応急手当」選んだ自軍サーヴァント：HP200回復　「たまには本気出す」味方全体：攻撃ダメージ+20(1T) ／ 味方全体：最大行動回数+1(1T) ／ 味方全体：弱体解除
 - **ひどいさん**（コスト1・HP999）補助の当たり：2・4番　4番「痛いのは嫌ですー」味方全体：被ダメージ-20 ／ 自身：被ダメージ-150　令呪：「イシスの雨」選んだ自軍サーヴァント：弱体解除 ／ 選んだ自軍サーヴァント：最大行動回数+1(1回)　「生存への布石」選んだ自軍サーヴァント：弱体無効(1回) ／ 選んだ自軍サーヴァント：最大行動回数+1(1回)　「全体回復」味方全体：HP100回復
 - **マスターロード・ペイン**（コスト4・HP350）補助の当たり：2・3・4・5・6番　4番「影ヲ追フ者」自軍サーヴァント：攻撃ダメージ+30 ／ 自軍サーヴァント：HP80回復　令呪：「カイザースラウテルン」選んだ敵サーヴァント：80ダメージ　「メルトダウン」敵サーヴァント全体：攻撃ダメージ-40(1T)　「シュヴァルツ・ゲシュヒテ」選んだ自軍サーヴァント：攻撃ダメージ+40(1T) ／ 選んだ自軍サーヴァント：自傷ダメージ50
@@ -389,7 +391,7 @@
 ### 5. その他の決まり
 
 - **セリフ**（lines）：`start`＝戦闘開始、`support`＝補助、`attack`＝攻撃（マスタールール）、`spell`＝令呪使用、`win`＝勝利、`defeat`＝敗北。それぞれ文字列の配列。面・令呪だけの専用セリフは、その面・令呪に `"line":["…"]`
-- **使用済みのID**（サーヴァントとも重複不可）：m_rin, m_kiritsugu, m_shirou, m_ritsuka, m_celenike, m_shinji, m_kariya, m_kota, m_shadowkaiser, m_masaru, m_erika, m_seiji, m_antonia, m_ssetsuna, m_jubiro, m_seimei, m_kuzunoha, m_kiri, m_isla, m_ophelia, m_chudovishche, m_natsume, m_ursula, m_medoisan, m_hidoisan, m_itaisan, artoria, emiya, cu, medusa, medea, kojiro, heracles, hassan, mash, kagemiya, odysseus, lancelot, connla, athelstan, mnesarete, hanzo, neoptolemus, titus, yorimitsu, lucan, almeida, tezcatlipoca, ahotoria, bartholomew, utixorabbit, kalki, lamorak, guillaume, vercingetorix, hangaku, adonis, ceryneia, hughes, necho1, croesus, croesusalter, logistilla, odysseiya, magoichi, brunhild, nileus, gwydion, arianrhod, tomiko, himetsuru, saishoku, liza, ursula, victy, maximinus, chiriduka, sulla, themistocles, ethelfleda, phaethon, chimaira, chief, brunhild2, fredegund
+- **使用済みのID**（サーヴァントとも重複不可）：m_rin, m_kiritsugu, m_shirou, m_ritsuka, m_celenike, m_shinji, m_kariya, m_kota, m_shadowkaiser, m_masaru, m_erika, m_seiji, m_antonia, m_ssetsuna, m_jubiro, m_seimei, m_kuzunoha, m_kiri, m_isla, m_ophelia, m_chudovishche, m_natsume, m_ursula, m_roswitha, m_uzumebi, m_medoisan, m_hidoisan, m_itaisan, artoria, emiya, cu, medusa, medea, kojiro, heracles, hassan, mash, kagemiya, odysseus, lancelot, connla, athelstan, mnesarete, hanzo, neoptolemus, titus, yorimitsu, lucan, almeida, tezcatlipoca, ahotoria, bartholomew, utixorabbit, kalki, lamorak, guillaume, vercingetorix, hangaku, adonis, ceryneia, hughes, necho1, croesus, croesusalter, logistilla, odysseiya, magoichi, brunhild, nileus, gwydion, arianrhod, tomiko, himetsuru, saishoku, liza, ursula, victy, maximinus, chiriduka, sulla, themistocles, ethelfleda, phaethon, chimaira, chief, brunhild2, fredegund, conall
 
 ## 見本（master-template.json）
 

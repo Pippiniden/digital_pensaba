@@ -279,13 +279,13 @@ const issueFaceNo=x=>{ const m=/^出目(\d)/.exec(x.msg||''); return m?+m[1]-1:n
 // ---------- マスター（泥ペンマス：マスタールール用） ----------
 // { id, name, cls:'マスター', cost, hp,
 //   faces:[ {label, eff:Eff[]} ×6 ]   補助：出た面の効果をこのターンだけ適用（eff が空なら「無」。効果に turns≥2 があればそのターン数＝自分の終了フェイズをその回数迎えるまで）
-//   spells:[ {name, eff:Eff[]} ×3 ] } 令呪：1試合1回、3つから1つ選ぶ
+//   spells:[ {name, ruby?, eff:Eff[]} ×3 ] } 令呪：1試合1回、3つから1つ選ぶ
 // 効果の対象は TGT_BY_CTX.master（self＝マスター自身）
 function normalizeMaster(m){
   m=m||{};
   const own=o=>{ const a=strList(o.line); return a.length?{line:a}:{}; }; // 専用セリフ（空なら項目ごと持たない）
   const faces=Array.from({length:6},(_,i)=>{ const f=(m.faces||[])[i]||{}; return {label:String(f.label||''), eff:(f.eff||[]).map(normEff), ...own(f)}; });
-  const spells=Array.from({length:3},(_,i)=>{ const s=(m.spells||[])[i]||{}; return {name:String(s.name||''), eff:(s.eff||[]).map(normEff), ...own(s)}; });
+  const spells=Array.from({length:3},(_,i)=>{ const s=(m.spells||[])[i]||{}; return {name:String(s.name||''), ...(String(s.ruby||'').trim()?{ruby:String(s.ruby).trim()}:{}), eff:(s.eff||[]).map(normEff), ...own(s)}; });
   const ln=m.lines||{};
   const condLines=(Array.isArray(m.condLines)?m.condLines:[]).map(c=>normCondLine(c,MASTER_LINE_KEYS)).filter(Boolean);
   return { id:String(m.id||''), name:String(m.name||''), cls:TERMS.player, traits:[], cost:num(m.cost), hp:num(m.hp,100), master:true,
@@ -451,7 +451,7 @@ function mastersToJS(ms){
     m.faces.map(f=>`      ${j({label:f.label,eff:f.eff,...(f.line?{line:f.line}:{})})}`).join(',\n'),
     '    ],',
     '    "spells":[',
-    m.spells.map(s=>`      ${j({name:s.name,eff:s.eff,...(s.line?{line:s.line}:{})})}`).join(',\n'),
+    m.spells.map(s=>`      ${j({name:s.name,...(s.ruby?{ruby:s.ruby}:{}),eff:s.eff,...(s.line?{line:s.line}:{})})}`).join(',\n'),
     '    ]',
     '  }'].join('\n')).join(',\n');
   return `'use strict';

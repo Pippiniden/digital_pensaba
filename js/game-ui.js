@@ -446,7 +446,7 @@ function masterDetailHTML(d,m){
     <h4>${MASTER_ACTS.support}（出た面の効果をこのターンだけ）</h4>
     <div class="skl">${d.faces.map((f,i)=>sklBlockHTML(`出目${i+1}`,f.label?esc(f.label):(f.eff.length?'':'<span class="sub">―</span>'),f.eff.length?effLines(f.eff,null,mTLabel):[],{cls:f.eff.length?'':'locked'})).join('')}</div>
     <h4>${MASTER_ACTS.spell}（${ruleset().mTeam?`${ruleset().spells}画・同じ効果は1回・使うと行動-1`:'1試合1回・3つから1つ'}）${P?`<small class="sub"> ${P.spell==='decl'?'宣言中':`残り${P.spellLeft}画`}</small>`:''}</h4>
-    <div class="skl">${d.spells.map((s,i)=>sklBlockHTML(`${i+1}画`,esc(s.name),s.eff.length?effLines(s.eff,null,spellTgt):[],{cls:P&&P.spellUsed[i]?'locked':'',note:P&&P.spellUsed[i]?'使用済み':''})).join('')}</div>
+    <div class="skl">${d.spells.map((s,i)=>sklBlockHTML(`${i+1}画`,ultNameHTML(s),s.eff.length?effLines(s.eff,null,spellTgt):[],{cls:P&&P.spellUsed[i]?'locked':'',note:P&&P.spellUsed[i]?'使用済み':''})).join('')}</div>
   </div>`;
 }
 function detailModalHTML(){

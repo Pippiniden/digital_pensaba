@@ -97,7 +97,7 @@
   filter:drop-shadow(0 0 .35cqw var(--bright)) drop-shadow(0 .3cqw .4cqw rgba(0,0,20,.85));
   --in:ctInName;--inT:.5s;--inD:.3s;--dxe:1.4cqw}
 /* ルビが無いときは宝具名を大きく */
-.ct-title:has(.ct-ruby:empty) .ct-name{--fs:6.8cqw}
+.ct-title:has(.ct-ruby:empty) .ct-name{--fs:7.4cqw}
 
 /* ---- 上部中央「宝具発動」 ---- */
 .ct-top{position:absolute;left:0;right:0;top:4cqh;translate:0 -50%;display:flex;justify-content:center} /* 上の枠(8cqh)の中央 */

@@ -101,7 +101,7 @@ function masterViewHTML(i){
     <h3>補助（鉛筆の6面）</h3>
     <table class="cmp">${m.faces.map((f,fi)=>`<tr${fi===MSHEET.faceMain?' class="main"':''}><th>${fi+1}${fi===MSHEET.faceMain?'★':''}</th><td><b>${esc(f.label||'')}</b><small>${esc(et(f.eff))}</small></td></tr>`).join('')}</table>
     <h3>令呪</h3>
-    <table class="cmp">${m.spells.map((s,si)=>`<tr><th>${si+1}画</th><td><b>${esc(s.name||'')}</b><small>${esc(et(s.eff))}</small></td></tr>`).join('')}</table>
+    <table class="cmp">${m.spells.map((s,si)=>`<tr><th>${si+1}画</th><td><b>${ultNameHTML({name:s.name||'',ruby:s.ruby})}</b><small>${esc(et(s.eff))}</small></td></tr>`).join('')}</table>
     <h3>セリフ</h3>
     <table class="cmp">${Object.entries(MASTER_LINE_KEYS).map(([k,n])=>`<tr><th>${esc(n)}</th><td>${m.lines[k].map(esc).join('<br>')||'<span class="sub">なし</span>'}</td></tr>`).join('')}</table>
     ${m.memo?`<p class="sub">memo：${esc(m.memo)}</p>`:''}
