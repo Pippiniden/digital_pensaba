@@ -5,6 +5,7 @@
 //   node tools/ref-check.js -e base,comp 検証を絞る（base / comp / tier / face / roster）
 //   node tools/ref-check.js --set "hp.3=[600,700];postAdd.1=40"   基準値を一時的に書き換えて試す（js/unit-ref.js は変えない。; 区切り）
 //   node tools/ref-check.js --list       テスト用サーヴァントの数値だけ表示して終わる
+//   node tools/ref-check.js --add a.json 自作のサーヴァント（JSON。1体でも配列でも可）の強さを測る（-e custom。今のキャラは対戦に入れない）
 //
 // テスト用サーヴァント：コスト1〜5 × カード構成6種（B3 / B2A2 / B2Q2 / A3 / A2Q2 / Q3）。スキルは全員同じ、宝具は追加効果のない単純なダメージ宝具で2通り。
 //   宝具「全体」：全員 敵全体（威力は UNIT_REF.ult.all のコストごとの値）
@@ -20,11 +21,19 @@
 //   tier  ：中央のキャラの環境に、下限／上限／耐久型／攻撃型のキャラを1体だけ入れたときの勝率（基準の幅がどれだけ勝率を動かすか）
 //   face  ：4番の面を 効果弱 / 中 / 強 に替えたときの勝率（3つが釣り合っているか）
 //   roster：今のキャラの環境に、中央のキャラを1体だけ入れたときの勝率（今のキャラと比べた強さ）
+//   custom：--add で渡したキャラを、中央のキャラの環境に1体だけ入れたときの勝率（--add を付けたときの既定）
 // CPU は両方「つよい（先読みなし）」。目安は 50%±3%。
 'use strict';
 const fs=require('fs'), vm=require('vm'), path=require('path'), os=require('os'), cp=require('child_process');
 const argv=process.argv.slice(2), opt=(...names)=>{ const i=argv.findIndex(a=>names.includes(a)); return i<0?null:argv[i+1]; }, flag=n=>argv.includes(n);
-const N=Math.max(1,Number(opt('-n','--games'))||2000), ONLY=(opt('-e','--exp')||'base,comp,tier,face,roster').split(','), SET=opt('--set')||'';
+const ADD=opt('--add')||'', N=Math.max(1,Number(opt('-n','--games'))||2000), ONLY=(opt('-e','--exp')||(ADD?'custom':'base,comp,tier,face,roster')).split(','), SET=opt('--set')||'';
+// --add のファイル：JSON（前後に文章やコードブロックの囲みがあっても、最初の [ か { から最後の ] か } までを読む）
+function readAdd(f){
+  if(!f) return [];
+  const t=fs.readFileSync(f,'utf8'); let r;
+  try{ r=JSON.parse(t); }catch(e){ r=JSON.parse(t.slice(t.search(/[[{]/),Math.max(t.lastIndexOf(']'),t.lastIndexOf('}'))+1)); }
+  return Array.isArray(r)?r:[r];
+}
 
 // ---- ゲームのスクリプトを、ブラウザなしの入れ物（vm）に読み込む ----
 function load(){
@@ -33,56 +42,19 @@ function load(){
   ctx.window=ctx; vm.createContext(ctx);
   const dir=path.join(__dirname,'..','js');
   let src='';
-  for(const f of ['rules','units','masters','common','unit-ref','engine','cpu','sim']) src+=fs.readFileSync(path.join(dir,f+'.js'),'utf8')+'\n;\n';
-  vm.runInContext(src+'function render(){}\n('+setup+')('+JSON.stringify(SET)+')',ctx,{filename:'game.js'});
+  for(const f of ['rules','units','masters','common','unit-ref','ref-units','engine','cpu','sim']) src+=fs.readFileSync(path.join(dir,f+'.js'),'utf8')+'\n;\n';
+  vm.runInContext(src+'function render(){}\n('+setup+')('+JSON.stringify(SET)+','+JSON.stringify(readAdd(ADD))+')',ctx,{filename:'game.js'});
   return ctx;
 }
 
-// ---- vm の中に置く部品：テスト用サーヴァントの組み立てと対戦 ----
-function setup(SET){
+// ---- vm の中に置く部品：テスト用サーヴァントの組み立ては js/ref-units.js ----
+function setup(SET,ADD){
   // --set：UNIT_REF の値を一時的に書き換える（"hp.3=[600,700]" → UNIT_REF.hp[3]=[600,700]）
   for(const s of SET.split(';').map(x=>x.trim()).filter(Boolean)){ const [k,v]=s.split('='), ks=k.trim().split('.'); let o=UNIT_REF; ks.slice(0,-1).forEach(x=>o=o[x]); o[ks[ks.length-1]]=JSON.parse(v); }
-  const PATS={B3:[3,1,1],B2A2:[2,2,1],B2Q2:[2,1,2],A3:[1,3,1],A2Q2:[1,2,2],Q3:[1,1,3]}; // [Buster, Arts, Quick] の枚数
-  const TIERS={lo:[0,0],mid:[.5,.5],hi:[1,1],tank:[1,0],glass:[0,1]}; // [HPの位置, 攻撃の位置]（0＝下限 / 1＝上限）
-  const r10=v=>Math.round(v/10)*10, r5=v=>Math.round(v/5)*5, sum=a=>a.reduce((s,x)=>s+x,0);
-  // 上限を超えていたら後ろのカードから step ずつ減らす（lo 未満にはしない）、下限に足りなければ前から増やす（hi は超えない）
-  const fit=(vals,min,max,step,lo,hi)=>{
-    vals=vals.slice();
-    for(let g=0;g<200&&max!=null&&sum(vals)>max;g++){ const i=vals.length-1-g%vals.length; if(vals[i]-step>=lo(i)) vals[i]-=step; }
-    for(let g=0;g<200&&min!=null&&sum(vals)<min;g++){ const i=g%vals.length; if(vals[i]+step<=hi(i)) vals[i]+=step; }
-    return vals;
-  };
-  const SKILLS=[ {name:'攻撃強化',eff:[{k:'atk',t:'self',v:20,turns:3}]}, {name:'魔力充填',eff:[{k:'np',t:'self',v:20}]}, {name:'回避',eff:[{k:'evade',t:'self',v:0,turns:1}]} ];
-  const FACE_EFF={ weak:{k:'ignoreDef',t:'self',v:0,turns:1,times:1}, mid:{k:'atk',t:'self',v:30,turns:1}, strong:{k:'evade',t:'self',v:0,turns:1} };
-  // id = r_<コスト>_<構成>_<lo|mid|hi|tank|glass>_<weak|mid|strong>_<宝具>　宝具：A＝全体（基準値）/ S＝単体（基準値）/ a240＝全体240 / s360＝単体360
-  const refId=(cost,pat,tier='mid',face='weak',kit='A')=>['r',cost,pat,tier,face,kit].join('_');
-  function refUnit(id){
-    const [,c,pat,tier,face,kit]=id.split('_'), cost=+c, [fh,f]=TIERS[tier], R=UNIT_REF, n=PATS[pat];
-    const cols=[...Array(n[0]).fill('R'),...Array(n[1]).fill('B'),...Array(n[2]).fill('G')];
-    const rg=i=>R.dmg[cols[i]][cost];
-    // 再臨前のダメージ：幅の中の f の位置。合計攻撃力の幅に収める
-    let pre=cols.map((_,i)=>r10(rg(i)[0]+f*(rg(i)[1]-rg(i)[0])));
-    pre=fit(pre,R.total[cost][0],R.total[cost][1],10,i=>rg(i)[0],i=>rg(i)[1]);
-    // 再臨後：合計が postAdd だけ増えるように、前のカードから10ずつ配る
-    const post=pre.slice(); for(let left=R.postAdd[cost],g=0;left>0;g++,left-=10) post[g%5]+=10;
-    // NP：Arts 1枚あたり。合計の上限に収める（収まらなければ下限より下げる）
-    const nr=R.np[Math.min(3,n[1])], npOf=(rng,max)=>fit(Array(n[1]).fill(0).map(()=>r5(rng[0]+f*(rng[1]-rng[0]))),null,max,5,()=>5,()=>99);
-    const npPre=npOf(nr.pre,nr.preMax), npPost=npOf(nr.post,nr.postMax);
-    // スター：Quick 3枚で合計の目安になるように1枚あたりを決める（コスト5は多め）
-    const plus=cost>=R.star.plusCost?Math.round(R.star.plus[0]+f*(R.star.plus[1]-R.star.plus[0])):0;
-    const split=t=>[Math.ceil(t/3),Math.round(t/3),t-Math.ceil(t/3)-Math.round(t/3)], stPre=split(R.star.pre+plus), stPost=split(R.star.post+plus);
-    let a=0,q=0;
-    const cards=cols.map((col,i)=>{ const np=col==='B'?a++:-1, st=col==='G'?q++:-1;
-      return { pre:{c:col,dmg:pre[i],np:np<0?0:npPre[np],star:st<0?0:stPre[st]}, post:{c:col,dmg:post[i],np:np<0?0:npPost[np],star:st<0?0:stPost[st]} }; });
-    const asc={ pre:{c:'ASC'}, post:{c:'W',label:'4番',eff:[FACE_EFF[face]],dmg:R.ascFace.dmg[cost][face],np:0,star:0} };
-    const faces=[cards[0],cards[1],cards[2],asc,cards[3],cards[4]].map(x=>({acts:1,...x}));
-    const hp=r10(R.hp[cost][0]+fh*(R.hp[cost][1]-R.hp[cost][0]));
-    const m=/^([as])(\d+)$/.exec(kit), u=m?[m[1]==='a'?'enemy_all':'target',+m[2]]:kit==='S'?['target',R.ult.one[cost]]:['enemy_all',R.ult.all[cost]];
-    return normalizeUnit({ id, name:id, cls:'セイバー', cost, hp, faces, skills:SKILLS, ult:{name:'宝具',c:cols[0],eff:[{k:'dmg',t:u[0],v:u[1]}]} });
-  }
-  const ROSTER=UNITS.map(u=>u.id);
-  const ensure=ids=>ids.forEach(id=>{ if(/^r_/.test(id)&&!D(id)){ const u=refUnit(id); UNITS=UNITS.concat(u); ALL_UNITS=ALL_UNITS.concat(u); } });
-  window.REFCHK={ PATS, refId, refUnit, ROSTER,
+  const PATS=REF_PATS, ROSTER=UNITS.map(u=>u.id);
+  const ADDED=ADD.map(normalizeUnit); UNITS=UNITS.concat(ADDED); ALL_UNITS=ALL_UNITS.concat(ADDED); // --add の自作キャラ
+  const ensure=refEnsure;
+  window.REFCHK={ PATS, refId, refUnit, ROSTER, ADDED:ADDED.map(u=>({id:u.id,name:u.name,cost:u.cost})),
     // 1件の対戦：t ＋ランダムな味方 vs 同じ合計コスト・同じ人数（pool＝味方・相手に使うキャラ。t を足して使う）
     run(job){ const pool=job.pool==='roster'?ROSTER:job.pool; ensure([job.t,...pool]);
       const r=simTeam(job.t,job.n,[...new Set([job.t,...pool])],true);
@@ -128,6 +100,7 @@ for(const [kit] of KITS){
   if(ONLY.includes('tier')) for(const tier of ['lo','hi','tank','glass']) for(const c of COSTS) for(const p of PATS) jobs.push({exp:`tier|${kit}|${tier}`,t:id(c,p,tier,'weak',kit),pool:pool(kit),n:N});
   if(ONLY.includes('face')) for(const face of ['mid','strong']) for(const c of COSTS) for(const p of PATS) jobs.push({exp:`face|${kit}|${face}`,t:id(c,p,'mid',face,kit),pool:pool(kit),n:N});
   if(ONLY.includes('roster')) for(const t of pool(kit)) jobs.push({exp:'roster|'+kit,t,pool:'roster',n:N});
+  if(ONLY.includes('custom')) for(const u of Q('REFCHK.ADDED')) jobs.push({exp:'custom|'+kit,t:u.id,pool:pool(kit),n:N});
 }
 if(ONLY.includes('ult')) for(const c of COSTS) for(const p of PATS){
   for(let k=0;k<2;k++) jobs.push({exp:'ult|A',t:id(c,p,'mid','weak','A'),pool:pool('A'),n:N}); // 比べる相手：全体宝具のとき（2回ぶん回して誤差を減らす）
@@ -142,7 +115,7 @@ const workers=Math.max(1,Math.min(jobs.length,(os.cpus().length||2)-1));
 let done=0, alive=workers;
 console.error(`${total}件 × 最大${N}試合を ${workers} プロセスで実行中…`);
 for(let i=0;i<workers;i++){
-  const w=cp.fork(__filename,['--worker','--set',SET]);
+  const w=cp.fork(__filename,['--worker','--set',SET,...(ADD?['--add',ADD]:[])]);
   const next=()=>{ const j=jobs.pop(); if(j) w.send(j); else { w.kill(); if(!--alive) report(); } };
   w.on('message',r=>{ res.push(r); if(++done%20===0) console.error(`  ${done}/${total}`); next(); });
   next();
@@ -183,6 +156,16 @@ function report(){
     console.log('\n■ 全体宝具の環境で、1体だけ全体宝具の威力を変えたときの勝率（6構成の平均）');
     console.log(pad('',10)+GRID_ALL.map(v=>pad('全体'+v,9)).join(''));
     for(const c of COSTS) console.log(pad(`コスト${c}`,10)+GRID_ALL.map(v=>{ const a=agg(by('ulta|'+v).filter(r=>r.t.startsWith(`r_${c}_`))); return pad((100*a.w/a.n).toFixed(1)+'%',9); }).join(''));
+  }
+  const cu=by('custom|A').concat(by('custom|S'));
+  if(cu.length){
+    console.log('\n■ 自作キャラを、基準の中央のキャラの環境に1体入れたときの勝率（目安 50%±3%）');
+    console.log(pad('',28)+pad('コスト',8)+pad('全体宝具の環境',16)+pad('単体宝具の環境',16)+'平均');
+    for(const u of Q('REFCHK.ADDED')){
+      const r=k=>by('custom|'+k).find(x=>x.t===u.id), a=r('A'), s=r('S'), av=agg([a,s].filter(x=>x&&x.n)), v=av.n?100*av.w/av.n:NaN;
+      const p=x=>x&&x.none?'編成できない':pct(x);
+      console.log(pad(`${u.name}（${u.id}）`,28)+pad(u.cost,8)+pad(p(a),16)+pad(p(s),16)+pct(av)+(v>53?'  ↑強め':v<47?'  ↓弱め':''));
+    }
   }
   const self=by('roster|self');
   if(self.length){

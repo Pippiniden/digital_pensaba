@@ -41,7 +41,7 @@ const imgOpts = (none='（なし）')=>[...assetOpts('img',none),...allUnits().m
 function idList(path,list,max){
   const ids=get(path)||[];
   return `<span class="idlist">${ids.map((id,k)=>`<span class="chip">${k+1}. ${esc(unitName(id))}<button class="small ghost" data-act="delId" data-p="${path}" data-k="${k}" title="外す">×</button></span>`).join('')}
-    ${max&&ids.length>=max?'':`<select data-addid="${path}"><option value="">＋ 追加</option>${list.filter(u=>!ids.includes(u.id)).map(u=>opt(u.id,`${u.name}（C${u.cost}）`,'')).join('')}</select>`}</span>`;
+    ${max&&ids.length>=max?'':`<select data-addid="${path}"><option value="">＋ 追加</option>${list.filter(u=>!ids.includes(u.id)).map(u=>opt(u.id,`${u.name}（C${u.cost}）${u.enemy?`［${ENEMY_KINDS[u.enemy]}］`:''}`,'')).join('')}</select>`}</span>`;
 }
 
 // ---------- 左：一覧 ----------

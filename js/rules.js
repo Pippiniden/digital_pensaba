@@ -105,6 +105,42 @@ const ARCADE = { rules:['team','mteam'], stages:5, diffs:{
   // エンドレスは難易度とは別に選ぶ（G.arcade.endless）：負けるまで続く。levels を順に使い、使い切ったら最後の強さのまま。コンティニューなし
 } };
 
+// ---------- エネミー専用キャラ（キャラデータの enemy） ----------
+// 付いたキャラは通常の編成・図鑑・ドラフト・アーケードなどには出ない（D() では引ける）。シナリオの戦闘で相手（や選べるキャラ）に指定して使う
+// boss は、ボスレイド・聖杯戦争のボス候補にも入る（コストの下限 RAID.minCost は見ない）
+const ENEMY_KINDS = { mob:'雑魚', boss:'ボス' };
+
+// ---------- ボスレイド（試験版。CPUのボス1騎 vs 自軍3騎の連戦。アーケードの仕組みを使う：G.arcade.kind==='raid'） ----------
+// levels：ステージごとのCPUの強さ（数がステージ数）／ hp：ボスの最大HPの倍率（元のHP×倍率）／ atk：攻撃ダメージ+ ／ np：獲得NP+% ／ acts：最大行動回数+
+// ボスは即死無効・最初から霊基再臨済み。HPが rage.at 以下になったターンの始めに一度だけ「怒り」：弱体をすべて解除して、以降は攻撃ダメージ+rage.atk
+// minCost：ボスに選ぶサーヴァントのコストの下限（いなければいちばん高いコスト）。負けてもコンティニューできる（回数は総合リザルトに出る）
+const RAID = { rule:'team', minCost:4, rage:{at:.5, atk:30}, diffs:{
+  // 目安（node tools/check.js --modes-only。自軍は CPU つよい）：1戦ごとの勝率 イージー 約80→60% / ノーマル 約75→60% / ハード 約50→30% / ルナティック 約30→20%
+  // acts（最大行動回数+1）はとても強い（ほかが同じで勝率が 40%→15% ほど下がる）ので、使うなら HP・攻撃を下げる
+  easy:   { name:'イージー',     levels:['easy','easy','normal'],     hp:[2,2.25,2.5],    atk:[0,0,10],   np:0,  acts:0 },
+  normal: { name:'ノーマル',     levels:['normal','normal','normal'], hp:[2.25,2.5,2.75], atk:[0,10,15],  np:10, acts:0 },
+  hard:   { name:'ハード',       levels:['hard','hard','hard'],       hp:[2.25,2.5,2.5],  atk:[10,10,20], np:20, acts:0 },
+  lunatic:{ name:'ルナティック', levels:['expert','expert','expert'], hp:[2.25,2.5,2.75], atk:[10,10,20], np:20, acts:0 },
+} };
+
+// ---------- 聖杯戦争（ローグライト・試験版。アーケードの仕組みを使う：G.arcade.kind==='rogue'） ----------
+// 最初は候補 offer 騎から1騎だけ選んで始め、勝つたびに報酬を1つ選ぶ（新しいサーヴァントの加入＝コスト上限まで3騎、または perks の強化）。
+// 相手は自軍と同じ人数・合計コスト＋delta[ステージ]。foe＝相手の補正（ステージ番号×値）。最終ステージは boss（ボスレイドと同じボス。hp は自軍3騎のときの倍率で、人数が少ないと下がる）
+// 負けてもコンティニューできる（報酬はそのまま。回数は総合リザルトに出る）
+const ROGUE = { rule:'team', offer:3,
+  perks:{
+    atk:    { name:'攻撃ダメージ+20', atk:20 },
+    hp:     { name:'最大HP+120', hp:120 },
+    np:     { name:'獲得NP+20%', np:20 },
+    npStart:{ name:'開始時NP+30%', npStart:30 },
+    stars:  { name:'開始時スター+5', stars:5 },
+  },
+  diffs:{
+    easy:   { name:'イージー',     levels:['easy','easy','easy','normal','normal','normal','normal'], delta:[0,0,0,0,0,1,0], foe:{atk:0,hp:0},  boss:{hp:2,   atk:0, np:0, acts:0} },
+    normal: { name:'ノーマル',     levels:['easy','normal','normal','normal','hard','hard','hard'],   delta:[0,0,0,1,1,1,0], foe:{atk:3,hp:20}, boss:{hp:2.25,atk:0, np:10,acts:0} },
+    hard:   { name:'ハード',       levels:['normal','hard','hard','hard','hard','expert','expert'],   delta:[0,0,1,1,1,2,0], foe:{atk:5,hp:30}, boss:{hp:2.5, atk:10,np:20,acts:0} },
+  } };
+
 // ---------- ドラフト（候補を交互に取り合って編成する。対CPU） ----------
 // pool：候補に出すサーヴァントの数（solo＝1騎のルール / team＝3騎のルール）／ masters：候補に出すマスターの数（マスターのいるルールだけ）
 const DRAFT = { pool:{ solo:6, team:12 }, masters:4 };
@@ -119,8 +155,9 @@ const DRAFT = { pool:{ solo:6, team:12 }, masters:4 };
 const MSHEET = {
   hpPerCost:100, hpRange:100, hpStep:50, sameMax:3, star5Cost:5, faceMain:3,
   forbid:{ np:'NPの即時増加は補助に入れられません（「攻撃時NP+x%(1回)」などにしてください）', invul:'無敵は補助に入れられません（令呪クラスの効果です）',
-    stun:'スタンは補助に入れられません（令呪クラスの効果です）', instantDeath:'即死は入れられません' },
-  limit1:['cleanse','strip','actsUp','fear'],   // ＋ 回避(1回)・魅了(ロール3以下の敵単体)
+    stun:'スタンは補助に入れられません（令呪クラスの効果です）', petrify:'石化は補助に入れられません（令呪クラスの効果です）',
+    bind:'拘束は補助に入れられません（令呪クラスの効果です）', sleep:'睡眠は補助に入れられません（令呪クラスの効果です）', instantDeath:'即死は入れられません' },
+  limit1:['cleanse','strip','actsUp','fear','confuse'],   // ＋ 回避(1回)・魅了(ロール3以下の敵単体)
   limit2:['buffImmune','debuffImmune','deathImmune','stripImmune','npDownImmune','starLossImmune'],
   single:['ally_svt','enemy_svt'],
   ref:{
@@ -139,6 +176,22 @@ const MSHEET = {
     heal:{name:'HP回復', vals:[30,80,60,100], single:20},
     poison:{name:'毒ダメージ（敵単体）', vals:[40,60,50,80]},
     burn:{name:'やけどダメージ（敵単体）', vals:[40,60,50,80]},
+  },
+  // 令呪の強すぎ注意（申請ツールと node tools/llm-pack.js --check だけで使う。エディタには出さない）。汎用令呪テンプレ（SPELL_TPL）の値がもと
+  // all＝味方全体（ally_all）・敵全体（enemy_all / enemy_both）。令呪の svt は1騎を選ぶので単体
+  spell:{
+    maxEffs:3, maxTurns:3,
+    forbid:{ instantDeath:'即死は令呪に入れられません' },
+    // 強い効果：turns・times の上限（どちらか一方が上限内ならよい）と、全体にかけるときの確率の上限（ロールN以下）
+    strong:{ stun:{turns:1,times:1,allChance:2}, charm:{turns:1,times:1,allChance:2}, fear:{turns:1,times:1,allChance:2},
+      sealSkill:{turns:1,times:1,allChance:2}, sealUlt:{turns:1,times:1,allChance:2}, buffImmune:{turns:1,times:1,allChance:2},
+      petrify:{turns:1,times:1,allChance:2}, bind:{turns:1,times:1,allChance:2}, sleep:{turns:1,times:1,allChance:2}, confuse:{turns:1,times:1,allChance:2},
+      invul:{turns:1,times:1}, evade:{turns:1,times:1} },
+    // 値の上限 [単体, 全体]。dmg の単体は敵サーヴァント（敵マスターは dmgMaster）
+    val:{ atk:[60,40], np:[50,20], heal:[300,150], npPow:[100,80], critPow:[100,50], critRoll:[4,2], actsUp:[3,1], onAtkNp:[20,10],
+      onAtkStar:[8,4], guts:[400,200], maxHp:[200,100], def:[40,20], atkDown:[40,20], defDown:[30,20], regenHp:[50,30], skillCharge:[1,1],
+      dmg:[200,80] },
+    dmgMaster:350,
   },
 };
 
@@ -199,7 +252,8 @@ const faceActs = (d,i)=>RULES.actsTable ? RULES.actsTable[i] : d.faces[i].acts;
 // 各サーヴァントの lines に、場面ごとのセリフを配列で書きます（複数あればランダムに1つ）
 // スキル・鉛筆の面ごとの専用セリフ（line）は、あればその場面の通常セリフの代わりに使う
 // マスター用のセリフの場面（ペンシルエディタのマスター編集と masters.js の lines）
-const MASTER_LINE_KEYS = { support:'補助', attack:'攻撃（マスタールール）', spell:'令呪使用' };
+// start / win / defeat は任意（空なら喋らない）。defeat＝自陣の敗北。マスターのセリフはサーヴァントのセリフより先に出す
+const MASTER_LINE_KEYS = { start:'戦闘開始', support:'補助', attack:'攻撃（マスタールール）', spell:'令呪使用', win:'勝利', defeat:'敗北' };
 const LINE_KEYS = { start:'戦闘開始', attack:'攻撃', extra:'エクストラアタック', damage:'被ダメージ', skill:'スキル使用', np:'宝具使用', npDamage:'宝具で被ダメージ', defeat:'敗退', win:'勝利' };
 const LINE_MIN = { attack:3 };   // 最低限そろえたい種類数（足りないと注意を出す）
 
@@ -245,12 +299,18 @@ const FX = {
   debuffUp:{name:'弱体成功率アップ',buff:true,val:true},     // 自分が敵に付ける弱体の判定ロール（ロールN以下）をN+xにする（成功率ダウンと相殺）
   ignoreDef:{name:'被ダメージ減少無視',buff:true},           // 相手の[被ダメージ-x]を受けずに攻撃
   buffUp:{name:'強化成功率アップ',buff:true,val:true},       // 自分が味方（自分含む）に付ける確率つきの強化の判定ロールをN+xにする（強化成功率ダウンと相殺）
+  debuffRes:{name:'弱体耐性アップ',buff:true,val:true},       // 自分が受ける確率つきの弱体の判定ロールをN-xにする（弱体耐性ダウンと相殺。「必ず」の弱体には効かない）
+  healUp:{name:'HP回復量アップ',buff:true,val:true},          // 受けるHP回復（即時・ターン開始時）が+x%
+  npDef:{name:'宝具被ダメージ-',buff:true,val:true},          // 宝具のダメージ1回ごとに-x（被ダメージ減少無視で無視される）
   debuffImmune:{name:'弱体無効',buff:true},                  // 弱体効果・弱体ダメージを受けない
   mentalImmune:{name:'精神異常無効',buff:true},              // 精神異常(mental)の弱体を受けない
   nullUnder:{name:'ダメージ無効(x以下)',buff:true,val:true},  // 攻撃1回ごとの最終ダメージがx以下なら0にする（弱体ダメージには効かない）
   // 攻撃時○○：ダメージを与えるコマンドを行うたびに発動（エクストラアタック・宝具では発動しない）。color で色を限定できる
   onAtkStar:{name:'攻撃時スター発生',buff:true,val:true,color:true},
   onAtkNp:{name:'攻撃時NP獲得',buff:true,val:true,color:true},
+  // カード性能アップ：色（必須）のコマンドの 威力(v)＝攻撃ダメージ+・NP獲得量(np)＝攻撃時NP・スター発生量(star)＝攻撃時スター をまとめて上げる。
+  // それぞれ atk / onAtkNp / onAtkStar と同じに働くが、別の種類なので「攻撃ダメージ+」だけを狙った解除などでは消えない。既定値は CARD_UP_DEF
+  cardUp:{name:'カード性能アップ',buff:true,val:true,color:true},
   actsUp:{name:'最大行動回数+',buff:true,val:true},          // 次の行動回数決定フェイズで出た数に+x（使うと回数を1消費）
   // 毎ターン○○：持ち主の手番の終了フェイズに発動（弱体ダメージの後）
   // ターン開始時○○：持ち主の陣営のターン開始時に発動（スターはそのターンの手持ちに加わる）
@@ -279,14 +339,22 @@ const FX = {
   spread:{name:'延焼',buff:false},                           // やけどのダメージ2倍
   curse:{name:'呪い',buff:false,timesOnly:true},             // 被弾時にNPが増えない。重ねると回数が増える
   hitNpSeal:{name:'被弾NP上昇封印',buff:false},               // 被弾時にNPが増えない（呪いと違い、ターン・回数どちらでも指定できる。回数を指定すると防ぐたびに減る）
+  erosion:{name:'蝕毒',buff:false},                          // 毒のダメージ2倍（延焼の毒版）
   stun:{name:'スタン',buff:false}, charm:{name:'魅了',buff:false,mental:true},
+  // 行動不能の種類（スタンと同じく行動・スキル・宝具すべて不可）。睡眠は精神異常で、攻撃でダメージを受けると解ける
+  petrify:{name:'石化',buff:false}, bind:{name:'拘束',buff:false}, sleep:{name:'睡眠',buff:false,mental:true},
+  confuse:{name:'混乱',buff:false,val:true,mental:true},     // 行動回数決定のたびに1d6を振り、v以下（0なら3以下）ならそのターン行動不能（最大行動回数0）
   fear:{name:'恐怖',buff:false,mental:true},                             // 行動回数-1
   actsDown:{name:'最大行動回数-',buff:false,val:true},                   // 次の行動回数決定で最大行動回数から値ぶん減らす（0未満にはならない・重ねると合計・精神異常ではない）
   drain:{name:'HP減少',buff:false,val:true,perm:true},      // ターン終了時に値ぶんの弱体ダメージ。重複する（合計）。永続でよい
   sealSkill:{name:'スキル封印',buff:false}, sealUlt:{name:'宝具封印',buff:false},
   critDown:{name:'クリティカル率ダウン',buff:false,val:true},
+  critPowDown:{name:'クリティカル威力ダウン',buff:false,val:true,color:true}, // クリティカル時のダメージ増加量-x（増加量は0未満にならない）
+  healDown:{name:'HP回復量ダウン',buff:false,val:true},       // 受けるHP回復（即時・ターン開始時）が-x%（0未満にはならない）
   npGainDown:{name:'NP獲得量ダウン',buff:false,val:true,allOpt:true}, // 攻撃で得るNP（コマンド・攻撃時NP・チェイン）が1回ごとに x 減る（0未満にはならない）。all なら スキル・ターン開始時・被弾時などの獲得も対象
   starDown:{name:'スター発生数ダウン',buff:false,val:true},          // 攻撃1回で発生するスターが x 個減る
+  // カード性能ダウン：カード性能アップの弱体版。色（必須）のコマンドの 威力(v)＝攻撃ダメージ-・NP獲得量(np)・スター発生量(star) をまとめて下げる（1回の攻撃ごと）。既定値は CARD_DOWN_DEF
+  cardDown:{name:'カード性能ダウン',buff:false,val:true,color:true},
   debuffResDown:{name:'弱体耐性ダウン',buff:false,val:true},   // 自分が受ける確率つきの弱体の判定ロールをN+xにする（「必ず」の弱体には効かない）
   debuffDown:{name:'弱体成功率ダウン',buff:false,val:true},   // 自分が敵に付ける弱体の判定ロールをN-xにする。「必ず」の弱体もロール6以下の判定になる
   buffDown:{name:'強化成功率ダウン',buff:false,val:true},    // 自分が味方（自分含む）に付ける強化の判定ロールをN-xにする。「必ず」の強化もロール6以下の判定になる
@@ -324,6 +392,11 @@ const FX = {
   desc:{name:'説明文（表示のみ）',inst:true,noTgt:true},
 };
 
+// カード性能アップの色ごとの既定値（エディタで色を選ぶと入る。v＝威力 / np＝NP獲得量 / star＝スター発生量）
+const CARD_UP_DEF = { R:{v:30,np:0,star:1}, G:{v:30,np:5,star:3}, B:{v:30,np:10,star:2} };
+// カード性能ダウンの色ごとの既定値（同じ形）。CARD_DEFS＝3つの値を持つ効果の種類 → 既定値
+const CARD_DOWN_DEF = { R:{v:30,np:0,star:1}, G:{v:30,np:5,star:3}, B:{v:30,np:10,star:2} };
+const CARD_DEFS = { cardUp:CARD_UP_DEF, cardDown:CARD_DOWN_DEF };
 // ---------- 効果の分類（エディタで「分類 → 種類」の2段で選ぶ） ----------
 // ここにない効果は最後の「その他」に入る
 // 条件つき効果（Eff.cond）：条件を満たす相手にだけ働く。condUse の効果は「使う瞬間」（ダメージ計算）に攻撃・防御の相手を見る。
@@ -336,10 +409,10 @@ const COND_KINDS = { trait:'属性', fx:'状態', hpBelow:'HP○%以下', hpAbov
 const LINE_WHO = { other:'相手・対象', self:'自分', ally:'味方のだれか', enemy:'敵のだれか' };
 ['atk','atkDown','atkPct','atkPctDown','def','defDown'].forEach(k=>{ if(FX[k]) FX[k].condUse=true; });
 const FX_GROUPS = [
-  ['攻撃強化', ['atk','atkPct','npPow','atkVs','atkTrait','ignoreDef','sureHit','pierce','critPow','critMult','critRoll','debuffUp','buffUp','cardConv','cardConvPick','onAtkStar','onAtkNp','aoeNormal']],
-  ['防御・耐性', ['def','defTrait','evade','invul','guts','taunt','nullUnder','counter','maxHp','debuffImmune','mentalImmune','deathImmune','stripImmune','npDownImmune','starLossImmune']],
-  ['継続・ターン', ['actsUp','regenHp','regenNp','regenStar','onHitNp','hitNpUp','onHitStar']],
-  ['弱体', ['atkDown','atkPctDown','npPowDown','defDown','critDown','starDown','npGainDown','debuffDown','debuffResDown','buffDown','poison','burn','spread','drain','curse','hitNpSeal','stun','charm','fear','actsDown','sealSkill','sealUlt','healBlock','buffImmune']],
+  ['攻撃強化', ['atk','atkPct','npPow','atkVs','atkTrait','ignoreDef','sureHit','pierce','critPow','critMult','critRoll','debuffUp','buffUp','cardConv','cardConvPick','onAtkStar','onAtkNp','cardUp','aoeNormal']],
+  ['防御・耐性', ['def','defTrait','npDef','evade','invul','guts','taunt','nullUnder','counter','maxHp','debuffRes','debuffImmune','mentalImmune','deathImmune','stripImmune','npDownImmune','starLossImmune']],
+  ['継続・ターン', ['actsUp','regenHp','healUp','regenNp','regenStar','onHitNp','hitNpUp','onHitStar']],
+  ['弱体', ['atkDown','atkPctDown','npPowDown','defDown','critDown','critPowDown','starDown','npGainDown','cardDown','debuffDown','debuffResDown','buffDown','poison','erosion','burn','spread','drain','curse','hitNpSeal','stun','petrify','bind','sleep','charm','confuse','fear','actsDown','sealSkill','sealUlt','healBlock','healDown','buffImmune']],
   ['回復・即時', ['heal','np','star','starLoss','cleanse','cleanseMental','strip','buffExtend','skillCharge','ascend','copyBuff','copyDebuff']],
   ['攻撃・特殊', ['dmg','multiHit','aoe','selfDmg','instantDeath','copyRoll']],
   ['表示', ['desc']],

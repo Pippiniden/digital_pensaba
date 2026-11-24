@@ -24,7 +24,7 @@ const netMe = ()=>netOn()?NET.me:0;
 // 相手が操作する番（自分は待つ）。編成中も含む。中断中はどちらも操作できない
 const netWaiting = ()=>!!NET.hold||NET.on&&!['mode','over','init','stage'].includes(G.phase)&&actor()!==NET.me;
 // ゲストからは受け付けない操作（部屋の設定・ひとり用のもの）
-const NET_BAN = ['restart','useDefaultData','setRule','toggleHandicap','chooseMode','scnBattle','arcadeGo','arcadeNext','arcadeContinue','toggleSpeed'];
+const NET_BAN = ['restart','useDefaultData','setRule','toggleHandicap','chooseMode','scnBattle','arcadeGo','arcadeNext','arcadeContinue','rogueReward','rogueLead','toggleSpeed'];
 
 // ---------- engine.js の act() から呼ばれる ----------
 // true を返すと、その操作はここで終わり（エンジンでは実行しない）

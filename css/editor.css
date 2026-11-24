@@ -5,7 +5,9 @@
 .ed{display:grid;grid-template-columns:220px minmax(0,1fr) 340px;gap:16px;max-width:1480px;margin:0 auto;padding:16px;align-items:start}
 @media (max-width:1200px){.ed{grid-template-columns:210px minmax(0,1fr)} #side{grid-column:1/-1}}
 @media (max-width:760px){.ed{grid-template-columns:1fr} header{position:static}}
-@media (min-width:761px){#list{position:sticky;top:72px}}
+@media (min-width:761px){#list{position:sticky;top:calc(var(--hdr,72px) + 16px)}} /* --hdr＝ヘッダーの高さ（editor.js が測って入れる）。ヘッダーの真下に固定する */
+/* 右側（プレビュー・検証・数値の目安）は画面に固定し、中だけでスクロールする（タブやキャラを変えても動かないように）。3列のときだけ */
+@media (min-width:1201px){#side{position:sticky;top:calc(var(--hdr,72px) + 16px);max-height:calc(100vh - var(--hdr,72px) - 32px);overflow-y:auto;overscroll-behavior:contain;padding-right:4px}}
 
 /* 一覧 */
 .ulist{display:flex;flex-direction:column;gap:4px;margin:8px 0;max-height:60vh;overflow:auto}
@@ -74,11 +76,7 @@ label.mini input[type=number]{width:62px}
 .cmdnums{display:flex;gap:6px;flex-wrap:wrap}
 .subcard{border:1px solid var(--line);border-radius:4px;background:rgba(6,13,34,.35);padding:10px;margin-bottom:10px;display:grid;gap:8px}
 .effs{display:grid;gap:6px}
-.eff{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 8px;border:1px dashed var(--line);border-radius:4px;background:var(--panel2)}
-.eff>select{max-width:170px}
-.effops{margin-left:auto;display:flex;gap:2px}
-.effops button{padding:1px 7px;font-size:12px}
-.effprev{flex-basis:100%;font-size:11px;color:var(--sub)}
+.eff{display:block} /* 効果1つの外枠。中身は共通部品（eff-ui.js の .erow、見た目は css/eff-ui.css） */
 .add{justify-self:start}
 .preview{font-size:12px;color:var(--sub);border-top:1px dashed var(--line);padding-top:6px}
 .preview::before{content:'カードの表記：';color:var(--ink)}
@@ -114,6 +112,7 @@ table.stats td:first-child{white-space:nowrap;color:var(--sub)}
 .pface.hit .pips{color:#2a1a04}
 .dot.lin{background:#4a8fd8}
 .wipbadge{flex:none;font-size:10px;padding:0 5px;border-radius:8px;background:#8a6d1f;color:#fff;white-space:nowrap}
+#impdlg .csvopt{display:flex;align-items:center;gap:6px;margin:10px 0 0;cursor:pointer}
 .wipin{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:10px;padding:6px 10px;border:1px dashed #8a6d1f;border-radius:6px}
 .wipin small{flex-basis:100%;opacity:.7}
 .issues li.line{color:#7db4ee}
@@ -197,9 +196,7 @@ table.simmx td.self{color:var(--sub)}
 .fields label.wide{grid-column:1/-1}
 .ownline{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--sub)}
 .ownline textarea{font-size:12px;resize:vertical;min-height:0}
-.eff .effgrp{max-width:9.5em;color:var(--sub)}
 .eff .traitin{width:7em}
-.eff .desctext{flex:1 1 16em;min-width:0}
 label.mini.chk{cursor:pointer}
 
 .effref{flex-basis:100%;font-size:10.5px;color:var(--sub);opacity:.85;line-height:1.4}.effref:empty{display:none}.effref.over{color:var(--warn);opacity:1}
@@ -258,3 +255,11 @@ label.mini.hasref{display:inline-grid;grid-template-columns:auto auto;justify-co
 .cmded>.uref,.subcard>.uref{display:block}
 .refsum{display:flex;flex-wrap:wrap;gap:4px 18px;margin-top:8px;font-size:12px;color:var(--sub)}.refsum:empty{display:none}
 .refsum b{color:var(--ink);font-weight:600}.refsum .uref{margin-left:6px}
+
+/* フォームのタブ（editor.js の formTabsInit）・検証の指摘から飛ぶ */
+.ftabs{position:sticky;top:var(--hdr,0px);z-index:3;background:var(--panel2);padding-top:6px}
+@media (max-width:760px){.ftabs{top:0}} /* 狭い画面ではヘッダーが固定されないので、タブは画面の一番上に */
+.issues li[data-ftab-go]{cursor:pointer}
+.issues li[data-ftab-go]:hover{background:rgba(127,166,255,.08)}
+.facerow.flash{outline:2px solid var(--gold);outline-offset:2px;transition:outline-color .3s}
+.wipbadge.enemybadge{background:#8a2f3a}

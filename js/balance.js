@@ -55,12 +55,15 @@ function loadData(kind){
   d.errors=[...validateUnits(d.units).filter(x=>x.level==='error').map(x=>(x.i>=0&&d.units[x.i]?`${d.units[x.i].name||d.units[x.i].id}：`:'')+x.msg),
             ...validateMasters(d.masters,d.units).filter(x=>x.level==='error').map(x=>(x.i>=0&&d.masters[x.i]?`${d.masters[x.i].name||d.masters[x.i].id}：`:'マスター：')+x.msg)];
   try{ d.same=kind==='public'||(JSON.stringify(d.units)===JSON.stringify(defU())&&JSON.stringify(d.masters)===JSON.stringify(defM())); }catch(e){ d.same=false; }
+  d.units=d.units.filter(u=>!u.enemy); // エネミー専用（シナリオ・ボス用）は対戦検証に入れない
   return d;
 }
-function setSrc(kind){ B.src=kind; B.data=loadData(kind); B.A={ids:[],m:null}; B.B={ids:[],m:null}; saveSet(); }
+function setSrc(kind){ B.src=kind; B.data=loadData(kind); B.uIdx=new Map(B.data.units.map(u=>[u.id,u])); B.dataVer=(B.dataVer||0)+1; B.A={ids:[],m:null}; B.B={ids:[],m:null}; saveSet(); }
 const eu=()=>B.data.units.filter(u=>u.id&&!B.excl.has(u.id));
 const em=()=>B.data.masters.filter(m=>m.id&&!B.mexcl.has(m.id));
-const uOf=id=>B.data.units.find(u=>u.id===id)||{name:id,cost:0,hp:0};
+// マスターチームでは編成が数十万になり uOf がそのぶん呼ばれるので、id → キャラの表（B.uIdx）で引く
+const uOf=id=>(B.uIdx&&B.uIdx.get(id))||B.data.units.find(u=>u.id===id)||{name:id,cost:0,hp:0};
+const uNm=id=>{ const u=uOf(id), same=B.data.units.some(o=>o.id!==id&&o.name===u.name); return same?`${u.name}（${id}）`:u.name; };   // 同名の別キャラは id を添えて見分ける
 const mOf=id=>B.data.masters.find(m=>m.id===id)||{name:id,cost:0};
 
 // ---------- 編成 ----------
@@ -70,8 +73,8 @@ function mkTeam(ids,m){
   ids=byHp(ids); const cost=ids.reduce((s,id)=>s+uOf(id).cost,0)+(m?mOf(m).cost:0);
   return {ids,m:m||null,cost,key:teamKey(ids,m)};
 }
-const teamName=t=>t.ids.map(id=>uOf(id).name).join('・')+(t.m?`／${mOf(t.m).name}`:'');
-const teamHTML=t=>`${esc(t.ids.map(id=>uOf(id).name).join('・'))}${t.m?` <span class="sub">／${esc(mOf(t.m).name)}</span>${((B.res&&B.res.mcol)||{})[t.m]?` <span class="tag">${TERMS[B.res.mcol[t.m]]}特化</span>`:''}`:''} <span class="sub small">C${t.cost}</span>`;
+const teamName=t=>t.ids.map(id=>uNm(id)).join('・')+(t.m?`／${mOf(t.m).name}`:'');
+const teamHTML=t=>`${esc(t.ids.map(id=>uNm(id)).join('・'))}${t.m?` <span class="sub">／${esc(mOf(t.m).name)}</span>${((B.res&&B.res.mcol)||{})[t.m]?` <span class="tag">${TERMS[B.res.mcol[t.m]]}特化</span>`:''}`:''} <span class="sub small">C${t.cost}</span>`;
 
 // ルールに合う編成を全部並べる（filter：full＝合計コストが上限ちょうど / maximal＝これ以上追加できない / all）
 function enumTeams(filter=B.filter){
@@ -93,7 +96,16 @@ function enumTeams(filter=B.filter){
   return full3;
 }
 const sample=(a,k)=>{ if(!(k>0)||k>=a.length) return a.slice(); const b=a.slice(); for(let i=0;i<k;i++){ const j=i+Math.floor(Math.random()*(b.length-i)); [b[i],b[j]]=[b[j],b[i]]; } return b.slice(0,k); };
+// a（self を含む）から self を除いて k 個をランダムに選ぶ（k が 0 か残り全部以上なら全部）。配列をコピーしないので、大きな a から少し選ぶときに速い
+function pickOthers(a,k,self){
+  const n=a.length-1;
+  if(!(k>0)||k>=n) return a.filter(o=>o!==self);
+  const got=new Set();
+  while(got.size<k){ const i=Math.floor(Math.random()*a.length); if(a[i]!==self) got.add(i); }
+  return [...got].map(i=>a[i]);
+}
 const oppOk=(a,b)=>a!==b&&(B.opp==='all'||(a.cost===b.cost&&a.ids.length===b.ids.length));
+const oppGroup=t=>B.opp==='all'?'':t.cost+'/'+t.ids.length; // oppOk で相手になれる編成のまとまり
 const useHandicap=()=>!!rs().handicapAsc&&B.handicap;
 
 // ---------- 対戦（タスク）の計画 ----------
@@ -109,9 +121,11 @@ function plan(){
 }
 function planRank(){
   const teams=enumTeams(); if(teams.length<2) return {tasks:[],err:'対戦できる編成が2つ以上ありません。編成の絞り込みを「すべて」にしてください'};
+  // 相手になれる編成を先にまとめておき、そこから選ぶ（編成ごとに全編成を絞り込むと、マスターチームの十数万編成で数分かかる）
+  const groups=new Map(); for(const t of teams){ const g=oppGroup(t); if(!groups.has(g)) groups.set(g,[]); groups.get(g).push(t); }
   const pairs=new Map();
   for(const t of teams){
-    sample(teams.filter(o=>oppOk(t,o)),B.k).forEach(o=>{ const key=[t.key,o.key].sort().join('|'); if(!pairs.has(key)) pairs.set(key,{ta:t,tb:o}); });
+    pickOthers(groups.get(oppGroup(t)),B.k,t).forEach(o=>{ const key=t.key<o.key?t.key+'|'+o.key:o.key+'|'+t.key; if(!pairs.has(key)) pairs.set(key,{ta:t,tb:o}); });
   }
   if(!pairs.size) return {tasks:[],err:'相手を選べる編成がありません。「相手の範囲」を「すべて」にしてください'};
   return {tasks:[...pairs.values()], teams:teams.length};
@@ -223,11 +237,14 @@ function taskSubs(t,view){
   if(view==='master') return ['m:'+t.tag.mi,'m:'+t.tag.mj];
   const out=[]; for(const tm of [t.ta,t.tb]){ tm.ids.forEach(id=>out.push('u:'+id)); if(tm.m) out.push('m:'+tm.m); } return [...new Set(out)];
 }
-const subName=k=>k==='team'?'検証する編成':k[0]==='u'?uOf(k.slice(2)).name:mOf(k.slice(2)).name;
+const subName=k=>k==='team'?'検証する編成':k[0]==='u'?uNm(k.slice(2)):mOf(k.slice(2)).name;
 // 目標までの試合数の見込み：全員が goalNeed 試合ずつ要る。1試合で進む人数（両陣営のサーヴァント／マスター）で割る
 function goalEst(tasks,view,goal){
-  const keys=new Set(); tasks.forEach(t=>taskSubs(t,view).forEach(k=>keys.add(k)));
-  const nu=[...keys].filter(k=>k[0]==='u').length, nm=[...keys].filter(k=>k[0]==='m').length, need=goalNeed(goal);
+  // taskSubs と同じ数え方。対戦が数百万あるので、対戦ごとに配列を作らずに直接数える
+  const us=new Set(), ms=new Set();
+  if(view==='master') tasks.forEach(t=>{ ms.add(t.tag.mi); ms.add(t.tag.mj); });
+  else if(view!=='team') for(const t of tasks) for(const tm of [t.ta,t.tb]){ for(const id of tm.ids) us.add(id); if(tm.m) ms.add(tm.m); }
+  const nu=us.size, nm=ms.size, need=goalNeed(goal);
   const deff=1+(Math.max(1,B.n)-1)*GOAL_RHO; // 同じカードを B.n 試合ずつ回すぶんの割り増し
   return Math.ceil((view==='team'?need:Math.max(need*nu/(2*rs().partyMax),need*nm/2))*deff);
 }
@@ -256,7 +273,7 @@ function startRun(){
     if(goal){ run.bySub=new Map(); ts.forEach(t=>taskSubs(t,view).forEach(k=>{ let a=run.bySub.get(k); if(!a) run.bySub.set(k,a=[]); a.push(t); })); } };
   load(mk(p.tasks));
   const nW=Math.max(1,Math.min(maxWorkers(),run.queue.length));
-  B.run=run;
+  B.run=run; B.freeze=false;
   B.res={goal,rounds:1,byKey:new Map(),view,rule:B.rule,src:B.src,n:B.n,k:B.k,filter:B.filter,opp:B.opp,level:B.level,handicap:useHandicap()&&B.view!=='master',vs:B.vs,mcol:{...B.mcol},cmin:B.cmin,
     data:B.data,items:[],log:B.detail?[]:null,logGames:0,done:false,teams:p.teams,excl:eu().length<B.data.units.length||em().length<B.data.masters.length};
   const R=B.res, hcap=R.handicap;
@@ -318,19 +335,28 @@ function startRun(){
   keepAwake(true);
   renderProg(); renderRes(); renderCtl();
 }
-function finish(){ B.res.ms=Date.now()-B.run.t0; B.res.done=true; stopRun(); renderProg(); renderRes(); renderCtl(); setTitle('✔ 完了'); }
+function finish(){ B.freeze=false; B.res.ms=Date.now()-B.run.t0; B.res.done=true; stopRun(); renderProg(); renderRes(); renderCtl(); setTitle('✔ 完了'); }
 let pending=false;
-function schedule(){ if(pending) return; pending=true; setTimeout(()=>{ pending=false; renderProg(); renderRes(); },250); }
+// B.freeze：実行中に「表示を止める」を押した状態。計算は続け、結果の表だけ描き直さない（進み具合のバーは更新する）
+function schedule(){ if(pending) return; pending=true; setTimeout(()=>{ pending=false; renderProg(); if(!B.freeze) renderRes(); },250); }
 
 // ---------- 画面：操作部 ----------
 const seg=(key,opts,cur)=>`<div class="seg">${opts.map(([v,l])=>`<button class="${v===cur?'on':''}" data-b="set" data-k="${key}" data-v="${esc(v)}" ${B.run?'disabled':''}>${l}</button>`).join('')}</div>`;
 const sel=(key,opts,cur,label,extra='')=>`<label ${extra}>${label}<select data-s="${key}" ${B.run?'disabled':''}>${opts.map(([v,l])=>`<option value="${esc(v)}" ${String(v)===String(cur)?'selected':''}>${l}</option>`).join('')}</select></label>`;
 
+// 画面の見込み（対戦数など）用の plan()。マスターチームは編成を並べるだけで1秒ほどかかるので、
+// 組み合わせに関わる設定が変わったときだけ作り直す（試合数・CPUの強さなどを変えただけなら前の結果を使う）
+let planMemo={key:'',p:null};
+function planForView(){
+  const key=JSON.stringify([B.dataVer,B.rule,B.view,B.filter,B.opp,B.k,B.sv,B.vs,B.A,B.B,[...B.excl],[...B.mexcl],B.mcol,B.cmin]);
+  if(planMemo.key!==key) planMemo={key,p:plan()};
+  return planMemo.p;
+}
 function renderCtl(){
   const d=B.data, dis=B.run?'disabled':'', m=hasMaster(), team=rs().partyMax>1;
   const views=[['rank','編成の勝率ランキング'],['team','特定の編成の戦績'],...(m?[['master','マスターの強さ']]:[])];
   if(!views.some(v=>v[0]===B.view)) B.view='rank';
-  const p=plan(), goal=Number(B.goal)||0, games=p.tasks.length*B.n, est=goal&&!p.err?goalEst(p.tasks,B.view,goal):0;
+  const p=planForView(), goal=Number(B.goal)||0, games=p.tasks.length*B.n, est=goal&&!p.err?goalEst(p.tasks,B.view,goal):0;
   const goalWho={rank:hasMaster()?'サーヴァント別・マスター別の平均勝率':'サーヴァント別の平均勝率',team:'検証する編成の勝率',master:'マスター別の勝率'}[B.view];
   const src=Object.entries(BSRC).map(([k,l])=>{
     const dd=k===B.src?d:null;
@@ -384,7 +410,7 @@ function builderHTML(key,label){
   return `<div class="bld"><b>${label}</b>
     <div class="chips mt">${B.data.units.filter(u=>u.id).map(u=>{
       const on=T.ids.includes(u.id), over=!on&&max>1&&cost+u.cost>cap, full=!on&&max>1&&T.ids.length>=max;
-      return `<button class="chip ${on?'on':''} ${B.excl.has(u.id)?'off':''}" data-b="bld" data-k="${key}" data-id="${esc(u.id)}" ${dis||over||full?'disabled':''}>${esc(u.name)}<span class="sub small">C${u.cost}</span></button>`; }).join('')}</div>
+      return `<button class="chip ${on?'on':''} ${B.excl.has(u.id)?'off':''}" data-b="bld" data-k="${key}" data-id="${esc(u.id)}" ${dis||over||full?'disabled':''}>${esc(uNm(u.id))}<span class="sub small">C${u.cost}</span></button>`; }).join('')}</div>
     ${hasMaster()?`<div class="row mt"><label class="sub small">マスター <select data-s="bm" data-k="${key}" ${dis}><option value="">（選んでください）</option>${B.data.masters.map(m=>`<option value="${esc(m.id)}" ${T.m===m.id?'selected':''}>${esc(m.name)}（C${m.cost}）</option>`).join('')}</select></label></div>`:''}
     <div class="cost">${max>1?`合計コスト <b class="${cost>cap?'bad':''}">${cost}</b> / ${cap}${hasMaster()?'（マスター込み）':''}　`:`コスト ${cost}　`}<button class="small" data-b="bldClear" data-k="${key}" ${dis}>クリア</button>
       ${max>1?`<button class="small" data-b="bldRandom" data-k="${key}" ${dis}>ランダム</button>`:''}</div></div>`;
@@ -402,7 +428,7 @@ function exclHTML(){
   return `<details class="excl"><summary>検証から外す　<span class="sub small">${n||nm?`サーヴァント${n}体${hasMaster()?`・マスター${nm}人`:''}を除外中`:'なし'}</span></summary>
     <p class="note">外したキャラは、編成の組み合わせ・相手・マスター比較に使いません（エディタのバランス検証と共有）。</p>
     <div class="row"><button class="small" data-b="exclNone" ${dis}>すべて戻す</button></div>
-    <div class="chips mt">${B.data.units.filter(u=>u.id).map(u=>`<button class="chip ${B.excl.has(u.id)?'off':''}" data-b="excl" data-id="${esc(u.id)}" ${dis}>${esc(u.name)}<span class="sub small">C${u.cost}</span></button>`).join('')}</div>
+    <div class="chips mt">${B.data.units.filter(u=>u.id).map(u=>`<button class="chip ${B.excl.has(u.id)?'off':''}" data-b="excl" data-id="${esc(u.id)}" ${dis}>${esc(uNm(u.id))}<span class="sub small">C${u.cost}</span></button>`).join('')}</div>
     ${hasMaster()?`<div class="chips mt">${B.data.masters.filter(m=>m.id).map(m=>`<button class="chip ${B.mexcl.has(m.id)?'off':''}" data-b="mexcl" data-id="${esc(m.id)}" ${dis}>${esc(m.name)}<span class="sub small">C${m.cost}</span></button>`).join('')}</div>`:''}</details>`;
 }
 
@@ -410,12 +436,14 @@ function renderProg(){
   const r=B.run; if(!r){ $('#prog').innerHTML=''; return; }
   setTitle(r.goal?`${r.need.length-(r.lag?r.left:r.need.length)}/${r.need.length} 検証中`:`${Math.round(r.done/Math.max(1,r.total)*100)}% 検証中`);
   const el=(Date.now()-r.t0)/1000, eta=r.done?el/r.done*(r.total-r.done):0;
+  // 画面の右下に浮かせる（下位の行を見ているときも押せるように）
+  const fz=B.res&&B.res.items.length?`<div class="freeze">${B.freeze?'<span class="small">結果の表示を止めています（計算は続いています）</span>':''}<button class="small ${B.freeze?'primary':''}" data-b="freeze">${B.freeze?'▶ 表示を再開':'⏸ 表示を止める'}</button></div>`:'';
   if(r.goal){ // 目標の誤差つき：届いた人数と、いちばん広い誤差
     const w=r.worst, n=r.need.length, left=r.lag?r.left:n, wt=w&&isFinite(w.v)?`いちばん広い誤差 ±${w.v.toFixed(1)}%（${esc(w.name)}）`:'';
-    $('#prog').innerHTML=`<div class="progbar"><i style="width:${(n-left)/Math.max(1,n)*100}%"></i><span>目標 ±${r.goal}% に到達 ${n-left} / ${n}　${r.games.toLocaleString()}試合　${wt}（経過${el<90?Math.round(el)+'秒':Math.round(el/60)+'分'}）</span></div>`;
+    $('#prog').innerHTML=`<div class="progbar"><i style="width:${(n-left)/Math.max(1,n)*100}%"></i><span>目標 ±${r.goal}% に到達 ${n-left} / ${n}　${r.games.toLocaleString()}試合　${wt}（経過${el<90?Math.round(el)+'秒':Math.round(el/60)+'分'}）</span></div>${fz}`;
     return;
   }
-  $('#prog').innerHTML=`<div class="progbar"><i style="width:${r.done/r.total*100}%"></i><span>${r.done} / ${r.total} 対戦${r.done?`（残り約${eta<90?Math.round(eta)+'秒':Math.round(eta/60)+'分'}）`:''}</span></div>`;
+  $('#prog').innerHTML=`<div class="progbar"><i style="width:${r.done/r.total*100}%"></i><span>${r.done} / ${r.total} 対戦${r.done?`（残り約${eta<90?Math.round(eta)+'秒':Math.round(eta/60)+'分'}）`:''}</span></div>${fz}`;
 }
 
 // ---------- 画面：結果 ----------
@@ -463,7 +491,7 @@ function resDetail(R){
       ${th('与ダメ','1試合あたりの与ダメージ')}${solo?'':th('チーム内','味方全員の与ダメージに占める割合')}${th('被ダメ','1試合あたりの被ダメージ')}${th('撃破','1試合あたりに倒した数')}${th('クリ率','攻撃のうちクリティカルになった割合')}
       ${th('宝具','1試合あたりの宝具の回数')}${th('勝ち｜負け','勝った試合と負けた試合それぞれの、1試合あたりの宝具の回数')}${th('スキル','1試合あたりのスキルの回数')}${th('防いだ','1試合あたりに回避・無敵などで攻撃を防いだ回数')}
       ${th('再臨','再臨できた試合の割合と、再臨した平均ターン')}${th(TERMS.out,'戦闘不能になった試合の割合と、その平均ターン')}</tr></thead><tbody>${rows.map(([id,a],i)=>{ const n=a.n;
-      return `<tr class="${grade(a.w/n)}"><td class="num">${i+1}</td><td>${esc(uOf(id).name)} <span class="sub small">C${uOf(id).cost}</span></td><td class="num rate"><b>${pct(a.w/n)}</b></td><td class="num">${a.first?pct(a.firstW/a.first):'-'}</td>
+      return `<tr class="${grade(a.w/n)}"><td class="num">${i+1}</td><td>${esc(uNm(id))} <span class="sub small">C${uOf(id).cost}</span></td><td class="num rate"><b>${pct(a.w/n)}</b></td><td class="num">${a.first?pct(a.firstW/a.first):'-'}</td>
         <td class="num">${Math.round(a.dealt/n)}</td>${solo?'':`<td class="num">${pct(a.share/n)}</td>`}<td class="num">${Math.round(a.taken/n)}</td><td class="num">${f2(a.kills/n)}</td><td class="num">${a.attacks?pct(a.crits/a.attacks):'-'}</td>
         <td class="num">${f2(a.ults/n)}</td><td class="num">${a.nW?f2(a.ultsW/a.nW):'-'}｜${a.nL?f2(a.ultsL/a.nL):'-'}</td><td class="num">${f2(a.skills/n)}</td><td class="num">${f2(a.blocked/n)}</td>
         <td class="num">${pct(a.asc/n)} <span class="sub small">${a.asc?f1(a.ascT/a.asc)+'T':''}</span></td><td class="num">${pct(a.ko/n)} <span class="sub small">${a.ko?f1(a.koT/a.ko)+'T':''}</span></td></tr>`; }).join('')}</tbody></table></div>
@@ -473,7 +501,7 @@ const levelName=R=>R.level==='hard+'?'つよい（先読みあり）':R.level===
 // CSV：1試合の1キャラを1行に（Excel で文字化けしないよう BOM つき UTF-8）
 function detailCSV(R){
   const q=v=>{ v=v==null?'':String(v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; };
-  const names=t=>t.ids.map(id=>uOf(id).name).join('・'), lv=levelName(R);
+  const names=t=>t.ids.map(id=>uNm(id)).join('・'), lv=levelName(R);
   const head=['試合番号','ルール','CPU','ターン数','勝ち','先攻','側','キャラID','キャラ名','コスト','並び順','味方の編成','味方のマスター','相手の編成','相手のマスター',
     '与ダメージ','チームの与ダメージ','被ダメージ','最大ダメージ','撃破数','攻撃回数','クリティカル回数','宝具回数','スキル回数','防いだ回数','再臨したターン','戦闘不能になったターン','残りHP',
     'チェインBuster','チェインArts','チェインQuick','ブレイブチェイン'];
@@ -562,7 +590,7 @@ function strengthHTML(R,unitW,mW){
     return `<div><h3>${title}</h3><div class="tbl"><table class="stats"><thead><tr><th>#</th><th>名前</th><th title="ほかが全員平均的なとき、このキャラ1体の差で勝率が何%になるか（50%＝平均的）">単体の強さ</th><th></th><th title="上の表の、そのキャラを含む編成の平均勝率">平均勝率</th><th title="平均勝率 − 単体の強さ。プラスなら味方や相手に恵まれていたぶん、マイナスなら足を引っぱられていたぶん">差</th></tr></thead><tbody>${rows.map((x,i)=>{
       const s=raw.get(x.id), rp=s&&s.g?s.w/s.g:null, d=rp==null?null:Math.round((rp-x.p)*100);
       return `<tr class="${grade(x.p)}"><td class="num">${i+1}</td><td>${esc(nameOf(x.id))} <span class="sub small">C${costOf(x.id)}</span></td><td class="num rate"><b>${pct(x.p)}</b> <span class="sub small">±${Math.round(x.moe)}</span></td><td>${bar(x.p)}</td><td class="num">${rp==null?'-':pct(rp)}</td><td class="num">${d==null?'-':(d>0?'+':'')+d}</td></tr>`; }).join('')}</tbody></table></div></div>`; };
-  return `<div class="grid">${tbl('サーヴァント単体の強さ','u',unitW,id=>uOf(id).name,id=>uOf(id).cost)}${hasMaster()?tbl('マスター単体の強さ','m',mW,id=>mOf(id).name,id=>mOf(id).cost):''}</div>
+  return `<div class="grid">${tbl('サーヴァント単体の強さ','u',unitW,id=>uNm(id),id=>uOf(id).cost)}${hasMaster()?tbl('マスター単体の強さ','m',mW,id=>mOf(id).name,id=>mOf(id).cost):''}</div>
     <p class="note">「単体の強さ」は、味方と相手の強さを差し引いたそのキャラだけの強さです。全対戦をまとめて「両陣営のキャラの強さの差で勝敗が決まる」という式に当てはめて求めています。50%が平均的で、${R.opp==='same'?'同じ合計コスト同士の対戦なので「50%＝コスト相応」と読めます。':'相手の範囲が「すべて」なので、コストの高いキャラほど高く出ます。'}組み合わせの相性（特定の味方と組んだときだけ強い、など）は式に入っていないので、平均としての強さです。</p>`;
 }
 
@@ -585,8 +613,8 @@ function resRank(R){
       `<tr class="${rowCls(s.w,s.g)}"><td class="num">${i+1}</td><td>${esc(nameOf(id))} <span class="sub small">C${costOf(id)}</span></td><td class="num rate">${rateCell(s.w,s.g,s)}</td><td>${bar(s.w/s.g)}</td><td class="num">${[...teams.values()].filter(x=>title.includes('マスター')?x.t.m===id:x.t.ids.includes(id)).length}</td></tr>`).join('')}</tbody></table></div></div>`; };
   let mx='';
   if(rs().partyMax===1&&!hasMaster()&&rows.length<=24){ // シンプルルール：キャラ同士の勝率表
-    const ks=rows.map(s=>s.t).sort((a,b)=>a.cost-b.cost||uOf(a.ids[0]).name.localeCompare(uOf(b.ids[0]).name));
-    mx=`<h3>勝率表（行のキャラから見た勝率 %）</h3><div class="tbl"><table class="mx"><thead><tr><th></th>${ks.map(t=>`<th title="${esc(teamName(t))}"><span class="vert">${esc(uOf(t.ids[0]).name)}</span><span class="sub small">C${t.cost}</span></th>`).join('')}</tr></thead><tbody>${ks.map(a=>`<tr><th class="rh">${esc(uOf(a.ids[0]).name)} <span class="sub small">C${a.cost}</span></th>${ks.map(b=>{
+    const ks=rows.map(s=>s.t).sort((a,b)=>a.cost-b.cost||uNm(a.ids[0]).localeCompare(uNm(b.ids[0])));
+    mx=`<h3>勝率表（行のキャラから見た勝率 %）</h3><div class="tbl"><table class="mx"><thead><tr><th></th>${ks.map(t=>`<th title="${esc(teamName(t))}"><span class="vert">${esc(uNm(t.ids[0]))}</span><span class="sub small">C${t.cost}</span></th>`).join('')}</tr></thead><tbody>${ks.map(a=>`<tr><th class="rh">${esc(uNm(a.ids[0]))} <span class="sub small">C${a.cost}</span></th>${ks.map(b=>{
       if(a===b) return '<td class="self">—</td>'; const c=cell.get(a.key+'|'+b.key); if(!c) return '<td class="none"></td>'; const p=c.w/c.g;
       return `<td class="hm" style="--p:${p}" title="${esc(teamName(a))} vs ${esc(teamName(b))}：${pct(p)}">${Math.round(p*100)}</td>`; }).join('')}</tr>`).join('')}</tbody></table></div>`;
   }
@@ -594,7 +622,7 @@ function resRank(R){
   return `<div class="sums"><div class="sum"><span class="sub small">編成数</span><b>${rows.length}</b></div>
       <div class="sum"><span class="sub small">対戦数</span><b>${R.items.length}</b></div>${spread?`<div class="sum"><span class="sub small">${spread.split('：')[0]}</span><b style="font-size:16px">${spread.split('：')[1]}</b></div>`:''}</div>
     <div class="grid"><div style="grid-column:1/-1"><h3>編成ランキング</h3>${tbl}</div>
-    ${unitTbl('サーヴァント別の平均勝率',unitW,id=>uOf(id).name,id=>uOf(id).cost)}
+    ${unitTbl('サーヴァント別の平均勝率',unitW,id=>uNm(id),id=>uOf(id).cost)}
     ${hasMaster()?unitTbl('マスター別の平均勝率',mW,id=>mOf(id).name,id=>mOf(id).cost):''}</div>${strengthHTML(R,unitW,mW)}${mx}
     <p class="note">キャラ別の勝率は、そのキャラを含む編成の勝率を試合数で平均したものです（味方・相手の組み合わせの影響を含みます）。</p>`;
 }
@@ -616,7 +644,7 @@ function resTeam(R){
       ${box('勝率',pct(p),grade(p),`±${Math.round(moeX(tot))}%`)}${box('勝-敗'+(draw?'-分':''),`${win}-${lose}${draw?`-${draw}`:''}`)}${box('平均ターン',(turns/dd).toFixed(1))}
       ${box('先攻時勝率',fg?pct(fw/fg):'-')}${box('与 / 被ダメ',`${Math.round(dA/dd)} / ${Math.round(dB/dd)}`)}${box(`${TERMS.out}した味方`,`${(out/dd).toFixed(2)}騎`,'', `1試合あたり`)}</div>
     ${R.items.length>1?`<div class="grid">
-      ${grp('相手にいたサーヴァント',byU,id=>`${esc(uOf(id).name)} <span class="sub small">C${uOf(id).cost}</span>`)}
+      ${grp('相手にいたサーヴァント',byU,id=>`${esc(uNm(id))} <span class="sub small">C${uOf(id).cost}</span>`)}
       ${byM.size?grp('相手にいたマスター',byM,id=>`${esc(mOf(id).name)} <span class="sub small">C${mOf(id).cost}</span>`):''}
       ${grp('相手の合計コスト',byC,k=>`コスト${k}`)}</div>
     <h3>相手別（苦手な順）</h3><div class="tbl"><table class="stats"><thead><tr><th>相手</th><th>勝率</th><th></th><th>勝-敗${draw?'-分':''}</th><th>平均ターン</th><th>先攻時勝率</th></tr></thead><tbody>${rows.map(x=>
@@ -644,9 +672,9 @@ function resMaster(R){
   let sm='';
   if(svts.size&&svts.size<=14){
     const sl=[...svts].sort((a,b)=>uOf(a).cost-uOf(b).cost);
-    sm=`<h3>マスター × サーヴァント（そのマスターの勝率 %）</h3><div class="tbl"><table class="mx"><thead><tr><th></th>${sl.map(s=>`<th><span class="vert">${esc(uOf(s).name)}</span><span class="sub small">C${uOf(s).cost}</span></th>`).join('')}</tr></thead><tbody>${ids.map(m=>`<tr><th class="rh">${esc(mOf(m).name)}</th>${sl.map(s=>{
+    sm=`<h3>マスター × サーヴァント（そのマスターの勝率 %）</h3><div class="tbl"><table class="mx"><thead><tr><th></th>${sl.map(s=>`<th><span class="vert">${esc(uNm(s))}</span><span class="sub small">C${uOf(s).cost}</span></th>`).join('')}</tr></thead><tbody>${ids.map(m=>`<tr><th class="rh">${esc(mOf(m).name)}</th>${sl.map(s=>{
       const c=svtCell.get(m+'|'+s); if(!c||!c.g) return '<td class="none"></td>'; const p=c.w/c.g;
-      return `<td class="hm" style="--p:${p}" title="${esc(mOf(m).name)} × ${esc(uOf(s).name)}：${pct(p)}">${Math.round(p*100)}</td>`; }).join('')}</tr>`).join('')}</tbody></table></div>`;
+      return `<td class="hm" style="--p:${p}" title="${esc(mOf(m).name)} × ${esc(uNm(s))}：${pct(p)}">${Math.round(p*100)}</td>`; }).join('')}</tr>`).join('')}</tbody></table></div>`;
   }
   return `<div class="sums"><div class="sum"><span class="sub small">マスター</span><b>${rows.length}</b></div><div class="sum"><span class="sub small">対戦数</span><b>${R.items.length}</b></div></div>
     <h3>マスターの強さ（同じサーヴァントでの勝率）</h3>${tbl}
@@ -665,7 +693,8 @@ document.addEventListener('click',e=>{
     case 'set': { const v=d.v; B[d.k]=v; if(d.k==='rule'||d.k==='view'){ B.A={ids:[],m:null}; B.B={ids:[],m:null}; } saveSet(); break; }
     case 'run': startRun(); return;
     case 'csv': case 'sum': saveDetail(d.b); return;
-    case 'stop': stopRun(); setTitle('中止'); if(B.res&&!B.res.done) B.res.stopped=true; renderProg(); renderRes(); break;
+    case 'freeze': B.freeze=!B.freeze; renderProg(); if(!B.freeze) renderRes(); return;
+    case 'stop': B.freeze=false; stopRun(); setTitle('中止'); if(B.res&&!B.res.done) B.res.stopped=true; renderProg(); renderRes(); break;
     case 'bld': { const T=B[d.k], i=T.ids.indexOf(d.id); if(i>=0) T.ids.splice(i,1); else if(rs().partyMax===1) T.ids=[d.id]; else T.ids.push(d.id); break; }
     case 'bldClear': B[d.k]={ids:[],m:null}; break;
     case 'bldRandom': { // 上限に収まるランダムな編成（マスター込み）

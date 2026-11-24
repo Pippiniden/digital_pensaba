@@ -1,6 +1,6 @@
 'use strict';
 // マスターデータ（ペンシルエディタで書き出し）。マスタールール・マスターチームで使う
-// faces : 補助で振る鉛筆の面1〜6。eff が空なら「無」（何も起きない）。効果はそのターンだけ
+// faces : 補助で振る鉛筆の面1〜6。eff が空なら「無」（何も起きない）。効果はそのターンだけ（turns≥2 を書いた効果はそのターン数）
 // spells: 令呪3種
 // lines : セリフ（support=補助 / attack=攻撃 / spell=令呪使用）。faces・spells の line は、その面・令呪だけの専用セリフ（任意）
 // 効果の対象（t）: svt=自軍サーヴァント / self=マスター自身 / ally_all=味方全体（マスター含む）
@@ -10,7 +10,7 @@ const DEFAULT_MASTERS = [
   {
     "id":"m_rin", "name":"遠坂凛", "cost":5, "hp":500,
     "fit":{"face":{"x":50,"y":31,"z":100}},
-    "lines":{"support":["行くわよっ！"],"attack":[],"spell":[]},
+    "lines":{"support":["行くわよっ！"]},
     "faces":[
       {"label":"連環腿","eff":[{"k":"dmg","t":"enemy_master","v":100}],"line":["絶対領域っ！"]},
       {"label":"宝石魔術・強化","eff":[{"k":"atk","t":"ally_svt","v":20,"color":"B"}]},
@@ -131,13 +131,17 @@ const DEFAULT_MASTERS = [
     "id":"m_kota", "name":"一文字コータ", "cost":3, "hp":300,
     "fit":{"face":{"x":50,"y":0,"z":100},"np":{"x":50,"y":15,"z":85}},
     "link":"https://seesaawiki.jp/kagemiya/d/%b0%ec%ca%b8%bb%fa%a5%b3%a1%bc%a5%bf",
+    "lines":{"win":["これがサーヴァントの真の力だ！"],"defeat":["つ、強いっ。オレじゃ敵わないのか……？"]},
+    "condLines":[
+      {"key":"start","who":"enemy","cond":{"k":"id","v":"m_shadowkaiser"},"lines":["サーヴァントは友達だ！　お前みたいなやつには負けてたまるか！"]}
+    ],
     "faces":[
-      {"label":"みんな、ぶっとばせ！","eff":[{"k":"atk","t":"svt","v":20,"color":"R"}],"line":["一気にぶっとばしてやれ！","サーヴァントバトル！　コマンド・オーダー！"]},
+      {"label":"みんな、ぶっとばせ！","eff":[{"k":"atk","t":"svt","v":30,"color":"R"}],"line":["一気にぶっとばしてやれ！","サーヴァントバトル！　コマンド・オーダー！"]},
       {"label":"応援","eff":[{"k":"desc","t":"svt","v":0,"text":"コータは精一杯応援している"}],"line":["みんな、がんばってくれ！"]},
       {"label":"変幻自在の攻撃だ！","eff":[{"k":"onAtkNp","t":"svt","v":10,"color":"B"}],"line":["サーヴァントバトル！　コマンド・オーダー！"]},
-      {"label":"必殺の作戦だ！","eff":[{"k":"atk","t":"ally_svt","v":20,"color":"R"},{"k":"onAtkNp","t":"ally_svt","v":10,"color":"B"},{"k":"onAtkStar","t":"ally_svt","v":4,"color":"G"}],"line":["とびっきりの作戦、いくぞ！"]},
+      {"label":"必殺の作戦だ！","eff":[{"k":"atk","t":"ally_svt","v":30,"color":"R"},{"k":"onAtkNp","t":"ally_svt","v":10,"color":"B"},{"k":"onAtkStar","t":"ally_svt","v":4,"color":"G"}],"line":["とびっきりの作戦、いくぞ！"]},
       {"label":"ひらめき","eff":[{"k":"desc","t":"svt","v":0,"text":"コータは何かひらめいたようだ"}],"line":["そうか、そうだったのか！","わかったぞ！"]},
-      {"label":"スピードで撹乱しろ！","eff":[{"k":"onAtkStar","t":"enemy_master","v":3,"color":"G"}],"line":["スピードで攻めろ！","サーヴァントバトル！　コマンド・オーダー！"]}
+      {"label":"スピードで撹乱しろ！","eff":[{"k":"onAtkStar","t":"enemy_master","v":4,"color":"G"}],"line":["スピードで攻めろ！","サーヴァントバトル！　コマンド・オーダー！"]}
     ],
     "spells":[
       {"name":"コマンド：リカバリー","eff":[{"k":"heal","t":"ally_svt","v":200}],"line":["みんな、大丈夫か！？"]},
@@ -150,6 +154,12 @@ const DEFAULT_MASTERS = [
     "fit":{"face":{"x":50,"y":0,"z":100},"np":{"x":50,"y":3,"z":105},"cut":{"x":0,"y":9,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%b7%a5%e3%a5%c9%a5%a6%a5%ab%a5%a4%a5%b6%a1%bc",
     "lines":{"support":["サーヴァントバトル、コマンド・オーダー！","ゆけっ、我が傀儡よ！","ハッハッハッハ……"],"attack":["聖杯戦争は命のやり取りなのだ！"],"spell":["サーヴァントなど勝つための道具にすぎん！","こうなっては令呪を使うほかあるまい！"]},
+    "condLines":[
+      {"key":"start","who":"enemy","cond":{"k":"id","v":"m_kota"},"lines":["これは命を賭けた殺し合いなのだよ！　子供は家でおとなしくしていろ！"]},
+      {"key":"start","who":"enemy","cond":{"k":"id","v":"m_masaru"},"lines":["これは命を賭けた殺し合いなのだよ！　子供は家でおとなしくしていろ！"]},
+      {"key":"defeat","who":"enemy","cond":{"k":"id","v":"m_kota"},"lines":["バカなっ！　私がこんな子供に負けるだとっ！？"]},
+      {"key":"defeat","who":"enemy","cond":{"k":"id","v":"m_masaru"},"lines":["バカな……！　コータならいざ知らず、貴様のような子供に……！"]}
+    ],
     "faces":[
       {"label":"無","eff":[]},
       {"label":"シャドウフレイム","eff":[{"k":"dmg","t":"enemy_all","v":15}],"line":["ハッハッハッハ……焼け焦げろ！"]},
@@ -258,7 +268,7 @@ const DEFAULT_MASTERS = [
     "id":"m_jubiro", "name":"石鷹授比郎", "cost":1, "hp":250,
     "fit":{"face":{"x":50,"y":0,"z":100},"np":{"x":50,"y":8,"z":105},"cut":{"x":0,"y":8,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%c0%d0%c2%eb%bc%f8%c8%e6%cf%ba",
-    "lines":{"support":["こいつぁスゲェ！！なんて入り組んだストーリーと謎だ！！","この聖杯戦争に！！俺達の骨を埋めてやろうじゃねぇかぁ！！","この戦争に勝てないと心が折れたら、逃げ時だぜ？"],"attack":[],"spell":["先の詠める漫画なんざつまらないにもほどがあるだろうがァァアアア！！！","この聖杯戦争ッ！！”俺に描かせろ”ッッッ！！！！"]},
+    "lines":{"support":["こいつぁスゲェ！！なんて入り組んだストーリーと謎だ！！","この聖杯戦争に！！俺達の骨を埋めてやろうじゃねぇかぁ！！","この戦争に勝てないと心が折れたら、逃げ時だぜ？"],"spell":["先の詠める漫画なんざつまらないにもほどがあるだろうがァァアアア！！！","この聖杯戦争ッ！！”俺に描かせろ”ッッッ！！！！"]},
     "faces":[
       {"label":"","eff":[{"k":"atk","t":"ally_svt","v":40,"color":"R"},{"k":"onAtkNp","t":"ally_svt","v":10}]},
       {"label":"","eff":[]},
@@ -277,6 +287,12 @@ const DEFAULT_MASTERS = [
     "id":"m_seimei", "name":"安倍晴明", "cost":5, "hp":500,
     "fit":{"face":{"x":50,"y":0,"z":119},"np":{"x":50,"y":9,"z":105}},
     "link":"https://seesaawiki.jp/kagemiya/d/%b0%c2%c7%dc%c0%b2%cc%c0",
+    "lines":{"start":["フハハハハ！！　我こそは、至高の陰陽術師！！　安倍晴明である！！"],"win":["ふははははは！！　当然のように！！　大勝利！！"],"defeat":["おのれおのれおのれー！！"]},
+    "condLines":[
+      {"key":"start","who":"enemy","cond":{"k":"cls","v":"キャスター"},"lines":["西洋魔術など気に食わぬ！　魔術師はとっとと去ねぃ！！"]},
+      {"key":"start","who":"enemy","cond":{"k":"id","v":"m_kuzunoha"},"lines":["母上ェ！？　何故ここにおられるのだァァ！！"]},
+      {"key":"start","who":"enemy","cond":{"k":"id","v":"yorimitsu"},"lines":["頼光ォ！！　千年ぶりよのう！！！"]}
+    ],
     "faces":[
       {"label":"鉄拳","eff":[{"k":"dmg","t":"enemy_master","v":100}],"line":["ふはははは！　貴様に術など不要！"]},
       {"label":"鉄拳","eff":[{"k":"dmg","t":"enemy_master","v":100}],"line":["ふはははは！　貴様に術など不要！"]},
@@ -295,6 +311,11 @@ const DEFAULT_MASTERS = [
     "id":"m_kuzunoha", "name":"葛の葉", "cost":1, "hp":100,
     "fit":{"face":{"x":50,"y":0,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%b3%eb%a4%ce%cd%d5",
+    "lines":{"start":["なんじゃそうぞうしいのう"],"win":["わらわの勝ちじゃ！"]},
+    "condLines":[
+      {"key":"start","who":"enemy","cond":{"k":"id","v":"m_seimei"},"lines":["ほんに可愛い息子じゃのう。ほれ、わらわが勝ったらいなりをたんまり頼むぞい"]},
+      {"key":"start","who":"other","cond":{"k":"trait","v":"悪"},"lines":["これはちと見過ごしてやれんのう……"]}
+    ],
     "faces":[
       {"label":"無","eff":[],"line":["わはは、このマンガは面白いのう！"]},
       {"label":"狸丼","eff":[{"k":"heal","t":"ally_svt","v":30}],"line":["狸丼さんや、おやつを持ってきてたもれ"]},
@@ -332,16 +353,16 @@ const DEFAULT_MASTERS = [
     "fit":{"face":{"x":50,"y":21,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%a2%a5%a4%a5%e9%a1%a6%a5%c0%a5%a6%a5%eb%a1%a6%a5%aa%a5%eb%a5%ca",
     "faces":[
-      {"label":"","eff":[{"k":"onAtkNp","t":"ally_svt","v":10},{"k":"onAtkNp","t":"ally_svt","v":5,"color":"B"},{"k":"atk","t":"ally_svt","v":30,"color":"B"},{"k":"cardConv","t":"ally_svt","v":0,"color":"B"}]},
-      {"label":"","eff":[{"k":"onAtkNp","t":"svt","v":10},{"k":"onAtkNp","t":"ally_svt","v":5,"color":"B"},{"k":"atk","t":"ally_svt","v":20,"color":"B"}]},
-      {"label":"","eff":[{"k":"atk","t":"ally_svt","v":15},{"k":"atk","t":"ally_svt","v":20,"color":"B"}]},
+      {"label":"","eff":[{"k":"onAtkNp","t":"ally_svt","v":10},{"k":"cardConv","t":"ally_svt","v":0,"color":"B"},{"k":"cardUp","t":"ally_svt","v":30,"color":"B","np":10,"star":2}]},
+      {"label":"","eff":[{"k":"onAtkNp","t":"svt","v":5},{"k":"cardUp","t":"svt","v":10,"color":"B","np":5,"star":1}]},
+      {"label":"","eff":[{"k":"atk","t":"ally_svt","v":15},{"k":"cardUp","t":"ally_svt","v":30,"color":"B","np":10,"star":2},{"k":"cardConv","t":"ally_svt","v":0,"color":"B"}]},
       {"label":"","eff":[{"k":"evade","t":"svt","v":0,"times":1}]},
-      {"label":"","eff":[{"k":"atk","t":"ally_svt","v":15},{"k":"atk","t":"ally_svt","v":30,"color":"B"},{"k":"cardConv","t":"ally_svt","v":0,"color":"B"}]},
-      {"label":"","eff":[{"k":"onAtkNp","t":"ally_svt","v":10},{"k":"onAtkNp","t":"ally_svt","v":5,"color":"B"},{"k":"atk","t":"ally_svt","v":30,"color":"B"}]}
+      {"label":"","eff":[{"k":"atk","t":"ally_svt","v":15},{"k":"cardConv","t":"ally_svt","v":0,"color":"B"},{"k":"cardUp","t":"ally_svt","v":30,"color":"B","np":10,"star":2}]},
+      {"label":"","eff":[{"k":"onAtkNp","t":"ally_svt","v":10}]}
     ],
     "spells":[
       {"name":"戦魔女の嘶き","eff":[{"k":"actsUp","t":"svt","v":3,"turns":1},{"k":"onAtkStar","t":"svt","v":8,"turns":1},{"k":"defDown","t":"svt","v":20,"turns":1}]},
-      {"name":"秘蔵の宝石","eff":[{"k":"atk","t":"ally_svt","v":40,"turns":1,"color":"B"},{"k":"np","t":"svt","v":25}]},
+      {"name":"秘蔵の宝石","eff":[{"k":"cardUp","t":"ally_svt","v":40,"turns":1,"color":"B","np":10,"star":2},{"k":"np","t":"svt","v":25}]},
       {"name":"大神慟哭・三弦狂騒","eff":[{"k":"stun","t":"enemy_all","v":0,"turns":1,"chance":2},{"k":"charm","t":"enemy_all","v":0,"turns":1,"chance":4},{"k":"defDown","t":"enemy_all","v":20,"turns":1}]}
     ]
   },
@@ -367,6 +388,7 @@ const DEFAULT_MASTERS = [
     "id":"m_chudovishche", "name":"チュドーヴィシチェ", "cost":2, "hp":240,
     "fit":{"face":{"x":50,"y":16,"z":100},"np":{"x":50,"y":0,"z":77},"cut":{"x":0,"y":1,"z":87}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%c1%a5%e5%a5%c9%a1%bc%a5%f4%a5%a3%a5%b7%a5%c1%a5%a7",
+    "lines":{"start":["キュィィ……キィィィィ"],"win":["キュイイイイイイン！！！"]},
     "faces":[
       {"label":"にじり寄り","eff":[]},
       {"label":"咀嚼","eff":[{"k":"dmg","t":"enemy_master","v":70}]},
@@ -385,7 +407,11 @@ const DEFAULT_MASTERS = [
     "id":"m_natsume", "name":"千速棗", "cost":3, "hp":400,
     "fit":{"face":{"x":50,"y":15,"z":100},"np":{"x":50,"y":11,"z":105},"cut":{"x":0,"y":0,"z":93}},
     "link":"https://seesaawiki.jp/kagemiya/d/%c0%e9%c2%ae%dc%a7",
-    "lines":{"support":["ほら、頑張んなよ","私の足が必要かい？"],"attack":["仙道ドライブキーック！","仙道オーバードライブキーック！","足癖が悪くてね！"],"spell":[]},
+    "lines":{"start":["ハハッ、荒っぽいな！"],"support":["ほら、頑張んなよ","私の足が必要かい？"],"attack":["仙道ドライブキーック！","仙道オーバードライブキーック！","足癖が悪くてね！"],"win":["何百年か生きた分、私の方が薄皮一枚上だったな"],"defeat":["死ぬ前に逃げるのが長生きの秘訣だ！"]},
+    "condLines":[
+      {"key":"start","who":"enemy","cond":{"k":"id","v":"m_seimei"},"lines":["あいつのご先祖さまかよ！　生きてたんかワレ！"]},
+      {"key":"start","who":"ally","cond":{"k":"id","v":"hangaku"},"lines":["噂に聞きし坂額御前――味方にいるなんてかしこまちゃうね"]}
+    ],
     "faces":[
       {"label":"無","eff":[]},
       {"label":"神行法","eff":[{"k":"onAtkNp","t":"ally_svt","v":5},{"k":"star","t":"master","v":5}]},
@@ -405,6 +431,10 @@ const DEFAULT_MASTERS = [
     "fit":{"face":{"x":50,"y":30,"z":100},"np":{"x":50,"y":18,"z":105}},
     "link":"https://seesaawiki.jp/kagemiya/d/%bc%d5%c6%f9%ba%d7%a4%ce%cb%e2%bd%f7%a5%a6%a5%eb%a5%b7%a5%e5%a5%e9",
     "lines":{"support":["行きなさい、サーヴァント","これが効率というものよ"],"attack":["切り刻んであげるわ！"],"spell":["古の術式を見よ！"]},
+    "condLines":[
+      {"key":"start","who":"enemy","cond":{"k":"id","v":"m_ursula"},"lines":["なっ……あれは……私！？"]},
+      {"key":"start","who":"enemy","cond":{"k":"id","v":"liza"},"lines":["……嫌な思い出があるわね、あの顔と胸は"]}
+    ],
     "faces":[
       {"label":"無","eff":[]},
       {"label":"切断魔術","eff":[{"k":"dmg","t":"enemy_master","v":80},{"k":"healBlock","t":"enemy_master","v":0}]},
@@ -417,6 +447,95 @@ const DEFAULT_MASTERS = [
       {"name":"混沌再臨","eff":[{"k":"skillCharge","t":"ally_svt","v":1}]},
       {"name":"蛹は羽化せず","eff":[{"k":"heal","t":"ally_svt","v":200}]},
       {"name":"擬似宇宙・災厄世界","eff":[{"k":"dmg","t":"enemy_both","v":80},{"k":"curse","t":"enemy_both","v":0,"times":1,"chance":3}]}
+    ]
+  },
+  {
+    "id":"m_roswitha", "name":"ロズヴィータ・ネーベルク・レーゲンフェルト", "cost":4, "hp":360,
+    "fit":{"np":{"x":50,"y":45,"z":105}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%a5%ed%a5%ba%a5%f4%a5%a3%a1%bc%a5%bf%a1%a6%a5%cd%a1%bc%a5%d9%a5%eb%a5%af%a1%a6%a5%ec%a1%bc%a5%b2%a5%f3%a5%d5%a5%a7%a5%eb%a5%c8",
+    "lines":{"start":["あの...もう帰っていいですか？","ひぃぃぃぃ！！！！","ふええええ...帰りたい...早く帰りたぁい...！"],"support":["すぐに楽にしてあげますよぉ...","は、早く死んでくださいよぉ！！"],"attack":["Gift　des　Todes！！","Todes！Todes！Todes！！！！"],"spell":["令呪を持って命じますぅ...！"],"win":["もう、動かない方がいいですよ？無理に回路と刻印を回すと負荷で...ほら、だから言ったのに...","か、勝ちましたぁ...あっ、早く痕跡を処理しないと...！酸毒...酸毒..."],"defeat":["痛いよぉ...なんでこんな目にぃぃぃぃ！！","ぴぎゃああ！！このままじゃ...死ぬ！し、死にたくないですぅぅ！！","せ、戦略的撤退ですぅぅ！！","せめて...自分の部屋の中で死にたかった..."]},
+    "faces":[
+      {"label":"苦痛の増加","eff":[{"k":"defDown","t":"enemy_svt","v":20}]},
+      {"label":"呪詛の炸裂","eff":[{"k":"dmg","t":"enemy_svt","v":80}]},
+      {"label":"幻妖穿窬","eff":[{"k":"poison","t":"enemy_svt","v":40,"turns":3}]},
+      {"label":"狭霧に霞む","eff":[{"k":"evade","t":"ally_svt","v":0,"times":1}],"line":["───Der　nebel　fallt"]},
+      {"label":"心筋の呪縛","eff":[{"k":"dmg","t":"enemy_master","v":100}]},
+      {"label":"頼むから死んでくださいぃ！！","eff":[{"k":"desc","t":"self","v":0,"text":"ロズヴィータは怯えながらも、高度な呪殺の準備を進めている..."}]}
+    ],
+    "spells":[
+      {"name":"醜穢澱濘","eff":[{"k":"stun","t":"enemy_svt","v":0,"turns":1,"chance":4},{"k":"buffImmune","t":"enemy_svt","v":0,"turns":1,"times":1}]},
+      {"name":"腐蝕霊症","eff":[{"k":"erosion","t":"enemy_svt","v":0,"turns":1,"times":3}]},
+      {"name":"肉體溶媒","eff":[{"k":"dmg","t":"enemy_master","v":150}]}
+    ]
+  },
+  {
+    "id":"m_uzumebi", "name":"埋火", "cost":1, "hp":100,
+    "fit":{"face":{"x":50,"y":19,"z":100},"np":{"x":50,"y":32,"z":81}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%cb%e4%b2%d0",
+    "faces":[
+      {"label":"無","eff":[]},
+      {"label":"無","eff":[]},
+      {"label":"無","eff":[]},
+      {"label":"","eff":[{"k":"onAtkNp","t":"svt","v":10}]},
+      {"label":"無","eff":[]},
+      {"label":"","eff":[{"k":"onAtkNp","t":"ally_svt","v":10}]}
+    ],
+    "spells":[
+      {"name":"のじゃの雄叫び","eff":[{"k":"np","t":"ally_svt","v":50},{"k":"hitNpSeal","t":"ally_svt","v":0,"turns":1}]},
+      {"name":"のじゃの頑張り","eff":[{"k":"evade","t":"ally_svt","v":0,"turns":1},{"k":"actsUp","t":"ally_svt","v":1,"times":1}]},
+      {"name":"のじゃの居眠り","eff":[{"k":"actsUp","t":"ally_svt","v":3,"times":1}]}
+    ]
+  },
+  {
+    "id":"m_medoisan", "name":"めどいさん", "cost":3, "hp":350,
+    "fit":{"face":{"x":50,"y":11,"z":100},"np":{"x":50,"y":28,"z":105},"cut":{"x":0,"y":7,"z":100}},
+    "lines":{"support":["はぁ……めど……"]},
+    "faces":[
+      {"label":"おさぼり","eff":[]},
+      {"label":"バール持ってください","eff":[{"k":"atk","t":"svt","v":40,"color":"R"},{"k":"critPow","t":"ally_svt","v":30},{"k":"cardDown","t":"ally_svt","v":10,"color":"G","np":0,"star":2}]},
+      {"label":"ちこいさんお願いします","eff":[{"k":"dmg","t":"enemy_master","v":80}]},
+      {"label":"めどいので今のうちにお掃除","eff":[{"k":"cleanse","t":"svt","v":0},{"k":"heal","t":"svt","v":60}]},
+      {"label":"カップ麺にご飯いれたやつ","eff":[{"k":"heal","t":"svt","v":30}]},
+      {"label":"お昼寝","eff":[]}
+    ],
+    "spells":[
+      {"name":"霊子譲渡","eff":[{"k":"np","t":"ally_svt","v":30}]},
+      {"name":"応急手当","eff":[{"k":"heal","t":"ally_svt","v":200}]},
+      {"name":"たまには本気出す","eff":[{"k":"atk","t":"ally_all","v":20,"turns":1},{"k":"actsUp","t":"ally_all","v":1,"turns":1},{"k":"cleanse","t":"ally_all","v":0}]}
+    ]
+  },
+  {
+    "id":"m_hidoisan", "name":"ひどいさん", "cost":1, "hp":999,
+    "fit":{"np":{"x":50,"y":20,"z":105},"cut":{"x":0,"y":7,"z":100}},
+    "faces":[
+      {"label":"無","eff":[],"line":["何も出来ないなんてひどいですー"]},
+      {"label":"ひどいガード","eff":[{"k":"def","t":"ally_svt","v":10},{"k":"def","t":"self","v":150}]},
+      {"label":"無","eff":[],"line":["何も出来ないなんてひどいですー"]},
+      {"label":"痛いのは嫌ですー","eff":[{"k":"def","t":"ally_all","v":20},{"k":"def","t":"self","v":150}]},
+      {"label":"無","eff":[],"line":["何も出来ないなんてひどいですー"]},
+      {"label":"無","eff":[],"line":["何も出来ないなんてひどいですー"]}
+    ],
+    "spells":[
+      {"name":"イシスの雨","eff":[{"k":"cleanse","t":"ally_svt","v":0},{"k":"actsUp","t":"ally_svt","v":1,"times":1}]},
+      {"name":"生存への布石","eff":[{"k":"debuffImmune","t":"ally_svt","v":0,"times":1},{"k":"actsUp","t":"ally_svt","v":1,"times":1}]},
+      {"name":"全体回復","eff":[{"k":"heal","t":"ally_all","v":100}]}
+    ]
+  },
+  {
+    "id":"m_itaisan", "name":"マスターロード・ペイン", "cost":4, "hp":350,
+    "fit":{"face":{"x":50,"y":12,"z":100},"cut":{"x":0,"y":6,"z":100}},
+    "faces":[
+      {"label":"ノートを確認中","eff":[],"line":["主殿！ この技の読み方はなんですか？"]},
+      {"label":"七ツ夜ノ死刀","eff":[{"k":"atk","t":"svt","v":10}],"line":["吾は面影糸を巣と張る蜘蛛！"]},
+      {"label":"冥キ混沌ヨ来タレ","eff":[{"k":"onAtkNp","t":"svt","v":5}],"line":["さぁ、生を謳歌せよ！"]},
+      {"label":"影ヲ追フ者","eff":[{"k":"atk","t":"svt","v":30},{"k":"heal","t":"svt","v":80}]},
+      {"label":"零式・無限剣刃","eff":[{"k":"heal","t":"svt","v":30}],"line":["我の身体は無限のツルギで出来ている！"]},
+      {"label":"其は夢幻の理想郷","eff":[{"k":"dmg","t":"enemy_svt","v":80}],"line":["我が栄光のアルカディアよ！"]}
+    ],
+    "spells":[
+      {"name":"カイザースラウテルン","eff":[{"k":"dmg","t":"enemy_svt","v":80}],"line":["奈落より這い山河を越え大路にて判を下す！"]},
+      {"name":"メルトダウン","eff":[{"k":"atkDown","t":"enemy_all","v":40,"turns":1}]},
+      {"name":"シュヴァルツ・ゲシュヒテ","eff":[{"k":"atk","t":"ally_svt","v":40,"turns":1},{"k":"selfDmg","t":"ally_svt","v":50}],"line":["主殿、深淵の魔導書の開帳を！"]}
     ]
   }
 ];

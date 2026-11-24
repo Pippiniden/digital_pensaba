@@ -46,8 +46,10 @@ function condText(c,use){
 //   味方・敵（ally / enemy）：「味方に黒咲恵梨佳がいる場合」「〔竜〕属性の相手がいる場合」
 const CL_OTHER = { start:'相手の先頭', attack:'対象', extra:'対象', np:'対象', skill:'対象', damage:'攻撃してきた相手', npDamage:'攻撃してきた相手', defeat:'倒した相手', win:'最後に倒した相手' };
 // 条件を見る人（who）の表示名。'other' だけは場面で指すものが変わる（敗退＝とどめを刺した相手 / 勝利＝最後に倒した相手）
-const lineWhoLabel=(key,who)=>who==='other'?(key==='defeat'||key==='win'?CL_OTHER[key]:LINE_WHO.other):(LINE_WHO[who]||'');
-function condLineText(cl,nameOf){
+// マスターの場面の「相手・対象」（m＝マスターのセリフのとき）
+const CL_OTHER_M = { start:'相手の先頭', support:'対象', attack:'攻撃の対象', spell:'対象', win:'最後に倒した相手', defeat:'勝った相手の先頭' };
+const lineWhoLabel=(key,who,m)=>who==='other'?(m?CL_OTHER_M[key]||LINE_WHO.other:key==='defeat'||key==='win'?CL_OTHER[key]:LINE_WHO.other):(LINE_WHO[who]||'');
+function condLineText(cl,nameOf,m){
   const c=cl&&cl.cond; if(!c) return '';
   const nmOf=nameOf||(v=>((typeof D==='function'&&D(v))||{}).name||v), not=!!c.not, v=c.v;
   const X={ id:nmOf(v), cls:v, trait:`〔${v}〕属性`,
@@ -65,14 +67,16 @@ function condLineText(cl,nameOf){
     case 'self': return one('自分');
     case 'ally': return any('味方');
     case 'enemy': return any('相手');
-    default: return one(CL_OTHER[cl.key]||'相手');
+    default: return one((m?CL_OTHER_M:CL_OTHER)[cl.key]||'相手');
   }
 }
 function normEff(e){
   e=e||{};
   const o={k:String(e.k||'atk'), t:String(e.t||'self'), v:num(e.v)};
   for(const k of ['turns','times','chance']) if(num(e[k])>0) o[k]=num(e[k]);
+  if(e.turns!=null&&e.turns!==''&&num(e.turns,-1)===0) o.turns=0; // 0ターン＝ターン経過では消えない（回数だけで消える。マスターの補助の面でも、そのターンで消えない）
   if(['R','B','G'].includes(e.color)) o.color=e.color;
+  if(CARD_DEFS[o.k]){ o.np=num(e.np); o.star=num(e.star); } // カード性能アップ・ダウン：v＝威力 / np＝NP獲得量 / star＝スター発生量
   // vs：弱体状態特攻の対象の弱体 / 弱体無効＝防ぐ弱体の種類 / 強化無効＝防ぐ強化の種類（未指定＝すべて）
   if(e.vs&&vsOk(String(e.k),e.vs)) o.vs=String(e.vs);
   const tr=String(e.trait??'').trim(); if(tr) o.trait=tr; // 属性特攻・特防の対象の属性
@@ -125,17 +129,19 @@ function normalizeUnit(u){
   const ult=u.ult||{};
   const ln=u.lines||{};
   const lines=Object.fromEntries(Object.keys(LINE_KEYS).map(k=>[k,strList(ln[k])]));
-  const condLines=(Array.isArray(u.condLines)?u.condLines:[]).map(normCondLine).filter(Boolean);
+  const condLines=(Array.isArray(u.condLines)?u.condLines:[]).map(c=>normCondLine(c)).filter(Boolean);
   return { id:String(u.id||''), name:String(u.name||''), cls:normClass(u.cls), traits:normTraits(u.traits), cost:num(u.cost), hp:num(u.hp,100),
     ...(u.wip?{wip:true}:{}), // 制作中：js 書き出し（units.js）に含めない
+    ...(ENEMY_KINDS[u.enemy]?{enemy:u.enemy}:{}), // エネミー専用（mob＝雑魚 / boss＝ボス）：通常の編成には出ない
     ...(typeof u.memo==='string'&&u.memo.trim()?{memo:u.memo}:{}), // メモ：エディタ用の覚え書き（ゲーム中では使わない）
     fit:normFit(u.fit), ...(normLink(u.link)?{link:normLink(u.link)}:{}), lines, ...(condLines.length?{condLines}:{}), faces, skills, ult:Object.assign({name:String(ult.name||''), c:String(ult.c||'R'), eff:(ult.eff||[]).map(normEff)}, String(ult.ruby||'').trim()?{ruby:String(ult.ruby).trim()}:{}, Number.isInteger(ult.br)&&ult.br>=0?{br:ult.br}:{}, PICKS[ult.pick]&&ult.pick?{pick:ult.pick}:{}) };
 }
 // 条件つきセリフ：{key:LINE_KEYS のキー, who:LINE_WHO のキー, cond:Cond, lines:string[]}。上にあるものから順に見て、最初に条件を満たしたものを使う。不正なら null
-function normCondLine(c){
+// keys：場面の一覧（マスターは MASTER_LINE_KEYS）
+function normCondLine(c,keys=LINE_KEYS){
   c=c||{};
   const cond=normCond(c.cond), lines=strList(c.lines);
-  if(!LINE_KEYS[c.key]||!cond||!lines.length) return null;
+  if(!keys[c.key]||!cond||!lines.length) return null;
   return { key:c.key, who:LINE_WHO[c.who]?c.who:'other', cond, lines };
 }
 // キャラクター設定へのリンク：http(s) のURLだけ受け付ける（それ以外は空）
@@ -168,7 +174,7 @@ function validateUnits(units){
     for(const [k,n] of Object.entries(LINE_MIN)) if(u.lines[k].length && u.lines[k].length<n) add('line',`${LINE_KEYS[k]}のセリフは${n}種類以上にしてください（今は${u.lines[k].length}種類）`);
     if(!(u.hp>0)) add('error','HPは1以上にしてください');
     if(!(u.cost>=0)) add('error','コストは0以上にしてください');
-    if(u.cost>RULES.costCap) add('error',`コストが上限${RULES.costCap}を超えているため編成できません`);
+    if(u.cost>RULES.costCap&&!u.enemy) add('error',`コストが上限${RULES.costCap}を超えているため編成できません`); // エネミー専用は編成しないので上限なし
 
     const ascN=u.faces.filter(f=>f.pre.c==='ASC').length;
     if(!ascN&&u.skills[2]&&u.skills[2].eff.length) add('warn',`${TERMS.asc}面がないため、スキル3が使えません`);
@@ -232,11 +238,14 @@ function checkEffs(effs,ctx,where,add){
     }
     if(e.t==='master'&&e.k!=='star'&&e.k!=='starLoss') add('warn',`${w}：${TERMS.player}が対象だと、${TERMS.star}獲得以外は効果がありません`);
     if(FX[e.k].val&&e.v===0&&!e.max) add('warn',`${w}：値が0です`);
-    if(!FX[e.k].inst&&!FX[e.k].perm&&e.turns==null&&e.times==null) add('warn',`${w}：効果時間がないため、ずっと続きます`);
-    if(FX[e.k].timesOnly&&e.turns!=null) add('warn',`${w}：${FX[e.k].name}は回数で指定します（ターンは使われません）`);
+    if(!FX[e.k].inst&&!FX[e.k].perm&&(e.turns==null||e.turns===0)&&e.times==null) add('warn',`${w}：効果時間がないため、ずっと続きます`);
+    if(FX[e.k].timesOnly&&e.turns) add('warn',`${w}：${FX[e.k].name}は回数で指定します（ターンは使われません）`);
     if(e.k==='instantDeath'&&['self','ally_all','ally_other'].includes(e.t)) add('warn',`${w}：味方に即死効果がかかります`);
     if(e.chance&&e.chance>=6) add('warn',`${w}：ロール6以下は必ず成功します`);
+    if(e.k==='confuse'&&e.v>=6) add('warn',`${w}：混乱の値はロールの出目（1〜5）です。6以上は毎ターン必ず行動不能になります`);
     if(e.k==='cardConv'&&!e.color) add('error',`${w}：カード変換は変換先の色を指定してください`);
+    if(CARD_DEFS[e.k]&&!e.color) add('error',`${w}：${FX[e.k].name}は色を指定してください`);
+    if(CARD_DEFS[e.k]&&!(e.v>0)&&!(e.np>0)&&!(e.star>0)) add('warn',`${w}：${FX[e.k].name}の威力・NP獲得量・スター発生量がすべて0です`);
     if(e.vs&&!(e.k in VS_KINDS)) add('warn',`${w}：この効果では弱体の種類の指定は使われません`);
     if(FX[e.k].trait&&!e.trait) add('error',`${w}：${FX[e.k].name}は対象（属性・クラス・キャラID）を指定してください`);
     if(e.trait&&!FX[e.k].trait) add('warn',`${w}：この効果では属性の指定は使われません`);
@@ -256,10 +265,20 @@ function checkEffs(effs,ctx,where,add){
   });
 }
 const hasErrors = units=>validateUnits(units).some(x=>x.level==='error');
+// 検証の指摘（validateUnits の1件）が、編集画面のどのタブの入力か：basic 基本 / faces 鉛筆の面 / skills スキル・宝具 / lines セリフ
+// エディタ（editor.js）と申請ツール（submit-edit.js）のタブの印・指摘から飛ぶのに使う
+function issueArea(x){
+  const m=x.msg||'';
+  if(x.level==='line'||/セリフ/.test(m)) return 'lines';
+  if(/^出目/.test(m)) return 'faces';
+  if(/^スキル/.test(m)||m.startsWith(TERMS.ult)) return 'skills';
+  return 'basic';
+}
+const issueFaceNo=x=>{ const m=/^出目(\d)/.exec(x.msg||''); return m?+m[1]-1:null; }; // 鉛筆の面の指摘なら出目（0〜5）
 
 // ---------- マスター（泥ペンマス：マスタールール用） ----------
 // { id, name, cls:'マスター', cost, hp,
-//   faces:[ {label, eff:Eff[]} ×6 ]   補助：出た面の効果をこのターンだけ適用（eff が空なら「無」）
+//   faces:[ {label, eff:Eff[]} ×6 ]   補助：出た面の効果をこのターンだけ適用（eff が空なら「無」。効果に turns≥2 があればそのターン数＝自分の終了フェイズをその回数迎えるまで）
 //   spells:[ {name, eff:Eff[]} ×3 ] } 令呪：1試合1回、3つから1つ選ぶ
 // 効果の対象は TGT_BY_CTX.master（self＝マスター自身）
 function normalizeMaster(m){
@@ -268,11 +287,12 @@ function normalizeMaster(m){
   const faces=Array.from({length:6},(_,i)=>{ const f=(m.faces||[])[i]||{}; return {label:String(f.label||''), eff:(f.eff||[]).map(normEff), ...own(f)}; });
   const spells=Array.from({length:3},(_,i)=>{ const s=(m.spells||[])[i]||{}; return {name:String(s.name||''), eff:(s.eff||[]).map(normEff), ...own(s)}; });
   const ln=m.lines||{};
+  const condLines=(Array.isArray(m.condLines)?m.condLines:[]).map(c=>normCondLine(c,MASTER_LINE_KEYS)).filter(Boolean);
   return { id:String(m.id||''), name:String(m.name||''), cls:TERMS.player, traits:[], cost:num(m.cost), hp:num(m.hp,100), master:true,
     ...(m.wip?{wip:true}:{}), // 制作中：js 書き出し（masters.js）に含めない
     ...(typeof m.memo==='string'&&m.memo.trim()?{memo:m.memo}:{}), // メモ：エディタ用の覚え書き（ゲーム中では使わない）
     ...(normLink(m.link)?{link:normLink(m.link)}:{}),
-    fit:normFit(m.fit), lines:Object.fromEntries(Object.keys(MASTER_LINE_KEYS).map(k=>[k,strList(ln[k])])), faces, spells };
+    fit:normFit(m.fit), lines:Object.fromEntries(Object.keys(MASTER_LINE_KEYS).map(k=>[k,strList(ln[k])])), ...(condLines.length?{condLines}:{}), faces, spells };
 }
 // ---------- 泥ペンマスシート（MSHEET）に沿った警告と目安 ----------
 // 補助の効果が「入れてはいけない」「リミット枠」のどれに当たるか。{c:'forbid'|'limit1'|'limit2', msg} または null
@@ -347,6 +367,37 @@ function checkMasterSheet(m,add){
   if(lim.limit1.length>1) add('big',`リミット1枠の効果が${lim.limit1.length}つ入っています（補助${lim.limit1.map(i=>i+1).join('・')}）。補助全体で1つまで`);
   if(lim.limit2.length>2) add('big',`リミット2枠の効果が${lim.limit2.length}つ入っています（補助${lim.limit2.map(i=>i+1).join('・')}）。補助全体で2つまで`);
 }
+// 令呪の強すぎ注意（MSHEET.spell）：[{level:'warn', msg}]。validateMasters には入れない（今のマスターにも超えるものがあるため）
+// 申請ツール（submit.js）と tools/llm-pack.js --check で使う
+function spellLimits(m){
+  const L=MSHEET.spell, out=[]; if(!L) return out;
+  const add=msg=>out.push({level:'warn',msg:'強すぎ注意：'+msg}), nm=k=>(FX[k]||{}).name||k;
+  const isAll=e=>['ally_all','enemy_all','enemy_both'].includes(e.t); // 令呪の svt は1騎を選ぶ（マスタールールは1騎だけ）ので単体
+  const own=e=>FX[e.k]&&(FX[e.k].buff===false||e.k==='selfDmg')&&['self','svt','ally_svt','ally_all'].includes(e.t); // 自分側への代償は数えない
+  m.spells.forEach((sp,si)=>{
+    const w=`令呪${si+1}`, effs=sp.eff.filter(e=>e.k!=='desc'&&!own(e));
+    if(effs.length>L.maxEffs) add(`${w}：効果は${L.maxEffs}つまでにしてください（今は${effs.length}つ）`);
+    sp.eff.forEach((e,ei)=>{
+      if(own(e)) return;
+      const x=`${w}・効果${ei+1}`, all=isAll(e);
+      if(L.forbid[e.k]) return add(`${x}：${L.forbid[e.k]}`);
+      if(e.turns>L.maxTurns) add(`${x}：効果時間は${L.maxTurns}Tまでにしてください（今は${e.turns}T）`);
+      const st=L.strong[e.k];
+      if(st){
+        const okT=e.turns>0&&e.turns<=st.turns, okM=e.times!=null&&e.times<=st.times;
+        if(!okT&&!okM) add(`${x}：${nm(e.k)}は ${st.turns}Tか${st.times}回 までにしてください`);
+        if(all&&st.allChance&&!(e.chance>0&&e.chance<=st.allChance)) add(`${x}：${nm(e.k)}を全体にかけるなら確率つき（chance ${st.allChance}以下）にしてください${e.chance?`（今は${e.chance}）`:'（今は必ず成功）'}`);
+      }
+      const v=L.val[e.k];
+      if(v&&typeof e.v==='number'&&!e.max){
+        const lim=e.k==='dmg'&&e.t==='enemy_master'?L.dmgMaster:all?v[1]:v[0];
+        if(Math.abs(e.v)>lim) add(`${x}：${nm(e.k)}${all?'（全体）':e.t==='enemy_master'?`（敵${TERMS.player}）`:''}の値は${lim}までにしてください（今は${e.v}）`);
+      }
+      if(e.k==='dmg'&&e.max) add(`${x}：最大HPぶんのダメージは令呪に入れないでください`);
+    });
+  });
+  return out;
+}
 // units を渡すと、サーヴァントとIDが重なっていないかも確かめる（ゲームはIDでサーヴァント→マスターの順に探すため）
 // level：'error'（反映できない） / 'big'（大警告：シートの決まりに反する） / 'warn'（小警告・注意：シートの目安から外れる）
 function validateMasters(ms,units=[]){
@@ -394,7 +445,8 @@ function mastersToJS(ms){
     ...(['face','np','cut'].every(k=>fitIsDef(m.fit,k))?[]:[`    "fit":${j(Object.fromEntries(['face','np','cut'].filter(k=>!fitIsDef(m.fit,k)).map(k=>[k,m.fit[k]])))},`]),
     ...(m.link?[`    "link":${j(m.link)},`]:[]),
     ...(m.memo?[`    "memo":${j(m.memo)},`]:[]),
-    ...(Object.keys(MASTER_LINE_KEYS).some(k=>m.lines[k].length)?[`    "lines":${j(Object.fromEntries(Object.keys(MASTER_LINE_KEYS).map(k=>[k,m.lines[k]])))},`]:[]),
+    ...(Object.keys(MASTER_LINE_KEYS).some(k=>m.lines[k].length)?[`    "lines":${j(Object.fromEntries(Object.keys(MASTER_LINE_KEYS).filter(k=>m.lines[k].length).map(k=>[k,m.lines[k]])))},`]:[]),
+    ...(m.condLines&&m.condLines.length?[`    "condLines":[`,m.condLines.map(c=>`      ${j(c)}`).join(',\n'),'    ],']:[]),
     '    "faces":[',
     m.faces.map(f=>`      ${j({label:f.label,eff:f.eff,...(f.line?{line:f.line}:{})})}`).join(',\n'),
     '    ],',
@@ -404,7 +456,7 @@ function mastersToJS(ms){
     '  }'].join('\n')).join(',\n');
   return `'use strict';
 // ${TERMS.player}データ（ペンシルエディタで書き出し）。マスタールール・マスターチームで使う
-// faces : 補助で振る鉛筆の面1〜6。eff が空なら「無」（何も起きない）。効果はそのターンだけ
+// faces : 補助で振る鉛筆の面1〜6。eff が空なら「無」（何も起きない）。効果はそのターンだけ（turns≥2 を書いた効果はそのターン数）
 // spells: 令呪3種
 // lines : セリフ（support=補助 / attack=攻撃 / spell=令呪使用）。faces・spells の line は、その面・令呪だけの専用セリフ（任意）
 // 効果の対象（t）: svt=自軍${TERMS.unit} / self=${TERMS.player}自身 / ally_all=味方全体（${TERMS.player}含む）
@@ -445,6 +497,7 @@ function unitsToJS(units){
     '  {',
     `    "id":${j(u.id)}, "name":${j(u.name)}, "cls":${j(u.cls)}, "cost":${u.cost}, "hp":${u.hp},`,
     ...(u.traits&&u.traits.length?[`    "traits":${j(u.traits)},`]:[]),
+    ...(u.enemy?[`    "enemy":${j(u.enemy)},`]:[]),
     ...(['face','card','np','cut'].every(k=>fitIsDef(u.fit,k))?[]:[`    "fit":${j(u.fit)},`]),
     ...(u.link?[`    "link":${j(u.link)},`]:[]),
     ...(u.memo?[`    "memo":${j(u.memo)},`]:[]),
@@ -476,6 +529,12 @@ function parseUnitsFile(text){
   const a=t.indexOf('['), b=t.lastIndexOf(']');
   if(a<0||b<a) throw new Error('サーヴァントの配列が見つかりません');
   return normalizeUnits(JSON.parse(t.slice(a,b+1)));
+}
+// 公開用の一覧CSV（名前・クラス・コスト）。includeWip=false なら制作中を除く。Excel で文字化けしないよう BOM 付き・CRLF
+function rosterCSV(list,includeWip){
+  const q=s=>{ s=String(s==null?'':s); return /[",\r\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
+  const rows=(list||[]).filter(x=>includeWip||!x.wip).map(x=>[x.name,x.cls,x.cost].map(q).join(','));
+  return '﻿'+['名前,クラス,コスト',...rows].join('\r\n')+'\r\n';
 }
 function downloadText(name,text,type='text/plain'){
   const url=URL.createObjectURL(new Blob([text],{type:type+';charset=utf-8'}));
@@ -587,6 +646,8 @@ function fxText(e){
   let s;
   switch(e.k){
     case 'atk': s=`攻撃ダメージ+${e.v}${col}`; break;
+    case 'cardUp': s=[`${e.color?`(${TERMS[e.color]})`:''}性能アップ`, e.v?`威力+${e.v}`:'', e.np?`NP獲得量+${e.np}`:'', e.star?`スター発生量+${e.star}`:''].filter(Boolean).join('・'); break;
+    case 'cardDown': s=[`${e.color?`(${TERMS[e.color]})`:''}性能ダウン`, e.v?`威力-${e.v}`:'', e.np?`NP獲得量-${e.np}`:'', e.star?`スター発生量-${e.star}`:''].filter(Boolean).join('・'); break;
     case 'atkDown': s=`攻撃ダメージ-${e.v}${col}`; break;
     case 'atkPct': s=`攻撃ダメージ+${e.v}%${col}`; break;
     case 'atkPctDown': s=`攻撃ダメージ-${e.v}%${col}`; break;
@@ -600,6 +661,12 @@ function fxText(e){
     case 'buffUp': s=`強化成功率アップ(ロール+${e.v})`; break;
     case 'debuffUp': s=`弱体成功率アップ(ロール+${e.v})`; break;
     case 'debuffResDown': s=`弱体耐性ダウン(受ける弱体のロール+${e.v})`; break;
+    case 'debuffRes': s=`弱体耐性アップ(受ける弱体のロール-${e.v})`; break;
+    case 'healUp': s=`HP回復量+${e.v}%`; break;
+    case 'healDown': s=`HP回復量-${e.v}%`; break;
+    case 'critPowDown': s=`クリティカル威力-${e.v}${col}`; break;
+    case 'npDef': s=`${TERMS.ult}被ダメージ-${e.v}`; break;
+    case 'confuse': s=`混乱(ロール${e.v||3}以下で行動不能)`; break;
     case 'debuffDown': s=`弱体成功率ダウン(ロール-${e.v})`; break;
     case 'buffDown': s=`強化成功率ダウン(ロール-${e.v})`; break;
     case 'poison': s=`毒${e.v||RULES.dot}`; break;
@@ -646,7 +713,7 @@ function fxText(e){
     case 'copyRoll': s=FX.copyRoll.name+(e.noExtra?'（エクストラアタックなし）':''); break;
     default: s=FX[e.k]?FX[e.k].name:e.k;
   }
-  const dur=[e.times!=null?`${e.times}回`:'', e.turns!=null?`${e.turns}T`:''].filter(Boolean).join('・');
+  const dur=[e.times!=null?`${e.times}回`:'', e.turns===0?'ターン無制限':e.turns!=null?`${e.turns}T`:typeof e.tmp==='number'?`${e.tmp}T`:''].filter(Boolean).join('・'); // tmp が数＝マスターの補助の複数ターン効果（残り）
   return s+(dur?`(${dur})`:'')+(e.cond?`［${condText(e.cond,FX[e.k]&&FX[e.k].condUse)}］`:'')+(e.chance?`［ロール${e.chance}以下］`:'')+(e.sure?'［解除・無効不可］':'')+(EFF_AT[e.at]&&e.k!=='dmg'?`［${EFF_AT[e.at]}］`:'');
 }
 function tLabel(t,pick){

@@ -18,7 +18,7 @@ function recordMatch(){
   if(G.scn||G.mode==='watch'||G.winner==null||(typeof netOn==='function'&&netOn())) return; // オンライン対戦は数えない
   const R=recLoad(), w=G.winner, cpu=G.mode==='cpu', at=(o,k,d)=>o[k]||(o[k]=d);
   if(G.arcade){ // アーケード：best＝勝ち抜いたステージ数の最高（エンドレスは連勝数）。クリア時は最少コンティニューと最短の合計ターンも残す
-    const A=G.arcade, a=at(at(R.arcade,G.rule,{}),A.diff+(A.endless?'+e':''),{battles:0,wins:0,clears:0,best:0,minCont:null,bestTurns:null});
+    const A=G.arcade, K=arcadeKind(A), a=at(at(R.arcade,G.rule,{}),A.diff+(A.endless?'+e':K!=='arcade'?'+'+K:''),{battles:0,wins:0,clears:0,best:0,minCont:null,bestTurns:null});
     a.battles++;
     if(w===0){ a.wins++; a.best=Math.max(a.best,A.stage+1);
       if(arcadeLast()){ const c=A.continues||0, t=A.results.reduce((s,r)=>s+r.turn,0)+G.turn;
@@ -39,15 +39,17 @@ function recUnitHTML(d){
 }
 // タイトルの「戦績」パネルの中身。リセットは確認つき（UI.recAsk）
 function recordsBodyHTML(){
-  const R=recLoad(), rules=Object.keys(RULESETS), lvs=Object.keys(CPU_LEVELS), dfs=Object.keys(ARCADE.diffs).flatMap(d=>[d,d+'+e']);
+  const R=recLoad(), rules=Object.keys(RULESETS), lvs=Object.keys(CPU_LEVELS);
+  // 難易度のキー：アーケード＝diff / エンドレス＝diff+e / ボスレイド・聖杯戦争＝diff+raid・diff+rogue
+  const dfs=[...Object.keys(ARCADE.diffs).flatMap(d=>[d,d+'+e']),...['raid','rogue'].flatMap(k=>Object.keys(ARC_KINDS[k].cfg().diffs).map(d=>d+'+'+k))];
   const sec=(t,body)=>`<div class="recsec"><h3>${t}</h3>${body}</div>`, none='<p class="sub small">まだ記録がありません。</p>';
   const table=(head,rows)=>`<div class="rtablewrap"><table class="rtable"><thead><tr>${head.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody></table></div>`;
   const cpuRows=rules.filter(k=>R.cpu[k]).map(k=>`<tr><th>${esc(RULESETS[k].name)}</th>${lvs.map(l=>{ const c=R.cpu[k][l]; return `<td>${c?`${c.w}勝${c.l}敗<small class="sub"> ${recPct(c.w,c.w+c.l)}</small>`:'—'}</td>`; }).join('')}</tr>`);
-  const arcRows=rules.filter(k=>R.arcade[k]).flatMap(k=>dfs.filter(d=>R.arcade[k][d]).map(d=>{ const a=R.arcade[k][d], en=d.endsWith('+e'), df=ARCADE.diffs[en?d.slice(0,-2):d];
+  const arcRows=rules.filter(k=>R.arcade[k]).flatMap(k=>dfs.filter(d=>R.arcade[k][d]).map(d=>{ const a=R.arcade[k][d], [dk,sk]=d.split('+'), en=sk==='e', kind=ARC_KINDS[sk]?sk:'arcade', df=ARC_KINDS[kind].cfg().diffs[dk];
     if(!df) return '';
-    return `<tr><th>${esc(RULESETS[k].name)}<small class="sub"> ${esc(df.name)}${en?' エンドレス':''}</small></th>${en
+    return `<tr><th>${kind==='arcade'?esc(RULESETS[k].name):ARC_KINDS[kind].name}<small class="sub"> ${esc(df.name)}${en?' エンドレス':''}</small></th>${en
       ?`<td>—</td><td>${a.best}連勝</td><td>—</td><td>—</td>`
-      :`<td>${a.clears}回</td><td>${a.best?`STAGE ${Math.min(a.best,ARCADE.stages)}`:'—'}</td><td>${a.minCont==null?'—':`${a.minCont}回`}</td><td>${a.bestTurns==null?'—':`${a.bestTurns}ターン`}</td>`}</tr>`; }));
+      :`<td>${a.clears}回</td><td>${a.best?`STAGE ${Math.min(a.best,df.levels.length)}`:'—'}</td><td>${a.minCont==null?'—':`${a.minCont}回`}</td><td>${a.bestTurns==null?'—':`${a.bestTurns}ターン`}</td>`}</tr>`; }));
   const pvp=rules.filter(k=>R.pvp[k]).map(k=>`${esc(RULESETS[k].name)} <b>${R.pvp[k].n}</b>戦`).join(' ・ ');
   const us=Object.entries(R.units).map(([id,x])=>({d:D(id),x})).filter(o=>o.d&&o.x.use).sort((a,b)=>b.x.use-a.x.use||b.x.win-a.x.win).slice(0,12);
   const units=us.map(({d,x})=>`<div class="rrow">${unitImg(d,'face','pimg',d.name)}<b>${esc(d.name)}</b><span>使用 ${x.use} ・ 勝率 ${recPct(x.win,x.use)}${d.master?'':`<small> ・ 与ダメ ${fmt(x.dealt)} ・ 撃破 ${x.kills}</small>`}</span></div>`).join('');
@@ -57,7 +59,7 @@ function recordsBodyHTML(){
     : `<div class="row"><button data-ui="recAsk" ${empty?'disabled':''}>記録をリセット</button></div>`;
   return `<div class="recs">
     ${sec('クイックバトル',cpuRows.length?table(['',...lvs.map(l=>esc(CPU_LEVELS[l].name))],cpuRows):none)}
-    ${sec('アーケード',arcRows.length?table(['','クリア','最高到達','最少コンティニュー','最短クリア'],arcRows):none)}
+    ${sec('アーケード・ボスレイド・聖杯戦争',arcRows.length?table(['','クリア','最高到達','最少コンティニュー','最短クリア'],arcRows):none)}
     ${sec('ローカル対戦',pvp?`<p class="small nm">${pvp}</p>`:none)}
     ${sec('よく使うキャラクター',units||none)}
     <p class="sub small">戦績はこの端末のブラウザに保存されます。シナリオの戦闘は含みません。</p>

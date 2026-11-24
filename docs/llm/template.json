@@ -1,0 +1,34 @@
+{
+  "id": "tpl_saber3",
+  "name": "テンプレート・セイバー",
+  "cls": "セイバー",
+  "traits": ["人型", "男性", "秩序", "善"],
+  "cost": 3,
+  "hp": 650,
+  "memo": "書式の見本（このまま使うキャラではない）。基準どおりのB2A2。強み：特になし／弱くしたところ：なし（基準値どおりなので）",
+  "lines": {
+    "start": ["セイバー、参る。", "さあ、始めよう。"],
+    "attack": ["はっ！", "そこだ！", "切り伏せる！"],
+    "extra": ["これで終わりだ！"],
+    "damage": ["くっ……！"],
+    "skill": ["力を貸してくれ。", "見ていろ。"],
+    "np": ["我が剣よ、光となれ――『見本の剣』！"],
+    "npDamage": ["ぐあっ……！"],
+    "defeat": ["ここまで、か……"],
+    "win": ["勝利は我らに。"]
+  },
+  "faces": [
+    {"acts":1, "pre":{"c":"R","dmg":80,"np":0,"star":0}, "post":{"c":"R","dmg":100,"np":0,"star":0}},
+    {"acts":1, "pre":{"c":"R","dmg":60,"np":0,"star":0}, "post":{"c":"R","dmg":80,"np":0,"star":0}},
+    {"acts":1, "pre":{"c":"B","dmg":50,"np":15,"star":0}, "post":{"c":"B","dmg":70,"np":20,"star":0}},
+    {"acts":1, "pre":{"c":"ASC"}, "post":{"c":"W","label":"渾身の一太刀","eff":[{"k":"atk","t":"self","v":30,"turns":1}],"dmg":60,"np":0,"star":0}},
+    {"acts":1, "pre":{"c":"B","dmg":40,"np":15,"star":0}, "post":{"c":"B","dmg":60,"np":20,"star":0}},
+    {"acts":1, "pre":{"c":"G","dmg":30,"np":0,"star":4}, "post":{"c":"G","dmg":50,"np":0,"star":7}}
+  ],
+  "skills": [
+    {"name":"剣術", "rank":"B", "eff":[{"k":"atk","t":"self","v":20,"turns":3}]},
+    {"name":"魔力放出", "rank":"C", "eff":[{"k":"np","t":"self","v":20}]},
+    {"name":"心眼", "rank":"B", "eff":[{"k":"evade","t":"self","v":0,"turns":1},{"k":"star","t":"master","v":8}]}
+  ],
+  "ult": {"name":"見本の剣", "ruby":"サンプル・ブレード", "c":"R", "eff":[{"k":"dmg","t":"enemy_all","v":220}]}
+}

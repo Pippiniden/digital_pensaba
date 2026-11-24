@@ -60,12 +60,46 @@ function scheduleCpu(){
   }, G.phase==='setup'?500:G.phase==='draft'?900:G.speed);
 }
 // カード変換（使用時に選ぶ）の色：そのユニットに乗っている色指定の強化（攻撃+・NP獲得・スター発生・クリティカル威力）が一番多い色。同点は Buster。弱い設定ではランダム
+// つよい以上（CONV_EV）：このターンに変換される味方（スキルの対象）で見込みを比べ、いちばん得な色（convGain）。見込みがどの色も0なら旧判断
+let CONV_EV = true;
 function cpuPickColor(u,easy){
   const cols=['R','B','G'];
   if(easy) return cols[Math.floor(rnd01()*3)];
+  if(CONV_EV&&cpuHard()&&G.pending&&G.pending.colorPick){
+    const s=D(u.def).skills[G.pending.si], picked=s.pick?cpuPickTarget(u.uid,G.pending.si,false):null;
+    const ts=s.eff.filter(e=>e.k==='cardConvPick').flatMap(e=>resolveTargets(u,e.t,picked));
+    const g=cols.map(c=>[c,convGain(ts,c)]).sort((a,b)=>b[1]-a[1]);
+    if(g[0][1]>0) return g[0][0];
+  }
   const sc=c=>u.fx.filter(e=>e.color===c&&FX[e.k]&&FX[e.k].buff===true).reduce((s,e)=>s+(e.v||1),0);
   return cols.map(c=>[c,sc(c)]).sort((a,b)=>b[1]-a[1])[0][0];
 }
+// カード変換の今ターンの見込み（ダメージ換算）：ts のコマンドを c に変えたときと変えないときの差。
+// 期待ダメージ（Busterチェイン・Busterのクリティカル・色つきの攻撃強化込み＝cmdValue）＋ NP（Artsチェイン・色つき攻撃時NP）×1.5 ＋ スター（Quickチェイン・色つき攻撃時スター）×1.3。
+// 宝具のターン・攻撃しない味方には0。重みと点数（convScore）は先読みの解析で決めた：つよい同士 6000試合の 9343場面で、使わない／変換なし／R／B／G を
+// それぞれ64回ずつ決着まで試した勝率差を当てはめると、NP 1 ≒ ダメージ1.5、スター1 ≒ ダメージ1.3。見込み100 ≒ 勝率+4〜5%
+function convGain(ts,c){
+  if(G.ult) return 0;
+  const tgt=[...alive(1-G.cur)].filter(x=>!x.master).sort((a,b)=>maxHp(b)-maxHp(a))[0]; if(!tgt) return 0;
+  const stars=G.players[G.cur].stars, RGB=['R','B','G'], slots=[];
+  Object.entries(G.alloc).forEach(([uid,n])=>{ const x=U(uid); if(x&&!x.out&&x.pid===G.cur) for(let i=0;i<n;i++) slots.push(x); });
+  if(!slots.length||!ts.some(t=>slots.includes(t))) return 0;
+  const cardSum=(x,col,k)=>x.fx.filter(e=>e.k==='cardUp'&&e.color===col).reduce((s,e)=>s+(e[k]||0),0);
+  const ev=cc=>{
+    const per=slots.map(x=>{ const cs=[0,1,2,3,4,5].map(f=>{ const m=cmdOf(x,f); return cc&&ts.includes(x)&&RGB.includes(m.c)?{...m,c:cc}:m; });
+      const p={}; RGB.forEach(k=>p[k]=cs.filter(m=>m.c===k).length/6);
+      const col=(k,card)=>cs.reduce((s,m)=>s+(RGB.includes(m.c)&&m.dmg>0?mods(x,k,m.c).sum+cardSum(x,m.c,card):0),0)/6;
+      return {v:cs.reduce((s,m)=>s+cmdValue(x,m,stars,tgt),0)/6, p, np:col('onAtkNp','np'), st:col('onAtkStar','star')}; });
+    const pc=k=>slots.length===3?per.reduce((m,s)=>m*s.p[k],1):0;
+    const dmg=per.reduce((s,x)=>s+x.v,0)+pc('R')*RULES.chainR*3;
+    const np=pc('B')*RULES.chainB*new Set(slots).size+per.reduce((s,x)=>s+x.np,0);
+    const st=pc('G')*RULES.chainG+per.reduce((s,x)=>s+x.st,0);
+    return dmg+np*1.5+st*1.3;
+  };
+  return ev(c)-ev(null);
+}
+// 見込み（ダメージ換算）→ 点数。36で3点（変換だけで使う）。見込み0以下（宝具のターン・3回そろわない）は0
+const convScore = g=>Math.max(0,Math.min(4,g/12));
 function cpuDecide(){
   const easy=G.level==='easy';
   switch(G.phase){
@@ -494,6 +528,12 @@ let SKILL_SENSE = true;
 // 防御無視は殴る予定の相手が防御を持っているときだけ。当てはまるキャラが少ないので全体の差は小さい（旧版との対戦 各約5.4万試合：team 50.22%・mteam 50.34%（±0.42）、スキル全体が無駄 0.3%）
 let SKILL_V2 = true;
 const selfDraw=(foes,ts,v)=>foes.length?v:SKILL_V2&&ts.length?0:-1; // 弱体：敵に入れば v、自分側だけならデメリットなので0（旧：-1）
+// HP回復の手段がある（毎ターン回復が付いている／未使用のスキル・宝具に回復がある）。マスターは見ない
+const cpuHealSrc=x=>{ if(x.master) return false; const d=D(x.def), hk=e=>e.k==='heal'||e.k==='regenHp';
+  return has(x,'regenHp')||d.skills.some((s,i)=>!x.used[i]&&(i<2||x.asc)&&s.eff.some(hk))||d.ult.eff.some(hk); };
+// 確率つきの弱体（敵に向けたもの）を、未使用のスキルか宝具に持っている
+const cpuChanceDebuffer=x=>{ if(x.master) return false; const d=D(x.def), hit=e=>FX[e.k]&&FX[e.k].buff===false&&e.chance&&!['self','ally_all','ally_other'].includes(e.t);
+  return d.skills.some((s,i)=>!x.used[i]&&s.eff.some(hit))||d.ult.eff.some(hit); };
 // 効果の並び（スキル・令呪）の「今使う価値」。si はスキル番号（スキル以外は -1）
 function cpuEffScore(u,effs,picked,si){
   const allies=alive(u.pid), enemies=alive(1-u.pid), stars=G.players[u.pid].stars;
@@ -519,6 +559,23 @@ function cpuEffScore(u,effs,picked,si){
       case 'fear': case 'actsDown': case 'sealSkill': sc+=foes.length?2:-1; break;
       case 'sealUlt': sc+=foes.some(t=>t.np>=RULES.ultCost-30)?4:foes.length?1:-1; break;
       case 'spread': sc+=foes.some(t=>has(t,'burn'))?2:.5; break;
+      // 新しい効果の使いどき：つよい同士・同じ編成のミラー戦（全キャラのスキル1をその効果だけのスキルにして、各案4000試合）で決めた。数字は案の側の勝率（相手は旧判断）
+      // 蝕毒：毒が付いている敵がいる（同じスキルで毒も付ける）ならすぐ使う。旧（2点＝実質使わない）より 66.5%。毒がなくても使う案と同じ勝率なので、無駄打ちしない方を採用
+      case 'erosion': sc+=!foes.length?-1:foes.some(t=>has(t,'poison'))||effs.some(x=>x.k==='poison')?3.5:.5; break;
+      // 弱体耐性アップ：すぐ使う 50.8% ／ 使わない 51.0% ／ 確率つき弱体を持つ敵がいるときだけ 50.4%（差なし）。小さな加点にとどめる
+      case 'debuffRes': sc+=foes.length?-1:enemies.some(x=>cpuChanceDebuffer(x))?1.5:.3; break;
+      // HP回復量アップ：減っている味方がいて回復の手段（同じスキル・未使用の回復スキル・毎ターン回復）があるとき 63.7%（すぐ 61.3% ／ HP70%未満の味方がいるとき 60.5%）
+      case 'healUp': { if(foes.length){ sc-=1; break; } const al=alive(u.pid).filter(t=>!t.master);
+        sc+=al.some(t=>maxHp(t)-t.hp>=70)&&(effs.some(x=>x.k==='heal'||x.k==='regenHp')||al.some(cpuHealSrc))?3.5:al.some(t=>hpR(t)<.7)?3:.3; break; }
+      // HP回復量ダウン：すぐ使う 69.6%（敵が減ってから 50.5% ／ 敵が回復しそうなとき 49.6%：敵の回復は減ったらすぐ来るので、待つと間に合わない）。回復の手段がある敵がいれば先に使う
+      case 'healDown': sc+=selfDraw(foes,ts,foes.some(cpuHealSrc)?3.5:.5); break;
+      // クリティカル威力ダウン：敵のスター6個以上で使う 52.1%（すぐ 50.8% ／ 11個以上 51.4% ／ 使わない 48.7%）
+      case 'critPowDown': sc+=selfDraw(foes,ts,foes.some(t=>G.players[t.pid].stars>=6)?3:.5); break;
+      // 宝具被ダメージ-：敵が宝具を撃てる（NP100%）ときに使う 56.9%（NP70%以上 51.9% ／ すぐ 44.9% ／ 使わない 45.1%）
+      case 'npDef': sc+=foes.length?-1:enemies.some(x=>!x.master&&x.np>=RULES.ultCost&&canUlt(x))?4:enemies.some(x=>!x.master&&x.np>=70)?1:0; break;
+      // 混乱：チームは旧判断（2点＝ふだんは使わず、倒れそうなときに使う）がいちばんよかった（すぐ 48.0% ／ 3ターン目から 47.0% ／ 敵NP100% 42.6% ／ 使わない 41.2%）。
+      // 1騎のルールはすぐ使う方がよい（旧判断に 54.2%）
+      case 'confuse': sc+=!SKILL_SENSE||foes.some(t=>!has(t,'debuffImmune')&&!has(t,'mentalImmune'))?(ruleset().partyMax===1?3:2):-1; break;
       case 'instantDeath': sc+=foes.length?5:-5; break;
       case 'drain': sc+=foes.length?2:-1; break;
       case 'cleanseMental': sc+=ts.some(t=>t.fx.some(x=>FX[x.k].mental))?3:0; break;
@@ -556,13 +613,26 @@ function cpuEffScore(u,effs,picked,si){
         const good=want?ts.some(t=>t.pid===u.pid&&t!==fu):foes.some(t=>t!==fu);
         sc+=n&&good?Math.min(4,1+n):want?0:-1; break; }
       case 'onAtkNp': case 'onAtkStar': sc+=onAtkScore(e,ts); break;
+      case 'cardUp': { // カード性能アップ：攻撃ダメージ+・攻撃時NP・攻撃時スターの合計に、その色の面が出やすいかを掛ける（色の面が半分あれば満額）
+        const share=ts.filter(t=>!t.master).reduce((m,t)=>Math.max(m,(D(t.def).faces||[]).filter(f=>f&&f.c===e.color).length/6),0);
+        const a=(cpuHard()?atkBuffScore(e,ts):acting?3:0)*Math.min(1,e.v/20);
+        const g=(e.np?onAtkScore({...e,k:'onAtkNp',v:e.np},ts):0)+(e.star?onAtkScore({...e,k:'onAtkStar',v:e.star},ts):0);
+        sc+=Math.min(5,(a+g)*Math.min(1,share*2)); break; }
+      case 'cardDown': { // カード性能ダウン：敵に入れば、威力・NP・スターの大きさに、その色の面が出やすいかを掛ける（色の面が半分あれば満額）
+        if(!foes.length){ sc+=selfDraw(foes,ts,0); break; }
+        const share=foes.filter(t=>!t.master).reduce((m,t)=>Math.max(m,(D(t.def).faces||[]).filter(f=>f&&f.c===e.color).length/6),0);
+        sc+=Math.min(3.5,(2*Math.min(1,(e.v||0)/20)+(e.np||0)/10+(e.star||0)/3)*Math.min(1,share*2)); break; }
       case 'buffUp': sc+=acting?.5:0; break;
       case 'debuffResDown': sc+=selfDraw(foes,ts,1); break;
       case 'debuffDown': sc+=selfDraw(foes,ts,1.5); break;
       case 'buffDown': sc+=selfDraw(foes,ts,1.5); break;
       case 'critMult': sc+=acting&&!G.ult&&critLevel(stars)>=3?3:0; break;
       case 'healBlock': sc+=foes.some(t=>hpR(t)<.7||t.fx.some(x=>x.k==='regenHp'))?2:1; break;
-      case 'cardConv': case 'cardConvPick': sc+=acting?1.5:.5; break;
+      // カード変換：つよい以上は今ターンの見込み（convGain）。使用時に選ぶ変換はいちばん得な色で見る。
+      // 解析（上の convGain）：宝具のターンや変換した味方が1〜2回しか行動しないときに使うと 0〜-3%、3回行動（チェインがそろう）なら +2〜5%
+      case 'cardConv': case 'cardConvPick':
+        if(CONV_EV&&cpuHard()){ sc+=convScore(Math.max(...(e.k==='cardConv'?[e.color]:['R','B','G']).map(c=>convGain(ts,c)))); break; }
+        sc+=acting?1.5:.5; break;
       case 'buffExtend': sc+=ts.some(t=>t.fx.some(x=>FX[x.k].buff===true&&x.turns!=null))?2:0; break;
       case 'ascend': { // 再臨できる味方がいれば価値あり。スキル3が未使用ならさらに高い（再臨でそのターンから使える）。再臨済みだけなら使わない
         const can=ts.filter(t=>t.pid===u.pid&&!t.master&&!t.out&&!t.asc);
@@ -571,7 +641,7 @@ function cpuEffScore(u,effs,picked,si){
       case 'cleanse': sc+=ts.some(t=>t.fx.some(x=>e.vs?x.k===e.vs:FX[x.k].buff===false))?2:0; break;
       case 'np': sc+=ts.some(t=>t.np<RULES.ultCost&&t.np+e.v>=RULES.ultCost)?4:ts.some(t=>t.np<RULES.ultCost)?1.5:0; break;
       case 'star': sc+=cpuHard()?starSkillScore(e.v,u.pid):G.ult?.5:2; break;
-      case 'stun': case 'charm': sc+=!SKILL_SENSE||foes.some(t=>!has(t,'debuffImmune')&&!(FX[e.k].mental&&has(t,'mentalImmune')))?3:-1; break; // 条件つき（特定の相手だけ）は対象がいなければ使わない
+      case 'stun': case 'charm': case 'petrify': case 'bind': case 'sleep': sc+=!SKILL_SENSE||foes.some(t=>!has(t,'debuffImmune')&&!(FX[e.k].mental&&has(t,'mentalImmune')))?3:-1; break; // 条件つき（特定の相手だけ）は対象がいなければ使わない
       case 'poison': case 'burn': sc+=ts.some(t=>!has(t,e.k))?2:0; break;
       case 'curse': case 'hitNpSeal': case 'atkDown': case 'atkPctDown': sc+=2; break;
       case 'strip': sc+=ts.some(t=>t.fx.some(x=>e.vs?x.k===e.vs:FX[x.k].buff))?2:0; break;
@@ -624,7 +694,8 @@ function cpuPickKind(cands,s,k){
   if(k.includes('copyRoll')){ const avg=x=>D(x.def).faces.reduce((s2,f)=>s2+(isCopyCmd(f.post)?0:f.post.dmg||0),0); return [...cands].sort((a,b)=>avg(b)-avg(a))[0]; } // 再臨後コマンドの平均ダメージが高い相手の鉛筆
   if(k.includes('heal')||k.includes('cleanse')) return [...cands].sort((a,b)=>hpR(a)-hpR(b))[0];
   if(k.includes('np')){ const below=cands.filter(c=>c.np<RULES.ultCost); return [...(below.length?below:cands)].sort((a,b)=>b.np-a.np)[0]; }
-  if(['stun','charm','fear','sealSkill','sealUlt','instantDeath'].some(x=>k.includes(x))) return [...cands].sort((a,b)=>b.np-a.np||b.hp-a.hp)[0];
+  if(['stun','charm','petrify','bind','sleep','confuse','fear','sealSkill','sealUlt','instantDeath'].some(x=>k.includes(x))) return [...cands].sort((a,b)=>b.np-a.np||b.hp-a.hp)[0];
+  if(k.includes('erosion')&&!k.includes('poison')){ const c=cands.filter(x=>has(x,'poison')); if(c.length) return [...c].sort((a,b)=>b.hp-a.hp)[0]; }
   if(k.includes('poison')||k.includes('burn')){ const c=cands.filter(x=>!has(x,'poison')&&!has(x,'burn')); return [...(c.length?c:cands)].sort((a,b)=>b.hp-a.hp)[0]; }
   return null;
 }
@@ -668,8 +739,10 @@ let TGT_GUARD = true; // 通常攻撃の対象選び（脅威度）：回避・�
 // 通常攻撃が通る割合：攻撃 hits 回のうち、回避・無敵の回数ぶん（回数なしは全部）が防がれる
 function atkPass(t,hits){ if(!hits) return 1; const g=t.fx.filter(x=>x.k==='invul'||x.k==='evade').reduce((s,x)=>s+(x.times==null?Infinity:x.times),0); return Math.max(0,hits-Math.min(g,hits))/hits; }
 const cpuThreat = t=>avgDmg(t)*1.5+ultPower(t)*.3+40;
+// 睡眠中の敵は殴ると目を覚ますので、倒せないなら起きている敵を狙う（ミラー戦4000試合：51.5%、狙いを変えないと 49.4%）
 function cpuThreatTarget(){
-  const c=cpuTargetCands();
+  let c=cpuTargetCands();
+  if(c.length>1&&c.some(t=>has(t,'sleep'))){ const aw=c.filter(t=>!t.fx.some(e=>e.k==='sleep'&&!e.sure)||estDamage(t)>=t.hp); if(aw.length) c=aw; }
   const hits=G.ult?D(U(G.ult).def).ult.eff.filter(e=>e.k==='dmg').length*hitsOf(D(U(G.ult).def).ult.eff):G.rolled.reduce((s,r)=>s+(r.cmd.dmg>0?hitsOf(r.cmd.eff):0),0);
   let best=c[0], bs=-Infinity;
   for(const t of c){
