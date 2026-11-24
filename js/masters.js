@@ -487,6 +487,42 @@ const DEFAULT_MASTERS = [
     ]
   },
   {
+    "id":"m_lechleri", "name":"レクレリ", "cost":5, "hp":600,
+    "fit":{"face":{"x":50,"y":8,"z":100},"cut":{"x":0,"y":3,"z":94}},
+    "link":"https://wikiwiki.jp/fate-trpg/%E3%83%AC%E3%82%AF%E3%83%AC%E3%83%AA",
+    "faces":[
+      {"label":"","eff":[{"k":"dmg","t":"enemy_svt","v":100}]},
+      {"label":"","eff":[{"k":"atk","t":"ally_svt","v":30}]},
+      {"label":"","eff":[{"k":"atk","t":"ally_svt","v":30}]},
+      {"label":"","eff":[{"k":"atk","t":"ally_svt","v":20},{"k":"onAtkNp","t":"ally_svt","v":10}]},
+      {"label":"","eff":[{"k":"onAtkNp","t":"ally_svt","v":5}]},
+      {"label":"","eff":[{"k":"dmg","t":"ally_svt","v":5}]}
+    ],
+    "spells":[
+      {"name":"竜の血","eff":[{"k":"heal","t":"ally_svt","v":150},{"k":"np","t":"ally_svt","v":15}]},
+      {"name":"万能触媒","eff":[{"k":"cleanse","t":"ally_svt","v":0},{"k":"actsUp","t":"ally_svt","v":1,"turns":1}]},
+      {"name":"応急魔力障壁","eff":[{"k":"evade","t":"svt","v":0,"times":1,"turns":0}]}
+    ]
+  },
+  {
+    "id":"m_shen_yenqiu", "name":"沈 硯秋", "cost":3, "hp":300,
+    "memo":"コンセプト：敵の弱体化と情報戦で味方を支える搦め手型マスター。強み：敵への固定ダメージ・毒・行動妨害を組み合わせ、相手の戦術を崩す。弱くしたところ：補助の当たり面はコスト相応に限定し、直接的な防御能力や継続的な強化は持たせていない。",
+    "lines":{"support":["舞台は整ったわ。あとはあなたの出番よ。","その動き、少しだけ借りるわね。","最高の役者は、観客に役者だと悟らせないものよ。"],"attack":["さあ、次の幕を始めましょう。","あなたの役は、ここで終わりよ。"],"spell":["令呪をもって命じる――さあ、演じてちょうだい。","この一幕、私が書き換えるわ。"]},
+    "faces":[
+      {"label":"偽装工作","eff":[{"k":"dmg","t":"enemy_svt","v":50}]},
+      {"label":"魔力の代演","eff":[{"k":"onAtkNp","t":"svt","v":5}]},
+      {"label":"無","eff":[]},
+      {"label":"千人千面","eff":[{"k":"dmg","t":"enemy_svt","v":100},{"k":"poison","t":"enemy_svt","v":60}]},
+      {"label":"敵マスターへの接近","eff":[{"k":"dmg","t":"enemy_master","v":100}]},
+      {"label":"無","eff":[]}
+    ],
+    "spells":[
+      {"name":"指鹿為馬","eff":[{"k":"atkDown","t":"enemy_svt","v":30,"turns":1},{"k":"critDown","t":"enemy_svt","v":2,"turns":1}]},
+      {"name":"金蝉脱殻","eff":[{"k":"dmg","t":"enemy_master","v":150}]},
+      {"name":"最佳女主角","eff":[{"k":"atk","t":"ally_svt","v":40,"turns":1},{"k":"sureHit","t":"ally_svt","v":0,"turns":1}]}
+    ]
+  },
+  {
     "id":"m_medoisan", "name":"めどいさん", "cost":3, "hp":350,
     "fit":{"face":{"x":50,"y":11,"z":100},"np":{"x":50,"y":28,"z":105},"cut":{"x":0,"y":7,"z":100}},
     "lines":{"support":["はぁ……めど……"]},
