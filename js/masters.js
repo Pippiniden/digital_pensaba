@@ -211,20 +211,20 @@ const DEFAULT_MASTERS = [
     ]
   },
   {
-    "id":"m_seiji", "name":"柏木星司", "cost":5, "hp":470,
+    "id":"m_seiji", "name":"柏木星司", "cost":5, "hp":500,
     "fit":{"face":{"x":50,"y":11,"z":100},"np":{"x":50,"y":14,"z":94}},
     "link":"https://seesaawiki.jp/kagemiya/d/%c7%f0%cc%da%c0%b1%bb%ca",
     "faces":[
-      {"label":"","eff":[{"k":"onAtkStar","t":"ally_svt","v":3}]},
-      {"label":"","eff":[{"k":"onAtkStar","t":"ally_svt","v":3}]},
-      {"label":"","eff":[{"k":"onAtkStar","t":"ally_svt","v":3}]},
-      {"label":"","eff":[{"k":"atk","t":"ally_svt","v":50,"color":"R"}]},
-      {"label":"","eff":[{"k":"atk","t":"ally_svt","v":30,"color":"R"}]},
-      {"label":"","eff":[{"k":"atk","t":"ally_svt","v":30,"color":"R"}]}
+      {"label":"","eff":[{"k":"onAtkStar","t":"ally_svt","v":4}]},
+      {"label":"","eff":[{"k":"onAtkStar","t":"ally_svt","v":4}]},
+      {"label":"","eff":[{"k":"onAtkStar","t":"ally_svt","v":4}]},
+      {"label":"","eff":[{"k":"cardUp","t":"ally_svt","v":50,"color":"R","np":0,"star":1}]},
+      {"label":"","eff":[{"k":"cardUp","t":"ally_svt","v":40,"color":"R","np":0,"star":1}]},
+      {"label":"","eff":[{"k":"cardUp","t":"ally_svt","v":40,"color":"R","np":0,"star":1}]}
     ],
     "spells":[
       {"name":"竜の心臓","eff":[{"k":"np","t":"ally_svt","v":50},{"k":"hitNpSeal","t":"ally_svt","v":0,"turns":1,"sure":true}]},
-      {"name":"EMCカートリッジ","eff":[{"k":"critRoll","t":"svt","v":2,"turns":1}]},
+      {"name":"EMCカートリッジ","eff":[{"k":"critRoll","t":"svt","v":2,"turns":1},{"k":"critPow","t":"svt","v":30,"turns":1}]},
       {"name":"Quad_Burst","eff":[{"k":"dmg","t":"enemy_svt","v":180},{"k":"selfDmg","t":"self","v":100}]}
     ]
   },
@@ -338,7 +338,7 @@ const DEFAULT_MASTERS = [
       {"label":"無","eff":[],"line":["ん？　まちがったかな……"]},
       {"label":"治療手術","eff":[{"k":"heal","t":"ally_svt","v":30}],"line":["ま、この程度ならねー"]},
       {"label":"怪しい薬","eff":[{"k":"onAtkNp","t":"ally_svt","v":5}],"line":["これを飲めば君の力は百人力！"]},
-      {"label":"パピリオ・マギア","eff":[{"k":"atk","t":"svt","v":30},{"k":"heal","t":"svt","v":80}],"line":["さぁさぁ、楽しい改造手術の時間だよ！"]},
+      {"label":"パピリオ・マギア","eff":[{"k":"atk","t":"svt","v":20},{"k":"heal","t":"svt","v":50}],"line":["さぁさぁ、楽しい改造手術の時間だよ！"]},
       {"label":"メス","eff":[{"k":"dmg","t":"enemy_master","v":100}],"line":["おっと、隙ありー！"]},
       {"label":"無","eff":[],"line":["ん？　まちがったかな……"]}
     ],
