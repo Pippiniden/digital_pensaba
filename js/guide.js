@@ -123,7 +123,7 @@ function rulesGuideBody(){
     gSub('コマンドとチェイン',`<p>行動ごとに鉛筆を振り、出た面のコマンド（<b>${TERMS.R}</b>＝攻撃力が高い／<b>${TERMS.B}</b>＝NPが貯まりやすい／<b>${TERMS.G}</b>＝スターが出やすい）で攻撃します。白い面は特殊行動です。</p>
       <dl><dt>${TERMS.R}チェイン</dt><dd>同じ色3枚で、各コマンドのダメージ+${R.chainR}。</dd>
       <dt>${TERMS.B}チェイン</dt><dd>行動した${TERMS.unit}全員のNP+${R.chainB}%。</dd>
-      <dt>${TERMS.G}チェイン</dt><dd>スター${R.chainG}個が発生。</dd>
+      <dt>${TERMS.G}チェイン</dt><dd>スター${R.chainG}個が発生（次のターンに使えます）。さらにそのターンは、手持ちのスター+${R.chainGNow}、この3回の攻撃のクリティカルレベル+${R.chainGCritLv}・クリティカルのダメージ+${R.chainGCritDmg}。</dd>
       <dt>ブレイブチェイン</dt><dd>同じ${TERMS.unit}が3回行動すると、追加で1回攻撃（エクストラアタック）。</dd></dl>
       <p>クラスの相性はありません。</p>`),
     gSub('クリティカルとスター',`<p>スターを持っていると、攻撃がクリティカルになることがあります。クリティカルのダメージは+${R.critDmg}（${TERMS.R}は+${R.critDmgR}）、NPとスターの獲得は2倍です。</p>

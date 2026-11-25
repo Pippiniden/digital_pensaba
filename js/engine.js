@@ -627,12 +627,13 @@ function attackHit(att,cmd,tgt,o,lab){
     const stars=G.players[att.pid].stars;
     if(stars>0){
       const cr=mods(att,'critRoll'), cd=mods(att,'critDown'); // critDown＝クリティカル率ダウン（弱体）
+      const cl=o.chain==='G'?(RULES.chainGCritLv||0):0; // Quickチェイン中の3回の攻撃：クリティカルレベル+
       if(ruleset().crit==='d6'){ // シンプルルール：1d6 の出目（クリティカル率アップ(critRoll)で出目を下げる）が必要値以下で成功
-        const need=critNeedD6(stars), r=roll()+1, rv=r-cr.sum+cd.sum;
+        const need=critNeedD6(stars), r=roll()+1, rv=r-cr.sum-cl+cd.sum;
         crit=(need>=6&&!cd.sum)||rv<=need;
-        note.push(`クリ判定 出目${r}${cr.sum?`-${cr.sum}`:''}${cd.sum?`+${cd.sum}`:''} ≤ ${need} ${crit?'成功':'失敗'}`);
+        note.push(`クリ判定 出目${r}${cr.sum+cl?`-${cr.sum+cl}`:''}${cd.sum?`+${cd.sum}`:''} ≤ ${need} ${crit?'成功':'失敗'}`);
       } else {
-        const lv=Math.max(0,Math.min(CRIT_TABLE.length,critLevel(stars)+cr.sum-cd.sum)), p=critChance(lv);
+        const lv=Math.max(0,Math.min(CRIT_TABLE.length,critLevel(stars)+cr.sum+cl-cd.sum)), p=critChance(lv);
         const r=Math.floor(Math.random()*100)+1;
         crit=r<=p;
         note.push(`クリ判定 Lv${lv}(${p}%) 出目${r} ${crit?'成功':'失敗'}`);
@@ -642,7 +643,7 @@ function attackHit(att,cmd,tgt,o,lab){
     if(crit){
       sa.crits++;
       const cp=mods(att,'critPow',cmd.c), cpd=mods(att,'critPowDown',cmd.c), cm=att.fx.filter(e=>e.k==='critMult');
-      const pw=cp.sum-cpd.sum; // クリティカル威力ダウン：増加量から引く（増加量は0未満にしない）
+      const pw=cp.sum-cpd.sum+(o.chain==='G'?(RULES.chainGCritDmg||0):0); // クリティカル威力ダウン：増加量から引く（増加量は0未満にしない）。Quickチェイン中は威力+
       if(cm.length){ // クリティカル倍率：+30/+60・色バフ2倍の代わりに、ここまでのダメージ×x%（威力+は最後に加算）
         const pct=Math.max(...cm.map(e=>e.v)), add=Math.max(0,Math.round(dmg*pct/100)-dmg+pw);
         dmg+=add; note.push(`クリ×${pct}%${pw?`${pw>0?'+':''}${pw}`:''}`); cons(att,cm);
@@ -736,7 +737,7 @@ function ultCopyRolls(u,tgt,picked,n,noExtra){
   }
   const three=n===3, c0=cmds[0].c;
   const chain=three&&['R','B','G'].includes(c0)&&cmds.every(c=>c.c===c0)?c0:null;
-  if(chain){ log(`${TERMS[chain]}チェイン発生！`,'good'); fxEmit({t:'banner',title:`${TERMS[chain]} Chain`,col:chain}); chainsOf(u.pid)[chain]++; }
+  if(chain){ log(`${TERMS[chain]}チェイン発生！`,'good'); fxEmit({t:'banner',title:`${TERMS[chain]} Chain`,col:chain}); chainsOf(u.pid)[chain]++; chainGNow(u.pid,chain); }
   cmds.forEach((cmd,ri)=>{ if(!u.out) resolveCommand(u,cmd,t,{chain,ri}); });
   if(u.out) return;
   if(chain==='B'){ addNp(u,npRate(u,RULES.chainB),'atk'); syncU(u); log(`チェインボーナス：${nm(u)}の${TERMS.gauge}+${RULES.chainB}%`); }
@@ -808,7 +809,7 @@ function resolveDamage(){
     const hp0=tgt.hp;
     const acts=G.rolled, cols=acts.map(a=>a.cmd.c);
     const chain = acts.length===3 && ['R','B','G'].includes(cols[0]) && cols.every(c=>c===cols[0]) ? cols[0] : null;
-    if(chain){ log(`${TERMS[chain]}チェイン発生！`,'good'); fxEmit({t:'banner',title:`${TERMS[chain]} Chain`,col:chain}); chainsOf(G.cur)[chain]++; }
+    if(chain){ log(`${TERMS[chain]}チェイン発生！`,'good'); fxEmit({t:'banner',title:`${TERMS[chain]} Chain`,col:chain}); chainsOf(G.cur)[chain]++; chainGNow(G.cur,chain); }
     acts.forEach((a,ri)=>{ if(!U(a.uid).out) resolveCommand(U(a.uid),a.cmd,tgt,{chain,ri}); }); // 反撃で倒れたら残りの行動はしない
     if(chain==='B'){ [...new Set(acts.map(a=>a.uid))].map(U).forEach(u=>{ addNp(u,npRate(u,RULES.chainB),'atk'); syncU(u); }); log(`チェインボーナス：行動${TERMS.unit}の${TERMS.gauge}+${RULES.chainB}%`); }
     if(chain==='G'){ G.gen+=RULES.chainG; log(`チェインボーナス：${TERMS.star}${RULES.chainG}個発生`); }
@@ -827,6 +828,12 @@ function resolveDamage(){
   flushKo();
   checkWin();
   if(G.winner==null) G.phase='end';
+}
+// Quickチェイン成立時（コマンドを解決する前）：そのターンの手持ちスターを増やす。クリティカルレベル・威力は attackHit が o.chain==='G' で足す
+function chainGNow(pid,chain){
+  if(chain!=='G'||!RULES.chainGNow) return;
+  G.players[pid].stars+=RULES.chainGNow; // 手番側の手持ちはターン終了で G.gen に置き換わるので、そのターンだけ有効
+  log(`チェインボーナス：このターンの${TERMS.star}+${RULES.chainGNow}、クリティカルLv+${RULES.chainGCritLv}・威力+${RULES.chainGCritDmg}`);
 }
 const chainsOf = pid=>(G.chains||(G.chains=[{R:0,B:0,G:0,brave:0},{R:0,B:0,G:0,brave:0}]))[pid];
 function ascend(u){ u.asc=true; fxEmit({t:'pop',uid:u.uid,text:TERMS.ascFull,cls:'asc'}); log(`${nm(u)} ${TERMS.ascFull}！ 以降は${TERMS.asc}後コマンド、スキル3解放`,'good'); }

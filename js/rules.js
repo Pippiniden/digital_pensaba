@@ -40,7 +40,10 @@ const RULES = {
   gaugeOnHit:10, gaugeMax:100, ultCost:100,
   chainR:30,   // Busterチェイン：各コマンドのダメージ+30
   chainB:20,   // Artsチェイン：行動した全サーヴァントのNP+20%
-  chainG:10,   // Quickチェイン：スター10個発生
+  chainG:10,   // Quickチェイン：スター10個発生（次のターンに使える）
+  chainGNow:10,    // Quickチェイン：そのターンの手持ちスター+10（この3回の攻撃のクリティカル判定から効く。ターン終了で消える）
+  chainGCritLv:1,  // Quickチェイン：そのターン（この3回の攻撃）のクリティカルレベル+1（シンプル・マスターの1d6では出目-1）
+  chainGCritDmg:30, // Quickチェイン：そのターン（この3回の攻撃）のクリティカルのダメージ加算+30
   critDmg:30, critDmgR:60, // クリティカル：ダメージ+30（Busterは+60）。獲得NP・発生スター・色バフは2倍
   dot:20,      // 毒・やけどの値が0（旧データ）のときのダメージ
   dotTiming:'current', // 毒・やけどの減少対象: 'current'=手番側のみ / 'all'=全ユニット
