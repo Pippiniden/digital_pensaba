@@ -5,7 +5,8 @@
 ### 4.1 Character ("servant") definition — `DEFAULT_UNITS[i]` / `UNITS[i]`
 ```
 { id, name, cls, traits?:string[], cost, hp,   // traits = 属性 (multiple, deduped by normTraits; used by atkTrait/defTrait). Omitted from export when empty. Read at runtime via traitsOf(u)
-  fit?: { face:{x,y,z}, card:{x,y,z}, np:{x,y,z}, cut:{x,y,z} },   // image framing set in the editor (x/y = object-position %, z = zoom %, 100–300). Defaults in FIT_DEF (common.js); omitted from export when default. Applied by unitImg() via fitStyle()
+  fit?: { face:{x,y,z}, card:{x,y,z}, np:{x,y,z}, cut:{x,y,z}, tile:{x,y,z} },   // image framing set in the editor (x/y = object-position %, z = zoom %, 100–300). Defaults in FIT_DEF (common.js); omitted from export when default. Applied by unitImg() via fitStyle()
+                                         // tile = selection-screen tiles (setup / draft / zukan, `unitImg(d,'tile',…)`): x,y = point brought to the centre, z = zoom (translate clamped so edges stay covered); default = follow `face`
                                          // np = the close-up face inside the cut-in band (background-position x/y %, z = image width %, 60–300 via fitRange); used by cutinStageHTML, not fitStyle
                                          // cut = the cut-in's standing art on the right: x = shift right (% of stage width, ±30), y = shift down (% of stage height, ±30), z = size % (60–160). For art whose head hits the top
                                          // images are NOT data: img/units/{id}.webp (face) and {id}_card.webp (card, optional)

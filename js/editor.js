@@ -456,7 +456,12 @@ function renderMasterForm(el){
       ${[['x','左右'],['y','上下'],['z','拡大']].map(([a,lab])=>`<label class="fitrow"><span>${lab}</span>
         <input type="range" min="${FIT_RANGE[a][0]}" max="${FIT_RANGE[a][1]}" step="1" data-p="fit.face.${a}" data-t="num" value="${m.fit.face[a]}">
         <output data-fitout="face.${a}">${m.fit.face[a]}%</output></label>`).join('')}
-      <button class="small" data-act="fitReset" data-k="face">リセット</button></div></div>
+      <button class="small" data-act="fitReset" data-k="face">リセット</button></div>
+    <div class="fitgrp"><b>${IMG_KEYS.tile}</b>${tileFitHint(m)}
+      ${[['x','左右'],['y','上下'],['z','拡大']].map(([a,lab])=>`<label class="fitrow"><span>${lab}</span>
+        <input type="range" min="${FIT_RANGE[a][0]}" max="${FIT_RANGE[a][1]}" step="1" data-p="fit.tile.${a}" data-t="num" value="${m.fit.tile[a]}">
+        <output data-fitout="tile.${a}">${m.fit.tile[a]}%</output></label>`).join('')}
+      <button class="small" data-act="fitReset" data-k="tile">リセット</button></div></div>
   </section>
   <section class="sec"><h2>補助（${TERMS.player}の鉛筆の6面）</h2>
     <p class="sub small nm">${TERMS.player}フェイズの「補助」で振り、出た面の効果を<b>そのターンだけ</b>適用します（効果ごとの「ターン」で2ターン以上にもできます）。効果のない面は「無」（何も起きない）。「敵${TERMS.player}」へのダメージは、相手が令呪1画で防げます。</p>
@@ -529,6 +534,8 @@ const optNum=(p,v,label)=>`<label class="mini"><span>${label}</span><input type=
 // マスターの補助の面のターン数：空＝1ターン（このターンだけ・既定）。2以上は自分の終了フェイズをその回数迎えるまで
 const faceTurns=(p,v)=>`<label class="mini" title="既定はこのターンだけ。2ターン以上なら、自分の終了フェイズをその回数迎えるまで続きます。0はターンでは消えません（回数を使い切るまで）"><span>ターン</span><select data-p="${p}" data-t="optnum0">${opt('','1（このターン）',v>1||v===0?v:'')}${opt(0,'0（ターン無制限）',v===0?0:'')}${[2,3,4,5].map(n=>opt(n,`${n}`,v)).join('')}${v>5?opt(v,`${v}`,v):''}</select></label>`;
 
+// 選択画面のタイルの見た目（3:4）と説明。左右・上下は「中央に持ってきたい点」、拡大すると動かせる
+function tileFitHint(u){ return `<span class="imgprev tprevw" data-imgprev="tile"><span class="tprev">${unitImg(u,'tile','',u.name)}</span></span><small class="sub">選ぶ画面の枠の見え方。拡大すると、左右・上下で見せたい場所を中央へ寄せられます（初期値はキャラクター画像と同じ）</small>`; }
 function renderForm(){
   const u=cur(), el=document.querySelector('#form');
   if(isM()) return renderMasterForm(el);
@@ -569,7 +576,7 @@ function renderForm(){
         <code data-imgpath="card">${esc(IMG_DIR+u.id)}${IMG_CARD_SUFFIX}.${IMG_EXT}</code><small class="sub">なければキャラクター画像を使う。背景を透過すると共通背景が見えて映えます</small></div>
     </div>
     <p class="sub small nm">画像がはみ出る・見切れるときは、表示位置と拡大で調整できます（ゲーム画面・カット・カードに反映）。</p>
-    <div class="fited">${['face','card'].map(k=>`<div class="fitgrp"><b>${IMG_KEYS[k]}</b>
+    <div class="fited">${['face','card','tile'].map(k=>`<div class="fitgrp"><b>${IMG_KEYS[k]}</b>${k==='tile'?tileFitHint(u):''}
       ${[['x','左右'],['y','上下'],['z','拡大']].map(([a,lab])=>`<label class="fitrow"><span>${lab}</span>
         <input type="range" min="${FIT_RANGE[a][0]}" max="${FIT_RANGE[a][1]}" step="1" data-p="fit.${k}.${a}" data-t="num" value="${u.fit[k][a]}">
         <output data-fitout="${k}.${a}">${u.fit[k][a]}%</output></label>`).join('')}
@@ -843,7 +850,7 @@ function updatePreviews(){
     mctUpdate();
     document.querySelectorAll('[data-linecount]').forEach(el=>el.textContent=`${u.lines[el.dataset.linecount].length}件`);
     const ma=RULESETS.master.masterAtk, at=document.querySelector('[data-mprev="atk"]'); if(at) at.textContent=`攻撃：相手${TERMS.player}へ${u.cost*ma.master}・相手${TERMS.unit}へ${u.cost*ma.svt}（マスタールール）`;
-    document.querySelectorAll('[data-imgprev]').forEach(el=>{ const key=`${u.id}|${JSON.stringify(u.fit)}`; if(el.dataset.key===key) return; el.dataset.key=key; el.innerHTML=faceImg(u,'face lg');
+    document.querySelectorAll('[data-imgprev]').forEach(el=>{ const key=`${u.id}|${JSON.stringify(u.fit)}`; if(el.dataset.key===key) return; el.dataset.key=key; el.innerHTML=el.dataset.imgprev==='tile'?`<span class="tprev">${unitImg(u,'tile','',u.name)}</span>`:faceImg(u,'face lg');
       const f=document.querySelector('[data-imgpath="face"]'); if(f) f.textContent=`${IMG_DIR+u.id}.${IMG_EXT}`; });
     return;
   }
@@ -858,7 +865,7 @@ function updatePreviews(){
   // 画像のパスが変わったときだけプレビューを作り直す（同じパスなら読み込み直さない）
   document.querySelectorAll('[data-imgprev]').forEach(el=>{
     const key=`${u.id}|${u.cls}|${JSON.stringify(u.fit)}`; if(el.dataset.key===key) return; el.dataset.key=key;
-    el.innerHTML = el.dataset.imgprev==='face' ? faceImg(u,'face lg') : cardPreviewHTML(u);
+    el.innerHTML = el.dataset.imgprev==='face' ? faceImg(u,'face lg') : el.dataset.imgprev==='tile' ? `<span class="tprev">${unitImg(u,'tile','',u.name)}</span>` : cardPreviewHTML(u);
     const f=document.querySelector('[data-imgpath="face"]'), c=document.querySelector('[data-imgpath="card"]');
     if(f) f.textContent=`${IMG_DIR+u.id}.${IMG_EXT}`; if(c) c.textContent=`${IMG_DIR+u.id}${IMG_CARD_SUFFIX}.${IMG_EXT}`;
   });

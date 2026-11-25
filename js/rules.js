@@ -13,7 +13,7 @@ const TERMS = { unit:'サーヴァント', player:'マスター', gauge:'NP', ul
 //   face: img/units/{id}.webp        キャラクター画像（なければ IMG_PLACEHOLDER.face の仮画像）
 //   card: img/units/{id}_card.webp   コマンドカード用（任意。なければ face を使う。背景透過だと映えます）
 const IMG_DIR = 'img/units/', IMG_EXT = 'webp', IMG_CARD_SUFFIX = '_card';
-const IMG_KEYS = { face:'キャラクター画像', card:'カード用キャラ画像' };
+const IMG_KEYS = { face:'キャラクター画像', card:'カード用キャラ画像', tile:'選択画面のタイル' };
 const IMG_PLACEHOLDER = { face:'img/placeholder/face.webp', card:'img/placeholder/card.webp' }; // card は背景透過の仮画像
 
 // コマンドカードは3枚の重ね合わせ： 背景（bg） → キャラ画像 → 枠と種別名（frame）

@@ -659,7 +659,7 @@ function draftHTML(){
     :`<b class="hl">${esc(G.players[turn].name)} の番です。</b>${draftNeedM(turn)?`${TERMS.player}を1人取ってください。`:`${TERMS.unit}を1騎取ってください。`}`;
   const tile=d=>{ const by=R.taken[d.id], m=R.mpool.includes(d.id), ok=turn!=null&&draftCan(turn,d.id);
     return `<button class="tile${m?' mtile':''}${by!=null?` taken t${by}`:ok?'':' dim'}${view&&view.id===d.id?' viewing':''}" data-a="draftPick" data-id="${esc(d.id)}" data-view="${esc(d.id)}">
-      ${unitImg(d,'face','pimg',d.name)}${m?'':clsIconTag(d.cls,'pcls')}<span class="tcost">C${d.cost}</span>${by!=null?`<span class="dtag p${by}">${esc(G.players[by].name)}</span>`:''}
+      ${unitImg(d,'tile','pimg',d.name)}${m?'':clsIconTag(d.cls,'pcls')}<span class="tcost">C${d.cost}</span>${by!=null?`<span class="dtag p${by}">${esc(G.players[by].name)}</span>`:''}
       <span class="tname">${esc(d.name)}<small>${m?'':`${esc(d.cls)} ・ `}HP${d.hp}</small></span>${tinfoHTML(d)}</button>`; };
   return `<div class="setup draft">
     <div class="sethead">
@@ -688,7 +688,7 @@ function masterRosterHTML(pid,view){
     <div class="mtiles" ${fold?'hidden':''}>${MASTERS.map(d=>{
     const sel=G.mpicks[pid]===d.id;
     return `<button class="tile mtile ${sel?'sel':''} ${view&&view.id===d.id?'viewing':''}" data-a="setupMaster" data-id="${esc(d.id)}" data-view="${esc(d.id)}">
-      ${unitImg(d,'face','pimg',d.name)}<span class="tcost">C${d.cost}</span>${sel?'<span class="order">✓</span>':''}
+      ${unitImg(d,'tile','pimg',d.name)}<span class="tcost">C${d.cost}</span>${sel?'<span class="order">✓</span>':''}
       <span class="tname">${esc(d.name)}<small>HP${d.hp}</small></span>${tinfoHTML(d)}</button>`; }).join('')}</div>
     <h4>${TERMS.unit}を選ぶ</h4></div>`;
 }
@@ -710,7 +710,7 @@ function zukanTilesHTML(view){
   const list=UI.ztab==='master'?[...MASTERS].sort((a,b)=>b.cost-a.cost||MASTERS.indexOf(a)-MASTERS.indexOf(b)):rosterList();
   if(!list.length) return `<p class="sub rempty">条件に合う${TERMS.unit}がいません。<button data-ui="rosterReset">絞り込みを解除</button></p>`;
   return list.map(d=>`<button class="tile ${d.master?'mtile':''} ${view&&view.id===d.id?'viewing':''}" data-ui="zview" data-id="${esc(d.id)}" data-view="${esc(d.id)}">
-      ${unitImg(d,'face','pimg',d.name)}${d.master?'':clsIconTag(d.cls,'pcls')}
+      ${unitImg(d,'tile','pimg',d.name)}${d.master?'':clsIconTag(d.cls,'pcls')}
       <span class="tcost">C${d.cost}</span>
       <span class="tname">${esc(d.name)}<small>${d.master?'':`${esc(d.cls)} ・ `}HP${d.hp}</small></span></button>`).join('');
 }
@@ -785,7 +785,7 @@ function rosterTilesHTML(view){
   return list.map(d=>{
     const i=picks.indexOf(d.id), sel=i>=0, over=rosterOver(d), full=over&&picks.length>=ruleset().partyMax; // 選べない理由：満員 / コスト超過（コストの札を赤く）
     return `<button class="tile ${sel?'sel':''} ${over?'dim':''} ${view&&view.id===d.id?'viewing':''}" data-a="setupToggle" data-id="${esc(d.id)}" data-view="${esc(d.id)}"${over?` title="${full?`編成は最大${ruleset().partyMax}騎までです`:`コストが足りません（残り${rosterRoom()}）`}"`:''}>
-      ${unitImg(d,'face','pimg',d.name)}${clsIconTag(d.cls,'pcls')}
+      ${unitImg(d,'tile','pimg',d.name)}${clsIconTag(d.cls,'pcls')}
       <span class="tcost${over&&!full?' over':''}">C${d.cost}</span>${sel?`<span class="order">${i+1}</span>`:''}
       <span class="tname">${esc(d.name)}<small>${esc(d.cls)} ・ HP${d.hp}</small></span>${tinfoHTML(d)}</button>`;
   }).join('');

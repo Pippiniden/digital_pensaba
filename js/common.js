@@ -103,7 +103,8 @@ function normClass(c){ c=String(c||'').trim(); return CLASS_LEGACY[c]||c; }
 // 画像の見せ方（はみ出し調整）。x,y = 表示位置(%) / z = 拡大率(%)。既定値のままなら書き出さない
 // np  = 宝具カットインで帯に透ける顔アップ（x,y = 立ち絵のどこを見せるか(%) / z = 立ち絵の幅(%)。縮小もできるので 60〜）
 // cut = 宝具カットインの右側の立ち絵（x = 右へずらす量・画面幅の% / y = 下へずらす量・画面高さの% / z = 大きさ%）。頭が上で切れるときに使う
-const FIT_DEF={ face:{x:50,y:18,z:100}, card:{x:50,y:12,z:100}, np:{x:50,y:14,z:105}, cut:{x:0,y:0,z:100} };
+// tile = 選択画面（編成・ドラフト・図鑑）のタイル。x,y = 中央に持ってきたい点(%) / z = 拡大率(%)。初期値のままなら face の設定をそのまま使う
+const FIT_DEF={ face:{x:50,y:18,z:100}, card:{x:50,y:12,z:100}, np:{x:50,y:14,z:105}, cut:{x:0,y:0,z:100}, tile:{x:50,y:50,z:100} };
 const FIT_RANGE={ x:[0,100], y:[0,100], z:[100,300] };
 const FIT_RANGE_K={ np:{ z:[60,300] }, cut:{ x:[-30,30], y:[-30,30], z:[60,160] } };
 const fitRange=(k,a)=>(FIT_RANGE_K[k]||{})[a]||FIT_RANGE[a];
@@ -111,11 +112,20 @@ function normFit(f){
   f=f||{};
   const one=k=>Object.fromEntries(['x','y','z'].map(a=>{ const v=Number(((f[k]||{})[a])); const [lo,hi]=fitRange(k,a);
     return [a, Number.isFinite(v)?Math.min(hi,Math.max(lo,Math.round(v))):FIT_DEF[k][a]]; }));
-  return { face:one('face'), card:one('card'), np:one('np'), cut:one('cut') };
+  return { face:one('face'), card:one('card'), np:one('np'), cut:one('cut'), tile:one('tile') };
 }
 const fitIsDef=(f,k)=>!f||!f[k]||['x','y','z'].every(a=>f[k][a]===FIT_DEF[k][a]);
 function fitStyle(d,k){
-  const f=d&&d.fit; if(fitIsDef(f,k)) return '';
+  const f=d&&d.fit;
+  if(k==='tile'){
+    if(fitIsDef(f,'tile')) return fitStyle(d,'face'); // 選択画面用の指定がなければ、これまで通りキャラクター画像の設定
+    const {x,y,z}=f.tile, s=z/100, ox=x/100, oy=y/100, base=fitIsDef(f,'face')?'':`object-position:${f.face.x}% ${f.face.y}%;`;
+    // 拡大の中心(x,y)を枠の中央へ寄せる。画像の端が枠の中に入らないよう、動かせる量は拡大分までに抑える
+    const clamp=(want,o)=>Math.min(o*(s-1),Math.max(-(1-o)*(s-1),want));
+    const tx=clamp(.5-ox,ox)*100, ty=clamp(.5-oy,oy)*100;
+    return `${base}transform-origin:${x}% ${y}%;scale:${s};translate:${tx.toFixed(2)}% ${ty.toFixed(2)}%`;
+  }
+  if(fitIsDef(f,k)) return '';
   const {x,y,z}=f[k];
   return `object-position:${x}% ${y}%;transform-origin:${x}% ${y}%;scale:${z/100}`;
 }
@@ -442,7 +452,7 @@ function mastersToJS(ms){
   const body=ms.map(m=>[
     '  {',
     `    "id":${j(m.id)}, "name":${j(m.name)}, "cost":${m.cost}, "hp":${m.hp},`,
-    ...(['face','np','cut'].every(k=>fitIsDef(m.fit,k))?[]:[`    "fit":${j(Object.fromEntries(['face','np','cut'].filter(k=>!fitIsDef(m.fit,k)).map(k=>[k,m.fit[k]])))},`]),
+    ...(['face','np','cut','tile'].every(k=>fitIsDef(m.fit,k))?[]:[`    "fit":${j(Object.fromEntries(['face','np','cut','tile'].filter(k=>!fitIsDef(m.fit,k)).map(k=>[k,m.fit[k]])))},`]),
     ...(m.link?[`    "link":${j(m.link)},`]:[]),
     ...(m.memo?[`    "memo":${j(m.memo)},`]:[]),
     ...(Object.keys(MASTER_LINE_KEYS).some(k=>m.lines[k].length)?[`    "lines":${j(Object.fromEntries(Object.keys(MASTER_LINE_KEYS).filter(k=>m.lines[k].length).map(k=>[k,m.lines[k]])))},`]:[]),
@@ -498,7 +508,7 @@ function unitsToJS(units){
     `    "id":${j(u.id)}, "name":${j(u.name)}, "cls":${j(u.cls)}, "cost":${u.cost}, "hp":${u.hp},`,
     ...(u.traits&&u.traits.length?[`    "traits":${j(u.traits)},`]:[]),
     ...(u.enemy?[`    "enemy":${j(u.enemy)},`]:[]),
-    ...(['face','card','np','cut'].every(k=>fitIsDef(u.fit,k))?[]:[`    "fit":${j(u.fit)},`]),
+    ...(['face','card','np','cut','tile'].every(k=>fitIsDef(u.fit,k))?[]:[`    "fit":${j(u.fit)},`]),
     ...(u.link?[`    "link":${j(u.link)},`]:[]),
     ...(u.memo?[`    "memo":${j(u.memo)},`]:[]),
     '    "lines":{',
