@@ -34,6 +34,7 @@ const body=function(N,ONLY,LEVEL,LOOK){
   const enemyHas=(u,test)=>enemiesOf(u).some(e=>{ const d=D(e.def), effs=[...d.skills.flatMap(s=>s.eff),...d.ult.eff,...d.faces.flatMap(f=>[f.pre,f.post].flatMap(c=>c&&c.eff||[]))];
     return effs.some(test); });
   const oneTurn=e=>e.turns===1||(!e.turns&&!e.times); // 今ターン（と相手の1ターン）だけの効果
+  const NORMAL_K=['critPow','critMult','critRoll','aoeNormal','onAtkNp','onAtkStar','cardConv','cardConvPick'];
   const ATK_K=['atk','atkPct','cardConv','cardConvPick','critPow','critMult','critRoll','sureHit','pierce','ignoreDef','atkVs','atkTrait','npPow','aoeNormal','onAtkNp','onAtkStar','cardUp'];
   // ---- 使った時点で分かる無駄。t＝効果の対象1体、e＝効果、u＝使った側、effs＝同じスキルの全効果。理由の文字列か null ----
   const WASTE_NOW={
@@ -139,7 +140,9 @@ const body=function(N,ONLY,LEVEL,LOOK){
         if(e.cond&&!(FX[e.k].condUse&&!e.cond.self)) ts=ts.filter(t=>condOk(e.cond,t));
         const st=kStat(e.k); st.n++;
         if(!ts.length){ st.now++; st.why['条件に合う対象がいない']=(st.why['条件に合う対象がいない']||0)+1; wasted.push('条件に合う対象がいない'); continue; }
-        const f=WASTE_NOW[e.k]; if(!f) continue;
+        const f0=WASTE_NOW[e.k]; if(!f0&&!ATK_K.includes(e.k)) continue;
+        // ターンで切れる攻撃系の強化は、数ターン続くものでも今ターン攻撃しない騎には無駄（スキルは1回きりなので、攻撃するターンまで待てる）
+        const f=(t,...a)=>(ATK_K.includes(e.k)&&t.pid===u.pid&&!t.master&&(e.turns||!e.times)&&!(NORMAL_K.includes(e.k)?!G.ult&&(G.alloc[t.uid]||0)>0:isActing(t))?'今ターン攻撃しない味方（ターン制）':null)||(f0?f0(t,...a):null);
         const ws=ts.map(t=>f(t,e,u,si)); // 全員に無駄なときだけ無駄とする
         if(ws.every(Boolean)){ st.now++; st.why[ws[0]]=(st.why[ws[0]]||0)+1; wasted.push(`${FX[e.k].name}：${ws[0]}`); }
       }

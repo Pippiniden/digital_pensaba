@@ -442,7 +442,8 @@ function cpuNextSkill(easy){
   if(easy) return list.find(x=>rnd01(`${G.turn}s${x.u.uid}${x.si}`)<.3)||null;
   let best=null;
   const dying=new Map(), dy=u=>{ if(!dying.has(u)) dying.set(u,cpuHard()&&cpuDanger(u)); return dying.get(u); };
-  for(const x of list){ const sc=cpuHard()?cpuGuardScore(x.u,x.si):cpuSkillScore(x.u,x.si); if((sc>=(cpuHard()?3:2)||(sc>=DANGER_MIN&&dy(x.u)))&&(!best||sc>best.sc)) best={...x,sc}; } // 倒れそうかの見積もり（重い）は、3点に届かないスキルがあるときだけ // つよい以上は3点以上で使う（2→3は勝率同等だった）
+  for(const x of list){ if(cpuSkillWaste(x.u,x.si)) continue; // 効果がすべて今は働かないスキルは、倒れそうなときも使わない
+    const sc=cpuHard()?cpuGuardScore(x.u,x.si):cpuSkillScore(x.u,x.si); if((sc>=(cpuHard()?3:2)||(sc>=DANGER_MIN&&dy(x.u)))&&(!best||sc>best.sc)) best={...x,sc}; } // 倒れそうかの見積もり（重い）は、3点に届かないスキルがあるときだけ // つよい以上は3点以上で使う（2→3は勝率同等だった）
   return best;
 }
 // つよい（チームバトル）：回避・無敵を含むスキルは、敵の宝具（NP100%）に合わせて使う。
@@ -540,6 +541,124 @@ const cpuHealSrc=x=>{ if(x.master) return false; const d=D(x.def), hk=e=>e.k==='
 // 確率つきの弱体（敵に向けたもの）を、未使用のスキルか宝具に持っている
 const cpuChanceDebuffer=x=>{ if(x.master) return false; const d=D(x.def), hit=e=>FX[e.k]&&FX[e.k].buff===false&&e.chance&&!['self','ally_all','ally_other'].includes(e.t);
   return d.skills.some((s,i)=>!x.used[i]&&s.eff.some(hit))||d.ult.eff.some(hit); };
+// ---------- 今使っても意味がない効果（無駄づかいの判定） ----------
+// 効果ごとに「この状況では働かない」を決める。スキルの効果がすべて無駄なら、よわい以外は使わない（倒れそうなとき・超つよいの先読みでも）。
+// 一部の効果だけ無駄なら、その効果は点数に入れない（0.5点などの下限も付けない）。
+// スキルは1試合1回なので、今働かない強化は「働くターンまで待つ」のが正しい（数ターン続く強化でも、今ターン攻撃しない騎には使わない）。
+// 判定は tools/skill-waste.js の WASTE_NOW と同じ考え方（新しい FX を足したら両方に足す）
+let SKILL_WASTE = true;
+const ATK_FX = ['atk','atkPct','cardUp','critPow','critMult','critRoll','sureHit','pierce','ignoreDef','atkVs','atkTrait','npPow','aoeNormal','onAtkNp','onAtkStar','cardConv','cardConvPick'];
+const NORMAL_ONLY_FX = ['critPow','critMult','critRoll','aoeNormal','onAtkNp','onAtkStar','cardConv','cardConvPick']; // 宝具には乗らない（通常攻撃だけ）
+const GUARD_FX = ['def','evade','invul','nullUnder','counter','onHitNp','hitNpUp','onHitStar','defTrait','npDef'];
+const cpuKitEffs = x=>{ const d=D(x.def); return [...(d.skills||[]).flatMap(s=>s.eff),...((d.ult&&d.ult.eff)||[]),...(d.faces||[]).flatMap(f=>[f.pre,f.post].flatMap(c=>c&&c.eff||[])),...(d.spells||[]).flatMap(s=>s.eff)]; };
+const towardFoe = x=>x.t!=='self'&&x.t!=='master'&&!String(x.t).startsWith('ally');
+const cpuFoeHas = (u,test)=>alive(1-u.pid).some(x=>cpuKitEffs(x).some(test));
+const oneTurnFx = e=>e.turns===1||(!e.turns&&!e.times); // 今ターン（と相手の1ターン）で切れる
+const timedFx = e=>!!e.turns||!e.times;                 // ターンで切れる（回数だけで消える効果は待っていても無駄にならない）
+// 効果 e が対象 t に今かかっても働かないなら理由（文字列）、働く・判定しないなら null
+function cpuEffWasteOne(u,e,t,effs,si){
+  const k=e.k, mine=t.pid===u.pid, enemies=alive(1-u.pid), allies=alive(u.pid);
+  const gives=kk=>effs.some(x=>x!==e&&x.k===kk);
+  if(mine&&!t.master&&ATK_FX.includes(k)){
+    const atkNow=NORMAL_ONLY_FX.includes(k)?!G.ult&&(G.alloc[t.uid]||0)>0:isActing(t);
+    if(timedFx(e)&&!atkNow) return '今ターン攻撃しない';
+    switch(k){
+      case 'critPow': case 'critMult': case 'critRoll': return oneTurnFx(e)&&G.players[u.pid].stars<=0&&!gives('star')?'スター0':null;
+      case 'sureHit': return enemies.some(x=>has(x,'evade'))?null:oneTurnFx(e)||!cpuFoeHas(u,x=>x.k==='evade')?'回避の敵がいない':null;
+      case 'pierce': return enemies.some(x=>has(x,'evade')||has(x,'invul'))?null:oneTurnFx(e)||!cpuFoeHas(u,x=>x.k==='evade'||x.k==='invul')?'回避・無敵の敵がいない':null;
+      case 'ignoreDef': return enemies.some(x=>has(x,'def')||has(x,'defTrait'))?null:oneTurnFx(e)||!cpuFoeHas(u,x=>x.k==='def'||x.k==='defTrait')?'防御の敵がいない':null;
+      case 'atkVs': return oneTurnFx(e)&&!enemies.some(x=>x.fx.some(f=>e.vs?f.k===e.vs:FX[f.k]&&FX[f.k].buff===false))&&!effs.some(x=>x!==e&&FX[x.k]&&FX[x.k].buff===false&&towardFoe(x))?'弱体の敵がいない':null;
+      case 'atkTrait': return enemies.some(x=>traitHit(x,e.trait))?null:'属性の敵がいない';
+      case 'aoeNormal': return enemies.filter(x=>!x.master).length<2?'敵が1体':null;
+      case 'onAtkNp': return t.np>=RULES.gaugeMax?'NP満タン':null;
+      case 'cardUp': return (D(t.def).faces||[]).some(f=>f&&f.c===e.color)?null:'その色の面がない';
+      case 'npPow': { if(G.ult===t.uid) return null;
+        const gain=effs.filter(x=>x.k==='np'&&x.v>0).reduce((s,x)=>s+x.v,0), now=!G.ult&&!G.ultDone&&canUlt(t)&&t.np+gain>=RULES.ultCost;
+        if(now) return null;
+        return oneTurnFx(e)||t.np+gain+30*((e.turns||1)-1)<RULES.ultCost?'宝具を撃たない':null; }
+    }
+    return null;
+  }
+  if(mine&&!t.master&&GUARD_FX.includes(k)){
+    const aoeSoon=enemies.some(x=>!x.master&&canUlt(x)&&x.np>=70&&ultNoTarget(x)&&D(x.def).ult.eff.some(y=>y.k==='dmg'));
+    if(!has(t,'taunt')&&!aoeSoon&&allies.some(a=>a!==t&&a.fx.some(x=>x.k==='taunt'&&(x.turns||0)!==0))) return 'ほかの味方がターゲット集中';
+    if(k==='evade'||k==='invul'){ const o=t.fx.find(x=>x.k==='invul'||x.k===k); if(o&&o.times==null&&(o.turns||0)>=(e.turns||1)) return '同じ守りがある'; }
+    if((k==='onHitNp'||k==='hitNpUp')&&t.np>=RULES.gaugeMax) return 'NP満タン';
+    if(k==='hitNpUp'&&(has(t,'curse')||has(t,'hitNpSeal'))) return '被弾NP封印中';
+    if(k==='defTrait'&&!enemies.some(x=>traitHit(x,e.trait))) return '属性の敵がいない';
+    if(k==='npDef'){ if(!enemies.some(x=>!x.master&&D(x.def).ult.eff.some(y=>y.k==='dmg'))) return 'ダメージ宝具の敵がいない';
+      if(oneTurnFx(e)&&!enemies.some(x=>!x.master&&canUlt(x)&&x.np>=70)) return '敵の宝具が来ない'; }
+    return null;
+  }
+  switch(k){
+    case 'guts': return mine&&has(t,'guts')?'ガッツがある':null;
+    case 'taunt': return !mine?null:allies.filter(a=>!a.master).length<2?'味方が1体':allies.some(a=>a!==t&&has(a,'taunt'))?'ほかの味方がターゲット集中':enemies.some(x=>!x.master&&canUlt(x)&&x.np>=RULES.ultCost&&ultNoTarget(x))?'敵が全体宝具を撃てる':null;
+    case 'debuffImmune': return mine&&!cpuFoeHas(u,x=>FX[x.k]&&FX[x.k].buff===false&&towardFoe(x))?'弱体を使う敵がいない':null;
+    case 'mentalImmune': return mine&&!cpuFoeHas(u,x=>FX[x.k]&&FX[x.k].mental)?'精神異常を使う敵がいない':null;
+    case 'deathImmune': return mine&&!cpuFoeHas(u,x=>x.k==='instantDeath')?'即死を使う敵がいない':null;
+    case 'stripImmune': return mine&&!cpuFoeHas(u,x=>x.k==='strip')?'強化解除を使う敵がいない':null;
+    case 'npDownImmune': return mine&&!cpuFoeHas(u,x=>x.k==='np'&&x.v<0)?'NP減少を使う敵がいない':null;
+    case 'starLossImmune': return mine&&!cpuFoeHas(u,x=>x.k==='starLoss')?'スター消失を使う敵がいない':null;
+    case 'debuffRes': return mine&&!cpuFoeHas(u,x=>FX[x.k]&&FX[x.k].buff===false&&x.chance&&towardFoe(x))?'確率弱体を使う敵がいない':null;
+    case 'debuffUp': return mine&&!t.master&&!cpuChanceDebuffer(t)&&!effs.some(x=>x!==e&&FX[x.k]&&FX[x.k].buff===false&&x.chance&&towardFoe(x))?'確率弱体を持っていない':null;
+    case 'regenNp': return mine&&t.np>=RULES.gaugeMax&&G.ult!==t.uid&&(e.turns||1)<=1?'NP満タン':null;
+    case 'regenHp': return mine&&has(t,'healBlock')?'回復無効中':null;
+    case 'heal': return mine&&(t.hp>=maxHp(t)||has(t,'healBlock'))?'HP満タン':null;
+    case 'healUp': return !mine?null:has(t,'healBlock')?'回復無効中':!effs.some(x=>x.k==='heal'||x.k==='regenHp')&&!allies.some(cpuHealSrc)?'回復の手段がない':null;
+    case 'np': return e.v>0&&mine&&t.np>=RULES.gaugeMax?'NP満タン':null;
+    case 'cleanse': return t.fx.some(x=>e.vs?x.k===e.vs:FX[x.k]&&FX[x.k].buff===false)?null:'弱体がない';
+    case 'cleanseMental': return t.fx.some(x=>FX[x.k]&&FX[x.k].mental)?null:'精神異常がない';
+    case 'strip': return mine?null:t.fx.some(x=>(e.vs?x.k===e.vs:FX[x.k]&&FX[x.k].buff===true)&&!x.sure)?null:'解除できる強化がない';
+    case 'buffExtend': return t.fx.some(x=>FX[x.k]&&FX[x.k].buff===true&&x.turns!=null)?null:'ターン制の強化がない';
+    case 'skillCharge': return t.used.some((x,i)=>x&&!(t===u&&i===si))?null:'使用済みスキルがない';
+    case 'ascend': return t.asc||t.master?'再臨済み':null;
+    case 'starLoss': return !mine&&G.players[t.pid].stars<=0?'敵のスター0':null;
+    case 'copyBuff': case 'copyDebuff': { const fu=resolveTargets(u,e.from||'self',null)[0], want=k==='copyBuff';
+      return fu&&!fu.fx.some(x=>FX[x.k]&&FX[x.k].buff===want&&!x.tmp&&!x.sure)?'コピーする効果がない':null; }
+  }
+  if(mine) return null; // ここから下は敵に入れる弱体（自分側にかかる分はデメリットなので判定しない）
+  if(FX[k]&&FX[k].buff===false&&has(t,'debuffImmune')&&!e.sure) return '弱体無効';
+  switch(k){
+    case 'stun': case 'charm': case 'petrify': case 'bind': case 'sleep': case 'confuse': case 'fear':
+      return FX[k].mental&&has(t,'mentalImmune')?'精神異常無効':t.fx.some(x=>x.k===k&&(x.turns==null||x.turns>=(e.turns||1)))?'すでにかかっている':null;
+    case 'instantDeath': return has(t,'deathImmune')?'即死無効':null;
+    case 'sealUlt': return oneTurnFx(e)&&t.np<60?'敵のNPが低い':null;
+    case 'npPowDown': return oneTurnFx(e)&&t.np<60?'敵のNPが低い':null;
+    case 'sealSkill': return t.used.some((x,i)=>!x&&(i<2||t.asc))?null:'未使用スキルがない';
+    case 'critDown': case 'critPowDown': return oneTurnFx(e)&&G.players[t.pid].stars<=0?'敵のスター0':null;
+    case 'spread': return has(t,'burn')||gives('burn')?null:'やけどがない';
+    case 'erosion': return has(t,'poison')||gives('poison')?null:'毒がない';
+    case 'curse': case 'hitNpSeal': return has(t,'curse')||has(t,'hitNpSeal')?'すでに被弾NP封印中':null;
+    case 'healBlock': case 'healDown': return cpuHealSrc(t)?null:'回復の手段がない敵';
+    case 'cardDown': return (D(t.def).faces||[]).some(f=>f&&f.c===e.color)?null:'その色の面がない敵';
+  }
+  return null;
+}
+// 効果1つが今は働かないか（対象全員に働かないときだけ true）。判定しない効果（デメリット・説明文・マスター宛て）は false
+function cpuEffWaste(u,e,ts,effs,si){
+  if(!SKILL_WASTE||!FX[e.k]||FX[e.k].noTgt||e.t==='master'||e.k==='selfDmg') return false;
+  if(!ts.length) return FX[e.k].buff!==false||towardFoe(e); // 条件に合う対象がいない
+  if(FX[e.k].buff===false&&ts.every(t=>t.pid===u.pid)) return false; // 自分側へのデメリット
+  return ts.every(t=>cpuEffWasteOne(u,e,t,effs,si)!=null);
+}
+// 判定する効果がすべて今は働かない（＝使う意味がない）
+function cpuEffsWaste(u,effs,picked,si){
+  if(!SKILL_WASTE) return false;
+  let judged=0;
+  for(const e of effs){
+    if(!FX[e.k]||FX[e.k].noTgt||e.t==='master'||e.k==='selfDmg') continue;
+    let ts=resolveTargets(u,e.t,picked);
+    if(e.cond&&!(FX[e.k].condUse&&!e.cond.self)) ts=ts.filter(t=>condOk(e.cond,t));
+    if(ts.length&&FX[e.k].buff===false&&ts.every(t=>t.pid===u.pid)) continue; // デメリットは数えない
+    judged++;
+    if(!cpuEffWaste(u,e,ts,effs,si)) return false;
+  }
+  return true; // 判定する効果がない（デメリットだけ）も使わない
+}
+function cpuSkillWaste(u,si){
+  const s=D(u.def).skills[si];
+  return cpuEffsWaste(u,s.eff,s.pick?cpuPickTarget(u.uid,si,false):null,si);
+}
 // 効果の並び（スキル・令呪）の「今使う価値」。si はスキル番号（スキル以外は -1）
 function cpuEffScore(u,effs,picked,si){
   const allies=alive(u.pid), enemies=alive(1-u.pid), stars=G.players[u.pid].stars;
@@ -554,6 +673,7 @@ function cpuEffScore(u,effs,picked,si){
       if(FX[e.k]&&FX[e.k].condUse&&!e.cond.self){ if(!enemies.some(x=>condOk(e.cond,x))) continue; }
       else ts=ts.filter(t=>condOk(e.cond,t));
     }
+    if(cpuEffWaste(u,e,ts,effs,si)) continue; // 今は働かない効果は点数に入れない
     const acting=ts.some(isActing);
     const foes=ts.filter(t=>t.pid!==u.pid);
     switch(e.k){
@@ -809,7 +929,7 @@ const mcSkillOn = ()=>!cpuInRollout && (ruleset().partyMax===1 ? G.level==='expe
 function cpuMcSkill(h){
   const cands=[['skillDone']];
   if(!G.ult&&!G.ultDone) alive(G.cur).forEach(u=>{ if(canUlt(u)&&u.np>=RULES.ultCost) cands.push(['useUlt',{uid:u.uid}]); });
-  usableSkills().forEach(x=>{ if(D(x.u.def).skills[x.si].eff.length) cands.push(['useSkill',{uid:x.u.uid,si:String(x.si)}]); });
+  usableSkills().forEach(x=>{ if(D(x.u.def).skills[x.si].eff.length&&!cpuSkillWaste(x.u,x.si)) cands.push(['useSkill',{uid:x.u.uid,si:String(x.si)}]); });
   if(cands.length<2) return h;
   const score=cpuMcScores(cands.map(m=>()=>ACTIONS[m[0]](m[1]||{})));
   const hi=cands.findIndex(m=>JSON.stringify(m)===JSON.stringify(h));

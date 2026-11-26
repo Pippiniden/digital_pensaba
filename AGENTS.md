@@ -83,7 +83,7 @@ Scenario: game adds (after game-ui / tapfx) scenarios/index.js → scenario-core
 6. Wrap user data in `esc()` in HTML; `log()` messages are HTML, so insert names via `nm()`/`dn()`.
 7. The allocation lane (`allocLaneHTML` / `animateLane`) flies new cards from the portrait; `laneSeen` prevents replay.
 8. **Auto-advance (`UI.auto`) only presses no-choice buttons** (`autoMove()` in game-ui.js). A new phase/button with no choice must be added there.
-9. **The CPU does not know the rules.** Tune via `cpuSkillScore`, `cpuBestTarget`, `cpuAlloc`. **A new `FX` key also needs a score in the `cpuSkillScore` switch**, else it is worth 0. (→ `engine-notes.md`)
+9. **The CPU does not know the rules.** Tune via `cpuSkillScore`, `cpuBestTarget`, `cpuAlloc`. **A new `FX` key also needs a score in the `cpuSkillScore` switch**, else it is worth 0. Skills whose effects are all pointless right now (`cpuEffsWaste` / `cpuEffWasteOne`: attack buffs on a unit that does not attack this turn, NP to a full gauge, immunities nobody threatens…) are never used outside `easy`, even when dying or in the expert look-ahead. (→ `engine-notes.md`)
 
 ## 6. I want to… → where to edit (full table → `docs/agents/where-to-edit.md`)
 
@@ -92,7 +92,7 @@ Scenario: game adds (after game-ui / tapfx) scenarios/index.js → scenario-core
 | Add/tune a character | `js/units.js` or editor export (id: half-width alnum/`_`/`-`, unique; cost ≤ `RULES.costCap`) |
 | Balance numbers / terms | `RULES`, `CRIT_TABLE`, `TERMS` in `rules.js` |
 | New rule variant | `RULESETS` → `ruleset()` checks in `engine.js` → `critInfo`/`setupHTML`/`modeHTML` |
-| **New effect kind** | ① `FX` + `FX_GROUPS` (rules.js) ② apply in `engine.js` (`applyOne` / `mods()` readers) ③ `fxText` (common.js) ④ `FX_HELP` (guide.js) ⑤ `cpuSkillScore` (cpu.js) ⑥ `checkEffs` if needed ⑦ `VAL` in tools/llm-pack.js, then `node tools/llm-pack.js` |
+| **New effect kind** | ① `FX` + `FX_GROUPS` (rules.js) ② apply in `engine.js` (`applyOne` / `mods()` readers) ③ `fxText` (common.js) ④ `FX_HELP` (guide.js) ⑤ `cpuSkillScore` (cpu.js) + when it is pointless in `cpuEffWasteOne` (cpu.js) and `WASTE_NOW` (tools/skill-waste.js) ⑥ `checkEffs` if needed ⑦ `VAL` in tools/llm-pack.js, then `node tools/llm-pack.js` |
 | New effect target | `TARGETS`, `TGT_BY_CTX` → `resolveTargets` |
 | New line scene | `LINE_KEYS` → `say(u,'key')` in engine.js |
 | Turn flow / phases | `ACTIONS`, `beginTurn`/`endPhase`/`toTargetPhase`; UI `promptHTML`/`stageHTML`/`ctlHTML`; update `cpuDecide` |
