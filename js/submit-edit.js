@@ -100,6 +100,7 @@ function editValue(el){
     case 'num': return Number(v)||0;
     case 'optnum': case 'optnum0': return v===''?undefined:Number(v);
     case 'optstr': return String(v).trim()?String(v).trim():undefined;
+    case 'roll': return effRollVal(v); // 出目で分岐（"1-2" → [1,2]、空なら消す）
     case 'lines': return String(v).split('\n').map(x=>x.trim()).filter(Boolean);
     case 'list': return [...new Set(String(v).split(/[、,，\s]+/).map(x=>x.trim()).filter(Boolean))];
     case 'bool': return el.checked?true:undefined;

@@ -41,6 +41,7 @@ function conv(el){
     case 'optnum': return v===''||!(Number(v)>0)?undefined:Number(v);
     case 'optnum0': return v===''||!(Number(v)>=0)?undefined:Number(v); // 0 も残す（効果のターン数：0＝ターン無制限）
     case 'optstr': return v===''?undefined:v;
+    case 'roll': return effRollVal(v); // 出目で分岐（"1-2" → [1,2]、空なら消す）
     case 'lines': return v.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
     case 'optlines': { const a=v.split(/\r?\n/).map(x=>x.trim()).filter(Boolean); return a.length?a:undefined; } // 専用セリフ（空なら項目ごと消す）
     case 'bool': return el.checked||undefined; // チェックボックス（外したら項目ごと消す）
@@ -286,7 +287,7 @@ function diffLists(draft,game){
 // 項目名（例：スキル2 › 効果1 › 値）
 const SEG={name:'名前',ruby:'ルビ',cls:'クラス',cost:'コスト',hp:'HP',traits:'属性',link:'リンク',memo:'メモ',wip:'制作中',fit:'画像の位置',lines:'セリフ',ult:TERMS.ult,
   pre:'再臨前',post:'再臨後',acts:'行動数',c:'色',dmg:'ダメージ',np:'NP',star:'スター',label:'名前',line:'専用セリフ',pick:'対象の選び方',br:'改行位置',
-  k:'種類',t:'対象',v:'値',turns:'ターン',times:'回数',chance:'確率',color:'色指定',trait:'特攻・特防の対象',at:'タイミング',max:'最大HP',text:'説明文',cond:'条件',sure:'解除・無効不可',vs:'対象の状態',from:'コピー元',noExtra:'エクストラなし',
+  k:'種類',t:'対象',v:'値',turns:'ターン',times:'回数',chance:'確率',roll:'出目で分岐',fixed:'相手の効果を受けない',color:'色指定',trait:'特攻・特防の対象',at:'タイミング',max:'最大HP',text:'説明文',cond:'条件',sure:'解除・無効不可',vs:'対象の状態',from:'コピー元',noExtra:'エクストラなし',
   key:'場面',who:'誰',face:'顔',card:'カード',cut:'カットインの立ち絵',x:'横',y:'縦',z:'拡大',master:'マスター'};
 // roots＝[下書き側, 比較先側]（スキル名・効果の種類を引くため）。どちらか見つかったほうを使う
 function pathLabel(p,m,roots){

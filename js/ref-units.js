@@ -108,9 +108,12 @@ function refLimits(u){
   };
   u.skills.forEach((s,si)=>{
     const w=`スキル${si+1}`;
-    const n=s.eff.filter(e=>e.k!=='desc'&&!(harm(e)&&e.t==='self')).length; // 説明文・自分への代償は数えない
-    if(n>L.maxEffs) add(`${w}：効果は${L.maxEffs}つまでにしてください（今は${n}つ）`);
-    const st=s.eff.filter(e=>L.strong[e.k]&&!(harm(e)&&['self','ally_all','ally_other'].includes(e.t)));
+    // 出目で分岐（roll）するスキルは、出目ごとに実際に出る効果で数える（いちばん多い出目）
+    const outs=s.eff.some(e=>e.roll)?[1,2,3,4,5,6].map(r=>s.eff.filter(e=>!e.roll||(r>=e.roll[0]&&r<=e.roll[1]))):[s.eff];
+    const most=f=>outs.map(es=>es.filter(f)).reduce((a,b)=>b.length>a.length?b:a,[]);
+    const n=most(e=>e.k!=='desc'&&!(harm(e)&&e.t==='self')).length; // 説明文・自分への代償は数えない
+    if(n>L.maxEffs) add(`${w}：効果は${L.maxEffs}つまでにしてください（今は${n}つ${outs.length>1?'・出目ごと':''}）`);
+    const st=most(e=>L.strong[e.k]&&!(harm(e)&&['self','ally_all','ally_other'].includes(e.t)));
     if(st.length>L.maxStrong) add(`${w}：強い効果（${st.map(e=>nm(e.k)).join('・')}）は1つのスキルに${L.maxStrong}つまでにしてください`);
     s.eff.forEach((e,ei)=>one(e,`${w}・効果${ei+1}`,'skill'));
   });

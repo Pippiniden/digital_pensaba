@@ -292,15 +292,21 @@ function cpuAlloc(easy){
 // 測定で差が出なかったので入れていないもの（基準版との対戦・各14000試合、±0.8）：見込みを「殴る予定の相手」への補正で出す 49.6〜51.0%、NPが貯まるコマンドに価値を足す 49.8〜51.1%
 const ASC_VALUE = 40; // 再臨前の再臨面1回の価値（ダメージ換算。avgDmg と同じ）
 function cmdOf(u,f){ const face=D(u.def).faces[f]; return !u.asc&&face.pre.c==='ASC'?face.pre:u.asc?face.post:face.pre; }
+// 特殊行動のダメージ効果（dmg）の見込み：攻撃扱いなら攻撃ダメージ±・被ダメージ±を入れ、固定なら値そのまま。出目で分岐なら確率を掛ける
+function cmdEffDmg(u,c,tgt,only){ // only＝tgt が受ける分だけ（estDamage）
+  return (c.eff||[]).filter(e=>e.k==='dmg').reduce((s,e)=>{ const one=t=>e.max?maxHp(t):e.fixed?e.v:(m=>applyPct(Math.max(0,e.v+m.sum),m.pct))(dmgMods(u,t,null));
+    const ts=e.t==='enemy_all'&&!only?alive(tgt.pid).filter(t=>!t.master):[tgt];
+    return s+ts.reduce((a,t)=>a+one(t),0)*effRollP(e); },0)*hitsOf(c.eff);
+}
 function cmdValue(u,c,stars,tgt){
   if(c.c==='ASC') return u.asc?0:ASC_VALUE;
-  if(!(c.dmg>0)) return 0;
+  if(!(c.dmg>0)) return cmdEffDmg(u,c,tgt);
   const m=dmgMods(u,tgt,c.c==='W'?null:c.c); let d=applyPct(Math.max(0,c.dmg+m.sum),m.pct);
   if(stars>0&&c.c!=='W'){
     const p=ruleset().crit==='d6'?Math.min(1,critNeedD6(stars)/6):critChance(critLevel(stars))/100;
     d+=p*((c.c==='R'?RULES.critDmgR:RULES.critDmg)+m.colorBuff);
   }
-  return d*hitsOf(c.eff)*(isAoe(c.eff)?Math.max(1,alive(tgt.pid).length):1);
+  return d*hitsOf(c.eff)*(isAoe(c.eff)?Math.max(1,alive(tgt.pid).length):1)+cmdEffDmg(u,c,tgt);
 }
 function allocEV(alloc,noChain,per){ // per＝騎ごとの見込みの使い回し（同じ局面で配分をいくつも比べるとき。cpuAllocEV）
   const tgt=[...alive(1-G.cur)].sort((a,b)=>maxHp(b)-maxHp(a))[0], stars=G.players[G.cur].stars;
@@ -328,7 +334,7 @@ function cpuAllocEV(us){
 function ultPower(u){
   const ud=D(u.def).ult, h=hitsOf(ud.eff), up=mods(u,'npPow').sum-mods(u,'npPowDown').sum;
   const one=e=>e.max?Math.max(0,...alive(1-u.pid).map(maxHp)):Math.max(0,e.v+up);
-  return ud.eff.filter(e=>e.k==='dmg').reduce((s,e)=>s+one(e)*h*(e.t==='enemy_all'?alive(1-u.pid).length:1),0)+ultRollPower(u,ud);
+  return ud.eff.filter(e=>e.k==='dmg').reduce((s,e)=>s+one(e)*effRollP(e)*h*(e.t==='enemy_all'?alive(1-u.pid).length:1),0)+ultRollPower(u,ud);
 }
 // 宝具の「他のサーヴァントをロール」の見込みダメージ：ロール回数 ×（ロールで出るコマンドの平均ダメージ ＋ 攻撃ダメージ+ ＋ クリティカルの期待値）。
 // ちょうど3回なら宝具の持ち主のエクストラアタック（自分の再臨後カードの平均ダメージ。補正・クリティカルなし）も足す。選ぶ宝具は平均ダメージが高い相手の鉛筆を選ぶ（cpuPickTarget）
@@ -363,7 +369,7 @@ function ultLand(u,tgt,raw,per){
       for(let h=0;h<hits;h++) (e.t==='enemy_all'?foes:[tgt]).forEach(t=>{ const x=t&&g.get(t); if(!x||(e.cond&&!condOk(e.cond,t))) return;
         if(!pierce&&x.invul>0){ x.invul--; return; }
         if(!pierce&&!sure&&x.evade>0){ x.evade--; return; }
-        const v=e.max?maxHp(t):Math.max(0,e.v+up); if(per) per.set(t,(per.get(t)||0)+v); sum+=v; });
+        const v=(e.max?maxHp(t):Math.max(0,e.v+up))*effRollP(e); if(per) per.set(t,(per.get(t)||0)+v); sum+=v; });
     }
   }
   return sum;
@@ -410,7 +416,7 @@ function cpuIncoming(u){
   const per=e=>[0,1,2,3,4,5].reduce((s,f)=>{ const c=cmdOf(e,f); if(!(c.dmg>0)) return s; const m=dmgMods(e,u,c.c==='W'?null:c.c); return s+applyPct(Math.max(0,c.dmg+m.sum),m.pct)*hitsOf(c.eff); },0)/6;
   const normal=Math.max(...foes.map(per))*Math.max(0,DANGER_ACTS-Math.min(guard,DANGER_ACTS));
   const ult=e=>{ const ud=D(e.def).ult, up=mods(e,'npPow').sum-mods(e,'npPowDown').sum, h=hitsOf(ud.eff), n=ud.eff.filter(x=>x.k==='dmg').length*h; if(!n) return 0;
-    const all=ud.eff.filter(x=>x.k==='dmg').reduce((s,x)=>s+(x.max?maxHp(u):(m=>applyPct(Math.max(0,x.v+m.sum+up),m.pct))(dmgMods(e,u,ud.c)))*h,0);
+    const all=ud.eff.filter(x=>x.k==='dmg').reduce((s,x)=>s+(x.max?maxHp(u):(m=>applyPct(Math.max(0,x.v+m.sum+up),m.pct))(dmgMods(e,u,ud.c)))*effRollP(x)*h,0);
     return all*Math.max(0,n-Math.min(guard,n))/n; };
   return Math.max(normal,...foes.filter(e=>e.np>=RULES.ultCost&&canUlt(e)).map(ult));
 }
@@ -542,6 +548,7 @@ function cpuEffScore(u,effs,picked,si){
   let sc=0;
   for(const e of effs){
     if(FX[e.k]&&FX[e.k].noTgt) continue; // 説明文・連続攻撃（スキルでは使わない）
+    const sc0=sc; // 出目で分岐する効果は、出る確率を掛けた見込みにする（下の switch のあと）
     let ts=e.t==='master'?[]:resolveTargets(u,e.t,picked);
     if(e.cond){ // 条件つき：付与時に見る効果は条件を満たす対象だけ／使う瞬間に見る効果（攻撃・防御補正）は条件を満たす敵がいるときだけ
       if(FX[e.k]&&FX[e.k].condUse&&!e.cond.self){ if(!enemies.some(x=>condOk(e.cond,x))) continue; }
@@ -654,6 +661,7 @@ function cpuEffScore(u,effs,picked,si){
       case 'npPowDown': sc+=foes.some(t=>t.np>=RULES.ultCost-30)?2.5:foes.length?.5:-1; break;
       case 'selfDmg': sc-=ts.reduce((s,t)=>s+(t.pid===u.pid?(effVal(e,t)>=t.hp?6:effVal(e,t)/maxHp(t)*4):-1.5),0); break; // 味方が倒れる自傷は使わない
     }
+    if(e.roll) sc=sc0+(sc-sc0)*effRollP(e);
   }
   return sc;
 }
@@ -704,13 +712,13 @@ function estDamage(t){
   if(G.ult){
     const u=U(G.ult), ud=D(u.def).ult;
     const up=mods(u,'npPow').sum-mods(u,'npPowDown').sum;
-    return ud.eff.filter(e=>e.k==='dmg').reduce((s,e)=>s+(e.max?maxHp(t):(dm=>applyPct(Math.max(0,e.v+dm.sum+up),dm.pct))(dmgMods(u,t,ud.c))),0)*hitsOf(ud.eff);
+    return ud.eff.filter(e=>e.k==='dmg').reduce((s,e)=>s+(e.max?maxHp(t):(dm=>applyPct(Math.max(0,e.v+dm.sum+up),dm.pct))(dmgMods(u,t,ud.c)))*effRollP(e),0)*hitsOf(ud.eff);
   }
   const cols=G.rolled.map(r=>r.cmd.c), chainR=G.rolled.length===3&&cols.every(c=>c==='R');
   return G.rolled.reduce((s,r)=>{
-    const c=r.cmd; if(!c.dmg) return s;
-    const a=U(r.uid), dm=dmgMods(a,t,c.c), d=applyPct(Math.max(0,c.dmg+dm.sum)+(chainR?RULES.chainR:0),dm.pct);
-    return s+d*hitsOf(c.eff)*(isAoe(c.eff)?Math.max(1,alive(t.pid).length):1);
+    const c=r.cmd, a=U(r.uid); if(!c.dmg) return s+cmdEffDmg(a,c,t,true);
+    const dm=dmgMods(a,t,c.c), d=applyPct(Math.max(0,c.dmg+dm.sum)+(chainR?RULES.chainR:0),dm.pct);
+    return s+d*hitsOf(c.eff)*(isAoe(c.eff)?Math.max(1,alive(t.pid).length):1)+cmdEffDmg(a,c,t,true);
   },0);
 }
 function cpuBestTarget(easy){

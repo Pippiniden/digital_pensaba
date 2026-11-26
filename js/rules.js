@@ -369,7 +369,8 @@ const FX = {
   instantDeath:{name:'即死',inst:true},                      // 対象のHPを0にする（ガッツがあれば踏みとどまる）
   buffExtend:{name:'強化延長',val:true,inst:true},           // 対象のターン制の強化すべての残りターン+x
   skillCharge:{name:'スキル再使用',val:true,inst:true},      // 対象の使用済みスキルをx個（番号の若い順）もう一度使えるようにする。使ったスキル自身・スキル再使用を持つスキルは戻らない
-  dmg:{name:'ダメージ',val:true,inst:true,maxOk:true,only:['ult','master']}, // マスターの補助・令呪では固定ダメージ（補正・無敵・回避なし）。max で対象の最大HPぶん（軽減不可）
+  dmg:{name:'ダメージ',val:true,inst:true,maxOk:true,only:['ult','special','master']}, // マスターの補助・令呪では固定ダメージ（補正・無敵・回避なし）。max で対象の最大HPぶん（軽減不可）
+  // 特殊行動のダメージは無属性の攻撃扱い（engine.js の effDamage）。fixed＝相手の効果を受けない固定ダメージ（宝具・特殊行動で選べる。スキルでは使えない）
   // 再臨：対象のサーヴァントを再臨させる（再臨後コマンド・スキル3解放）。すでに再臨済み・戦闘不能・マスターには効果なし
   ascend:{name:'再臨',inst:true},
   // 特殊行動専用：自分以外の戦闘不能でないサーヴァント1体（敵味方どちらでも）を選び、その鉛筆を代わりにロールして

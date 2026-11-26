@@ -288,6 +288,16 @@ function chanceRoll(e,who,need=e.chance){
   log(`判定ロール（${nm(who)}）出目${r} ≤ ${need} → ${ok?'成功':'失敗'}`, ok?'':'sub');
   return ok;
 }
+// 出目で分岐（Eff.roll=[下限,上限]）：スキル・宝具・特殊行動を使うたびに1d6を1回だけ振り、出目が範囲に入る効果だけを残す（範囲のない効果は毎回）
+const rollIn = (e,r)=>!e.roll||(r>=e.roll[0]&&r<=e.roll[1]);
+function effRollPick(u,effs){
+  effs=effs||[];
+  if(!effs.some(e=>e.roll)) return effs;
+  const r=roll()+1, hit=effs.filter(e=>e.roll&&rollIn(e,r));
+  rollFx(u.uid,r-1,{lab:hit.length?`${rollText([r,r])}の効果`:'効果なし'});
+  log(`出目分岐ロール（${nm(u)}）出目${r} → ${hit.length?hit.map(fxName).join('・'):'該当する効果なし'}`,hit.length?'':'sub');
+  return effs.filter(e=>rollIn(e,r));
+}
 // 弱体の成功率：敵に付ける弱体の判定は、弱体成功率アップ(+x)／ダウン(-x)でロールの基準値をずらす（0〜6）。
 // 「必ず」の弱体はロール6以下として扱うので、ダウンがあるときだけ失敗しうる。アップは確率つきの弱体にだけ効く
 // 強化の成功率：味方（自分含む）に付ける強化の判定は、強化成功率ダウン(-x)でロールの基準値が下がる。
@@ -688,11 +698,14 @@ function resolveCommand(att,cmd,tgt,o={}){
     rollFx(src.uid,r.f,{cmd:r.cmd,def:src.def});
     return resolveCommand(att,r.cmd,tgt,o);
   }
+  if(cmd.c==='W') log(`${n}：特殊行動「${esc(cmd.label)}」${cmd.from?`（${esc(cmd.from)}）`:''}`);
+  if((cmd.eff||[]).some(e=>e.roll)) cmd={...cmd,eff:effRollPick(att,cmd.eff)}; // 出目で分岐：使うたびに1回振って、出た効果だけ残す
   // 付加効果のタイミング：既定は特殊行動＝攻撃前、通常コマンド＝攻撃後（効果ごとの at で変えられる）
-  const [preE,postE]=splitEffs(cmd.eff,EFF_AT_DEFAULT[cmd.c==='W'?'W':'cmd']);
+  // ダメージ効果（dmg・特殊行動のみ）は攻撃前の効果と面の攻撃のあと、攻撃後の効果の前に当てる（effDamage）
+  const [preE,postE]=splitEffs((cmd.eff||[]).filter(e=>e.k!=='dmg'),EFF_AT_DEFAULT[cmd.c==='W'?'W':'cmd']);
+  const effHit=()=>(cmd.eff||[]).filter(e=>e.k==='dmg').forEach(e=>{ if(!att.out) effDamage(att,e,tgt,hitsOf(cmd.eff)); });
   if(cmd.c==='W'){
-    log(`${n}：特殊行動「${esc(cmd.label)}」${cmd.from?`（${esc(cmd.from)}）`:''}`);
-    if(!(cmd.dmg>0)){ if(cmdLine(cmd)) say(att,'attack',{own:cmd.line}); atkFx(null); applyEffects(att,[...preE,...postE],null); gainNpStar(att,cmd,1); syncU(att); return; }
+    if(!(cmd.dmg>0)){ if(cmdLine(cmd)) say(att,'attack',{own:cmd.line,other:tgt}); atkFx(null); applyEffects(att,preE,null); effHit(); if(!att.out) applyEffects(att,postE,null); gainNpStar(att,cmd,1); syncU(att); return; }
     // ダメージを持つ特殊行動は無属性の攻撃として続けて処理する（チェインには数えない）
   }
   applyEffects(att,preE,null); // 攻撃前の効果（防御無視・無敵貫通などを付けてから攻撃）
@@ -719,6 +732,7 @@ function resolveCommand(att,cmd,tgt,o={}){
   }
   if(aoe&&!isAoe(cmd.eff)) consume(att,att.fx.filter(e=>e.k==='aoeNormal')); // 通常攻撃の全体化：攻撃1回で1回消費
   tl.forEach(syncU); syncU(att); // 獲得したNP・使い切った効果は、ダメージ演出のあとで画面に反映
+  effHit(); if(att.out) return;
 
   // 攻撃後の効果（例：自身の弱体解除）
   applyEffects(att,postE,null);
@@ -751,6 +765,44 @@ function ultCopyRolls(u,tgt,picked,n,noExtra){
     if(cmd.c==='ASC') ascend(u); else resolveCommand(u,cmd,t,{extra:true});
   }
 }
+// ダメージ効果（dmg）を1つ、hits 回（宝具・特殊行動で共通）。o.ult＝宝具（色 o.c・宝具威力±・宝具被ダメージ-・敵マスターへの全体ダメージ・被ダメージ時セリフ）
+// 特殊行動のダメージは無属性の攻撃（攻撃ダメージ±・被ダメージ±・回避・無敵・ダメージ無効・被ダメージ時NP・反撃が働く）
+// e.fixed＝相手の効果を受けない固定ダメージ：補正・回避・無敵・ダメージ無効なし、相手のNPは増えず反撃もない（マスターの固定ダメージと同じ扱い）
+function effDamage(u,e,tgt,hits,o={}){
+  for(let h=0;h<hits;h++){
+    if(u.out) break;
+    // マスタールール：全体宝具は敵マスターにも当たる（退避中なら当たらない。無敵・回避などでは防げない）。特殊行動は当たらない
+    const em=masterOf(1-u.pid), hitM=o.ult&&e.t==='enemy_all'&&em&&!em.out&&!G.players[em.pid].evac&&!mTeam();
+    let ts = e.t==='enemy_all' ? [...alive(1-u.pid),...(hitM?[em]:[])] : [tgt].filter(x=>x&&!x.out&&x.pid!==u.pid);
+    if(e.cond) ts=ts.filter(t=>condOk(e.cond,t)); // 条件つきダメージ：満たす対象だけ
+    if(!ts.length) break;
+    const usedA=new Set(), lab=hits>1?`（${h+1}/${hits}）`:'';
+    for(const t of ts){
+      t.tgtd=true;
+      // 宝具威力アップ・ダウンは攻撃ダメージ+と同じく足し引き。max（最大HPぶん）は補正を受けない（軽減不可）
+      let dmg, usedT=[];
+      if(e.max) dmg=maxHp(t);
+      else if(e.fixed) dmg=e.v;
+      else {
+        const m=dmgMods(u,t,o.ult?o.c:null), up=o.ult?mods(u,'npPow'):{sum:0,list:[]}, dn=o.ult?mods(u,'npPowDown'):{sum:0,list:[]};
+        [...m.usedA,...up.list,...dn.list].forEach(x=>usedA.add(x)); usedT=m.usedT;
+        dmg=applyPct(Math.max(0,e.v+m.sum+up.sum-dn.sum),m.pct);
+        // 宝具被ダメージ-：受ける側の宝具ダメージを減らす（被ダメージ減少無視なら見ない）
+        const nd=!o.ult||has(u,'ignoreDef')?null:mods(t,'npDef');
+        if(nd&&nd.list.length){ dmg=Math.max(0,dmg-nd.sum); usedT=[...usedT,...nd.list]; }
+      }
+      if(t.master&&e.t==='enemy_all'){ log(`→ ${nm(t)}${lab}：<b>${fmt(dmg)}</b>ダメージ`); dealDamage(t,dmg,false,{np:!!o.ult,src:u}); continue; }
+      if(e.fixed){ log(`→ ${nm(t)}${lab}：<b>${fmt(dmg)}</b>ダメージ（${e.max?'最大HP・':''}固定）`); dealDamage(t,dmg,false,{np:!!o.ult,src:u}); if(o.ult&&!t.out&&!h) say(t,'npDamage',{other:u}); continue; }
+      const b=blocked(u,t,(x,l)=>l.forEach(y=>usedA.add(y)));
+      if(b){ st(t).blocked++; log(`→ ${nm(t)}${lab}：${b}で無効`); fxEmit({t:'dmg',uid:t.uid,text:b}); }
+      else if(!e.max&&nullified(t,dmg)){ st(t).blocked++; log(`→ ${nm(t)}${lab}：${fmt(dmg)}ダメージは${nullified(t,dmg)}以下なので無効`); fxEmit({t:'dmg',uid:t.uid,text:'無効'}); nullUse(t,dmg); consume(t,usedT); }
+      else { log(`→ ${nm(t)}${lab}：<b>${fmt(dmg)}</b>ダメージ${e.max?'（最大HP・軽減不可）':''}`); consume(t,usedT); dealDamage(t,dmg,true,{np:!!o.ult,att:u}); if(o.ult&&!t.out&&!h) say(t,'npDamage',{other:u}); }
+      if(u.out) break; // 反撃で倒れたら残りの対象には当たらない
+    }
+    consume(u,[...usedA]);
+    ts.forEach(syncU); syncU(u);
+  }
+}
 function resolveUlt(u,tgt,picked){
   const ud=D(u.def).ult;
   if(picked===undefined) picked=G.ultPick?U(G.ultPick):null;
@@ -759,44 +811,15 @@ function resolveUlt(u,tgt,picked){
   fxEmit({t:'cutin',uid:u.uid,title:ud.name,ruby:ud.ruby,br:ud.br,col:ud.c});
   say(u,'np',{other:tgt});
   st(u).ults++;
-  const hits=hitsOf(ud.eff); // 連続攻撃：ダメージ効果それぞれを hits 回
+  const effs=effRollPick(u,ud.eff); // 出目で分岐：撃つたびに1回振って、出た効果だけ使う
+  const hits=hitsOf(effs); // 連続攻撃：ダメージ効果それぞれを hits 回
   if(hits>1) log(`${hits}回連続攻撃`,'sub');
   let copyDone=false;
-  for(const e of ultEffOrder(ud.eff)){
+  for(const e of ultEffOrder(effs)){
     if(u.out) break; // 反撃で倒れたら残りの効果は出ない
-    if(e.k==='copyRoll'){ if(!copyDone){ copyDone=true; ultCopyRolls(u,tgt,picked,ud.eff.filter(x=>x.k==='copyRoll').length,ud.eff.some(x=>x.k==='copyRoll'&&x.noExtra)); flushKo(); } continue; } // ロールは最初の1つのところでまとめて行う
+    if(e.k==='copyRoll'){ if(!copyDone){ copyDone=true; ultCopyRolls(u,tgt,picked,effs.filter(x=>x.k==='copyRoll').length,effs.some(x=>x.k==='copyRoll'&&x.noExtra)); flushKo(); } continue; } // ロールは最初の1つのところでまとめて行う
     if(e.k!=='dmg'){ applyEffects(u,[e],picked); continue; }
-    for(let h=0;h<hits;h++){
-      if(u.out) break;
-      // マスタールール：全体宝具は敵マスターにも当たる（退避中なら当たらない。無敵・回避などでは防げない）
-      const em=masterOf(1-u.pid), hitM=e.t==='enemy_all'&&em&&!em.out&&!G.players[em.pid].evac&&!mTeam();
-      let ts = e.t==='enemy_all' ? [...alive(1-u.pid),...(hitM?[em]:[])] : [tgt].filter(x=>x&&!x.out);
-      if(e.cond) ts=ts.filter(t=>condOk(e.cond,t)); // 条件つきダメージ：満たす対象だけ
-      if(!ts.length) break;
-      const usedA=new Set(), lab=hits>1?`（${h+1}/${hits}）`:'';
-      for(const t of ts){
-        t.tgtd=true;
-        // 宝具威力アップ・ダウンは攻撃ダメージ+と同じく足し引き。max（最大HPぶん）は補正を受けない（軽減不可）
-        let dmg, usedT=[];
-        if(e.max) dmg=maxHp(t);
-        else {
-          const m=dmgMods(u,t,ud.c), up=mods(u,'npPow'), dn=mods(u,'npPowDown');
-          [...m.usedA,...up.list,...dn.list].forEach(x=>usedA.add(x)); usedT=m.usedT;
-          dmg=applyPct(Math.max(0,e.v+m.sum+up.sum-dn.sum),m.pct);
-          // 宝具被ダメージ-：受ける側の宝具ダメージを減らす（被ダメージ減少無視なら見ない）
-          const nd=has(u,'ignoreDef')?null:mods(t,'npDef');
-          if(nd&&nd.list.length){ dmg=Math.max(0,dmg-nd.sum); usedT=[...usedT,...nd.list]; }
-        }
-        if(t.master&&e.t==='enemy_all'){ log(`→ ${nm(t)}${lab}：<b>${fmt(dmg)}</b>ダメージ`); dealDamage(t,dmg,false,{np:true,src:u}); continue; }
-        const b=blocked(u,t,(x,l)=>l.forEach(y=>usedA.add(y)));
-        if(b){ st(t).blocked++; log(`→ ${nm(t)}${lab}：${b}で無効`); fxEmit({t:'dmg',uid:t.uid,text:b}); }
-        else if(!e.max&&nullified(t,dmg)){ st(t).blocked++; log(`→ ${nm(t)}${lab}：${fmt(dmg)}ダメージは${nullified(t,dmg)}以下なので無効`); fxEmit({t:'dmg',uid:t.uid,text:'無効'}); nullUse(t,dmg); consume(t,usedT); }
-        else { log(`→ ${nm(t)}${lab}：<b>${fmt(dmg)}</b>ダメージ${e.max?'（最大HP・軽減不可）':''}`); consume(t,usedT); dealDamage(t,dmg,true,{np:true,att:u}); if(!t.out&&!h) say(t,'npDamage',{other:u}); }
-        if(u.out) break; // 反撃で倒れたら残りの対象には当たらない
-      }
-      consume(u,[...usedA]);
-      ts.forEach(syncU); syncU(u);
-    }
+    effDamage(u,e,tgt,hits,{ult:true,c:ud.c});
   }
 }
 function resolveDamage(){
@@ -1178,7 +1201,7 @@ function doSkill(u,si,picked,color){
     lines:s.eff.length?effLines(s.eff,s.pick):['効果なし']});
   st(u).skills++;
   say(u,'skill',{own:s.line,other:picked}); // スキルの専用セリフがあればそちら
-  applyEffects(u,s.eff,picked);
+  applyEffects(u,effRollPick(u,s.eff),picked); // 出目で分岐する効果は、ここで1回振って出たものだけ
   u.used[si]=true; // 効果の後に使用済みにする（スキル再使用で自分自身が戻らないように）
   flushKo();
   checkWin(); // 即死などでスキルだけで決着することがある

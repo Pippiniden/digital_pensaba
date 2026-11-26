@@ -84,12 +84,25 @@ function normEff(e){
   if(e.noExtra&&o.k==='copyRoll') o.noExtra=true; // 宝具で3回ロールしたあとのエクストラアタックを行わない
   const cd=normCond(e.cond); if(cd&&!(FX[o.k]&&FX[o.k].noTgt)) o.cond=cd; // 条件つき効果
   if(EFF_AT[e.at]) o.at=e.at; // 攻撃の前/後（未指定なら既定のタイミング。rules.js の EFF_AT）
-  if(e.max&&FX[o.k]&&FX[o.k].maxOk) o.max=true; // 値＝対象の最大HP（軽減不可）
+  if(e.max&&FX[o.k]&&FX[o.k].maxOk) o.max=true;
+  if(e.fixed&&o.k==='dmg') o.fixed=true; // ダメージ：相手の効果（被ダメージ±・回避・無敵・被ダメージ時NP・反撃など）を受けない固定ダメージ // 値＝対象の最大HP（軽減不可）
   if(e.sure&&FX[o.k]&&!FX[o.k].inst&&!FX[o.k].noTgt) o.sure=true; // 持続効果のみ：強化無効・弱体無効・解除の影響を受けない（ターン・回数では切れる）
   if(e.all&&FX[o.k]&&FX[o.k].allOpt) o.all=true; // NP獲得量ダウン：攻撃以外（スキル・ターン開始時・被弾時）の獲得も減らす
   const tx=String(e.text??'').trim(); if(tx&&o.k==='desc') o.text=tx; // 説明文
+  // 出目で分岐：[下限,上限]（1〜6）。スキル・宝具・特殊行動（面の効果）を使うたびに1d6を1回振り、出目が範囲内の効果だけ使う（範囲のない効果は毎回）
+  // 1〜6 全部は「毎回」と同じなので持たない。他のサーヴァントをロール・説明文には付けない
+  if(Array.isArray(e.roll)&&o.k!=='copyRoll'&&o.k!=='desc'){
+    const a=Math.round(num(e.roll[0])), b=Math.round(num(e.roll[1]));
+    if(a>=1&&b<=6&&a<=b&&!(a===1&&b===6)) o.roll=[a,b];
+  }
   return o;
 }
+// 出目で分岐する効果が出る確率（範囲がなければ1）と、その表示（「出目1〜2」「出目6」）
+const effRollP = e=>e&&e.roll?(e.roll[1]-e.roll[0]+1)/6:1;
+const rollText = r=>r?`出目${r[0]===r[1]?r[0]:`${r[0]}〜${r[1]}`}`:'';
+// 入力欄の選択肢（1〜6 全部を除く範囲すべて）と、選択値 "1-2" → [1,2]（エディタ・提出ツールの data-t="roll"）
+const EFF_ROLL_OPTS = [1,2,3,4,5,6].flatMap(a=>[1,2,3,4,5,6].filter(b=>b>=a&&!(a===1&&b===6)).map(b=>[a,b]));
+const effRollVal = v=>{ const m=/^(\d)-(\d)$/.exec(String(v||'')); return m?[+m[1],+m[2]]:undefined; };
 function normCmd(c){
   c=c||{};
   const ln=strList(c.line), withLine=o=>(ln.length?Object.assign(o,{line:ln}):o); // この面の専用セリフ（任意）
@@ -252,6 +265,9 @@ function checkEffs(effs,ctx,where,add){
     if(FX[e.k].timesOnly&&e.turns) add('warn',`${w}：${FX[e.k].name}は回数で指定します（ターンは使われません）`);
     if(e.k==='instantDeath'&&['self','ally_all','ally_other'].includes(e.t)) add('warn',`${w}：味方に即死効果がかかります`);
     if(e.chance&&e.chance>=6) add('warn',`${w}：ロール6以下は必ず成功します`);
+    if(e.k==='dmg'&&ctx!=='master'&&!['target','enemy_all'].includes(e.t)) add('error',`${w}：ダメージの対象は「${TARGETS.target}」か「${TARGETS.enemy_all}」にしてください`);
+    if(e.fixed&&ctx==='master') add('warn',`${w}：${TERMS.player}のダメージはもともと固定ダメージです`);
+    if(e.roll&&ctx==='master') add('error',`${w}：${TERMS.player}の補助・令呪では「出目で分岐」は使えません`);
     if(e.k==='confuse'&&e.v>=6) add('warn',`${w}：混乱の値はロールの出目（1〜5）です。6以上は毎ターン必ず行動不能になります`);
     if(e.k==='cardConv'&&!e.color) add('error',`${w}：カード変換は変換先の色を指定してください`);
     if(CARD_DEFS[e.k]&&!e.color) add('error',`${w}：${FX[e.k].name}は色を指定してください`);
@@ -712,7 +728,7 @@ function fxText(e){
     case 'ascend': s=TERMS.ascFull; break;
     case 'np': s=`${TERMS.gauge}${e.v>=0?'+':''}${e.v}%`; break;
     case 'star': s=`${TERMS.star}${e.v}個獲得`; break;
-    case 'dmg': s=e.max?'最大HPぶんのダメージ(軽減不可)':`${e.v}ダメージ`; break;
+    case 'dmg': s=(e.max?'最大HPぶんのダメージ(軽減不可)':`${e.v}ダメージ`)+(e.fixed?'(固定・相手の効果を受けない)':''); break;
     case 'selfDmg': s=e.max?'最大HPぶんの自傷ダメージ(軽減不可)':`自傷ダメージ${e.v}`; break;
     case 'aoe': s='攻撃の全体化（敵全体に攻撃）'; break;
     case 'aoeNormal': s='通常攻撃の全体化（敵全体に攻撃）'; break;
@@ -735,7 +751,7 @@ function tLabel(t,pick){
 function effLines(effs,pick,tl){
   const ds=effs.filter(e=>e.k==='desc');
   if(ds.length) return ds.map(e=>e.text||'（説明文なし）');
-  return effs.map(e=>FX[e.k]&&FX[e.k].noTgt?fxText(e):`${tl?tl(e.t):tLabel(e.t,pick)}：${fxText(e)}`);
+  return effs.map(e=>(e.roll?`【${rollText(e.roll)}】`:'')+(FX[e.k]&&FX[e.k].noTgt?fxText(e):`${tl?tl(e.t):tLabel(e.t,pick)}：${fxText(e)}`));
 }
 const effsText=(effs,pick,tl)=>effs.length?effLines(effs,pick,tl).join(' ／ '):'効果なし';
 function cmdChip(c){

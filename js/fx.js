@@ -93,6 +93,7 @@ function showRoll(L,ev,r){
     el.classList.add('land'); fxSpeedUp(el);
     const res=el.querySelector('.rf-res');
     if(ev.ch) res.innerHTML=`<span class="rf-acts rf-ch ${ev.ch.ok?'':'zero'}">${ev.ch.ok?'成功':'失敗'}<small>${ev.ch.need}以下で成功</small></span>`;
+    else if(ev.lab) res.innerHTML=`<span class="rf-acts rf-ch">${esc(ev.lab)}</span>`; // 出目で分岐（effRollPick）
     else if(ev.n!=null) res.innerHTML=`<span class="rf-acts ${ev.n?'':'zero'}">行動 ×${ev.n}</span>`;
     else if(ev.cmd&&d) res.innerHTML=cmdCardHTML(d,ev.cmd);
     reveal(ev);

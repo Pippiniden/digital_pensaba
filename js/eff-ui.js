@@ -136,6 +136,7 @@ function effKindChange(old,k,ctx,pick){
   if(k==='dmg'&&!foe) ne.t='enemy_all';
   if(!f.inst&&!f.noTgt){ if(old.turns&&!f.timesOnly) ne.turns=old.turns; if(old.times) ne.times=old.times; if(!ne.turns&&!ne.times) ne[f.timesOnly?'times':'turns']=f.timesOnly?1:3; }
   if(!f.noTgt&&old.chance) ne.chance=old.chance;
+  if(old.roll&&k!=='copyRoll'&&k!=='desc') ne.roll=old.roll; // 出目で分岐はそのまま
   if(f.color&&(old.color||CARD_DEFS[k]||k==='cardConv')) ne.color=old.color||'R';
   if(CARD_DEFS[k]) Object.assign(ne,CARD_DEFS[k][ne.color]);
   if(f.trait) ne.trait=old.trait||'';
@@ -169,17 +170,20 @@ function effRowHTML(e,o){
   else if(f.val&&!e.max) L.push(num('v',e.v,e.k==='multiHit'?'回':''));
   if(e.k==='cardConv') L.push(`<label class="ein"><span>→</span><select ${A(p+'.color','str')} aria-label="変換先の色">${['R','B','G'].map(c=>opt(c,TERMS[c],e.color||'R')).join('')}</select></label>`);
   if(f.trait) L.push(`<label class="ein"><span>相手：</span><input class="mid" ${o.traitList?`list="${o.traitList}" `:''}${A(p+'.trait','str')} value="${esc(e.trait||'')}" placeholder="属性・クラス・ID"></label>`);
+  if(e.k==='dmg'&&ctx!=='master') L.push(`<label class="ein chk" title="チェックなし：攻撃扱い（攻撃ダメージ±・相手の被ダメージ±・回避・無敵・ダメージ無効・被ダメージ時NP・反撃が働く）。チェックあり：それらを受けない固定ダメージ"><input type="checkbox" ${A(p+'.fixed','bool')} ${e.fixed?'checked':''}><span>相手の効果を受けない</span></label>`);
   if(f.maxOk) L.push(`<label class="ein chk"><input type="checkbox" ${A(p+'.max','bool')} ${e.max?'checked':''}><span>最大HPぶん</span></label>`);
   if(!f.inst&&!f.noTgt){ if(!f.timesOnly) L.push(o.turnsHTML!=null?o.turnsHTML:num('turns',e.turns,'ターン','n2','optnum0')); L.push(num('times',e.times,'回','n2','optnum')); }
   // 詳しく：あまり使わない設定。設定されているものは見出しに出す
   const colorOpt=f.color&&!card&&e.k!=='cardConv';
   const kept=Object.keys(EFF_KEPT).filter(k=>e[k]!=null&&e[k]!==false);
-  const hasMore=colorOpt||!f.noTgt||kept.length||!!o.moreHTML;
-  const moreLabel=[colorOpt&&e.color?`${TERMS[e.color]}だけ`:'', e.chance?`ロール${e.chance}以下`:'', ...kept.map(k=>EFF_KEPT[k])].filter(Boolean).join('・');
+  const rollOk=ctx!=='master'&&e.k!=='copyRoll'; // 出目で分岐（マスターの補助・令呪では使えない）
+  const hasMore=colorOpt||!f.noTgt||rollOk||kept.length||!!o.moreHTML;
+  const moreLabel=[e.roll?rollText(e.roll):'', colorOpt&&e.color?`${TERMS[e.color]}だけ`:'', e.chance?`ロール${e.chance}以下`:'', ...kept.map(k=>EFF_KEPT[k])].filter(Boolean).join('・');
   if(hasMore) L.push(`<button class="small ghost emore" ${B('effMore')} aria-expanded="${!!o.more}">詳しく${moreLabel?`（${esc(moreLabel)}）`:''}${o.more?' ▴':' ▾'}</button>`);
   L.push(tail);
   const more=o.more&&hasMore?`<div class="emoreb">
       ${colorOpt?`<label class="ein"><span>色を限定</span><select ${A(p+'.color','optstr')}>${opt('','しない（すべての色）',e.color||'')}${['R','B','G'].map(c=>opt(c,TERMS[c]+'だけ',e.color)).join('')}</select></label>`:''}
+      ${rollOk?`<label class="ein" title="使うたびに1d6を1回だけ振り、出目がこの範囲のときだけこの効果が出ます（同じスキル・${TERMS.ult}・特殊行動の中で出目は共通）"><span>出目で分岐</span><select ${A(p+'.roll','roll')}>${opt('','しない（毎回）',e.roll?e.roll.join('-'):'')}${EFF_ROLL_OPTS.map(([a,b])=>opt(`${a}-${b}`,`${rollText([a,b])}のとき（${Math.round((b-a+1)/6*100)}%）`,e.roll?e.roll.join('-'):'')).join('')}</select></label>`:''}
       ${!f.noTgt?`<label class="ein"><span>成功する確率</span><select ${A(p+'.chance','optnum')}>${opt('','必ず成功',e.chance??'')}${[1,2,3,4,5].map(k=>opt(k,`ロール${k}以下で成功（${Math.round(k/6*100)}%）`,e.chance)).join('')}</select></label>`:''}
       ${o.moreHTML||''}
       ${kept.length&&!o.moreHTML?`<span class="sub">${esc(kept.map(k=>EFF_KEPT[k]).join('・'))}の設定があります（エディタで変えられます。ここではそのまま残します）</span>`:''}
