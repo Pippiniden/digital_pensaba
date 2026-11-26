@@ -385,7 +385,7 @@ const DEFAULT_UNITS = [
     "ult":{"name":"無毀なる湖光","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":280},{"k":"def","t":"self","v":40,"turns":1}],"ruby":"アロンダイト"}
   },
   {
-    "id":"connla", "name":"コンラ", "cls":"アーチャー", "cost":3, "hp":550,
+    "id":"connla", "name":"コンラ", "cls":"アーチャー", "cost":3, "hp":600,
     "traits":["中立","中庸","天","神性","人型"],
     "fit":{"face":{"x":60,"y":0,"z":142},"card":{"x":50,"y":12,"z":112},"np":{"x":50,"y":5,"z":105},"cut":{"x":0,"y":12,"z":100},"tile":{"x":50,"y":50,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%b3%a5%f3%a5%e9",
@@ -416,7 +416,7 @@ const DEFAULT_UNITS = [
     "ult":{"name":"岩が出てくる不思議な小舟","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":280},{"k":"star","t":"master","v":8}],"ruby":"カモン！ミステリアスボート"}
   },
   {
-    "id":"athelstan", "name":"エゼルスタン", "cls":"セイバー", "cost":5, "hp":780,
+    "id":"athelstan", "name":"エゼルスタン", "cls":"セイバー", "cost":5, "hp":800,
     "traits":["秩序","善","人","女性","騎乗","竜","王"],
     "fit":{"face":{"x":59,"y":0,"z":127},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":0,"z":116},"cut":{"x":0,"y":12,"z":100},"tile":{"x":50,"y":33,"z":146}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%a8%a5%bc%a5%eb%a5%b9%a5%bf%a5%f3",
@@ -523,7 +523,7 @@ const DEFAULT_UNITS = [
     "ult":{"name":"是・闇に潜み忍ぶ者","c":"G","eff":[{"k":"dmg","t":"enemy_all","v":320},{"k":"strip","t":"enemy_all","v":0}],"ruby":"レジェンド・ニンジャ・マスター"}
   },
   {
-    "id":"neoptolemus", "name":"ネオプトレモス", "cls":"ライダー", "cost":3, "hp":600,
+    "id":"neoptolemus", "name":"ネオプトレモス", "cls":"ライダー", "cost":3, "hp":650,
     "traits":["男性","中立","中庸","人型","神性","王","騎乗","ギリシャ神話系男性"],
     "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":4,"z":89},"cut":{"x":0,"y":4,"z":92},"tile":{"x":50,"y":50,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%cd%a5%aa%a5%d7%a5%c8%a5%ec%a5%e2%a5%b9",
@@ -688,7 +688,7 @@ const DEFAULT_UNITS = [
     "ult":{"name":"護国の石窯","c":"R","eff":[{"k":"dmg","t":"target","v":300},{"k":"defDown","t":"target","v":20,"turns":3},{"k":"burn","t":"target","v":20,"turns":3}],"ruby":"クリメイション・ブレッド"}
   },
   {
-    "id":"tezcatlipoca", "name":"テスカトリポカ", "cls":"バーサーカー", "cost":5, "hp":880,
+    "id":"tezcatlipoca", "name":"テスカトリポカ", "cls":"バーサーカー", "cost":5, "hp":900,
     "traits":["男性","混沌","悪","天","人型","神性","魔性"],
     "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":8,"z":105},"cut":{"x":0,"y":4,"z":100},"tile":{"x":50,"y":39,"z":126}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%c6%a5%b9%a5%ab%a5%c8%a5%ea%a5%dd%a5%ab",
@@ -975,7 +975,7 @@ const DEFAULT_UNITS = [
       {"acts":1,"pre":{"c":"R","dmg":90,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
       {"acts":1,"pre":{"c":"B","dmg":60,"np":15,"star":0},"post":{"c":"B","dmg":70,"np":20,"star":0}},
-      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"R","dmg":70,"np":0,"star":0,"eff":[{"k":"aoe","t":"self","v":0}]}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"R","dmg":60,"np":0,"star":0,"eff":[{"k":"aoe","t":"self","v":0}]}},
       {"acts":3,"pre":{"c":"G","dmg":40,"np":0,"star":4},"post":{"c":"G","dmg":50,"np":0,"star":6}},
       {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":3},"post":{"c":"G","dmg":50,"np":0,"star":5}}
     ],
@@ -1089,16 +1089,19 @@ const DEFAULT_UNITS = [
     "fit":{"face":{"x":50,"y":31,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":29,"z":105},"cut":{"x":0,"y":4,"z":100},"tile":{"x":50,"y":50,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%cd%a5%b3",
     "lines":{
-      "start":["我は常に強い者の味方にゃ"],
-      "attack":["にゃぁッ！","放て！","ぶっちぎる！"],
-      "extra":["蝕み融かせッ『ネコフスキービーム』！"],
-      "damage":["ｵｴ"],
-      "skill":["尾を振って服従と成す！"],
+      "start":["我は常に強い者の味方にゃ","我が666の命、本体だけは無駄にせぬ！","にゃにゃにゃにゃにゃ"],
+      "attack":["にゃぁッ！","放て！","ぶっちぎる！","ギニャーッ！"],
+      "extra":["蝕み融かせッ『ネコフスキービーム』！","ネコの瞳は世界を穿つ！"],
+      "damage":["ｵｴ","おぷばっ！？"],
+      "skill":["尾を振って服従と成す！","ネコ缶だけは最後までとっておく！"],
       "np":["我が許しを請い、汝が手を緩める時ぞ！"],
-      "npDamage":["肉球に傷がー！？"],
-      "defeat":["我が物語は……ここまで、か──。我が死んでも月曜と火曜と木曜と土曜の深夜に紡がれる物語の記録は忘れるな。日アサは三話まで見てから判断しろ。一週でも見逃すとそのままずるずると見なくなぐふっ"],
-      "win":["オールC[ｷｬｯﾄ]。ふん、三流の冒険譚だったにゃ"]
+      "npDamage":["肉球に傷がー！？","待て、話せばわかるにゃぁぁぁぁぁっ！！"],
+      "defeat":["この眼にｳｰｯ！！！！？！？","出口など無い……ここがネコの終焉にゃ……"],
+      "win":["オールC[ｷｬｯﾄ]。ふん、三流の冒険譚だったにゃ","ネコは本能的に愉悦を求める。喩えばちゅーるを求める獣の様に、な","ファラオは英霊にならぬと誰が決めたにゃ？　決めた人も今頃困ってるんじゃないかにゃー"]
     },
+    "condLines":[
+      {"key":"start","who":"enemy","cond":{"k":"id","v":"m_uzumebi"},"lines":["聖杯戦争にイロモノは不要！"]}
+    ],
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":25,"np":0,"star":0},"post":{"c":"R","dmg":28,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"R","dmg":25,"np":0,"star":0},"post":{"c":"R","dmg":28,"np":0,"star":0}},
@@ -1150,7 +1153,7 @@ const DEFAULT_UNITS = [
     "ult":{"name":"金の魔貨・銀の聖貨","c":"B","eff":[{"k":"dmg","t":"enemy_all","v":150},{"k":"star","t":"master","v":15}],"ruby":"コイン・コイーン"}
   },
   {
-    "id":"croesusalter", "name":"クロイソス【オルタ】", "cls":"セイバー", "cost":5, "hp":850,
+    "id":"croesusalter", "name":"クロイソス【オルタ】", "cls":"セイバー", "cost":5, "hp":900,
     "traits":["男性","混沌","善","人","人型","王"],
     "fit":{"face":{"x":50,"y":36,"z":115},"card":{"x":50,"y":46,"z":122},"np":{"x":50,"y":14,"z":105},"cut":{"x":0,"y":4,"z":100},"tile":{"x":50,"y":42,"z":153}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%af%a5%ed%a5%a4%a5%bd%a5%b9%a1%ca%a5%aa%a5%eb%a5%bf%a1%cb",
@@ -1171,18 +1174,18 @@ const DEFAULT_UNITS = [
     ],
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":100,"np":0,"star":0},"post":{"c":"R","dmg":120,"np":0,"star":0}},
-      {"acts":2,"pre":{"c":"B","dmg":40,"np":10,"star":0},"post":{"c":"B","dmg":80,"np":20,"star":0}},
-      {"acts":1,"pre":{"c":"B","dmg":60,"np":15,"star":0},"post":{"c":"B","dmg":70,"np":15,"star":0}},
-      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"特殊行動","eff":[{"k":"critRoll","t":"self","v":1,"turns":1},{"k":"copyRoll","t":"self","v":0}],"dmg":0,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"B","dmg":40,"np":10,"star":0},"post":{"c":"B","dmg":70,"np":15,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":60,"np":15,"star":0},"post":{"c":"B","dmg":80,"np":20,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"買収","eff":[{"k":"critRoll","t":"self","v":1,"turns":1},{"k":"copyRoll","t":"self","v":0}],"dmg":0,"np":0,"star":0}},
       {"acts":3,"pre":{"c":"B","dmg":50,"np":10,"star":0},"post":{"c":"B","dmg":70,"np":15,"star":0}},
       {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":3},"post":{"c":"G","dmg":60,"np":5,"star":5}}
     ],
     "skills":[
       {"name":"黄金律","eff":[{"k":"onAtkNp","t":"self","v":10,"turns":3}],"rank":"A++"},
-      {"name":"千里眼(金)","eff":[{"k":"onAtkStar","t":"self","v":3,"turns":3}]},
-      {"name":"星の開拓者","eff":[{"k":"np","t":"self","v":30},{"k":"star","t":"master","v":10}],"rank":"EX"}
+      {"name":"千里眼(金)","eff":[{"k":"onAtkStar","t":"self","v":5,"turns":3}]},
+      {"name":"星の開拓者","eff":[{"k":"np","t":"self","v":50},{"k":"pierce","t":"self","v":0,"turns":1},{"k":"star","t":"master","v":10}],"rank":"EX"}
     ],
-    "ult":{"name":"信仰はかくも容易く崩れ去る","c":"B","eff":[{"k":"critRoll","t":"self","v":3,"turns":1},{"k":"copyBuff","t":"self","v":0,"from":"target"},{"k":"copyRoll","t":"self","v":0},{"k":"copyRoll","t":"self","v":0},{"k":"copyRoll","t":"self","v":0}],"ruby":"しゅへのうらぎり","pick":"any"}
+    "ult":{"name":"信仰はかくも容易く崩れ去る","c":"B","eff":[{"k":"copyBuff","t":"self","v":0,"from":"target"},{"k":"critRoll","t":"self","v":3,"turns":1},{"k":"critPow","t":"self","v":40,"turns":1},{"k":"copyRoll","t":"self","v":0},{"k":"copyRoll","t":"self","v":0},{"k":"copyRoll","t":"self","v":0}],"ruby":"しゅへのうらぎり","pick":"any"}
   },
   {
     "id":"logistilla", "name":"ロジェスティラ", "cls":"キャスター", "cost":4, "hp":670,
@@ -1350,7 +1353,7 @@ const DEFAULT_UNITS = [
     "ult":{"name":"花の如き死化粧","c":"B","eff":[{"k":"atk","t":"ally_other","v":20,"turns":3},{"k":"def","t":"ally_other","v":20,"turns":3},{"k":"star","t":"master","v":15},{"k":"selfDmg","t":"self","v":20,"max":true}],"ruby":"エレガンス・メンズノンノ"}
   },
   {
-    "id":"gwydion", "name":"グウィディオン", "cls":"キャスター", "cost":4, "hp":760,
+    "id":"gwydion", "name":"グウィディオン", "cls":"キャスター", "cost":4, "hp":780,
     "traits":["男性","混沌","悪","天","イギリス"],
     "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":8,"z":100},"np":{"x":50,"y":4,"z":105},"cut":{"x":-1,"y":0,"z":90},"tile":{"x":50,"y":43,"z":119}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%b0%a5%a6%a5%a3%a5%c7%a5%a3%a5%aa%a5%f3",
@@ -1391,7 +1394,7 @@ const DEFAULT_UNITS = [
     "ult":{"name":"騒樹荊棘獄","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":240},{"k":"stun","t":"enemy_all","v":0,"turns":1,"chance":2},{"k":"np","t":"self","v":30}],"ruby":"ケルヌンノス・ウッズ"}
   },
   {
-    "id":"arianrhod", "name":"アリアンロッド", "cls":"ライダー", "cost":4, "hp":830,
+    "id":"arianrhod", "name":"アリアンロッド", "cls":"ライダー", "cost":4, "hp":850,
     "traits":["女性","混沌","中庸","天","神性","人型","イギリス"],
     "fit":{"face":{"x":50,"y":21,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":14,"z":105},"cut":{"x":0,"y":0,"z":100},"tile":{"x":50,"y":44,"z":118}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%a2%a5%ea%a5%a2%a5%f3%a5%ed%a5%c3%a5%c9",
@@ -1841,15 +1844,15 @@ const DEFAULT_UNITS = [
     "fit":{"face":{"x":50,"y":21,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":23,"z":81},"cut":{"x":0,"y":12,"z":100},"tile":{"x":50,"y":48,"z":116}},
     "link":"https://seesaawiki.jp/kagemiya/d/%22%B1%A3%A4%B5%A4%EC%A4%B7%BC%F3%CE%CE%22",
     "lines":{
-      "start":["ハッ！！　当職を怒らせたか！！","どう殺してくれようか？"],
-      "attack":["\"止まれ！\"","お痛がすぎるな","命知らずが！"],
-      "extra":["その存在の一片までも、歴史の果てから消し去ってくれyアダァ！！？　くっ…膝擦りむいた…！"],
-      "damage":["くそ…！"],
-      "skill":["神よりの恩寵である"],
+      "start":["神とは、上(カミ)に立つ概念を指す。","当職こそ、その意味の具現にして太源。その意味を、御身が魂に刻み付けてやろう。"],
+      "attack":["我が言葉を以て命ずる！\"跪け\"ッ！","身の程を知れ！　当職の威光の前にッ！"],
+      "extra":["初めに言葉ありき────我が言葉こそ開闢の理！","全知全能の片鱗を見せてくれる！ 当職こそ、汝ら総ての造物主であるぞ！"],
+      "damage":["ハッ、生意気な……当職に触れるなッ！","ふぎゃっ！？"],
+      "skill":["クハッ！ 我が手には遍く全ての神の権能が宿る！","首を垂れ許しを乞えよ、これこそ天地を啓く権能（ことば）にあるぞ！"],
       "np":["少し、本気の片鱗を見せてくれる"],
-      "npDamage":["止まれ！　止まれったら！　頼むぶへぁ！"],
-      "defeat":["どういう事だそれぇ！","……ぐすん"],
-      "win":["当職は偉いんだぞ本当に！"]
+      "npDamage":["なぜ当職が……こんな目にィ……っ！","あだっツっ！！！"],
+      "defeat":["ちぃぃぃ……！おのれぇぇえええ！","当職がこの程度の存在に、敗北するとはァ……！","やはり、起源種としての霊基が要るか……覚えていろ、この借りは兆倍にして返す！！"],
+      "win":["クハッ！ それ見たか当職の権能を！","……ま、正直肝が冷えたがな。未発達な信仰を統一させ、紙一重だったか……","当職を楽しませてくれた礼の１つでもくれてやろうか？"]
     },
     "condLines":[
       {"key":"start","who":"other","cond":{"k":"trait","v":"神性"},"lines":["ゼウスとか、オーディンとか、みんなみーんな当職の支配下だ！　子供みたいなもんなんだ！"]}
@@ -1970,7 +1973,7 @@ const DEFAULT_UNITS = [
     "ult":{"name":"穿ち貫く脳漿弾","c":"R","eff":[{"k":"sureHit","t":"self","v":0,"times":1},{"k":"dmg","t":"target","v":300},{"k":"dmg","t":"target","v":50,"chance":4}],"ruby":"タスラム"}
   },
   {
-    "id":"browning", "name":"ジョン・モーゼス・ブローニング", "cls":"ガンナー", "cost":2, "hp":580,
+    "id":"browning", "name":"ジョン・モーゼス・ブローニング", "cls":"ガンナー", "cost":2, "hp":600,
     "traits":["中立","悪","人","アメリカ","ヒト科以外","兵器","超巨大"],
     "fit":{"face":{"x":50,"y":65,"z":100},"card":{"x":50,"y":100,"z":120},"np":{"x":50,"y":38,"z":105},"cut":{"x":0,"y":0,"z":100},"tile":{"x":50,"y":57,"z":127}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%b8%a5%e7%a5%f3%a1%a6%a5%e2%a1%bc%a5%bc%a5%b9%a1%a6%a5%d6%a5%ed%a1%bc%a5%cb%a5%f3%a5%b0",
@@ -1993,10 +1996,10 @@ const DEFAULT_UNITS = [
       {"key":"start","who":"other","cond":{"k":"id","v":"ling_zhen"},"lines":["敵影を確認。あの様相、サーヴァントとは思えません"]}
     ],
     "faces":[
-      {"acts":1,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
-      {"acts":1,"pre":{"c":"R","dmg":60,"np":0,"star":0},"post":{"c":"R","dmg":90,"np":0,"star":0}},
-      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"BAC","eff":[{"k":"atk","t":"ally_all","v":30,"turns":3,"color":"R"},{"k":"heal","t":"self","v":20}],"dmg":0,"np":0,"star":0,"line":["お待たせしました。BAC、営業開始と参りましょう"]}},
+      {"acts":1,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"BAC","eff":[{"k":"atk","t":"ally_all","v":30,"turns":3,"color":"R"},{"k":"heal","t":"self","v":30}],"dmg":0,"np":0,"star":0,"line":["お待たせしました。BAC、営業開始と参りましょう"]}},
       {"acts":3,"pre":{"c":"B","dmg":25,"np":15,"star":0},"post":{"c":"B","dmg":35,"np":20,"star":0}},
       {"acts":1,"pre":{"c":"G","dmg":20,"np":0,"star":1},"post":{"c":"G","dmg":30,"np":0,"star":2}}
     ],
@@ -2005,7 +2008,7 @@ const DEFAULT_UNITS = [
       {"name":"統合射撃管制システム","eff":[{"k":"sureHit","t":"self","v":0,"turns":1}],"line":["射撃管制システム、起動"]},
       {"name":"アクティブスタビライザー","eff":[{"k":"def","t":"self","v":10,"turns":3},{"k":"debuffRes","t":"self","v":1,"turns":3},{"k":"maxHp","t":"self","v":50,"turns":3}],"line":["アクティブ・スタビライザー、展開","姿勢制御システム、最大稼働"]}
     ],
-    "ult":{"name":"170mm破砕滑腔砲ターミネーター","c":"R","eff":[{"k":"dmg","t":"target","v":280},{"k":"selfDmg","t":"self","v":100}],"br":10}
+    "ult":{"name":"170mm破砕滑腔砲ターミネーター","c":"R","eff":[{"k":"dmg","t":"target","v":300},{"k":"selfDmg","t":"self","v":100}],"br":10}
   },
   {
     "id":"ling_zhen", "name":"凌振", "cls":"アーチャー", "cost":5, "hp":850,
@@ -2037,5 +2040,66 @@ const DEFAULT_UNITS = [
       {"name":"対都市(砲火)","eff":[{"k":"npPow","t":"self","v":50,"turns":1},{"k":"defDown","t":"enemy_all","v":10,"turns":3},{"k":"atk","t":"self","v":30,"turns":3,"color":"R"}],"rank":"B+"}
     ],
     "ult":{"name":"超巨砲撃・轟天雷","c":"R","eff":[{"k":"sureHit","t":"self","v":0,"turns":1},{"k":"atkTrait","t":"self","v":50,"turns":1,"times":1,"trait":"天"},{"k":"dmg","t":"enemy_all","v":280}],"ruby":"ヴィルヘルム・ヘヴンカタストロフィ"}
+  },
+  {
+    "id":"ollerus", "name":"オレルス", "cls":"アーチャー", "cost":4, "hp":700,
+    "traits":["女性","北欧","秩序","善","天","人型","神性"],
+    "fit":{"face":{"x":50,"y":16,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":14,"z":105},"cut":{"x":0,"y":0,"z":100},"tile":{"x":50,"y":50,"z":100}},
+    "lines":{
+      "start":["いいだろう。決闘として受けて立つ","狩りだな？　追い立ててやろう"],
+      "attack":["そこか","狩りのルーンよ！","狙うまでもない"],
+      "extra":["仮真名――イチイバル！"],
+      "damage":["その程度か"],
+      "skill":["狩りの射程だ","ルーネを刻め"],
+      "np":["櫟の谷よ、雪の館よ、呼びかけに応えて姿を見せよ！　――再臨せよ、『櫟の谷』！　光輝、栄光――私こそが！　神名ウルだ！"],
+      "npDamage":["効く、ものか――！"],
+      "defeat":["そん、な――こんなの、いやだ――","私は、わたしは――誰、なんだ――"],
+      "win":["勝って当然だ。私は光輝、そして栄光の神なのだから","これが狩りの成果か？　――ケチだな"]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"B","dmg":60,"np":10,"star":0},"post":{"c":"B","dmg":80,"np":15,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":70,"np":20,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"B","dmg":70,"np":10,"star":0,"eff":[{"k":"atk","t":"self","v":20,"turns":3}]}},
+      {"acts":3,"pre":{"c":"B","dmg":50,"np":20,"star":0},"post":{"c":"B","dmg":70,"np":25,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":3},"post":{"c":"G","dmg":50,"np":0,"star":5}}
+    ],
+    "skills":[
+      {"name":"千里眼(狩猟神)","eff":[{"k":"sureHit","t":"self","v":0,"turns":3},{"k":"onAtkStar","t":"self","v":5,"turns":3},{"k":"critPow","t":"self","v":60,"turns":3}],"rank":"B+"},
+      {"name":"ルーン魔術","eff":[{"k":"cardUp","t":"picked","v":30,"turns":1,"color":"B","np":10,"star":3},{"k":"critRoll","t":"picked","v":2,"turns":1}],"rank":"A","pick":"ally"},
+      {"name":"光輝の楯","eff":[{"k":"invul","t":"self","v":0,"turns":1},{"k":"debuffImmune","t":"self","v":0,"turns":1},{"k":"taunt","t":"self","v":0,"turns":1}],"rank":"A"}
+    ],
+    "ult":{"name":"櫟の谷","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":260},{"k":"atkDown","t":"enemy_all","v":30,"turns":3}],"ruby":"ユーダリル"}
+  },
+  {
+    "id":"kay", "name":"カイ", "cls":"キャスター", "cost":4, "hp":800,
+    "traits":["女性","混沌","善","地","人型","アルトリア顔","イギリス","円卓の騎士"],
+    "fit":{"face":{"x":50,"y":31,"z":100},"card":{"x":50,"y":6,"z":100},"np":{"x":50,"y":14,"z":105},"cut":{"x":0,"y":0,"z":100},"tile":{"x":50,"y":54,"z":105}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%a5%ab%a5%a4",
+    "lines":{
+      "start":[],
+      "attack":[],
+      "extra":[],
+      "damage":[],
+      "skill":[],
+      "np":[],
+      "npDamage":[],
+      "defeat":[],
+      "win":[]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":80,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"B","dmg":60,"np":20,"star":0},"post":{"c":"B","dmg":80,"np":25,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":50,"np":20,"star":0},"post":{"c":"B","dmg":60,"np":30,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"専科百般","eff":[{"k":"def","t":"self","v":20,"turns":3,"roll":[1,2]},{"k":"atk","t":"self","v":20,"turns":3,"roll":[3,5]},{"k":"dmg","t":"target","v":150,"roll":[6,6]}],"dmg":0,"np":0,"star":0}},
+      {"acts":3,"pre":{"c":"G","dmg":40,"np":0,"star":4},"post":{"c":"G","dmg":50,"np":0,"star":5}},
+      {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":5},"post":{"c":"G","dmg":40,"np":0,"star":6}}
+    ],
+    "skills":[
+      {"name":"異形の刻印","eff":[{"k":"atk","t":"self","v":20,"turns":3},{"k":"def","t":"self","v":20,"turns":3},{"k":"cardUp","t":"self","v":30,"turns":0,"color":"B","np":10,"star":2},{"k":"cardUp","t":"self","v":40,"turns":0,"color":"R","np":0,"star":1,"roll":[1,3]},{"k":"cardUp","t":"self","v":30,"turns":0,"color":"G","np":5,"star":3,"roll":[4,6]}],"rank":"A"},
+      {"name":"高速神言(偽)","eff":[{"k":"np","t":"self","v":50}],"rank":"C"},
+      {"name":"巨獣狩り","eff":[{"k":"np","t":"self","v":30},{"k":"atk","t":"self","v":30,"turns":1},{"k":"atkTrait","t":"self","v":50,"turns":1,"trait":"超巨大"}],"rank":"B"}
+    ],
+    "ult":{"name":"死絶の金鋒","c":"R","eff":[{"k":"dmg","t":"target","v":400},{"k":"healBlock","t":"target","v":0,"turns":0},{"k":"curse","t":"target","v":0,"times":3}],"ruby":"カースド・コールブランド"}
   }
 ];
