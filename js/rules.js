@@ -139,8 +139,10 @@ const ROGUE = { rule:'team', offer:3,
     stars:  { name:'開始時スター+5', stars:5 },
   },
   diffs:{
-    easy:   { name:'イージー',     levels:['easy','easy','easy','normal','normal','normal','normal'], delta:[0,0,0,0,0,1,0], foe:{atk:0,hp:0},  boss:{hp:2,   atk:0, np:0, acts:0} },
-    normal: { name:'ノーマル',     levels:['easy','normal','normal','normal','hard','hard','hard'],   delta:[0,0,0,1,1,1,0], foe:{atk:3,hp:20}, boss:{hp:2.25,atk:0, np:10,acts:0} },
+    // イージー：同じ測り方で約67%（200回）。序盤（1戦目は-2、2〜4戦目は-1）は相手のコストを下げる。旧設定は約36%
+    easy:   { name:'イージー',     levels:['easy','easy','easy','normal','normal','normal','normal'], delta:[-2,-1,-1,-1,0,0,0], foe:{atk:0,hp:0},  boss:{hp:2,   atk:0, np:0, acts:0} },
+    // ノーマル：超つよい（先読みあり）が自軍を動かしてノーコンティニュー突破 約35%（200回）。旧設定は約4%（自軍の報酬はサーヴァント優先）
+    normal: { name:'ノーマル',     levels:['easy','easy','normal','normal','normal','normal','hard'], delta:[0,0,0,0,0,0,0], foe:{atk:0,hp:0},  boss:{hp:2,   atk:0, np:0, acts:0} },
     hard:   { name:'ハード',       levels:['normal','hard','hard','hard','hard','expert','expert'],   delta:[0,0,1,1,1,2,0], foe:{atk:5,hp:30}, boss:{hp:2.5, atk:10,np:20,acts:0} },
   } };
 
