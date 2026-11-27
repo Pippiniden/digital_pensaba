@@ -34,8 +34,8 @@ const body=function(N,ONLY,LEVEL,LOOK){
   const enemyHas=(u,test)=>enemiesOf(u).some(e=>{ const d=D(e.def), effs=[...d.skills.flatMap(s=>s.eff),...d.ult.eff,...d.faces.flatMap(f=>[f.pre,f.post].flatMap(c=>c&&c.eff||[]))];
     return effs.some(test); });
   const oneTurn=e=>e.turns===1||(!e.turns&&!e.times); // 今ターン（と相手の1ターン）だけの効果
-  const NORMAL_K=['critPow','critMult','critRoll','aoeNormal','onAtkNp','onAtkStar','cardConv','cardConvPick','onAtkFx'];
-  const ATK_K=['atk','atkPct','cardConv','cardConvPick','critPow','critMult','critRoll','sureHit','pierce','ignoreDef','atkVs','atkTrait','npPow','aoeNormal','onAtkNp','onAtkStar','cardUp','onAtkFx'];
+  const NORMAL_K=['critPow','critMult','critRoll','aoeNormal','onAtkNp','onAtkStar','cardConv','cardConvPick'];
+  const ATK_K=['atk','atkPct','cardConv','cardConvPick','critPow','critMult','critRoll','sureHit','pierce','ignoreDef','atkVs','atkTrait','npPow','aoeNormal','onAtkNp','onAtkStar','cardUp'];
   // ---- 使った時点で分かる無駄。t＝効果の対象1体、e＝効果、u＝使った側、effs＝同じスキルの全効果。理由の文字列か null ----
   const WASTE_NOW={
     atk:(t,e)=>oneTurn(e)&&!isActing(t)?'今ターン攻撃しない味方（1ターン）':null,
@@ -59,7 +59,7 @@ const body=function(N,ONLY,LEVEL,LOOK){
     hitNpUp:(t,e,u)=>has(t,'curse')||has(t,'hitNpSeal')?'呪い・被弾NP封印中':t.np>=RULES.gaugeMax?'NPが満タン':guardShadowed(t,u),
     guts:(t)=>has(t,'guts')?'すでにガッツがある（上書き）':null,
     // 発動型・特性付与
-    onAtkFx:(t,e)=>oneTurn(e)&&(!isActing(t)||G.ult)?'今ターン通常攻撃しない味方（1ターン）':null,
+    onAtkFx:(t,e)=>(e.turns||0)<=1&&!e.times&&(!isActing(t)||G.ult)?'今ターン通常攻撃しない味方（1ターン）':null, // 数ターン続くなら早く付けてよい（cpu.js の NEWFX）
     onHitFx:(t,e,u)=>guardShadowed(t,u),
     onGutsFx:(t)=>t.pid===G.cur&&!has(t,'guts')&&!sameSkillGives(null,'guts')&&!effsDeep(cpuKitEffs(t)).some(x=>x.k==='guts')?'ガッツがない':null,
     traitAddFoe:(t,e,u)=>t.pid!==u.pid&&!cpuTraitUse(u,e.trait)?'その特性を使う味方がいない':null,
