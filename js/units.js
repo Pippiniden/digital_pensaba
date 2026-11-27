@@ -327,7 +327,6 @@ const DEFAULT_UNITS = [
       {"key":"start","who":"ally","cond":{"k":"id","v":"m_erika"},"lines":["さ、見ててよボクのエリカ！"]},
       {"key":"defeat","who":"ally","cond":{"k":"id","v":"m_erika"},"lines":["エリカ……ごめん……"]},
       {"key":"win","who":"ally","cond":{"k":"id","v":"m_erika"},"lines":["これがボクとエリカの愛の力ってね！"]},
-      {"key":"defeat","who":"ally","cond":{"k":"id","v":"m_erika"},"lines":["エリカ……ごめん……"]},
       {"key":"start","who":"other","cond":{"k":"id","v":"lancelot"},"lines":["ったく、キミと正面衝突とはね"]},
       {"key":"start","who":"ally","cond":{"k":"id","v":"lancelot"},"lines":["さ、前線は任せたよセイバー！"]},
       {"key":"win","who":"enemy","cond":{"k":"id","v":"themistocles"},"lines":["冗談でしょ……こいつと一緒にされてたの、ボク……！？"]},
@@ -336,7 +335,8 @@ const DEFAULT_UNITS = [
       {"key":"win","who":"enemy","cond":{"k":"id","v":"neoptolemus"},"lines":["やる気なし、かい？　ま、勝ちは拾わせてもらうよネオプトレモス","キミが何を考えていようと、手加減してちゃボクの身まで危ないんでね"]},
       {"key":"start","who":"enemy","cond":{"k":"id","v":"nileus"},"lines":["あの光ってる雑魚は無視して別のを狙おうか","相変わらずだね……ボクに勝てると思ってるのかい、ニレウス"]},
       {"key":"defeat","who":"other","cond":{"k":"id","v":"nileus"},"lines":["う、嘘だろ！？　あのキラキラ男に負けるなんてー！"]},
-      {"key":"win","who":"enemy","cond":{"k":"id","v":"nileus"},"lines":["結局ずっと1人で光ってたな、あのバカ……","ボクは顔が良いだけの男には興味無いんでね"]}
+      {"key":"win","who":"enemy","cond":{"k":"id","v":"nileus"},"lines":["結局ずっと1人で光ってたな、あのバカ……","ボクは顔が良いだけの男には興味無いんでね"]},
+      {"key":"start","who":"other","cond":{"k":"id","v":"odysseiya"},"lines":["ボクの好みはアンドロメダなんだけどな"]}
     ],
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
@@ -637,9 +637,11 @@ const DEFAULT_UNITS = [
       "win":["戦いにも抜かりはありません。それがメイドというものです","お疲れとお見受けします。すぐにお紅茶のご用意をいたしますね、マスター"]
     },
     "condLines":[
+      {"key":"start","who":"other","cond":{"k":"id","v":"lancelot"},"lines":["敵わないから引く私ではないことを、あなたもご存知でしょう？"]},
       {"key":"start","who":"other","cond":{"k":"id","v":"lamorak"},"lines":["フフ……お仕置きが必要だねラモラック"]},
       {"key":"win","who":"other","cond":{"k":"id","v":"lamorak"},"lines":["二度と！！　私をババアと呼ばないこと！！"]},
-      {"key":"start","who":"other","cond":{"k":"id","v":"ahotoria"},"lines":["……私の仕えた偉大なる王と一緒にしたくありません"]}
+      {"key":"start","who":"other","cond":{"k":"id","v":"ahotoria"},"lines":["……私の仕えた偉大なる王と一緒にしたくありません"]},
+      {"key":"win","who":"other","cond":{"k":"id","v":"logistilla"},"lines":["あなたとは気が合いそうな気がしますわ"]}
     ],
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":50,"np":0,"star":0},"post":{"c":"R","dmg":60,"np":0,"star":0}},
@@ -802,7 +804,7 @@ const DEFAULT_UNITS = [
     },
     "condLines":[
       {"key":"start","who":"enemy","cond":{"k":"cls","v":"アーチャー"},"lines":["ひっ、アーチャーがいるの！？"]},
-      {"key":"attack","who":"other","cond":{"k":"cls","v":"ガンナー"},"lines":["ななな、なによそのおっかない武器はーっ！"]},
+      {"key":"start","who":"other","cond":{"k":"cls","v":"ガンナー"},"lines":["ななな、なによそのおっかない武器はーっ！"]},
       {"key":"defeat","who":"other","cond":{"k":"cls","v":"アーチャー"},"lines":["狩られるのはいやーっ！"]},
       {"key":"defeat","who":"other","cond":{"k":"cls","v":"ガンナー"},"lines":["狩られるのはいやーっ！"]},
       {"key":"win","who":"other","cond":{"k":"cls","v":"アーチャー"},"lines":["弓使いの相手なんてもう懲り懲りよ……"]},
@@ -876,7 +878,8 @@ const DEFAULT_UNITS = [
       {"key":"start","who":"other","cond":{"k":"id","v":"lancelot"},"lines":["ここで会ったが百年目じゃランスロットォォォォ！！！"]},
       {"key":"start","who":"other","cond":{"k":"id","v":"lucan"},"lines":["ルーカンのババア、久しぶりじゃのう！"]},
       {"key":"defeat","who":"other","cond":{"k":"id","v":"ahotoria"},"lines":["あれを王様とは認めんでええええ！！！！"]},
-      {"key":"win","who":"other","cond":{"k":"id","v":"lancelot"},"lines":["円卓最強はこのわしじゃあああああ！！！！！"]}
+      {"key":"win","who":"other","cond":{"k":"id","v":"lancelot"},"lines":["ッシャアアアア！！！　円卓最強はこのわしじゃあああああ！！！！！"]},
+      {"key":"start","who":"other","cond":{"k":"id","v":"kay"},"lines":["おう、姐さんか！！　知り合いでも手は抜かんで！！！！"]}
     ],
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":60,"np":0,"star":0},"post":{"c":"R","dmg":90,"np":0,"star":0}},
@@ -889,7 +892,7 @@ const DEFAULT_UNITS = [
     "skills":[
       {"name":"勇猛","eff":[{"k":"mentalImmune","t":"self","v":0,"turns":3},{"k":"atk","t":"self","v":30,"turns":3}],"rank":"A"},
       {"name":"戦闘続行","eff":[{"k":"guts","t":"self","v":200,"turns":5}],"rank":"A+"},
-      {"name":"怒号","eff":[{"k":"taunt","t":"self","v":0,"turns":1},{"k":"atkDown","t":"enemy_all","v":10,"turns":3}]}
+      {"name":"怒号","eff":[{"k":"taunt","t":"self","v":0,"turns":1},{"k":"atkDown","t":"enemy_all","v":20,"turns":3},{"k":"cardUp","t":"self","v":30,"turns":3,"color":"R","np":0,"star":1}]}
     ],
     "ult":{"name":"赤い盾","c":"R","eff":[{"k":"dmg","t":"target","v":300},{"k":"invul","t":"self","v":0,"turns":1},{"k":"cleanse","t":"ally_all","v":0}],"ruby":"レッドシールド"}
   },
@@ -1037,6 +1040,9 @@ const DEFAULT_UNITS = [
       "defeat":["月女神の捧げものである私を倒したこと……すぐに後悔することになるよ","うう……アルテミス様ごめんなさーい"],
       "win":["ふっふーん、ヘラクレスでも無ければ私を捕まえることなんてできないんだから"]
     },
+    "condLines":[
+      {"key":"start","who":"other","cond":{"k":"id","v":"phaethon"},"lines":["ちょ……ちょっとちょっと！　ものすっっっごい不安な運転してるけど大丈夫！？　免許持ってないの！？"]}
+    ],
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"B","dmg":60,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
@@ -1203,6 +1209,13 @@ const DEFAULT_UNITS = [
       "defeat":["こんなところで、倒れるわけには……！","すみません……私はここまでのようです……"],
       "win":["これも一つの学びでしょうか。いずれは糧になるでしょう","少し汗をかきましたね。帰って静かに読書をしましょう"]
     },
+    "condLines":[
+      {"key":"win","who":"other","cond":{"k":"id","v":"lucan"},"lines":["いずれお茶でもご一緒しましょう。あなたのような方は好きですよ"]},
+      {"key":"win","who":"other","cond":{"k":"trait","v":"善"},"lines":["その力は真に正しいことの為に使うべきでしたね。さあ、指導の時間です"]},
+      {"key":"win","who":"other","cond":{"k":"trait","v":"悪"},"lines":["あなたのような方にこの純潔の城を穢させはしません"]},
+      {"key":"win","who":"other","cond":{"k":"trait","v":"混沌"},"lines":["ふう、こういう方の相手は疲れます"]},
+      {"key":"win","who":"other","cond":{"k":"id","v":"logistilla"},"lines":["善も秩序も人の理性が掴み取るもの。システムを執行するだけの存在など……！"]}
+    ],
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":90,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
@@ -1216,7 +1229,7 @@ const DEFAULT_UNITS = [
       {"name":"英雄指導","eff":[{"k":"atk","t":"picked","v":20,"turns":3},{"k":"npPow","t":"picked","v":60,"turns":1},{"k":"sureHit","t":"picked","v":0,"turns":1},{"k":"np","t":"picked","v":20}],"rank":"C","pick":"ally","line":["サポートをいたしましょう"]},
       {"name":"常春の妖精たち","eff":[{"k":"atk","t":"picked","v":20,"turns":3},{"k":"onAtkNp","t":"picked","v":10,"turns":3},{"k":"critRoll","t":"picked","v":1,"turns":1},{"k":"pierce","t":"picked","v":0,"turns":1},{"k":"debuffImmune","t":"picked","v":0,"turns":3},{"k":"heal","t":"picked","v":100}],"rank":"B","pick":"ally","line":["みんな、よろしくお願いします","仲良くしてくださいね"]}
     ],
-    "ult":{"name":"清浄たる常春庭園","c":"B","eff":[{"k":"def","t":"ally_all","v":30,"turns":3},{"k":"cleanse","t":"self","v":0},{"k":"heal","t":"ally_all","v":120},{"k":"onAtkNp","t":"ally_all","v":5,"turns":3},{"k":"atk","t":"self","v":20,"turns":3},{"k":"nullUnder","t":"ally_all","v":60,"turns":3}],"ruby":"ラ・プランタン・エテルネル"}
+    "ult":{"name":"清浄たる常春庭園","c":"B","eff":[{"k":"def","t":"ally_all","v":30,"turns":3},{"k":"cleanse","t":"ally_all","v":0},{"k":"heal","t":"ally_all","v":120},{"k":"onAtkNp","t":"ally_all","v":5,"turns":3},{"k":"atk","t":"ally_all","v":20,"turns":3},{"k":"nullUnder","t":"ally_all","v":60,"turns":3}],"ruby":"ラ・プランタン・エテルネル"}
   },
   {
     "id":"odysseiya", "name":"オデュッセウス", "cls":"グラップラー", "cost":3, "hp":520,
@@ -1300,6 +1313,9 @@ const DEFAULT_UNITS = [
       "defeat":["戦いで負けて死ぬのなら……まだ、納得できる結末だ","まだだ……我が悲願を、果たすまでは……くっ","これが、あの時の戦いであったなら……"],
       "win":["この程度の戦力で、このブリュンヒルトに勝てると思ったのか？愚かな","はぁ……貴様も、私を受け止められる勇士では無かったか","この戦は終わりか。では次に行くぞ。手早く支度を済ませよ、マスター"]
     },
+    "condLines":[
+      {"key":"start","who":"other","cond":{"k":"id","v":"brunhild2"},"lines":["盲目に堕ちた私か。……その顔を見ると虫唾が走る"]}
+    ],
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":90,"np":0,"star":0},"post":{"c":"R","dmg":120,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"R","dmg":90,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
@@ -1391,7 +1407,7 @@ const DEFAULT_UNITS = [
       {"name":"原初のルーン","eff":[{"k":"atk","t":"picked","v":40,"turns":1,"color":"R"},{"k":"np","t":"picked","v":20}],"rank":"A","pick":"ally"},
       {"name":"高速神言","eff":[{"k":"np","t":"self","v":70}],"rank":"B"}
     ],
-    "ult":{"name":"騒樹荊棘獄","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":240},{"k":"stun","t":"enemy_all","v":0,"turns":1,"chance":2},{"k":"np","t":"self","v":30}],"ruby":"ケルヌンノス・ウッズ"}
+    "ult":{"name":"騒樹荊棘獄","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":260},{"k":"stun","t":"enemy_all","v":0,"turns":1,"chance":2},{"k":"np","t":"self","v":30}],"ruby":"ケルヌンノス・ウッズ"}
   },
   {
     "id":"arianrhod", "name":"アリアンロッド", "cls":"ライダー", "cost":4, "hp":850,
@@ -1409,6 +1425,10 @@ const DEFAULT_UNITS = [
       "defeat":[],
       "win":[]
     },
+    "condLines":[
+      {"key":"start","who":"other","cond":{"k":"id","v":"gwydion"},"lines":["来たわね、愚弟。今日こそその口を縫い付けてあげる"]},
+      {"key":"win","who":"other","cond":{"k":"id","v":"gwydion"},"lines":["世界で一番憎らしい弟だけど……倒れられると寝覚めが悪いのよ"]}
+    ],
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":15,"star":0}},
@@ -1569,7 +1589,8 @@ const DEFAULT_UNITS = [
       {"key":"win","who":"other","cond":{"k":"id","v":"liza"},"lines":["まだまだ、甘ったれには負けんわい！","派手なばかりじゃ足を取られるぞい、リザ！","これがわし流の教育じゃ！"]},
       {"key":"start","who":"ally","cond":{"k":"id","v":"m_ursula"},"lines":["わしに命令されるとは……","なぜわしがわしに従わねばならんのじゃ！"]},
       {"key":"defeat","who":"ally","cond":{"k":"id","v":"m_ursula"},"lines":["これは悪夢か……？","余計な混乱を招きおって！"]},
-      {"key":"win","who":"ally","cond":{"k":"id","v":"m_ursula"},"lines":["主従の息はぴったりか……複雑じゃのう","ああ、なんと混沌の状況か！","わしの勝利はわしのものじゃ！　わしの為ではないわい！"]}
+      {"key":"win","who":"ally","cond":{"k":"id","v":"m_ursula"},"lines":["主従の息はぴったりか……複雑じゃのう","ああ、なんと混沌の状況か！","わしの勝利はわしのものじゃ！　わしの為ではないわい！"]},
+      {"key":"win","who":"other","cond":{"k":"cls","v":"セイバー"},"lines":["フン、何が最優のクラスじゃ！　わし如きと同じクラスじゃ。知れたものよのう！"]}
     ],
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":70,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
@@ -1888,6 +1909,9 @@ const DEFAULT_UNITS = [
       "defeat":["こんな……こんな最期なんて、やだよぉ……","まだ、わたしは……終わってないはずなのにぃ……","先に……地獄で、待ってるからねぇ…………"],
       "win":["あはっ。こんなしけた相手に勝ったって、何の意味もないよぉ……？","ここにもあいつは居ない……いつになったら会えるんだろう、ねぇ……？","疲れちゃったぁ……昔の私ならともかく、今の私にこんな無茶なことさせないでよぉ……"]
     },
+    "condLines":[
+      {"key":"start","who":"other","cond":{"k":"id","v":"brunhild"},"lines":["あはっ、真っ直ぐなだけの私だぁ……気に入らないなぁ"]}
+    ],
     "faces":[
       {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"B","dmg":60,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
@@ -2101,5 +2125,129 @@ const DEFAULT_UNITS = [
       {"name":"巨獣狩り","eff":[{"k":"np","t":"self","v":30},{"k":"atk","t":"self","v":30,"turns":1},{"k":"atkTrait","t":"self","v":50,"turns":1,"trait":"超巨大"}],"rank":"B"}
     ],
     "ult":{"name":"死絶の金鋒","c":"R","eff":[{"k":"dmg","t":"target","v":400},{"k":"healBlock","t":"target","v":0,"turns":0},{"k":"curse","t":"target","v":0,"times":3}],"ruby":"カースド・コールブランド"}
+  },
+  {
+    "id":"skuld", "name":"女王スクルド", "cls":"キャスター", "cost":5, "hp":880,
+    "traits":["女性","デンマーク","北欧","中立","悪","天","人型","妖精","王"],
+    "link":"https://seesaawiki.jp/kagemiya/d/%bd%f7%b2%a6%a5%b9%a5%af%a5%eb%a5%c9",
+    "lines":{
+      "start":[],
+      "attack":[],
+      "extra":[],
+      "damage":[],
+      "skill":[],
+      "np":[],
+      "npDamage":[],
+      "defeat":[],
+      "win":[]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":90,"np":0,"star":0},"post":{"c":"R","dmg":120,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"B","dmg":70,"np":15,"star":0},"post":{"c":"B","dmg":80,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":60,"np":10,"star":0},"post":{"c":"B","dmg":70,"np":15,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"W","label":"妖精郷","eff":[{"k":"regenNp","t":"ally_all","v":5,"turns":3}],"dmg":0,"np":0,"star":0}},
+      {"acts":3,"pre":{"c":"B","dmg":50,"np":10,"star":0},"post":{"c":"B","dmg":60,"np":15,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":50,"np":0,"star":4},"post":{"c":"G","dmg":60,"np":0,"star":6}}
+    ],
+    "skills":[
+      {"name":"セイズコナ","eff":[{"k":"heal","t":"ally_all","v":100},{"k":"cleanse","t":"ally_all","v":0},{"k":"onAtkNp","t":"ally_all","v":5,"turns":3}],"rank":"B"},
+      {"name":"原初のルーン(呪)","eff":[{"k":"cardUp","t":"self","v":30,"turns":3,"color":"B","np":10,"star":2},{"k":"strip","t":"enemy_all","v":0,"vs":"guts"},{"k":"healDown","t":"enemy_all","v":50,"turns":5}],"rank":"-"},
+      {"name":"戦乙女の残影","eff":[{"k":"np","t":"self","v":30},{"k":"mentalImmune","t":"self","v":0,"turns":3},{"k":"debuffUp","t":"self","v":1,"turns":3},{"k":"fear","t":"enemy_all","v":0,"turns":3}],"rank":"C"}
+    ],
+    "ult":{"name":"雪上加霜・冬至の嵐","c":"B","eff":[{"k":"atkTrait","t":"self","v":50,"turns":1,"trait":"善"},{"k":"dmg","t":"enemy_all","v":280},{"k":"confuse","t":"enemy_all","v":3,"turns":1,"chance":2},{"k":"atkDown","t":"enemy_all","v":20,"turns":3}],"ruby":"ヤルンヴィド・ユールレイエン"}
+  },
+  {
+    "id":"xiang-yu_other", "name":"項羽【ジアザー】", "cls":"ランサー", "cost":5, "hp":830,
+    "traits":["男性","中国","混沌","悪","人","人型"],
+    "fit":{"face":{"x":50,"y":18,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":29,"z":89},"cut":{"x":0,"y":0,"z":100},"tile":{"x":50,"y":50,"z":100}},
+    "link":"https://wikiwiki.jp/fate-trpg/%E9%A0%85%E7%BE%BD%E3%80%94%E3%82%B8%E3%82%A2%E3%82%B6%E3%83%BC%E3%80%95",
+    "lines":{
+      "start":[],
+      "attack":[],
+      "extra":[],
+      "damage":[],
+      "skill":[],
+      "np":[],
+      "npDamage":[],
+      "defeat":[],
+      "win":[]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":90,"np":0,"star":0},"post":{"c":"R","dmg":120,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"R","dmg":90,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"R","dmg":50,"np":0,"star":0,"eff":[{"k":"aoe","t":"self","v":0},{"k":"cardUp","t":"self","v":30,"turns":2,"color":"R","np":0,"star":1}]}},
+      {"acts":3,"pre":{"c":"B","dmg":70,"np":15,"star":0},"post":{"c":"B","dmg":90,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":50,"np":0,"star":4},"post":{"c":"G","dmg":60,"np":0,"star":6}}
+    ],
+    "skills":[
+      {"name":"狂化(戦闘)","eff":[{"k":"atk","t":"self","v":40,"turns":3},{"k":"cardUp","t":"self","v":30,"turns":3,"color":"R","np":0,"star":1},{"k":"defDown","t":"self","v":20,"turns":3}],"rank":"B"},
+      {"name":"火尖槍","eff":[{"k":"burn","t":"enemy_all","v":20,"turns":3,"chance":3},{"k":"cardUp","t":"self","v":40,"turns":3,"color":"R","np":0,"star":2}]},
+      {"name":"重瞳","eff":[{"k":"guts","t":"self","v":200,"turns":3}],"rank":"A"}
+    ],
+    "ult":{"name":"火尖槍・抜山蓋世","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":300},{"k":"defDown","t":"enemy_all","v":30,"turns":3,"color":"R"},{"k":"burn","t":"enemy_all","v":20,"turns":3}],"ruby":"かせんそう・ばつざんがいせい"}
+  },
+  {
+    "id":"nagayoshi", "name":"丸目長恵", "cls":"アサシン", "cost":2, "hp":580,
+    "traits":["中立","中庸","人","男性","人型","日本","戦国時代"],
+    "link":"https://seesaawiki.jp/kagemiya/d/%B4%DD%CC%DC%C4%B9%B7%C3",
+    "memo":"コスト1のQuick寄り剣技型。タイ捨流による攻撃強化と、敵の攻撃を崩す小規模な妨害を持つ。低コストで編成しやすい代わりに、HP・通常攻撃力・スキル効果を控えめにし、宝具威力も必中効果ぶん基準より下げた。",
+    "lines":{
+      "start":["さて、どれほどの腕前か。ひとつ見せてもらおう。","抜け。抜かねば、儂の剣は見えんぞ？"],
+      "attack":["ふっ！","はっ！","むん！","甘いわ！"],
+      "extra":["これで仕舞いじゃ！"],
+      "damage":["クッ……！","なんと！？"],
+      "skill":["執着を捨て、自在に至る。","さて、ひとつ稽古をつけてやろう。","勝ちを捨て、太刀に任せよ。"],
+      "np":["心を捨て、形を捨て、勝ちを捨てよ。されば太刀、自ずから敵を斬る。これぞ我が剣の真髄。『無住五捨の境地』――さて、どう崩す？"],
+      "npDamage":["クッ……見事な太刀じゃ！"],
+      "defeat":["まだまだ修行不足と言うことか……"],
+      "win":["勝ちを拾ったか。……ふむ、まだまだ精進せねばな。","よい太刀筋であった。次に会う時は、一緒に酒でも呑もうか！"]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":50,"np":0,"star":0},"post":{"c":"R","dmg":80,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":40,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":40,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"ASC"},"post":{"c":"W","label":"タイ捨流・無住八相","eff":[{"k":"sureHit","t":"self","v":0,"turns":3}],"dmg":0,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":6},"post":{"c":"G","dmg":50,"np":0,"star":8}},
+      {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":5},"post":{"c":"G","dmg":50,"np":0,"star":7}}
+    ],
+    "skills":[
+      {"name":"タイ捨流","eff":[{"k":"atk","t":"self","v":20,"turns":3},{"k":"cardUp","t":"self","v":30,"turns":3,"color":"G","np":5,"star":3},{"k":"actsUp","t":"self","v":3,"turns":3},{"k":"np","t":"self","v":30}],"rank":"A++"},
+      {"name":"殺人刀","eff":[{"k":"defDown","t":"picked","v":20,"turns":1},{"k":"atk","t":"self","v":30,"turns":1}],"rank":"B","pick":"enemy"},
+      {"name":"活人剣","eff":[{"k":"atkDown","t":"picked","v":30,"turns":3},{"k":"buffDown","t":"picked","v":2,"turns":3},{"k":"critPow","t":"self","v":30,"turns":3},{"k":"critRoll","t":"self","v":2,"turns":3}],"rank":"B","pick":"enemy"}
+    ],
+    "ult":{"name":"無住五捨の境地","c":"G","eff":[{"k":"regenStar","t":"self","v":15,"turns":3},{"k":"sureHit","t":"self","v":0,"turns":3},{"k":"critRoll","t":"self","v":2,"turns":3},{"k":"critPow","t":"self","v":60,"turns":2},{"k":"cardUp","t":"self","v":40,"turns":3,"color":"G","np":5,"star":5}],"ruby":"むじゅうごしゃのきょうち"}
+  },
+  {
+    "id":"carl12", "name":"カール12世", "cls":"ライダー", "cost":5, "hp":800,
+    "traits":["人","女性","秩序","中庸","王","騎乗","人型"],
+    "fit":{"face":{"x":50,"y":18,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":14,"z":105},"cut":{"x":-2,"y":-4,"z":89},"tile":{"x":50,"y":50,"z":100}},
+    "link":"https://seesaawiki.jp/kagemiya/d/%A5%AB%A1%BC%A5%EB12%C0%A4%28%CE%AE%C0%B1%B2%A6%29",
+    "memo":"高速突撃と軍勢の進撃を軸にした攻撃型ライダー。強み：高い通常攻撃力、自己強化、全体宝具による敵軍弱体化。弱くしたところ：流星加速の反動を再現してHPを基準中間、宝具威力を追加効果分だけ低下。進撃の勢いを重視し、停止や長期戦に強い防御性能は持たせていない。",
+    "lines":{
+      "start":["ライダー、カール12世。スウェーデン国王である。卿に余の力を貸してやる。","敵軍を確認した。全軍、戦闘準備！"],
+      "attack":["遅い。","道を開けよ。","その程度か。"],
+      "extra":["余の前に立ちはだかった不運を呪うがよい――墜ちよ、蒼き流星！"],
+      "damage":["くっ……！","ぐっ……あぁ……！"],
+      "skill":["追いつけるものなら追いついてみせよ。","余の進撃を阻むには、神々とて相応の覚悟が必要であろう。","諸君、歩みを止めるな！"],
+      "np":["諸君、敵は我らを数に劣る弱兵と侮っているようだ。ならば、その誤解を正してやろうではないか。蒼衣の兵士たちよ、旗を掲げよ！我らの勝利を、我ら自身の手で掴み取るのだ！――流星加速！『轢き潰す流星群』！"],
+      "npDamage":["ぐっ……！"],
+      "defeat":["……ふっ、どうやら歴史は、同じ結末を好むらしいな……","まだだ……！まだ、私の戦争は……終わって……"],
+      "win":["当然の結果だな。諸君、ご苦労であった。負傷者の救護を最優先とせよ。","敵将の力量は悪くなかった。だが、余を相手にするには、些か経験が足りなかったようだな。"]
+    },
+    "faces":[
+      {"acts":1,"pre":{"c":"R","dmg":90,"np":0,"star":0},"post":{"c":"R","dmg":120,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"R","dmg":90,"np":0,"star":0},"post":{"c":"R","dmg":110,"np":0,"star":0}},
+      {"acts":1,"pre":{"c":"B","dmg":70,"np":15,"star":0},"post":{"c":"B","dmg":80,"np":20,"star":0}},
+      {"acts":1,"pre":{"c":"ASC"},"post":{"c":"G","dmg":60,"np":0,"star":0,"eff":[{"k":"cardUp","t":"ally_all","v":30,"turns":3,"color":"G","np":5,"star":3,"at":"pre"}]}},
+      {"acts":1,"pre":{"c":"G","dmg":50,"np":0,"star":4},"post":{"c":"G","dmg":60,"np":0,"star":6}},
+      {"acts":1,"pre":{"c":"G","dmg":50,"np":0,"star":3},"post":{"c":"G","dmg":60,"np":0,"star":5}}
+    ],
+    "skills":[
+      {"name":"北方の流星王","eff":[{"k":"critPow","t":"ally_all","v":30,"turns":3},{"k":"critRoll","t":"ally_all","v":2,"turns":3},{"k":"cardUp","t":"ally_all","v":30,"turns":3,"color":"G","np":5,"star":3},{"k":"burn","t":"ally_all","v":20,"turns":3}],"rank":"EX"},
+      {"name":"神罰の行進","eff":[{"k":"atk","t":"ally_all","v":20,"turns":3,"times":3},{"k":"def","t":"ally_all","v":20,"turns":3,"times":3},{"k":"mentalImmune","t":"ally_all","v":0,"times":1,"turns":0}],"rank":"A+"},
+      {"name":"不屈の意志","eff":[{"k":"guts","t":"self","v":150,"times":1},{"k":"mentalImmune","t":"self","v":0,"turns":3}],"rank":"B"}
+    ],
+    "ult":{"name":"轢き潰す流星群","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":300},{"k":"selfDmg","t":"ally_all","v":50}],"ruby":"メテオールレーンネッツ・パラード"}
   }
 ];
