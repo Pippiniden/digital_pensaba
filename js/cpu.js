@@ -440,11 +440,47 @@ function usableSkills(){
 function cpuNextSkill(easy){
   const list=usableSkills();
   if(easy) return list.find(x=>rnd01(`${G.turn}s${x.u.uid}${x.si}`)<.3)||null;
-  let best=null;
+  let best=null; const pass=[];
   const dying=new Map(), dy=u=>{ if(!dying.has(u)) dying.set(u,cpuHard()&&cpuDanger(u)); return dying.get(u); };
   for(const x of list){ if(cpuSkillWaste(x.u,x.si)) continue; // 効果がすべて今は働かないスキルは、倒れそうなときも使わない
-    const sc=cpuHard()?cpuGuardScore(x.u,x.si):cpuSkillScore(x.u,x.si); if((sc>=(cpuHard()?3:2)||(sc>=DANGER_MIN&&dy(x.u)))&&(!best||sc>best.sc)) best={...x,sc}; } // 倒れそうかの見積もり（重い）は、3点に届かないスキルがあるときだけ // つよい以上は3点以上で使う（2→3は勝率同等だった）
+    const sc=cpuHard()?cpuGuardScore(x.u,x.si):cpuSkillScore(x.u,x.si); if(sc>=(cpuHard()?3:2)||(sc>=DANGER_MIN&&dy(x.u))){ pass.push({...x,sc}); if(!best||sc>best.sc) best={...x,sc}; } } // 倒れそうかの見積もり（重い）は、3点に届かないスキルがあるときだけ // つよい以上は3点以上で使う（2→3は勝率同等だった）
+  if(SKILL_ORDER&&best){ // このターンに使うスキルのうち、best を強めるもの（弱体成功率アップなど）があれば先に使う
+    const pre=pass.filter(x=>x!==best&&!(x.u===best.u&&x.si===best.si)&&skillBefore(x,best)).sort((a,b)=>b.sc-a.sc)[0];
+    if(pre) return pre;
+  }
   return best;
+}
+// ---------- 使う順番 ----------
+// 使った瞬間に結果が決まる効果（確率の判定・即時回復の量・スキル再使用）は、それを強めるスキルを先に使う。
+// 攻撃のときに読まれる効果（クリティカル威力・特攻など）はスキルフェイズ内の順番で結果が変わらないので見ない。
+// 強める側の点数は、強められる側を数えて付ける（debuffUpScore）。使う予定（点数が基準以上）のスキル同士でだけ順番を入れ替える
+// 測定（つよい・先読みなし、両陣営同じ編成で旧判断と対戦・各6000試合 ±1.3）：ネサレテ 59.7%、謝肉祭の魔女リザ 49.9%・隠されし首領 49.0%・塵塚怪王 50.4%・リュキアン・キマイラ 50.9%（差なし）。
+// 旧版との対戦（各4000試合 ±1.5）：team 51.5%・simple 50.1%・master 51.0%・mteam 50.5%
+let SKILL_ORDER = true;
+const skillEffs=x=>D(x.u.def).skills[x.si].eff;
+const chanceFoe=e=>FX[e.k]&&FX[e.k].buff===false&&e.chance&&towardFoe(e);
+const chanceAlly=e=>FX[e.k]&&FX[e.k].buff===true&&e.chance&&!towardFoe(e);
+const ordTs=(u,e)=>e.t==='master'||e.t==='target'?[]:resolveTargets(u,e.t,null);
+// x を y より先に使うと y が強くなるか
+function skillBefore(x,y){
+  const xe=skillEffs(x), ye=skillEffs(y), on=(e,b)=>ordTs(x.u,e).includes(b);
+  for(const e of xe){
+    if(e.k==='debuffUp'&&on(e,y.u)&&ye.some(chanceFoe)) return true;
+    if(e.k==='buffUp'&&on(e,y.u)&&ye.some(chanceAlly)) return true;
+    if(e.k==='healUp'){ const ts=ordTs(x.u,e); if(ye.some(h=>h.k==='heal'&&ordTs(y.u,h).some(t=>ts.includes(t)&&maxHp(t)>t.hp))) return true; }
+  }
+  return ye.some(e=>e.k==='skillCharge'&&ordTs(y.u,e).includes(x.u)); // スキル再使用は、戻す先のスキルを使ってから
+}
+// 弱体成功率アップ：対象がこれから使う確率つきの弱体（未使用のスキル・同じスキル・宝具・今ターンの攻撃の面）の多さで点数を付ける
+function debuffUpScore(u,e,ts,effs,si){
+  let v=0;
+  for(const t of ts){ if(t.pid!==u.pid||t.master) continue; const d=D(t.def);
+    v+=1.5*d.skills.filter((s,i)=>!(t===u&&i===si)&&!t.used[i]&&(i<2||t.asc)&&s.eff.some(chanceFoe)).length;
+    if(t===u&&effs.some(x=>x!==e&&chanceFoe(x))) v+=1;
+    if(d.ult.eff.some(chanceFoe)) v+=t.np>=RULES.ultCost?1.5:t.np>=50?1:.5;
+    if(isActing(t)&&(d.faces||[]).some(f=>f&&f.post&&(f.post.eff||[]).concat(f.pre&&f.pre.eff||[]).some(chanceFoe))) v+=.5;
+  }
+  return Math.min(4,v);
 }
 // つよい（チームバトル）：回避・無敵を含むスキルは、敵の宝具（NP100%）に合わせて使う。
 // 敵が宝具を撃てる → 狙われそうな味方（全体宝具なら誰でも）に回避・無敵が付くなら最優先。
@@ -775,7 +811,7 @@ function cpuEffScore(u,effs,picked,si){
       case 'critDown': sc+=selfDraw(foes,ts,1.5); break;
       case 'npGainDown': sc+=selfDraw(foes,ts,1.5); break;
       case 'starDown': sc+=selfDraw(foes,ts,1); break;
-      case 'debuffUp': sc+=acting?1:0; break;
+      case 'debuffUp': sc+=SKILL_ORDER?debuffUpScore(u,e,ts,effs,si):acting?1:0; break;
       case 'copyBuff': case 'copyDebuff': { // コピー元に強化（弱体）があり、対象が味方（弱体は敵）なら価値あり
         const want=e.k==='copyBuff', fu=resolveTargets(u,e.from||'self',picked)[0];
         const n=fu?fu.fx.filter(x=>FX[x.k].buff===want&&!x.tmp&&!x.sure).length:0;
