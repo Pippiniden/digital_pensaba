@@ -9,11 +9,11 @@
    ===================================================================== */
 
 // ---- 今のキャラ（原作キャラを除く）での使われ方：場所（skill / ult / special / master）× 効果 ----
-const EFF_CTX_NAME={skill:'スキル',ult:TERMS.ult,special:'面',master:`${TERMS.player}の補助・令呪`};
+const EFF_CTX_NAME={skill:'スキル',ult:TERMS.ult,special:'面',master:`${TERMS.player}の補助・令呪`,trig:'発動する効果'};
 function effStats(){
   if(effStats.c) return effStats.c;
-  const m={skill:{},ult:{},special:{},master:{}};
-  const add=(ctx,e)=>{ if(!FX[e.k]) return; const s=m[ctx][e.k]||(m[ctx][e.k]={n:0,pats:new Map()}); s.n++; const k=effPatText(e,ctx); s.pats.set(k,(s.pats.get(k)||0)+1); };
+  const m={skill:{},ult:{},special:{},master:{},trig:{}};
+  const add=(ctx,e)=>{ if(!FX[e.k]) return; (e.eff||[]).forEach(x=>add('trig',x)); /* 発動型の中の効果も数える */ const s=m[ctx][e.k]||(m[ctx][e.k]={n:0,pats:new Map()}); s.n++; const k=effPatText(e,ctx); s.pats.set(k,(s.pats.get(k)||0)+1); };
   const units=(typeof DEFAULT_UNITS!=='undefined'?normalizeUnits(DEFAULT_UNITS):[]).filter(u=>!CANON_UNIT_IDS.includes(u.id));
   for(const u of units){
     u.skills.forEach(s=>s.eff.forEach(e=>add('skill',e)));
@@ -24,7 +24,7 @@ function effStats(){
   for(const x of ms){ (x.faces||[]).forEach(f=>(f.eff||[]).forEach(e=>add('master',e))); (x.spells||[]).forEach(s=>(s.eff||[]).forEach(e=>add('master',e))); }
   return effStats.c=m;
 }
-const effTLabel=(t,ctx)=>ctx==='master'&&typeof mTLabel==='function'?mTLabel(t):(TARGETS[t]||t);
+const effTLabel=(t,ctx)=>ctx==='trig'&&t==='target'?'その場面の相手':ctx==='master'&&typeof mTLabel==='function'?mTLabel(t):(TARGETS[t]||t);
 // 使われ方の1件を短い文に（例：「自身 20・3T」）
 function effPatText(e,ctx){
   const f=FX[e.k]||{};
@@ -143,6 +143,9 @@ function effKindChange(old,k,ctx,pick){
   if(f.copy) ne.from='self';
   if(k==='multiHit') ne.v=Math.max(2,ne.v>10?2:ne.v);
   if(k==='desc') ne.text=old.text||'';
+  if(f.trig) ne.eff=of.trig&&Array.isArray(old.eff)&&old.eff.length?old.eff:JSON.parse(JSON.stringify(TRIG_DEF[k]||[])); // 発動型どうしなら中の効果を残す
+  if(f.val&&!f.noTgt&&old.scale) ne.scale=old.scale;
+  if(f.val&&!f.inst&&!f.noTgt&&old.grow){ ne.grow=old.grow; if(old.growMax) ne.growMax=old.growMax; }
   return ne;
 }
 
@@ -152,7 +155,7 @@ function effKindChange(old,k,ctx,pick){
 //       turnsHTML:ターンの入力の差し替え（マスターの補助の面）, ops:×の前に足すボタン（↑↓など）, after:行の最後に足すHTML, traitList:特攻の相手の候補の datalist の id }
 //   attr の type：num / optnum / optnum0（0も残す） / str / optstr / bool（使う側で値に直す）
 //   「色」（カード性能アップ・ダウン）の選択には data-act="cardUpColor" が付く（色を変えたら、その色の既定値を入れるのは使う側）
-const EFF_KEPT={cond:'条件',at:'タイミング',sure:'解除・無効不可',vs:'種類の指定',all:'すべての獲得',noExtra:'エクストラなし'}; // 詳しくの中の設定（入っていたら見出しに出す）
+const EFF_KEPT={cond:'条件',at:'タイミング',sure:'解除・無効不可',vs:'種類の指定',all:'すべての獲得',noExtra:'エクストラなし',scale:'値の参照',grow:'毎ターン上昇'}; // 詳しくの中の設定（入っていたら見出しに出す）
 function effRowHTML(e,o){
   const f=FX[e.k]||{}, p=o.path, A=o.attr, B=o.btn, ctx=o.ctx, card=!!CARD_DEFS[e.k];
   const opt=(v,label,cur)=>`<option value="${esc(v)}"${String(v)===String(cur??'')?' selected':''}>${esc(label)}</option>`;
@@ -193,4 +196,4 @@ function effRowHTML(e,o){
     <div class="etxt"><span class="etxt-game">${esc(effRowText(e,ctx))}</span>${hint?`<span class="etxt-hint">よく使われる形：${esc(hint)}</span>`:''}</div>${o.after||''}</div>`;
 }
 // 行の下に出す「ゲームでの表示」
-const effRowText=(e,ctx)=>effsText([normEff(e)],null,ctx==='master'&&typeof mTLabel==='function'?mTLabel:undefined);
+const effRowText=(e,ctx)=>effsText([normEff(e)],null,ctx==='master'&&typeof mTLabel==='function'?mTLabel:ctx==='trig'?(t=>effTLabel(t,ctx)):undefined);

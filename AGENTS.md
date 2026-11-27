@@ -61,7 +61,7 @@ Scenario: game adds (after game-ui / tapfx) scenarios/index.js → scenario-core
 ## 4. Core concepts (details → `docs/agents/data-model.md`, `docs/agents/rules-spec.md`)
 
 - **Character**: `{id, name, cls, traits?, enemy?, cost, hp, fit?, link?, lines, condLines?, faces[6], skills[3], ult}`. `enemy` (`'mob'`/`'boss'`, `ENEMY_KINDS`) = enemy-only: not in `UNITS` (normal selection), only `D()` / scenarios; bosses also appear in raids. `normalizeUnit()` **drops unknown fields** — adding a field means touching `normalizeUnit`, `unitsToJS`, editor `newUnit`/`renderForm`, `validateUnits`, `units.js`.
-- **Effect** `Eff = {k, t, v, turns?, times?, chance?, ...}`: `k` is a key of `FX`, `t` a key of `TARGETS` (allowed set by `TGT_BY_CTX`).
+- **Effect** `Eff = {k, t, v, turns?, times?, chance?, ...}`: `k` is a key of `FX`, `t` a key of `TARGETS` (allowed set by `TGT_BY_CTX`). Trigger kinds (`FX[k].trig`, e.g. 攻撃時発動) carry nested `eff:Eff[]` fired by `fireTrig` (ctx `'trig'`); `scale` adds `per × count` to the value (`SCALE_BY`); `grow` raises a lasting value each turn; runtime fx keep an internal `src` (which skill / ult / face gave it; copies marked `copy`). Details → `data-model.md`.
 - **Runtime unit** `makeUnit()`; look up the definition with `D(id)`, a unit with `U(uid)`. Read max HP via `maxHp(u)`, never `D(u.def).hp`.
 - **Rules** (`G.rule`, via `ruleset()`): `team` (3v3, cost 10), `simple` (1v1), `master` (simple + master), `mteam` (team + master, cost 13). No class matchups.
 - **Phases** (`G.phase`): `mode → setup (or draft) → actRoll → [master] → skill → action → target → end → (swap) …→ over`; `guard` is a defender-side interlude in master rules.

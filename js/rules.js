@@ -394,6 +394,43 @@ const FX = {
   //   NP・スター・攻撃時効果は1回だけ。クリティカル・回避・無敵は対象ごと。敵マスターには当たらない（aoe と同じ扱い）
   aoeNormal:{name:'通常攻撃の全体化',buff:true},
   desc:{name:'説明文（表示のみ）',inst:true,noTgt:true},
+  // 発動型（trig）：付いている間、決まった場面で中の効果（Eff.eff：効果の並び）を発動する。中の効果の対象は TGT_BY_CTX.trig（target＝その場面の相手 TRIG_OTHER）。
+  //   回数（times）は1回発動するごとに1減る。中に発動型は入れられない
+  //   atk  ：ダメージを与えるコマンド（特殊行動のダメージを含む。エクストラアタック・宝具では発動しない）が当たったあと（回避・無敵・ダメージ無効で防がれた相手には出ない）。color で色を限定できる
+  //   hit  ：攻撃（コマンド・宝具）でダメージを受けるたび（回避・無敵で防いだ攻撃では出ない）
+  //   ko   ：戦闘不能になったとき（ガッツで踏みとどまったときは出ない。持ち主は倒れているので self は効果なし）
+  //   guts ：ガッツで復帰したとき
+  //   delay：ターン経過で効果が切れたとき（回数切れ・解除・戦闘不能では出ない）
+  //   start／end：持ち主の陣営のターン開始時（ターン開始時○○ と同じ時）／終了フェイズ（弱体ダメージのあと）
+  onAtkFx:{name:'攻撃時発動',buff:true,trig:'atk',color:true},
+  onHitFx:{name:'被ダメージ時発動',buff:true,trig:'hit'},
+  onKoFx:{name:'戦闘不能時発動',buff:true,trig:'ko'},
+  onGutsFx:{name:'ガッツ発動時発動',buff:true,trig:'guts'},
+  delayFx:{name:'遅延発動',buff:true,trig:'delay'},
+  startFx:{name:'ターン開始時発動',buff:true,trig:'start'},
+  endFx:{name:'ターン終了時発動',buff:true,trig:'end'},
+  // 特性付与：付いている間、対象が属性 trait を持つ（特攻・特防・条件「属性」の判定に加わる）。強化として付けるもの／弱体として付けるもの
+  traitAdd:{name:'特性付与',buff:true,trait:true},
+  traitAddFoe:{name:'特性付与（弱体）',buff:false,trait:true},
+};
+// 発動型の中の効果で「その場面の相手」（t:'target'）が指すもの。ないものは target を使えない
+const TRIG_OTHER = { onAtkFx:'攻撃した相手', onHitFx:'攻撃してきた相手', onKoFx:'倒した相手', onGutsFx:'HPを0にした相手' };
+const TRIG_WHEN = { onAtkFx:'攻撃時', onHitFx:'被ダメージ時', onKoFx:'戦闘不能時', onGutsFx:'ガッツ発動時', delayFx:'効果が切れたとき', startFx:'ターン開始時', endFx:'ターン終了時' };
+// 発動型の種類を選んだときの中の効果の既定（エディタ・申請ツール）
+const TRIG_DEF = {
+  onAtkFx:[{k:'poison',t:'target',v:20,turns:3}], onHitFx:[{k:'burn',t:'target',v:20,turns:3}], onKoFx:[{k:'np',t:'ally_other',v:20}],
+  onGutsFx:[{k:'np',t:'self',v:30}], delayFx:[{k:'heal',t:'self',v:100}], startFx:[{k:'atk',t:'self',v:10,turns:1}], endFx:[{k:'star',t:'master',v:3}],
+};
+// 参照して値が増える（Eff.scale = {by, v?, per, max?}）：効果の値 v に「数え上げた数 × per」を足す（max があれば合計をそこで止める）。
+// 付与・発動するときに1回数える（あとから数が変わっても、付いた効果の値は変わらない）。宝具・特殊行動のダメージは当てるときに対象ごとに数える
+//   need：v に入れるもの（trait＝属性・クラス・キャラID / fx＝状態の種類（*buff / *debuff も可））、unit：表示の単位
+const SCALE_BY = {
+  stars:{name:`自陣の${TERMS.star}`,unit:'個'},
+  selfBuff:{name:'自身の強化状態',unit:'つ'}, selfDebuff:{name:'自身の弱体状態',unit:'つ'},
+  tgtBuff:{name:'対象の強化状態',unit:'つ'}, tgtDebuff:{name:'対象の弱体状態',unit:'つ'},
+  allyTrait:{name:'属性を持つ味方（自分含む）',unit:'体',need:'trait'}, enemyTrait:{name:'属性を持つ敵',unit:'体',need:'trait'},
+  allyFx:{name:'状態の味方（自分含む）',unit:'体',need:'fx'}, enemyFx:{name:'状態の敵',unit:'体',need:'fx'},
+  allyOut:{name:`${TERMS.out}の味方`,unit:'体'}, enemyOut:{name:`${TERMS.out}の敵`,unit:'体'},
 };
 
 // カード性能アップの色ごとの既定値（エディタで色を選ぶと入る。v＝威力 / np＝NP獲得量 / star＝スター発生量）
@@ -419,6 +456,7 @@ const FX_GROUPS = [
   ['弱体', ['atkDown','atkPctDown','npPowDown','defDown','critDown','critPowDown','starDown','npGainDown','cardDown','debuffDown','debuffResDown','buffDown','poison','erosion','burn','spread','drain','curse','hitNpSeal','stun','petrify','bind','sleep','charm','confuse','fear','actsDown','sealSkill','sealUlt','healBlock','healDown','buffImmune']],
   ['回復・即時', ['heal','np','star','starLoss','cleanse','cleanseMental','strip','buffExtend','skillCharge','ascend','copyBuff','copyDebuff']],
   ['攻撃・特殊', ['dmg','multiHit','aoe','selfDmg','instantDeath','copyRoll']],
+  ['発動・特性', ['onAtkFx','onHitFx','onKoFx','onGutsFx','delayFx','startFx','endFx','traitAdd','traitAddFoe']],
   ['表示', ['desc']],
 ];
 function fxGroupOf(k){ const g=FX_GROUPS.find(([,ks])=>ks.includes(k)); return g?g[0]:'その他'; }
@@ -441,11 +479,13 @@ const TGT_BY_CTX = {
   ult:['self','target','picked','ally_all','ally_other','enemy_all','master'], // picked＝宝具の「対象の選び方」(ult.pick) で選んだ1体
   special:['self','target','ally_all','ally_other','enemy_all','master'],
   master:['svt','ally_svt','self','ally_all','enemy_all','enemy_both','enemy_svt','enemy_master','master'],
+  trig:['self','target','ally_all','ally_other','enemy_all','master'], // 発動型（FX[k].trig）の中の効果。target＝その場面の相手（TRIG_OTHER）。self＝発動型を持っている本人
 };
 // 状態コピー（copyBuff / copyDebuff）のコピー元（Eff.from）。場所ごとに選べるもの（コピー先は Eff.t で TGT_BY_CTX から選ぶ）
 const FROM_TARGETS = { self:'自身', picked:'選んだ1体', target:'攻撃対象' };
 const FROM_BY_CTX = { skill:['self','picked'], ult:['self','picked','target'], special:['self','target'] };
-const fxOnlyIn =(k,ctx)=>!FX[k].only||[].concat(FX[k].only).includes(ctx); // その場所で使える効果か
+// その場所で使える効果か。発動型の中（trig）には、場所を限る効果（ダメージ・コピー・連続攻撃など）・発動型・説明文は入れない
+const fxOnlyIn =(k,ctx)=>ctx==='trig'?!FX[k].only&&!FX[k].trig&&k!=='desc':!FX[k].only||[].concat(FX[k].only).includes(ctx);
 const PICKS = { '':'選ばない', ally:'味方単体', other:'自分以外の味方単体', enemy:'敵単体', any:'単体（敵味方）' };
 
 // ---------- エディタ用：カード構成テンプレ（コスト × カード構成） ----------

@@ -40,3 +40,7 @@
 .etxt{display:flex;flex-wrap:wrap;gap:2px 12px;margin-top:4px;font-size:11.5px}
 .etxt-game{color:var(--ink);opacity:.8}
 .etxt-hint{color:var(--sub)}
+
+/* 発動型の中の効果（入れ子の効果の並び） */
+.etrig{margin:6px 0 2px 14px;padding:6px 8px;border-left:3px solid var(--gold-lo);background:rgba(6,13,34,.35);border-radius:0 3px 3px 0}
+.etrig>.sub{margin-bottom:4px}

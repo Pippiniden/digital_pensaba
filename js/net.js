@@ -13,7 +13,7 @@
      「タイトルに戻る」で自分から抜けたときだけ、相手側も対戦を終える
    engine.js の act() が netAct / netTapOn / netSync を呼ぶ。画面の状態は UI.net（接続の画面）と UI.netMsg（お知らせ）
    ===================================================================== */
-const NET_VER = 1;                 // 通信の形式が変わったら上げる（違う版同士はつながない）
+const NET_VER = 2;                 // 通信の形式が変わったら上げる（違う版同士はつながない）
 const NET_FRAME = 4000;            // 1回に送る文字数（長いメッセージは分けて送る）
 const NET_ICE = [{urls:['stun:stun.l.google.com:19302','stun:stun1.l.google.com:19302']}];
 const NET_HIGH = 1<<20;            // 送信待ちがこれ（バイト）を超えたら、減るまで次を送らない

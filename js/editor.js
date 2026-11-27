@@ -97,6 +97,7 @@ function newEff(ctx,path){
   if(ctx==='ult') return {k:'dmg',t:'target',v:80};
   if(ctx==='master') return /^spells\./.test(path||'')?{k:'atk',t:'ally_svt',v:20,turns:1}:{k:'atk',t:'ally_svt',v:20}; // 令呪の継続効果は1ターン、補助の面は既定でそのターンだけ（ターン数なし＝1ターン）
   if(ctx==='special') return {k:'heal',t:'self',v:20};
+  if(ctx==='trig') return {k:'np',t:'self',v:10}; // 発動型の中の効果
   return {k:'atk',t:'self',v:10,turns:3};
 }
 // ---------- 効果の種類を変えたときの自動設定（値・対象・ターン） ----------
@@ -114,8 +115,8 @@ const FX_SIDE = { star:'master', starLoss:'enemy', strip:'enemy', instantDeath:'
 const FROM_DEF = { copyBuff:{skill:'picked',ult:'target',special:'target'}, copyDebuff:{skill:'self',ult:'self',special:'self'} };
 const sideOfFx = k=>FX_SIDE[k]||((FX[k]||{}).buff===false?'enemy':'ally');
 const T_ALLY = ['self','ally_all','ally_other','master','svt','ally_svt','picked'], T_ENEMY = ['enemy_all','target','enemy_svt','enemy_master','enemy_both','picked'];
-const T_DEF = { ally:{skill:'self',ult:'self',special:'self',master:'ally_svt'}, enemy:{skill:'enemy_all',ult:'enemy_all',special:'target',master:'enemy_svt'},
-  master:{skill:'master',ult:'master',special:'master',master:'master'}, selfOnly:{skill:'self',ult:'self',special:'self',master:'self'} };
+const T_DEF = { ally:{skill:'self',ult:'self',special:'self',master:'ally_svt',trig:'self'}, enemy:{skill:'enemy_all',ult:'enemy_all',special:'target',master:'enemy_svt',trig:'target'},
+  master:{skill:'master',ult:'master',special:'master',master:'master',trig:'master'}, selfOnly:{skill:'self',ult:'self',special:'self',master:'self',trig:'self'} };
 // 種類を変えた効果に、その種類らしい値・対象・ターンを入れる。ctx＝skill/ult/special/master、path＝効果の位置（令呪か補助の面かの判別用）
 function autoEff(e,ctx,path){
   const f=FX[e.k]||{}, m=ctx==='master';
@@ -158,6 +159,10 @@ function fixEff(e){
   if(!f.maxOk) delete e.max;
   if(f.inst||f.noTgt||!e.sure) delete e.sure;
   if(!f.allOpt) delete e.all;
+  if(!f.trig) delete e.eff; // 発動型の中の効果（種類を変えたら、発動型どうしなら残す）
+  else if(!Array.isArray(e.eff)||!e.eff.length) e.eff=clone(TRIG_DEF[e.k]||[]);
+  if(!f.val||f.noTgt) delete e.scale;
+  if(!f.val||f.inst||f.noTgt){ delete e.grow; delete e.growMax; }
   if(e.k!=='desc') delete e.text;
   else if(e.text==null) e.text='';
   if(f.noTgt){ e.t=e.t==='svt'?'svt':'self'; delete e.chance; delete e.at; delete e.cond; } // 対象・確率・タイミングを使わない効果
@@ -824,6 +829,8 @@ function effRow(path,j,e,ctx,n,atKind){
     f.inst||f.noTgt?'':`<label class="mini chk" title="強化無効・弱体無効で付与を防がれず、強化解除・弱体解除でも消えません。ターンや回数が尽きれば切れます"><input type="checkbox" data-p="${p}.sure" data-t="bool" ${e.sure?'checked':''}><span>解除・無効不可</span></label>`,
     f.allOpt?`<label class="mini chk" title="チェックなし：攻撃で得るNP（コマンド・攻撃時NP・チェイン）だけ減らします。チェックあり：スキル・ターン開始時・被ダメージ時のNP獲得も減らします"><input type="checkbox" data-p="${p}.all" data-t="bool" ${e.all?'checked':''}><span>スキル・毎ターンなども含む</span></label>`:'',
     f.noTgt?'':effAtSel(p,e,atKind),
+    scaleIn(p,e,f),
+    f.val&&!f.inst&&!f.noTgt?`<label class="mini" title="付けた側のターンが始まるたびに値がこれだけ増えます（効果が切れるターンには増えません）"><span>毎ターン上昇</span><input type="number" min="0" class="n2" data-p="${p}.grow" data-t="optnum" value="${e.grow??''}" placeholder="-"></label>${e.grow?`<label class="mini"><span>上限</span><input type="number" min="0" class="n3" data-p="${p}.growMax" data-t="optnum" value="${e.growMax??''}" placeholder="なし"></label>`:''}`:'',
   ].join('');
   const ops=`<button class="small" data-act="effMove" data-path="${path}" data-i="${j}" data-d="-1" ${j?'':'disabled'} title="上へ">↑</button><button class="small" data-act="effMove" data-path="${path}" data-i="${j}" data-d="1" ${j<n-1?'':'disabled'} title="下へ">↓</button>`;
   const mface=ctx==='master'&&/^faces\./.test(path);
@@ -831,7 +838,20 @@ function effRow(path,j,e,ctx,n,atKind){
     attr:(pp,t)=>`data-p="${pp}" data-t="${t}"`,
     btn:act=>`data-act="${act}" data-path="${path}" data-i="${j}" data-ctx="${ctx}"`,
     turnsHTML:mface?faceTurns(p+'.turns',e.turns):null,
-    after:mface?`<div class="effref ${refOver(e,path)?'over':''}">${esc(refText(e,path))}</div>`:'' })}</div>`;
+    after:(f.trig?trigBox(p,e):'')+(mface?`<div class="effref ${refOver(e,path)?'over':''}">${esc(refText(e,path))}</div>`:'') })}</div>`;
+}
+// 発動型の中の効果（効果の並びをそのまま入れ子で編集する）
+const trigBox=(p,e)=>`<div class="etrig"><div class="sub small">${esc(TRIG_WHEN[e.k]||'')}に発動する効果${TRIG_OTHER[e.k]?`（対象の「その場面の相手」＝${esc(TRIG_OTHER[e.k])}）`:''}</div>${effList(p+'.eff',e.eff||[],'trig')}</div>`;
+// 参照して値が増える（scale）の入力：何を数えるか → 属性・状態 → 1あたり → 上限
+function scaleIn(p,e,f){
+  if(!f.val||f.noTgt) return '';
+  const c=e.scale, b=c&&SCALE_BY[c.by];
+  const kind=`<label class="mini" title="使う（付ける・発動する）ときに数を数え、値に「数×1あたり」を足します"><span>値を増やす</span><select data-act="scaleKind" data-ep="${p}">${opt('','しない',c?c.by:'')}${Object.entries(SCALE_BY).map(([k,v])=>opt(k,`${v.name}の数`,c&&c.by)).join('')}</select></label>`;
+  if(!c||!b) return kind;
+  const fxs=Object.keys(FX).filter(k=>!FX[k].inst&&!FX[k].noTgt&&FX[k].buff!=null);
+  const val=b.need==='trait'?`<label class="mini"><input class="traitin" list="traitlist" data-p="${p}.scale.v" data-t="optstr" value="${esc(c.v||'')}" placeholder="属性・クラス・ID"></label>`
+    :b.need==='fx'?`<label class="mini"><select data-p="${p}.scale.v">${opt('*debuff','いずれかの弱体',c.v)}${opt('*buff','いずれかの強化',c.v)}${fxs.map(k=>opt(k,FX[k].name,c.v)).join('')}</select></label>`:'';
+  return kind+val+`<label class="mini"><span>1${b.unit}につき</span><input type="number" class="n3" data-p="${p}.scale.per" data-t="num" value="${c.per??0}"></label><label class="mini"><span>上限</span><input type="number" class="n3" data-p="${p}.scale.max" data-t="optnum" value="${c.max??''}" placeholder="なし"></label>`;
 }
 // 補助の効果に出す、マスターシートの目安（小さく）。path は faces.<面>.eff.<番号>
 const refFace = path=>+path.split('.')[1];
@@ -842,7 +862,7 @@ const cardPreviewHTML=u=>`<span class="ccrow">${['R','B','G'].map(k=>cmdCardHTML
 // 入力中は再描画せず、説明文だけ更新する（入力欄のフォーカスを保つため）
 function updatePreviews(){
   const u=cur(); if(!u) return;
-  document.querySelectorAll('.eff[data-ep]').forEach(el=>{ const e=getPath(u,el.dataset.ep); const pv=el.querySelector('.etxt-game'); if(e&&pv) pv.textContent=effRowText(e,isM()?'master':'skill'); }); // 効果の行の「ゲームでの表示」（説明文の行にはない）
+  document.querySelectorAll('.eff[data-ep]').forEach(el=>{ const e=getPath(u,el.dataset.ep); const pv=el.querySelector('.etxt-game'); if(e&&pv) pv.textContent=effRowText(e,/\.eff\.\d+\.eff\./.test(el.dataset.ep)?'trig':isM()?'master':'skill'); }); // 効果の行の「ゲームでの表示」（説明文の行にはない）
   if(isM()){
     document.querySelectorAll('.eff[data-ep^="faces."]').forEach(el=>{ const e=getPath(u,el.dataset.ep), r=el.querySelector('.effref'); if(e&&r){ r.textContent=refText(e,el.dataset.ep); r.classList.toggle('over',refOver(e,el.dataset.ep)); } });
     document.querySelectorAll('[data-prev="mface"]').forEach(el=>el.textContent=mFaceText(u.faces[+el.dataset.i]));
@@ -953,6 +973,13 @@ document.addEventListener('input',e=>{
   if(el.dataset.act==='cmdType'){
     const old=getPath(cur(),el.dataset.path);
     setPath(cur(),el.dataset.path,makeCmd(el.value,old));
+    return full();
+  }
+  if(el.dataset.act==='scaleKind'){ // 参照して値が増える：何を数えるか
+    const e=getPath(cur(),el.dataset.ep); if(!e) return;
+    if(!el.value) delete e.scale;
+    else { const old=e.scale||{}, need=SCALE_BY[el.value].need;
+      e.scale={by:el.value, per:old.per||10, ...(need==='trait'?{v:old.by===el.value?old.v:''}:need==='fx'?{v:old.by===el.value?old.v:'*debuff'}:{}), ...(old.max!=null?{max:old.max}:{})}; }
     return full();
   }
   if(el.dataset.act==='condKind'){ // 条件の種類：なし／属性／状態／HP…

@@ -17,7 +17,7 @@ const ctx={console,Math,Date,JSON,localStorage:store(),sessionStorage:store(),do
 ctx.window=ctx; vm.createContext(ctx);
 let src='';
 for(const f of ['rules','units','masters','common','unit-ref','ref-units','engine','guide']) src+=fs.readFileSync(path.join(ROOT,'js',f+'.js'),'utf8')+'\n;\n';
-vm.runInContext(src+'function render(){}\nthis.__G={FX,FX_GROUPS,FX_HELP,TARGETS,TGT_BY_CTX,PICKS,COND_KINDS,EFF_AT,LINE_KEYS,LINE_MIN,CLASSES,UNIT_REF,TERMS,RULES,VS_KINDS,FROM_BY_CTX,CARD_UP_DEF,CARD_DOWN_DEF,CANON_UNIT_IDS,ALL_UNITS,normalizeUnit,validateUnits,refCompare,refLimits,MSHEET,SPELL_TPL,MASTER_LINE_KEYS,DEFAULT_MASTERS,CANON_MASTER_IDS,normalizeMaster,validateMasters,spellLimits,normEff,effsText,mTLabel,fxOnlyIn};',ctx,{filename:'game.js'});
+vm.runInContext(src+'function render(){}\nthis.__G={FX,SCALE_BY,TRIG_OTHER,TRIG_WHEN,FX_GROUPS,FX_HELP,TARGETS,TGT_BY_CTX,PICKS,COND_KINDS,EFF_AT,LINE_KEYS,LINE_MIN,CLASSES,UNIT_REF,TERMS,RULES,VS_KINDS,FROM_BY_CTX,CARD_UP_DEF,CARD_DOWN_DEF,CANON_UNIT_IDS,ALL_UNITS,normalizeUnit,validateUnits,refCompare,refLimits,MSHEET,SPELL_TPL,MASTER_LINE_KEYS,DEFAULT_MASTERS,CANON_MASTER_IDS,normalizeMaster,validateMasters,spellLimits,normEff,effsText,mTLabel,fxOnlyIn};',ctx,{filename:'game.js'});
 const G=ctx.__G, R=G.UNIT_REF;
 const COL={R:'Buster',B:'Arts',G:'Quick'};
 const SITE='https://pippiniden.github.io/digital_pensaba/'; // 公開版（キットの頭に、もう片方のキットと申請ツールへのリンクを書く）
@@ -78,6 +78,8 @@ function fields(k){
   if(f.maxOk) a.push('max:true で値＝対象の最大HP（軽減不可）');
   if(f.allOpt) a.push('all:true で攻撃以外の獲得も減らす');
   if(f.mental) a.push('精神異常');
+  if(f.trig) a.push(`eff 必須（発動する効果の並び。書き方はふつうの効果と同じ。中の対象 t は ${G.TGT_BY_CTX.trig.join('/')}${G.TRIG_OTHER[k]?`、target＝${G.TRIG_OTHER[k]}`:'（target は使えない）'}。中に発動型・ダメージ・コピーは入れられない）`);
+  if(k==='delayFx') a.push('turns 必須（切れたときに発動）');
   return a.join('。');
 }
 const whereOk=k=>['skill','ult','special'].filter(c=>!G.FX[k].only||[].concat(G.FX[k].only).includes(c)).map(c=>CTX_NAME[c]).join('・')||'（サーヴァントでは使えない）';
@@ -207,6 +209,8 @@ function md(){
   P(`- **条件つき効果**（cond）：\`{"k":種類,"v":値,"not":true}\`。種類は ${Object.entries(G.COND_KINDS).map(([k,n])=>`\`${k}\`＝${n}`).join('、')}`);
   P(`- **タイミング**（at、宝具・カードの効果だけ）：${Object.entries(G.EFF_AT).map(([k,n])=>`\`${k}\`＝${n}`).join('、')}`);
   P('- **解除・無効不可**：持続する効果に `"sure":true`');
+  P(`- **参照して値が増える**（scale、値を持つ効果）：\`"scale":{"by":数えるもの,"v":属性や状態,"per":1あたりの増減,"max":合計の上限}\`。使う（付ける・発動する）ときに数えて、値 v に「数×per」を足す。by は ${Object.entries(G.SCALE_BY).map(([k,b])=>`\`${k}\`＝${b.name}${b.need?`（v に${b.need==='trait'?'属性':'状態のキー（*buff・*debuff も可）'}）`:''}`).join('、')}`);
+  P('- **毎ターン上昇**（grow、持続する値つきの効果）：`"grow":増える量, "growMax":上限`。付けた側のターン開始ごとに値が増える');
   P('');
   const traits=[...new Set(ORIG.flatMap(u=>u.traits||[]))];
   P(`- **属性**（traits）：今のキャラが使っている属性 → ${traits.join('・')}`);

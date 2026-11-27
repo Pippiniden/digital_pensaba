@@ -95,7 +95,32 @@ function normEff(e){
     const a=Math.round(num(e.roll[0])), b=Math.round(num(e.roll[1]));
     if(a>=1&&b<=6&&a<=b&&!(a===1&&b===6)) o.roll=[a,b];
   }
+  const f=FX[o.k];
+  // 発動型：中の効果（並び）。中に発動型は入れない
+  if(f&&f.trig) o.eff=(Array.isArray(e.eff)?e.eff:[]).map(normEff).filter(x=>!(FX[x.k]&&FX[x.k].trig));
+  // 参照して値が増える（SCALE_BY）：値を持つ効果だけ
+  const sc=normScale(e.scale); if(sc&&f&&f.val&&!f.noTgt) o.scale=sc;
+  // 毎ターン上昇：持続する値つきの効果だけ。付けた側のターン開始ごとに値+grow（growMax で合計を止める）
+  if(f&&f.val&&!f.inst&&!f.noTgt&&num(e.grow)>0){ o.grow=num(e.grow); if(num(e.growMax)>0) o.growMax=num(e.growMax); }
   return o;
+}
+// 参照して値が増える：{by:SCALE_BY のキー, v?:属性・状態の種類, per:1あたりの増減, max?:合計の上限}。不正・per が0なら null
+function normScale(c){
+  if(!c||!SCALE_BY[c.by]) return null;
+  const o={by:c.by, per:num(c.per)};
+  if(!o.per) return null;
+  const need=SCALE_BY[c.by].need;
+  if(need==='trait'){ const v=String(c.v??'').trim(); if(!v) return null; o.v=v; }
+  if(need==='fx'){ const v=String(c.v??''); o.v=(v==='*debuff'||v==='*buff'||(FX[v]&&!FX[v].inst&&!FX[v].noTgt))?v:'*debuff'; }
+  if(c.max!=null&&c.max!==''&&Number.isFinite(+c.max)) o.max=+c.max;
+  return o;
+}
+// 参照の説明（「自身の強化状態1つにつき+10（最大50）」）
+function scaleText(c){
+  if(!c) return '';
+  const b=SCALE_BY[c.by]||{name:c.by,unit:''};
+  const what=b.need==='trait'?`〔${c.v}〕${b.name.replace('属性を持つ','')}`:b.need==='fx'?`${c.v==='*debuff'?'弱体':c.v==='*buff'?'強化':(FX[c.v]||{}).name||c.v}${b.name.replace('状態の','状態の')}`:b.name;
+  return `${what}1${b.unit}につき${c.per>0?'+':''}${c.per}${c.max!=null?`（${c.per>0?'最大':'最小'}${c.max}）`:''}`;
 }
 // 出目で分岐する効果が出る確率（範囲がなければ1）と、その表示（「出目1〜2」「出目6」）
 const effRollP = e=>e&&e.roll?(e.roll[1]-e.roll[0]+1)/6:1;
@@ -182,10 +207,11 @@ function normalizeUnits(raw){
 function validateUnits(units){
   const issues=[], ids=new Map();
   if(!units.length) issues.push({i:-1,level:'error',msg:`${TERMS.unit}が1体もありません`});
-  const allTraits=new Set(units.flatMap(u=>[...(u.traits||[]),u.cls,u.id])); // 特攻・特防は属性・クラス・キャラIDで指定できる
+  // 特攻・特防は属性・クラス・キャラIDで指定できる。特性付与で付く属性も含める
+  const allTraits=new Set(units.flatMap(u=>[...(u.traits||[]),u.cls,u.id,...unitEffs(u).filter(e=>TRAIT_ADD.includes(e.k)&&e.trait).map(e=>e.trait)]));
   units.forEach((u,i)=>{
     const add=(level,msg)=>issues.push({i,level,msg});
-    traitUseCheck(u.faces.flatMap(f=>[...(f.pre.eff||[]),...(f.post.eff||[])]).concat(...u.skills.map(s=>s.eff),u.ult.eff),allTraits,add);
+    traitUseCheck(unitEffs(u),allTraits,add);
     if(!/^[A-Za-z0-9_-]+$/.test(u.id)) add('error','IDは半角英数字・_・- で入力してください');
     else if(ids.has(u.id)) add('error',`ID「${u.id}」が他の${TERMS.unit}と重複しています`);
     else ids.set(u.id,i);
@@ -240,10 +266,13 @@ function validateUnits(units){
   });
   return issues;
 }
+const TRAIT_ADD = ['traitAdd','traitAddFoe']; // 特性付与（対象に属性を足す）
+// サーヴァントの全効果（面・スキル・宝具。発動型の中も）
+const unitEffs = u=>effsDeep(u.faces.flatMap(f=>[...(f.pre.eff||[]),...(f.post.eff||[])]).concat(...u.skills.map(s=>s.eff),u.ult.eff));
 // 特攻・特防の属性を、どのサーヴァントも持っていなければ注意
 function traitUseCheck(effs,allTraits,add){
   const miss=[...new Set([
-    ...effs.filter(e=>FX[e.k]&&FX[e.k].trait&&e.trait&&!allTraits.has(e.trait)).map(e=>e.trait),
+    ...effs.filter(e=>FX[e.k]&&FX[e.k].trait&&!TRAIT_ADD.includes(e.k)&&e.trait&&!allTraits.has(e.trait)).map(e=>e.trait),
     ...effs.filter(e=>e.cond&&e.cond.k==='trait'&&e.cond.v&&!allTraits.has(e.cond.v)).map(e=>e.cond.v)])];
   if(miss.length) add('warn',`属性・クラス・IDが「${miss.join('」「')}」の${TERMS.unit}がいません（特攻・特防が発動しません）`);
 }
@@ -288,8 +317,24 @@ function checkEffs(effs,ctx,where,add){
     if(e.k==='multiHit'&&!(e.v>=2)) add('warn',`${w}：連続攻撃の回数は2以上にしてください`);
     if(e.k==='multiHit'&&e.v>10) add('warn',`${w}：連続攻撃は10回までです（それ以上は10回）`);
     if(e.k==='multiHit'&&effs.filter(x=>x.k==='multiHit').length>1&&effs.indexOf(e)!==effs.findIndex(x=>x.k==='multiHit')) add('warn',`${w}：連続攻撃が複数あります（一番大きい回数を使います）`);
+    if(ctx==='trig'){
+      if(e.t==='target'&&!TRIG_OTHER[where.trigK]) add('warn',`${w}：「${FX[where.trigK].name}」には相手がいないので、「その場面の相手」への効果は出ません`);
+      if(e.t==='self'&&where.trigK==='onKoFx') add('warn',`${w}：戦闘不能時の発動では、本人（自身）への効果は出ません`);
+      if(e.at) add('warn',`${w}：発動する効果では「${EFF_AT[e.at]}」の指定は使われません`);
+    }
+    if(FX[e.k].trig){
+      if(!e.eff||!e.eff.length) add('warn',`${w}：発動する効果がありません`);
+      else { const w2=new String(`${w}・発動する効果`); w2.trigK=e.k; checkEffs(e.eff,'trig',w2,add); }
+      if(e.k==='delayFx'&&!(e.turns>0)) add('error',`${w}：遅延発動はターン数を指定してください（切れたときに発動します）`);
+    }
+    if(e.scale){
+      if(SCALE_BY[e.scale.by]&&SCALE_BY[e.scale.by].need&&!e.scale.v) add('warn',`${w}：参照する${SCALE_BY[e.scale.by].need==='trait'?'属性':'状態'}が空です`);
+    }
+    if(e.growMax!=null&&e.growMax<=e.v) add('warn',`${w}：毎ターン上昇の上限が、はじめの値以下です`);
   });
 }
+// 効果の並びを、発動型の中の効果まで含めて平らにする（属性の確認・数え上げ用）
+const effsDeep = effs=>(effs||[]).flatMap(e=>[e,...(e.eff?effsDeep(e.eff):[])]);
 const hasErrors = units=>validateUnits(units).some(x=>x.level==='error');
 // 検証の指摘（validateUnits の1件）が、編集画面のどのタブの入力か：basic 基本 / faces 鉛筆の面 / skills スキル・宝具 / lines セリフ
 // エディタ（editor.js）と申請ツール（submit-edit.js）のタブの印・指摘から飛ぶのに使う
@@ -737,11 +782,18 @@ function fxText(e){
     case 'npPowDown': s=`${TERMS.ult}威力-${e.v}`; break;
     case 'desc': return e.text||'（説明文なし）';
     case 'copyRoll': s=FX.copyRoll.name+(e.noExtra?'（エクストラアタックなし）':''); break;
-    default: s=FX[e.k]?FX[e.k].name:e.k;
+    case 'traitAdd': case 'traitAddFoe': s=`〔${e.trait||'未指定'}〕特性付与`; break;
+    default:
+      if(FX[e.k]&&FX[e.k].trig){ s=`${e.color&&e.k==='onAtkFx'?TERMS[e.color]:''}${TRIG_WHEN[e.k]}に発動［${(e.eff&&e.eff.length?trigLines(e):['効果なし']).join('、')}］`; break; }
+      s=FX[e.k]?FX[e.k].name:e.k;
   }
+  if(e.scale) s+=`［${scaleText(e.scale)}］`;
+  if(e.grow) s+=`［毎ターン+${e.grow}${e.growMax?`（最大${e.growMax}）`:''}］`;
   const dur=[e.times!=null?`${e.times}回`:'', e.turns===0?'ターン無制限':e.turns!=null?`${e.turns}T`:typeof e.tmp==='number'?`${e.tmp}T`:''].filter(Boolean).join('・'); // tmp が数＝マスターの補助の複数ターン効果（残り）
   return s+(dur?`(${dur})`:'')+(e.cond?`［${condText(e.cond,FX[e.k]&&FX[e.k].condUse)}］`:'')+(e.chance?`［ロール${e.chance}以下］`:'')+(e.sure?'［解除・無効不可］':'')+(EFF_AT[e.at]&&e.k!=='dmg'?`［${EFF_AT[e.at]}］`:'');
 }
+// 発動型の中の効果を1つずつ（対象の「その場面の相手」は場面ごとの呼び名）
+const trigLines = e=>effLines(e.eff||[],null,t=>t==='target'?TRIG_OTHER[e.k]||'相手':tLabel(t));
 function tLabel(t,pick){
   if(t==='picked') return PICKS[pick]&&pick ? PICKS[pick] : TARGETS.picked;
   return TARGETS[t]||t;

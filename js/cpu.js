@@ -547,9 +547,13 @@ const cpuChanceDebuffer=x=>{ if(x.master) return false; const d=D(x.def), hit=e=
 // スキルは1試合1回なので、今働かない強化は「働くターンまで待つ」のが正しい（数ターン続く強化でも、今ターン攻撃しない騎には使わない）。
 // 判定は tools/skill-waste.js の WASTE_NOW と同じ考え方（新しい FX を足したら両方に足す）
 let SKILL_WASTE = true;
-const ATK_FX = ['atk','atkPct','cardUp','critPow','critMult','critRoll','sureHit','pierce','ignoreDef','atkVs','atkTrait','npPow','aoeNormal','onAtkNp','onAtkStar','cardConv','cardConvPick'];
-const NORMAL_ONLY_FX = ['critPow','critMult','critRoll','aoeNormal','onAtkNp','onAtkStar','cardConv','cardConvPick']; // 宝具には乗らない（通常攻撃だけ）
-const GUARD_FX = ['def','evade','invul','nullUnder','counter','onHitNp','hitNpUp','onHitStar','defTrait','npDef'];
+const ATK_FX = ['atk','atkPct','cardUp','critPow','critMult','critRoll','sureHit','pierce','ignoreDef','atkVs','atkTrait','npPow','aoeNormal','onAtkNp','onAtkStar','cardConv','cardConvPick','onAtkFx'];
+const NORMAL_ONLY_FX = ['critPow','critMult','critRoll','aoeNormal','onAtkNp','onAtkStar','cardConv','cardConvPick','onAtkFx']; // 宝具には乗らない（通常攻撃だけ）
+const GUARD_FX = ['def','evade','invul','nullUnder','counter','onHitNp','hitNpUp','onHitStar','defTrait','npDef','onHitFx'];
+// 特性付与（弱体）で付けた属性を、味方の誰かが使う（特攻・条件・参照）
+const cpuTraitUse = (u,tr)=>alive(u.pid).some(a=>effsDeep(cpuKitEffs(a)).some(x=>(x.k==='atkTrait'&&x.trait===tr)||(x.cond&&x.cond.k==='trait'&&x.cond.v===tr)||(x.scale&&x.scale.v===tr)));
+// 発動型の中の効果の大きさの目安（1つ0.7点・3点まで）
+const trigVal = e=>Math.min(3,(e.eff||[]).length*.7);
 const cpuKitEffs = x=>{ const d=D(x.def); return [...(d.skills||[]).flatMap(s=>s.eff),...((d.ult&&d.ult.eff)||[]),...(d.faces||[]).flatMap(f=>[f.pre,f.post].flatMap(c=>c&&c.eff||[])),...(d.spells||[]).flatMap(s=>s.eff)]; };
 const towardFoe = x=>x.t!=='self'&&x.t!=='master'&&!String(x.t).startsWith('ally');
 const cpuFoeHas = (u,test)=>alive(1-u.pid).some(x=>cpuKitEffs(x).some(test));
@@ -592,6 +596,8 @@ function cpuEffWasteOne(u,e,t,effs,si){
   }
   switch(k){
     case 'guts': return mine&&has(t,'guts')?'ガッツがある':null;
+    case 'onGutsFx': return mine&&!has(t,'guts')&&!gives('guts')&&!cpuKitEffs(t).some(x=>x.k==='guts')?'ガッツがない':null;
+    case 'traitAddFoe': return !mine&&!cpuTraitUse(u,e.trait)?'その特性を使う味方がいない':null;
     case 'taunt': return !mine?null:allies.filter(a=>!a.master).length<2?'味方が1体':allies.some(a=>a!==t&&has(a,'taunt'))?'ほかの味方がターゲット集中':enemies.some(x=>!x.master&&canUlt(x)&&x.np>=RULES.ultCost&&ultNoTarget(x))?'敵が全体宝具を撃てる':null;
     case 'debuffImmune': return mine&&!cpuFoeHas(u,x=>FX[x.k]&&FX[x.k].buff===false&&towardFoe(x))?'弱体を使う敵がいない':null;
     case 'mentalImmune': return mine&&!cpuFoeHas(u,x=>FX[x.k]&&FX[x.k].mental)?'精神異常を使う敵がいない':null;
@@ -665,7 +671,7 @@ function cpuEffScore(u,effs,picked,si){
   const aoeSoon=SKILL_SENSE&&enemies.some(x=>!x.master&&canUlt(x)&&x.np>=70&&ultNoTarget(x));
   const shielded=t=>SKILL_SENSE&&t.pid===u.pid&&!has(t,'taunt')&&!aoeSoon&&allies.some(a=>a!==t&&has(a,'taunt')); // 敵の単体攻撃はターゲット集中の味方に行く
   let sc=0;
-  for(const e of effs){
+  for(let e of effs){
     if(FX[e.k]&&FX[e.k].noTgt) continue; // 説明文・連続攻撃（スキルでは使わない）
     const sc0=sc; // 出目で分岐する効果は、出る確率を掛けた見込みにする（下の switch のあと）
     let ts=e.t==='master'?[]:resolveTargets(u,e.t,picked);
@@ -674,6 +680,7 @@ function cpuEffScore(u,effs,picked,si){
       else ts=ts.filter(t=>condOk(e.cond,t));
     }
     if(cpuEffWaste(u,e,ts,effs,si)) continue; // 今は働かない効果は点数に入れない
+    if(e.scale) e={...e,v:scaleVal(u,e,ts[0]||null)}; // 参照して値が増える：今の数で見る
     const acting=ts.some(isActing);
     const foes=ts.filter(t=>t.pid!==u.pid);
     switch(e.k){
@@ -740,6 +747,14 @@ function cpuEffScore(u,effs,picked,si){
         const good=want?ts.some(t=>t.pid===u.pid&&t!==fu):foes.some(t=>t!==fu);
         sc+=n&&good?Math.min(4,1+n):want?0:-1; break; }
       case 'onAtkNp': case 'onAtkStar': sc+=onAtkScore(e,ts); break;
+      // 発動型：中の効果の数で大まかに見る（攻撃時は今ターン殴る味方、被ダメージ時は味方、戦闘不能時はHPが減った味方、ガッツ発動時はガッツがある味方）
+      case 'onAtkFx': sc+=acting&&!G.ult?1.5+trigVal(e):.5; break;
+      case 'onHitFx': sc+=ts.some(t=>t.pid===u.pid)?1+trigVal(e):-1; break;
+      case 'onKoFx': sc+=ts.some(t=>t.pid===u.pid&&hpR(t)<.5)?2+trigVal(e)/2:1; break;
+      case 'onGutsFx': sc+=ts.some(t=>has(t,'guts'))||effs.some(x=>x.k==='guts')?2+trigVal(e)/2:.3; break;
+      case 'delayFx': case 'startFx': case 'endFx': sc+=ts.some(t=>t.pid===u.pid)?1.5+trigVal(e)/2:.5; break;
+      case 'traitAdd': sc+=ts.some(t=>t.pid===u.pid)?1:0; break;
+      case 'traitAddFoe': sc+=foes.length&&cpuTraitUse(u,e.trait)?3:foes.length?.3:-1; break;
       case 'cardUp': { // カード性能アップ：攻撃ダメージ+・攻撃時NP・攻撃時スターの合計に、その色の面が出やすいかを掛ける（色の面が半分あれば満額）
         const share=ts.filter(t=>!t.master).reduce((m,t)=>Math.max(m,(D(t.def).faces||[]).filter(f=>f&&f.c===e.color).length/6),0);
         const a=(cpuHard()?atkBuffScore(e,ts):acting?3:0)*Math.min(1,e.v/20);

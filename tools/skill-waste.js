@@ -34,8 +34,8 @@ const body=function(N,ONLY,LEVEL,LOOK){
   const enemyHas=(u,test)=>enemiesOf(u).some(e=>{ const d=D(e.def), effs=[...d.skills.flatMap(s=>s.eff),...d.ult.eff,...d.faces.flatMap(f=>[f.pre,f.post].flatMap(c=>c&&c.eff||[]))];
     return effs.some(test); });
   const oneTurn=e=>e.turns===1||(!e.turns&&!e.times); // 今ターン（と相手の1ターン）だけの効果
-  const NORMAL_K=['critPow','critMult','critRoll','aoeNormal','onAtkNp','onAtkStar','cardConv','cardConvPick'];
-  const ATK_K=['atk','atkPct','cardConv','cardConvPick','critPow','critMult','critRoll','sureHit','pierce','ignoreDef','atkVs','atkTrait','npPow','aoeNormal','onAtkNp','onAtkStar','cardUp'];
+  const NORMAL_K=['critPow','critMult','critRoll','aoeNormal','onAtkNp','onAtkStar','cardConv','cardConvPick','onAtkFx'];
+  const ATK_K=['atk','atkPct','cardConv','cardConvPick','critPow','critMult','critRoll','sureHit','pierce','ignoreDef','atkVs','atkTrait','npPow','aoeNormal','onAtkNp','onAtkStar','cardUp','onAtkFx'];
   // ---- 使った時点で分かる無駄。t＝効果の対象1体、e＝効果、u＝使った側、effs＝同じスキルの全効果。理由の文字列か null ----
   const WASTE_NOW={
     atk:(t,e)=>oneTurn(e)&&!isActing(t)?'今ターン攻撃しない味方（1ターン）':null,
@@ -58,6 +58,11 @@ const body=function(N,ONLY,LEVEL,LOOK){
     counter:(t,e,u)=>guardShadowed(t,u), onHitNp:(t,e,u)=>t.np>=RULES.gaugeMax?'NPが満タン':guardShadowed(t,u),
     hitNpUp:(t,e,u)=>has(t,'curse')||has(t,'hitNpSeal')?'呪い・被弾NP封印中':t.np>=RULES.gaugeMax?'NPが満タン':guardShadowed(t,u),
     guts:(t)=>has(t,'guts')?'すでにガッツがある（上書き）':null,
+    // 発動型・特性付与
+    onAtkFx:(t,e)=>oneTurn(e)&&(!isActing(t)||G.ult)?'今ターン通常攻撃しない味方（1ターン）':null,
+    onHitFx:(t,e,u)=>guardShadowed(t,u),
+    onGutsFx:(t)=>t.pid===G.cur&&!has(t,'guts')&&!sameSkillGives(null,'guts')&&!effsDeep(cpuKitEffs(t)).some(x=>x.k==='guts')?'ガッツがない':null,
+    traitAddFoe:(t,e,u)=>t.pid!==u.pid&&!cpuTraitUse(u,e.trait)?'その特性を使う味方がいない':null,
     taunt:(t,e,u)=>alliesOf(u).length<2?'味方が1体だけ':alliesOf(u).some(a=>a!==t&&has(a,'taunt'))?'ほかの味方がすでにターゲット集中':aoeReady(u)?'敵が全体宝具を撃てる（NP100%）':null,
     debuffImmune:(t,e,u)=>!enemyHas(u,x=>FX[x.k]&&FX[x.k].buff===false&&x.t!=='self'&&!String(x.t).startsWith('ally'))?'弱体を使う敵がいない':null,
     mentalImmune:(t,e,u)=>!enemyHas(u,x=>FX[x.k]&&FX[x.k].mental)?'精神異常を使う敵がいない':null,
@@ -114,6 +119,8 @@ const body=function(N,ONLY,LEVEL,LOOK){
     npPow:(h,ev)=>attacks(h,ev)&&ev.ult, aoeNormal:(h,ev)=>normalAtk(h,ev)&&alive(1-h.pid).length>=2,
     onAtkNp:normalAtk, onAtkStar:normalAtk, cardUp:attacks,
     def:hit, evade:hit, invul:hit, nullUnder:hit, guts:hit, counter:hit, onHitNp:hit, hitNpUp:hit, onHitStar:hit,
+    onAtkFx:normalAtk, onHitFx:hit, onKoFx:hit, onGutsFx:hit,
+    traitAddFoe:(h,ev,x)=>hit(h,ev)&&ev.att.some(a=>effsDeep(cpuKitEffs(a)).some(y=>y.k==='atkTrait'&&y.trait===x.trait)),
     defTrait:(h,ev,x)=>hit(h,ev)&&ev.att.some(a=>traitHit(a,x.trait)),
     taunt:(h,ev)=>hit(h,ev)&&!ev.all&&alive(h.pid).length>=2,
     // 敵に付けた弱体

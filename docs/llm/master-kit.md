@@ -259,9 +259,9 @@
 - **千速棗**（コスト3・HP400）補助の当たり：2・3・4・5番　4番「天速星」選んだ自軍サーヴァント：攻撃時：スター5個発生 ／ 選んだ自軍サーヴァント：攻撃時：NP+10% ／ 選んだ自軍サーヴァント：攻撃ダメージ+20(Quick) ／ 選んだ自軍サーヴァント：Quick攻撃時：NP+5% ／ 選んだ自軍サーヴァント：クリティカル率アップ(Lv+1)　令呪：「韋駄天夏目」選んだ自軍サーヴァント：回避(1T) ／ 選んだ自軍サーヴァント：最大行動回数+1(1回)　「仙人の知恵」選んだ自軍サーヴァント：回避(1回・3T) ／ 選んだ自軍サーヴァント：最大行動回数+1(1回)　「よくわかんないけど仙丹」選んだ自軍サーヴァント：ガッツ(HP200)(1回・1T) ／ 選んだ自軍サーヴァント：NP+15%
 - **ウルシュラ・ムラチニク**（コスト4・HP380）補助の当たり：2・3・4・5・6番　4番「混沌解放」敵全体（サーヴァント＋マスター）：40ダメージ　令呪：「混沌再臨」選んだ自軍サーヴァント：使用済みスキル1個を再使用可能に　「蛹は羽化せず」選んだ自軍サーヴァント：HP200回復　「擬似宇宙・災厄世界」敵全体（サーヴァント＋マスター）：60ダメージ ／ 敵全体（サーヴァント＋マスター）：呪い(1回)［ロール3以下］
 - **ロズヴィータ・ネーベルク・レーゲンフェルト**（コスト4・HP360）補助の当たり：1・2・3・4・5番　4番「狭霧に霞む」選んだ自軍サーヴァント：回避(1回)　令呪：「醜穢澱濘」選んだ敵サーヴァント：スタン(1T)［ロール4以下］ ／ 選んだ敵サーヴァント：強化無効(1回・1T)　「腐蝕霊症」選んだ敵サーヴァント：蝕毒(3回・1T)　「肉體溶媒」敵マスター：150ダメージ
-- **埋火**（コスト1・HP100）補助の当たり：4・6番　4番「一個飛ばしてのじゃなのじゃ！」選んだ自軍サーヴァント：攻撃時：NP+10%　令呪：「のじゃの王者、略してのじゃ」選んだ自軍サーヴァント：NP+50% ／ 選んだ自軍サーヴァント：被弾NP上昇封印(1T)［解除・無効不可］　「八雷神ぱぅわー」選んだ自軍サーヴァント：回避(1T) ／ 選んだ自軍サーヴァント：最大行動回数+1(1回)　「のじゃ大爆発」自身：自傷ダメージ50 ／ 敵全体（サーヴァント＋マスター）：100ダメージ
-- **レクレリ**（コスト5・HP600）補助の当たり：1・2・3・4・5・6番　4番「」選んだ自軍サーヴァント：攻撃ダメージ+20 ／ 選んだ自軍サーヴァント：攻撃時：NP+10%　令呪：「竜の血」選んだ自軍サーヴァント：HP150回復 ／ 選んだ自軍サーヴァント：NP+15%　「万能触媒」選んだ自軍サーヴァント：弱体解除 ／ 選んだ自軍サーヴァント：最大行動回数+1(1T)　「応急魔力障壁」自軍サーヴァント：回避(1回・ターン無制限)
-- **沈 硯秋**（コスト3・HP300）補助の当たり：1・2・4・5番　4番「千人千面」選んだ敵サーヴァント：100ダメージ ／ 選んだ敵サーヴァント：毒60　令呪：「指鹿為馬」選んだ敵サーヴァント：攻撃ダメージ-30(1T) ／ 選んだ敵サーヴァント：クリティカル率ダウン(Lv-2)(1T)　「金蝉脱殻」敵マスター：150ダメージ　「最佳女主角」選んだ自軍サーヴァント：攻撃ダメージ+40(1T) ／ 選んだ自軍サーヴァント：必中(1T)
+- **埋火**（コスト1・HP100）補助の当たり：4・6番　4番「一個飛ばしてのじゃなのじゃ！」選んだ自軍サーヴァント：攻撃時：NP+10%　令呪：「のじゃの王者、略してのじゃ」選んだ自軍サーヴァント：NP+50% ／ 選んだ自軍サーヴァント：被弾NP上昇封印(1T)［解除・無効不可］　「八雷神ぱぅわー」選んだ自軍サーヴァント：回避(1T) ／ 選んだ自軍サーヴァント：最大行動回数+1(1回)　「のじゃ大爆発」自身：最大HPぶんの自傷ダメージ(軽減不可) ／ 敵全体（サーヴァント＋マスター）：100ダメージ
+- **レクレリ**（コスト5・HP580）補助の当たり：1・2・3・4・5・6番　4番「」選んだ自軍サーヴァント：攻撃ダメージ+20 ／ 選んだ自軍サーヴァント：攻撃時：NP+10%　令呪：「竜の血」選んだ自軍サーヴァント：HP150回復 ／ 選んだ自軍サーヴァント：NP+15%　「万能触媒」選んだ自軍サーヴァント：弱体解除 ／ 選んだ自軍サーヴァント：最大行動回数+1(1T)　「応急魔力障壁」自軍サーヴァント：回避(1回・ターン無制限)
+- **沈 硯秋**（コスト3・HP320）補助の当たり：1・2・4・5番　4番「千人千面」選んだ敵サーヴァント：100ダメージ ／ 選んだ敵サーヴァント：毒30(3回・ターン無制限)　令呪：「指鹿為馬」選んだ敵サーヴァント：攻撃ダメージ-30(1T) ／ 選んだ敵サーヴァント：クリティカル率ダウン(Lv-2)(1T)　「金蝉脱殻」敵マスター：150ダメージ　「最佳女主角」選んだ自軍サーヴァント：攻撃ダメージ+40(1T) ／ 選んだ自軍サーヴァント：必中(1T)
 - **めどいさん**（コスト3・HP350）補助の当たり：2・3・4・5番　4番「めどいので今のうちにお掃除」自軍サーヴァント：弱体解除 ／ 自軍サーヴァント：HP60回復　令呪：「霊子譲渡」選んだ自軍サーヴァント：NP+30%　「応急手当」選んだ自軍サーヴァント：HP200回復　「たまには本気出す」味方全体：攻撃ダメージ+20(1T) ／ 味方全体：最大行動回数+1(1T) ／ 味方全体：弱体解除
 - **ひどいさん**（コスト1・HP999）補助の当たり：2・4番　4番「痛いのは嫌ですー」味方全体：被ダメージ-20 ／ 自身：被ダメージ-150　令呪：「イシスの雨」選んだ自軍サーヴァント：弱体解除 ／ 選んだ自軍サーヴァント：最大行動回数+1(1回)　「生存への布石」選んだ自軍サーヴァント：弱体無効(1回) ／ 選んだ自軍サーヴァント：最大行動回数+1(1回)　「全体回復」味方全体：HP100回復
 - **マスターロード・ペイン**（コスト4・HP350）補助の当たり：2・3・4・5・6番　4番「影ヲ追フ者」自軍サーヴァント：攻撃ダメージ+30 ／ 自軍サーヴァント：HP80回復　令呪：「カイザースラウテルン」選んだ敵サーヴァント：80ダメージ　「メルトダウン」敵サーヴァント全体：攻撃ダメージ-40(1T)　「シュヴァルツ・ゲシュヒテ」選んだ自軍サーヴァント：攻撃ダメージ+40(1T) ／ 選んだ自軍サーヴァント：自傷ダメージ50
@@ -390,10 +390,22 @@
 - **`selfDmg` 自傷ダメージ**（即時） — 対象（ふつうは自身）に固定ダメージを与える。軽減・回避されず、NPも増えない。　値：自分などへ vダメージ（固定）
 - **`instantDeath` 即死**（即時） — 対象のHPを0にする（ガッツがあれば踏みとどまる）。　値：使わない（0）　**補助には入れない**
 
+#### 発動・特性
+
+- **`onAtkFx` 攻撃時発動**（強化） — ダメージを与えるコマンド攻撃が当たるたびに、中の効果が出る（当たった相手1体につき1回。エクストラアタック・宝具では出ない。回避・無敵で防がれた相手には出ない）。　値：使わない（0）
+- **`onHitFx` 被ダメージ時発動**（強化） — 攻撃でダメージを受けるたびに、中の効果が出る（攻撃してきた相手に弱体を返す、など。回避・無敵で防いだときは出ない）。　値：使わない（0）
+- **`onKoFx` 戦闘不能時発動**（強化） — 戦闘不能になったときに、中の効果が出る（味方へ強化を残す、倒した相手に弱体、など。ガッツで踏みとどまったときは出ない）。　値：使わない（0）
+- **`onGutsFx` ガッツ発動時発動**（強化） — ガッツで復帰したときに、中の効果が出る。　値：使わない（0）
+- **`delayFx` 遅延発動**（強化） — ターン経過で効果が切れたときに、中の効果が出る（○ターン後に発動）。解除・回数切れ・戦闘不能では出ない。　値：使わない（0）
+- **`startFx` ターン開始時発動**（強化） — 持ち主の陣営のターン開始時に、毎回中の効果が出る。　値：使わない（0）
+- **`endFx` ターン終了時発動**（強化） — 持ち主の陣営の終了フェイズ（弱体ダメージのあと）に、毎回中の効果が出る。　値：使わない（0）
+- **`traitAdd` 特性付与**（強化） — 付いている間、指定の属性を持つ（特攻・特防・属性の条件で、その属性として扱われる）。　値：使わない（0）。trait 必須
+- **`traitAddFoe` 特性付与（弱体）**（弱体） — 弱体として、指定の属性を付ける。味方の特攻の対象にできる（弱体解除で消える）。　値：使わない（0）。trait 必須
+
 ### 5. その他の決まり
 
 - **セリフ**（lines）：`start`＝戦闘開始、`support`＝補助、`attack`＝攻撃（マスタールール）、`spell`＝令呪使用、`win`＝勝利、`defeat`＝敗北。それぞれ文字列の配列。面・令呪だけの専用セリフは、その面・令呪に `"line":["…"]`
-- **使用済みのID**（サーヴァントとも重複不可）：m_rin, m_kiritsugu, m_shirou, m_ritsuka, m_celenike, m_shinji, m_kariya, m_kota, m_shadowkaiser, m_masaru, m_erika, m_seiji, m_antonia, m_ssetsuna, m_jubiro, m_seimei, m_kuzunoha, m_kiri, m_isla, m_ophelia, m_chudovishche, m_natsume, m_ursula, m_roswitha, m_uzumebi, m_lechleri, m_shen_yenqiu, m_medoisan, m_hidoisan, m_itaisan, artoria, emiya, cu, medusa, medea, kojiro, heracles, hassan, mash, kagemiya, odysseus, lancelot, connla, athelstan, mnesarete, hanzo, neoptolemus, titus, yorimitsu, lucan, almeida, tezcatlipoca, ahotoria, bartholomew, utixorabbit, kalki, lamorak, guillaume, vercingetorix, hangaku, adonis, ceryneia, hughes, necho1, croesus, croesusalter, logistilla, odysseiya, magoichi, brunhild, nileus, gwydion, arianrhod, tomiko, himetsuru, saishoku, liza, ursula, victy, maximinus, chiriduka, sulla, themistocles, ethelfleda, phaethon, chimaira, chief, brunhild2, fredegund, conall, browning, ling_zhen
+- **使用済みのID**（サーヴァントとも重複不可）：m_rin, m_kiritsugu, m_shirou, m_ritsuka, m_celenike, m_shinji, m_kariya, m_kota, m_shadowkaiser, m_masaru, m_erika, m_seiji, m_antonia, m_ssetsuna, m_jubiro, m_seimei, m_kuzunoha, m_kiri, m_isla, m_ophelia, m_chudovishche, m_natsume, m_ursula, m_roswitha, m_uzumebi, m_lechleri, m_shen_yenqiu, m_medoisan, m_hidoisan, m_itaisan, artoria, emiya, cu, medusa, medea, kojiro, heracles, hassan, mash, kagemiya, odysseus, lancelot, connla, athelstan, mnesarete, hanzo, neoptolemus, titus, yorimitsu, lucan, almeida, tezcatlipoca, ahotoria, bartholomew, utixorabbit, kalki, lamorak, guillaume, vercingetorix, hangaku, adonis, ceryneia, hughes, necho1, croesus, croesusalter, logistilla, odysseiya, magoichi, brunhild, nileus, gwydion, arianrhod, tomiko, himetsuru, saishoku, liza, ursula, victy, maximinus, chiriduka, sulla, themistocles, ethelfleda, phaethon, chimaira, chief, brunhild2, fredegund, conall, browning, ling_zhen, ollerus, kay
 
 ## 見本（master-template.json）
 

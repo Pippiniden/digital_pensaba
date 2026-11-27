@@ -19,7 +19,7 @@ function eNum(i,p,v,label,w=''){ return `<label class="ef"><span>${label}</span>
 function eTxt(i,p,v,label,cls='',ph=''){ return `<label class="ef ${cls}"><span>${label}</span><input ${eAttr(i,p,'str')} value="${esc(v??'')}" placeholder="${esc(ph)}"></label>`; }
 
 // 場所ごとの効果の追加時の初期値
-const EFF_NEW={ skill:{k:'atk',t:'self',v:20,turns:3}, ult:{k:'dmg',t:'enemy_all',v:200}, special:{k:'atk',t:'self',v:10,turns:1} };
+const EFF_NEW={ skill:{k:'atk',t:'self',v:20,turns:3}, ult:{k:'dmg',t:'enemy_all',v:200}, special:{k:'atk',t:'self',v:10,turns:1}, trig:{k:'np',t:'self',v:10} };
 
 // ---- 効果1つ：共通部品 effRowHTML（eff-ui.js）を使う ----
 // その効果の持ち主（スキル・宝具）の「対象の選び方」。面の効果には無い
@@ -27,7 +27,8 @@ const ownerPick=(u,path)=>{ const m=/^(skills\.\d+|ult)\.eff$/.exec(path); retur
 function effRowE(i,path,j,e,ctx){
   const p=`${path}.${j}`;
   return effRowHTML(e,{ ctx, path:p, attr:(pp,t)=>eAttr(i,pp,t), more:S.more.has(i+':'+p), pick:ownerPick(S.units[i],path),
-    btn:act=>`data-act="${act}" data-i="${i}" data-path="${path}" data-j="${j}" data-ctx="${ctx}"` });
+    btn:act=>`data-act="${act}" data-i="${i}" data-path="${path}" data-j="${j}" data-ctx="${ctx}"`,
+    after:FX[e.k]&&FX[e.k].trig?`<div class="etrig"><div class="sub small">${esc(TRIG_WHEN[e.k]||'')}に発動する効果${TRIG_OTHER[e.k]?`（「その場面の相手」＝${esc(TRIG_OTHER[e.k])}）`:''}</div>${effListE(i,p+'.eff',e.eff,'trig')}</div>`:'' }); // 発動型の中の効果
 }
 function effListE(i,path,effs,ctx){
   return `<div class="effs">${(effs||[]).map((e,j)=>effRowE(i,path,j,e,ctx)).join('')}<button class="small" data-act="effAdd" data-i="${i}" data-path="${path}" data-ctx="${ctx}">＋効果</button></div>`;
