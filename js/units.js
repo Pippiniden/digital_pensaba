@@ -2182,14 +2182,15 @@ const DEFAULT_UNITS = [
     ],
     "skills":[
       {"name":"狂化(戦闘)","eff":[{"k":"atk","t":"self","v":40,"turns":3},{"k":"cardUp","t":"self","v":30,"turns":3,"color":"R","np":0,"star":1},{"k":"defDown","t":"self","v":20,"turns":3}],"rank":"B"},
-      {"name":"火尖槍","eff":[{"k":"burn","t":"enemy_all","v":20,"turns":3,"chance":3},{"k":"cardUp","t":"self","v":40,"turns":3,"color":"R","np":0,"star":2}]},
-      {"name":"重瞳","eff":[{"k":"guts","t":"self","v":200,"turns":3}],"rank":"A"}
+      {"name":"焔の覇王","eff":[{"k":"burn","t":"enemy_all","v":20,"turns":3,"chance":3},{"k":"cardUp","t":"self","v":40,"turns":3,"color":"R","np":0,"star":2}],"rank":"B"},
+      {"name":"重瞳","eff":[{"k":"guts","t":"self","v":1,"turns":3,"times":1},{"k":"critRoll","t":"self","v":3,"turns":1},{"k":"evade","t":"self","v":0,"turns":1}],"rank":"A"}
     ],
-    "ult":{"name":"火尖槍・抜山蓋世","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":300},{"k":"defDown","t":"enemy_all","v":30,"turns":3,"color":"R"},{"k":"burn","t":"enemy_all","v":20,"turns":3}],"ruby":"かせんそう・ばつざんがいせい"}
+    "ult":{"name":"火尖槍・抜山蓋世","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":300},{"k":"actsUp","t":"self","v":1,"turns":0,"times":1},{"k":"defDown","t":"enemy_all","v":30,"turns":3,"color":"R"},{"k":"burn","t":"enemy_all","v":20,"turns":3}],"ruby":"かせんそう・ばつざんがいせい"}
   },
   {
     "id":"nagayoshi", "name":"丸目長恵", "cls":"アサシン", "cost":2, "hp":580,
     "traits":["中立","中庸","人","男性","人型","日本","戦国時代"],
+    "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":14,"z":105},"cut":{"x":0,"y":0,"z":100},"tile":{"x":50,"y":50,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%B4%DD%CC%DC%C4%B9%B7%C3",
     "memo":"コスト1のQuick寄り剣技型。タイ捨流による攻撃強化と、敵の攻撃を崩す小規模な妨害を持つ。低コストで編成しやすい代わりに、HP・通常攻撃力・スキル効果を控えめにし、宝具威力も必中効果ぶん基準より下げた。",
     "lines":{
