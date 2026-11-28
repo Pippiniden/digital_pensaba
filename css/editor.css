@@ -194,7 +194,13 @@ table.simmx td.self{color:var(--sub)}
 .preview.mprev::before{content:'効果：'}
 
 /* 属性・専用セリフ・効果の分類 */
-.fields label.wide{grid-column:1/-1}
+.fields label.wide,.fields .wide{grid-column:1/-1}
+/* 属性の選択ボタン（見た目は buttons.css の .rchip）：基本の組は枠で囲み、未設定の組は赤い枠 */
+.trpick{display:flex;flex-direction:column;gap:6px;margin-top:-4px}
+.trrow{display:flex;flex-wrap:wrap;gap:6px}
+.trgrp{display:inline-flex;flex-wrap:wrap;gap:3px;padding:3px;border-radius:6px;border:1px dashed var(--gold-lo)}
+.trgrp.miss{border-color:#c0504d}
+.trmore{max-height:96px;overflow-y:auto;gap:3px}
 .ownline{display:flex;flex-direction:column;gap:3px;font-size:11px;color:var(--sub)}
 .ownline textarea{font-size:12px;resize:vertical;min-height:0}
 .eff .traitin{width:7em}

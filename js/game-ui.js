@@ -7,7 +7,7 @@
    ===================================================================== */
 
 const UI = { nav:{s:'top',step:'rule'}, /* モード選択の階層：top / quick(rule→level) / local / tutorial / settings */ menu:false, mfold:false, /* マスター選択の折り畳み */ spellPick:false, /* 令呪の即時発動：3つの中から選ぶ表示 */ result:false, resultShown:false, endReady:false,
-  roster:{ sort:'default', cls:'', cost:'', trait:'', q:'', ok:false }, /* キャラクター選択の並べ替え・絞り込み */ detail:null, setupView:null, log:readLogPref(), auto:readPref('pencilduel.auto')==='1' };
+  roster:{ sort:'default', cls:'', cost:'', trait:'', q:'', ok:false }, /* キャラクター選択の並べ替え・絞り込み */ mroster:{ sort:'default', cost:'', fx:'', q:'' }, /* 図鑑のマスター一覧の並べ替え・絞り込み */ detail:null, setupView:null, log:readLogPref(), auto:readPref('pencilduel.auto')==='1' };
 function readPref(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
 function savePref(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
 window.SPEED_PREF=Number(readPref('pencilduel.speed'))||0; // 設定で選んだ進行速度（newGame が読む）
@@ -704,11 +704,11 @@ function sinfoModalHTML(){
 const ZTABS = { svt:TERMS.unit, master:TERMS.player };
 function zukanView(){
   const list=UI.ztab==='master'?MASTERS:UNITS, d=D(UI.setupView);
-  return d&&list.includes(d)?d:(UI.ztab==='master'?list[0]:rosterList()[0]||list[0]);
+  return d&&list.includes(d)?d:(UI.ztab==='master'?masterList():rosterList())[0]||list[0];
 }
 function zukanTilesHTML(view){
-  const list=UI.ztab==='master'?[...MASTERS].sort((a,b)=>b.cost-a.cost||MASTERS.indexOf(a)-MASTERS.indexOf(b)):rosterList();
-  if(!list.length) return `<p class="sub rempty">条件に合う${TERMS.unit}がいません。<button data-ui="rosterReset">絞り込みを解除</button></p>`;
+  const m=UI.ztab==='master', list=m?masterList():rosterList();
+  if(!list.length) return `<p class="sub rempty">条件に合う${m?TERMS.player:TERMS.unit}がいません。<button data-ui="${m?'mrosterReset':'rosterReset'}">絞り込みを解除</button></p>`;
   return list.map(d=>`<button class="tile ${d.master?'mtile':''} ${view&&view.id===d.id?'viewing':''}" data-ui="zview" data-id="${esc(d.id)}" data-view="${esc(d.id)}">
       ${unitImg(d,'tile','pimg',d.name)}${d.master?'':clsIconTag(d.cls,'pcls')}
       <span class="tcost">C${d.cost}</span>
@@ -754,7 +754,7 @@ function zukanHTML(){
       <div class="rtabs" role="tablist">${Object.entries(ZTABS).map(([k,v])=>`<button role="tab" aria-selected="${tab===k}" class="${tab===k?'on':''}" data-ui="ztab" data-v="${k}">${v}</button>`).join('')}</div>
     </div>
     <div class="setbody">
-      <div class="rosterwrap">${tab==='svt'?rosterFilterHTML():''}<div class="roster">${zukanTilesHTML(view)}</div></div>
+      <div class="rosterwrap">${tab==='svt'?rosterFilterHTML():masterFilterHTML()}<div class="roster">${zukanTilesHTML(view)}</div></div>
       <div class="sdetail">${view?zukanDetailHTML(view):''}</div>
     </div>
   </div>`;
@@ -811,21 +811,53 @@ function rosterFilterHTML(){
     </div>
   </div>`;
 }
+// ---------- 図鑑のマスター一覧：並べ替え・絞り込み（UI.mroster） ----------
+const MASTER_SORTS = { default:'コストが高い順', costAsc:'コストが低い順', hpDesc:'HPが高い順', hpAsc:'HPが低い順', name:'名前順' };
+// 補助の面・令呪に入っている効果の種類（発動型の中の効果も数える）
+function masterFxKeys(d){
+  const ks=new Set(), walk=effs=>(effs||[]).forEach(e=>{ if(!e) return; if(e.k) ks.add(e.k); walk(e.eff); });
+  (d.faces||[]).forEach(f=>walk(f.eff)); (d.spells||[]).forEach(s=>walk(s.eff));
+  return ks;
+}
+const masterCountHTML = ()=>`${masterList().length} / ${MASTERS.length}人`;
+function masterList(){
+  const f=UI.mroster, q=f.q.trim().toLowerCase(), has=t=>t&&String(t).toLowerCase().includes(q);
+  const list=MASTERS.filter(d=>(f.cost===''||d.cost===Number(f.cost))&&(!f.fx||masterFxKeys(d).has(f.fx))
+    &&(!q||has(d.name)||(d.faces||[]).some(x=>has(x.label))||(d.spells||[]).some(x=>has(x.name))));
+  const by={ default:(a,b)=>b.cost-a.cost, costAsc:(a,b)=>a.cost-b.cost, hpDesc:(a,b)=>b.hp-a.hp, hpAsc:(a,b)=>a.hp-b.hp,
+    name:(a,b)=>a.name.localeCompare(b.name,'ja') }[f.sort]||((a,b)=>b.cost-a.cost);
+  return [...list].sort((a,b)=>by(a,b)||MASTERS.indexOf(a)-MASTERS.indexOf(b));
+}
+function masterFilterHTML(){
+  const f=UI.mroster, costs=[...new Set(MASTERS.map(d=>d.cost))].sort((a,b)=>a-b);
+  // 効果：持っているマスターの多い順（同数は FX の並び順）
+  const fc=new Map(); MASTERS.forEach(d=>masterFxKeys(d).forEach(k=>fc.set(k,(fc.get(k)||0)+1)));
+  if(f.fx&&!fc.has(f.fx)) fc.set(f.fx,0);
+  const ord=Object.keys(FX), fxs=[...fc].filter(([k])=>FX[k]).sort((a,b)=>b[1]-a[1]||ord.indexOf(a[0])-ord.indexOf(b[0]));
+  return `<div class="rfilter"><div class="rrow2">
+      <input type="search" class="rq" data-umf="q" placeholder="名前・面・令呪の名前で検索" value="${esc(f.q)}">
+      <select data-umf="cost" title="コストで絞り込み"><option value="">コスト：すべて</option>${costs.map(c=>`<option value="${c}" ${String(c)===f.cost?'selected':''}>コスト ${c}</option>`).join('')}</select>
+      ${fxs.length?`<select data-umf="fx" title="補助の面・令呪の効果で絞り込み"><option value="">効果：すべて</option>${fxs.map(([k,n])=>`<option value="${esc(k)}" ${f.fx===k?'selected':''}>${esc(FX[k].name)}（${n}）</option>`).join('')}</select>`:''}
+      <select data-umf="sort" title="並べ替え">${Object.entries(MASTER_SORTS).map(([k,v])=>`<option value="${k}" ${f.sort===k?'selected':''}>${v}</option>`).join('')}</select>
+      <span class="sub small rcount">${masterCountHTML()}</span>
+    </div></div>`;
+}
 // 絞り込みを変えたら一覧だけ描き直す（検索欄の入力中にフォーカスを失わないように）
 function redrawRoster(){
   const r=document.querySelector('.roster'); if(!r){ render(); return; }
-  if(G.phase!=='setup'){ setHTML(r,zukanTilesHTML(zukanView())); const c=document.querySelector('.rcount'); if(c) c.innerHTML=rosterCountHTML(); return; }
+  if(G.phase!=='setup'){ setHTML(r,zukanTilesHTML(zukanView())); const c=document.querySelector('.rcount'); if(c) c.innerHTML=UI.ztab==='master'?masterCountHTML():rosterCountHTML(); return; }
   const picks=G.picks[G.setupPid];
   setHTML(r,rosterTilesHTML(D(UI.setupView)||D(picks[picks.length-1])||ROSTER()[0]));
   const c=document.querySelector('.rcount'); if(c) c.innerHTML=rosterCountHTML();
 }
 function onRosterField(e){
-  const el=e.target.closest('[data-uif]'); if(!el) return;
+  const el=e.target.closest('[data-uif],[data-umf]'); if(!el) return;
+  if(el.dataset.umf){ UI.mroster[el.dataset.umf]=el.value; redrawRoster(); return; }
   const k=el.dataset.uif; UI.roster[k]=el.type==='checkbox'?el.checked:el.value;
   redrawRoster();
 }
 document.addEventListener('input',onRosterField);
-document.addEventListener('change',e=>{ if(e.target.matches('select[data-uif],input[type=checkbox][data-uif]')) onRosterField(e); });
+document.addEventListener('change',e=>{ if(e.target.matches('select[data-uif],input[type=checkbox][data-uif],select[data-umf]')) onRosterField(e); });
 
 // シンプルルール：相手のコストとハンデの説明
 // ハンデ戦の説明（モード選択の title・編成画面）
@@ -1127,6 +1159,7 @@ function uiAct(a,ds){
     case 'mToggle': UI.mfold=!UI.mfold; break;
     case 'omenu': UI.omenu=!UI.omenu; break;
     case 'rosterCls': UI.roster.cls=ds.v; break;
+    case 'mrosterReset': UI.mroster={...UI.mroster, cost:'', fx:'', q:''}; break;
     case 'rosterReset': UI.roster={...UI.roster, cls:'', cost:'', trait:'', q:'', ok:false}; break;
     default: if(typeof netUi==='function'&&netUi(a,ds)) break; // オンライン対戦（net.js）
       if(typeof scnUi==='function') scnUi(a,ds); // シナリオ（scenario.js）

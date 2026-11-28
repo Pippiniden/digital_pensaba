@@ -159,3 +159,6 @@ button.danger:hover:not(:disabled){border-color:var(--r);box-shadow:var(--btn-ri
 /* 効果の種類ボタン（eff-ui.js）：選択欄のように見せる。押すと効果を選ぶ画面が開く */
 button.ekbtn{padding:3px 8px 3px 10px;font-size:13px;letter-spacing:0;color:var(--gold-hi);background:#060d22;border-color:var(--gold-lo);box-shadow:none;gap:6px}
 button.ekbtn .ekarrow{color:var(--sub);font-size:11px}
+/* エディタの属性ボタン（.rchip の小さい版。数字は使っているキャラの数） */
+.trpick .rchip{font-size:12px;padding:2px 8px}
+.trpick .rchip small{margin-left:4px;opacity:.6;font-size:10px}

@@ -171,6 +171,18 @@ function fixEff(e){
 
 // 全サーヴァントの属性（入力候補・特攻/特防の選択肢）
 const allTraits = ()=>[...new Set(units.flatMap(u=>u.traits||[]))].sort((a,b)=>a.localeCompare(b,'ja'));
+// 属性の選択ボタン：基本の組（どれか1つを付けるもの）＋ほかのキャラが使っている属性（使用数の多い順）
+const TRAIT_GROUPS = [['秩序','中立','混沌'],['善','中庸','悪','狂'],['天','地','人','星','獣'],['男性','女性'],['人型']];
+const TRAIT_GROUP_NAMES = ['秩序・中立・混沌','善・中庸・悪','天・地・人・星・獣','性別','人型'];
+function traitPickHTML(u){
+  const t=u.traits||[], basic=TRAIT_GROUPS.flat(), cnt=new Map();
+  units.forEach(x=>(x.traits||[]).forEach(k=>cnt.set(k,(cnt.get(k)||0)+1)));
+  const chip=(k,n)=>`<button type="button" class="rchip ${t.includes(k)?'on':''}" data-act="traitTog" data-v="${esc(k)}"${n!=null?` title="${n}体が使用"`:''}>${esc(k)}${n!=null?`<small>${n}</small>`:''}</button>`;
+  const groups=TRAIT_GROUPS.map((g,i)=>{ const miss=!g.some(k=>t.includes(k));
+    return `<span class="trgrp${miss?' miss':''}" title="${esc(TRAIT_GROUP_NAMES[i])}${miss?'：未設定':''}">${g.map(k=>chip(k)).join('')}</span>`; }).join('');
+  const others=[...cnt].filter(([k])=>!basic.includes(k)).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'ja'));
+  return `<div class="trrow">${groups}</div>${others.length?`<div class="trrow trmore">${others.map(([k,n])=>chip(k,n)).join('')}</div>`:''}`;
+}
 const traitTargets = ()=>[...allTraits(),...CLASSES,...units.map(u=>u.id)]; // 特攻・特防の候補：属性・クラス・キャラID
 const traitDatalist = ()=>`<datalist id="traitlist">${traitTargets().map(t=>`<option value="${esc(t)}"></option>`).join('')}</datalist>`;
 // 専用セリフ欄（スキル・鉛筆の面）。空なら通常の「スキル使用」「攻撃」のセリフを使う
@@ -560,7 +572,8 @@ function renderForm(){
       <label>エネミー専用<select data-p="enemy" data-t="optstr" data-act="structural">${opt('','なし（通常のキャラ）',u.enemy||'')}${Object.entries(ENEMY_KINDS).map(([k,v])=>opt(k,v,u.enemy||'')).join('')}</select>
         <small>雑魚・ボスは通常の編成・図鑑に出ず、シナリオの相手などでだけ使います。ボスはボスレイド・聖杯戦争のボスにも登場します（コスト上限なし）</small></label>
       <label class="wide">属性（複数可）<input data-p="traits" data-t="tags" value="${esc((u.traits||[]).join('、'))}" placeholder="例：竜、騎乗、王、人型">
-        <small>読点・カンマ・空白で区切る。特攻・特防の判定に使います${allTraits().length?`（使用中：${esc(allTraits().join('・'))}）`:''}</small></label>
+        <small>下のボタンで付け外しできます。一覧に無い属性は読点・カンマ・空白で区切って入力。特攻・特防の判定に使います</small></label>
+      <div class="wide trpick" data-trpick>${traitPickHTML(u)}</div>
       <label class="wide">キャラクター設定のリンク（任意）<input type="url" data-p="link" data-t="optstr" value="${esc(u.link||'')}" placeholder="https://…">
         <small>http(s) のURL。ゲームのキャラクター詳細に「キャラクター設定」リンクが出ます（別タブで開く）</small></label>
       ${memoIn(u)}
@@ -993,6 +1006,7 @@ document.addEventListener('input',e=>{
   }
   if(!el.dataset.p) return;
   setPath(cur(),el.dataset.p,conv(el));
+  if(el.dataset.p==='traits'){ const tp=document.querySelector('[data-trpick]'); if(tp) tp.innerHTML=traitPickHTML(cur()); } // 入力中もボタンの状態を合わせる
   if(el.dataset.act==='cardUpColor'){ const e=getPath(cur(),el.dataset.p.replace(/\.color$/,'')); if(e&&CARD_DEFS[e.k]&&CARD_DEFS[e.k][e.color]) Object.assign(e,CARD_DEFS[e.k][e.color]); return full(); } // 色を変えたら、その色の既定値に
   if(el.dataset.act==='structural') return full();
   // 効果の行の選択・チェック（対象・確率・最大HPなど）は、値の欄や「詳しく」の見出しが変わるので描き直す
@@ -1116,6 +1130,11 @@ document.addEventListener('click',e=>{
     case 'clAdd': { if(!u.condLines) u.condLines=[]; u.condLines.push(u.master?{key:'start',who:'enemy',cond:{k:'id',v:(units[0]||{}).id||''},lines:[]}:{key:'attack',who:'other',cond:{k:'trait',v:'神性'},lines:[]}); full(); break; }
     case 'clDel': u.condLines.splice(+b.dataset.i,1); full(); break;
     case 'clMove': { const l=u.condLines, i=+b.dataset.i, j=i+Number(b.dataset.d); if(j<0||j>=l.length) break; [l[i],l[j]]=[l[j],l[i]]; full(); break; }
+    case 'traitTog': { // 属性ボタン：付け外し。基本の組（秩序・中立・混沌など）は同じ組のほかを外して置き換える
+      const k=b.dataset.v, t=u.traits||(u.traits=[]), g=TRAIT_GROUPS.find(x=>x.includes(k));
+      if(t.includes(k)) t.splice(t.indexOf(k),1);
+      else { if(g&&g.length>1) u.traits=t.filter(x=>!g.includes(x)); u.traits.push(k); }
+      full(); break; }
     case 'fitReset': { u.fit[b.dataset.k]={...FIT_DEF[b.dataset.k]}; full(); break; }
     case 'ctBr': { if(b.dataset.br==='') delete u.ult.br; else u.ult.br=+b.dataset.br; light(); break; }
     case 'ctReplay': ctUpdate(true); break;

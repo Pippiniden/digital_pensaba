@@ -417,7 +417,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"athelstan", "name":"エゼルスタン", "cls":"セイバー", "cost":5, "hp":800,
-    "traits":["秩序","善","人","女性","騎乗","竜","王"],
+    "traits":["秩序","善","人","女性","騎乗","竜","王","人型"],
     "fit":{"face":{"x":59,"y":0,"z":127},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":0,"z":116},"cut":{"x":0,"y":12,"z":100},"tile":{"x":50,"y":33,"z":146}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%a8%a5%bc%a5%eb%a5%b9%a5%bf%a5%f3",
     "lines":{
@@ -455,7 +455,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"mnesarete", "name":"ネサレテ", "cls":"アーチャー", "cost":5, "hp":750,
-    "traits":["混沌","善","天","神性"],
+    "traits":["混沌","善","天","神性","女性","人型"],
     "fit":{"face":{"x":50,"y":20,"z":100},"card":{"x":93,"y":12,"z":100},"np":{"x":50,"y":12,"z":103},"cut":{"x":0,"y":4,"z":92},"tile":{"x":50,"y":42,"z":115}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%cd%a5%b5%a5%ec%a5%c6%a1%a6%a5%a2%a5%d5%a5%ed%a5%c7%a5%a3%a5%c6",
     "lines":{
@@ -524,7 +524,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"neoptolemus", "name":"ネオプトレモス", "cls":"ライダー", "cost":3, "hp":650,
-    "traits":["男性","中立","中庸","人型","神性","王","騎乗","ギリシャ神話系男性"],
+    "traits":["男性","中立","中庸","人型","神性","王","騎乗","ギリシャ神話系男性","地"],
     "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":4,"z":89},"cut":{"x":0,"y":4,"z":92},"tile":{"x":50,"y":50,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%cd%a5%aa%a5%d7%a5%c8%a5%ec%a5%e2%a5%b9",
     "lines":{
@@ -722,7 +722,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"ahotoria", "name":"アルトリア・ペンドラゴン", "cls":"セイバー", "cost":1, "hp":450,
-    "traits":["女性","人型","竜","騎乗","アホ","王","混沌","善"],
+    "traits":["女性","人型","竜","騎乗","アホ","王","混沌","善","地"],
     "fit":{"face":{"x":50,"y":0,"z":119},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":14,"z":105},"cut":{"x":0,"y":4,"z":94},"tile":{"x":50,"y":50,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%a2%a5%eb%a5%c8%a5%ea%a5%a2%a1%a6%a5%da%a5%f3%a5%c9%a5%e9%a5%b4%a5%f3%a1%ce%a5%b3%a5%e1%a5%c7%a5%a3%a5%a2%a5%f3%a1%cf",
     "lines":{
@@ -788,7 +788,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"utixorabbit", "name":"ウティホの兎", "cls":"アサシン", "cost":2, "hp":360,
-    "traits":["女性","混沌","中庸","地","獣","ヒト科以外"],
+    "traits":["女性","混沌","中庸","地","獣","ヒト科以外","人型"],
     "fit":{"face":{"x":50,"y":15,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":29,"z":105},"cut":{"x":0,"y":6,"z":95},"tile":{"x":50,"y":50,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%a6%a5%c6%a5%a3%a5%db%a4%ce%c5%c6",
     "lines":{
@@ -828,7 +828,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"kalki", "name":"カルキ", "cls":"ルーラー", "cost":5, "hp":900,
-    "traits":["男性","秩序","中庸","天","神性"],
+    "traits":["男性","秩序","中庸","天","神性","人型"],
     "fit":{"face":{"x":50,"y":11,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":14,"z":105},"cut":{"x":0,"y":2,"z":100},"tile":{"x":50,"y":50,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%A5%AB%A5%EB%A5%AD%28%C7%E9%29",
     "lines":{
@@ -1091,7 +1091,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"necho1", "name":"ネコ1世", "cls":"ライダー", "cost":1, "hp":280,
-    "traits":["女性","中立","善","アホ","エジプト"],
+    "traits":["女性","中立","善","アホ","エジプト","人"],
     "fit":{"face":{"x":50,"y":31,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":29,"z":105},"cut":{"x":0,"y":4,"z":100},"tile":{"x":50,"y":50,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%cd%a5%b3",
     "lines":{
@@ -1233,7 +1233,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"odysseiya", "name":"オデュッセウス", "cls":"グラップラー", "cost":3, "hp":520,
-    "traits":["女性","混沌","善","地","ギリシャ","王"],
+    "traits":["女性","混沌","善","地","ギリシャ","王","人型"],
     "fit":{"face":{"x":50,"y":10,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":14,"z":98},"cut":{"x":0,"y":0,"z":88},"tile":{"x":50,"y":50,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%aa%a5%c7%a5%e5%a5%c3%a5%bb%a5%a6%a5%b9%28%b7%fd%29",
     "lines":{
@@ -1370,7 +1370,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"gwydion", "name":"グウィディオン", "cls":"キャスター", "cost":4, "hp":780,
-    "traits":["男性","混沌","悪","天","イギリス"],
+    "traits":["男性","混沌","悪","天","イギリス","人型"],
     "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":8,"z":100},"np":{"x":50,"y":4,"z":105},"cut":{"x":-1,"y":0,"z":90},"tile":{"x":50,"y":43,"z":119}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%b0%a5%a6%a5%a3%a5%c7%a5%a3%a5%aa%a5%f3",
     "lines":{
@@ -1477,7 +1477,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"himetsuru", "name":"姫鶴一文字", "cls":"セイバー", "cost":4, "hp":600,
-    "traits":["女性","中立","善","人型","日本","ヒト科以外"],
+    "traits":["女性","中立","善","人型","日本","ヒト科以外","地"],
     "fit":{"face":{"x":50,"y":16,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":14,"z":105},"cut":{"x":0,"y":7,"z":100},"tile":{"x":50,"y":44,"z":116}},
     "link":"https://seesaawiki.jp/kagemiya/d/%c9%b1%c4%e1%b0%ec%ca%b8%bb%fa",
     "lines":{
@@ -1507,8 +1507,8 @@ const DEFAULT_UNITS = [
     "ult":{"name":"真贋双翼","c":"B","eff":[{"k":"sureHit","t":"self","v":0,"turns":3},{"k":"ignoreDef","t":"self","v":0,"turns":1},{"k":"multiHit","t":"self","v":2},{"k":"dmg","t":"target","v":250},{"k":"defDown","t":"target","v":20,"turns":3}],"ruby":"しんがんそうよく"}
   },
   {
-    "id":"saishoku", "name":" 彩蝕のハサン", "cls":"アサシン", "cost":3, "hp":550,
-    "traits":["男性","中立","悪","中東","人","獣"],
+    "id":"saishoku", "name":"彩蝕のハサン", "cls":"アサシン", "cost":3, "hp":550,
+    "traits":["男性","中立","悪","中東","人","獣","人型"],
     "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":0,"z":105},"cut":{"x":0,"y":10,"z":100},"tile":{"x":50,"y":44,"z":107}},
     "link":"https://seesaawiki.jp/kagemiya/d/%ba%cc%bf%aa%a4%ce%a5%cf%a5%b5%a5%f3",
     "lines":{
@@ -1861,7 +1861,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"chief", "name":"隠されし首領", "cls":"ルーラー", "cost":5, "hp":780,
-    "traits":["女性","秩序","中庸","人型","神性","超巨大","高位存在","人類の脅威"],
+    "traits":["女性","秩序","中庸","人型","神性","超巨大","高位存在","人類の脅威","地"],
     "fit":{"face":{"x":50,"y":21,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":23,"z":81},"cut":{"x":0,"y":12,"z":100},"tile":{"x":50,"y":48,"z":116}},
     "link":"https://seesaawiki.jp/kagemiya/d/%22%B1%A3%A4%B5%A4%EC%A4%B7%BC%F3%CE%CE%22",
     "lines":{
@@ -1967,7 +1967,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"conall", "name":"コナル・ケルナッハ", "cls":"アーチャー", "cost":2, "hp":450,
-    "traits":["男性","秩序","中庸","アイルランド","ケルト","天"],
+    "traits":["男性","秩序","中庸","アイルランド","ケルト","天","人型"],
     "fit":{"face":{"x":50,"y":6,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":0,"z":105},"cut":{"x":-2,"y":0,"z":92},"tile":{"x":50,"y":44,"z":122}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%b3%a5%ca%a5%eb%a1%a6%a5%b1%a5%eb%a5%ca%a5%c3%a5%cf",
     "lines":{
@@ -1998,7 +1998,7 @@ const DEFAULT_UNITS = [
   },
   {
     "id":"browning", "name":"ジョン・モーゼス・ブローニング", "cls":"ガンナー", "cost":2, "hp":600,
-    "traits":["中立","悪","人","アメリカ","ヒト科以外","兵器","超巨大"],
+    "traits":["中立","悪","人","アメリカ","ヒト科以外","兵器","超巨大","機械"],
     "fit":{"face":{"x":50,"y":65,"z":100},"card":{"x":50,"y":100,"z":120},"np":{"x":50,"y":38,"z":105},"cut":{"x":0,"y":0,"z":100},"tile":{"x":50,"y":57,"z":127}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%b8%a5%e7%a5%f3%a1%a6%a5%e2%a1%bc%a5%bc%a5%b9%a1%a6%a5%d6%a5%ed%a1%bc%a5%cb%a5%f3%a5%b0",
     "memo":"小回りの利かない低コスBアタッカー\n基本的に殴ることしか出来ず、回避も無いがコストの割に体力と恒常火力は高め\nスキルよわよわ❤",
