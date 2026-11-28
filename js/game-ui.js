@@ -7,7 +7,7 @@
    ===================================================================== */
 
 const UI = { nav:{s:'top',step:'rule'}, /* モード選択の階層：top / quick(rule→level) / local / tutorial / settings */ menu:false, mfold:false, /* マスター選択の折り畳み */ spellPick:false, /* 令呪の即時発動：3つの中から選ぶ表示 */ result:false, resultShown:false, endReady:false,
-  roster:{ sort:'default', cls:'', cost:'', q:'', ok:false }, /* キャラクター選択の並べ替え・絞り込み */ detail:null, setupView:null, log:readLogPref(), auto:readPref('pencilduel.auto')==='1' };
+  roster:{ sort:'default', cls:'', cost:'', trait:'', q:'', ok:false }, /* キャラクター選択の並べ替え・絞り込み */ detail:null, setupView:null, log:readLogPref(), auto:readPref('pencilduel.auto')==='1' };
 function readPref(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
 function savePref(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
 window.SPEED_PREF=Number(readPref('pencilduel.speed'))||0; // 設定で選んだ進行速度（newGame が読む）
@@ -772,8 +772,8 @@ const rosterRoom = ()=>costCap()-sumCost(G.picks[G.setupPid])-mcost(G.setupPid);
 const rosterCountHTML = ()=>`${G.phase==='setup'&&ruleset().partyMax>1?`残りコスト <b class="hl">${rosterRoom()}</b> ・ `:''}${rosterList().length} / ${ROSTER().length}騎`;
 function rosterList(){
   const f=UI.roster, q=f.q.trim().toLowerCase();
-  const all=ROSTER(), list=all.filter(d=>(!f.cls||d.cls===f.cls)&&(f.cost===''||d.cost===Number(f.cost))
-    &&(!q||d.name.toLowerCase().includes(q)||d.cls.toLowerCase().includes(q))&&(!f.ok||G.phase!=='setup'||!rosterOver(d)));
+  const all=ROSTER(), list=all.filter(d=>(!f.cls||d.cls===f.cls)&&(f.cost===''||d.cost===Number(f.cost))&&(!f.trait||(d.traits||[]).includes(f.trait))
+    &&(!q||d.name.toLowerCase().includes(q)||d.cls.toLowerCase().includes(q)||(d.traits||[]).some(t=>t.toLowerCase().includes(q)))&&(!f.ok||G.phase!=='setup'||!rosterOver(d)));
   const ci=c=>{ const i=CLASSES.indexOf(c); return i<0?CLASSES.length:i; };
   const by={ costDesc:(a,b)=>b.cost-a.cost, costAsc:(a,b)=>a.cost-b.cost, hpDesc:(a,b)=>b.hp-a.hp, hpAsc:(a,b)=>a.hp-b.hp,
     name:(a,b)=>a.name.localeCompare(b.name,'ja'), cls:(a,b)=>ci(a.cls)-ci(b.cls)||b.cost-a.cost }[f.sort];
@@ -794,12 +794,17 @@ function rosterFilterHTML(){
   const f=UI.roster;
   const clss=[...new Set(ROSTER().map(d=>d.cls))].sort((a,b)=>(CLASSES.indexOf(a)+1||99)-(CLASSES.indexOf(b)+1||99));
   const costs=[...new Set(ROSTER().map(d=>d.cost))].sort((a,b)=>a-b);
+  // 属性：持っているキャラの多い順（同数は名前順）。選択中のものは一覧に無くても残す
+  const tc=new Map(); ROSTER().forEach(d=>(d.traits||[]).forEach(t=>tc.set(t,(tc.get(t)||0)+1)));
+  if(f.trait&&!tc.has(f.trait)) tc.set(f.trait,0);
+  const traits=[...tc].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'ja'));
   const chip=(v,label,body)=>`<button class="rchip ${f.cls===v?'on':''}" data-ui="rosterCls" data-v="${esc(v)}" title="${esc(label)}">${body}</button>`;
   return `<div class="rfilter">
     <div class="rcls">${chip('','すべてのクラス','全')}${clss.map(c=>chip(c,c,`<img src="${esc(classIcon(c))}" alt="${esc(c)}">`)).join('')}</div>
     <div class="rrow2">
-      <input type="search" class="rq" data-uif="q" placeholder="名前・クラスで検索" value="${esc(f.q)}">
+      <input type="search" class="rq" data-uif="q" placeholder="名前・クラス・属性で検索" value="${esc(f.q)}">
       <select data-uif="cost" title="コストで絞り込み"><option value="">コスト：すべて</option>${costs.map(c=>`<option value="${c}" ${String(c)===f.cost?'selected':''}>コスト ${c}</option>`).join('')}</select>
+      ${traits.length?`<select data-uif="trait" title="属性で絞り込み"><option value="">属性：すべて</option>${traits.map(([t,n])=>`<option value="${esc(t)}" ${f.trait===t?'selected':''}>${esc(t)}（${n}）</option>`).join('')}</select>`:''}
       <select data-uif="sort" title="並べ替え">${Object.entries(ROSTER_SORTS).map(([k,v])=>`<option value="${k}" ${f.sort===k?'selected':''}>${v}</option>`).join('')}</select>
       ${G.phase==='setup'&&ruleset().partyMax>1?`<label class="rok"><input type="checkbox" data-uif="ok" ${f.ok?'checked':''}>編成できるものだけ</label>`:''}
       <span class="sub small rcount">${rosterCountHTML()}</span>
@@ -1122,7 +1127,7 @@ function uiAct(a,ds){
     case 'mToggle': UI.mfold=!UI.mfold; break;
     case 'omenu': UI.omenu=!UI.omenu; break;
     case 'rosterCls': UI.roster.cls=ds.v; break;
-    case 'rosterReset': UI.roster={...UI.roster, cls:'', cost:'', q:'', ok:false}; break;
+    case 'rosterReset': UI.roster={...UI.roster, cls:'', cost:'', trait:'', q:'', ok:false}; break;
     default: if(typeof netUi==='function'&&netUi(a,ds)) break; // オンライン対戦（net.js）
       if(typeof scnUi==='function') scnUi(a,ds); // シナリオ（scenario.js）
   }
@@ -1142,7 +1147,7 @@ document.addEventListener('click',e=>{
   if(b.dataset.a==='restart'&&!b.dataset.keepnav) UI.nav={s:'top',step:'rule'}; // 試合から戻るときはトップメニューへ（編成の「戻る」は直前の選択画面へ）
   if(b.dataset.view) UI.setupView=b.dataset.view;
   if(b.dataset.a==='setupMaster'&&b.classList.contains('mtile')) UI.mfold=!b.classList.contains('sel'); // 選んだら畳む／外したら開く
-  if(b.dataset.a==='setupConfirm'){ UI.mfold=false; UI.roster={...UI.roster, cls:'', cost:'', q:'', ok:false}; } // 次の人の編成では、マスター一覧を開いた状態・絞り込みなしから始める（並べ替えは残す）
+  if(b.dataset.a==='setupConfirm'){ UI.mfold=false; UI.roster={...UI.roster, cls:'', cost:'', trait:'', q:'', ok:false}; } // 次の人の編成では、マスター一覧を開いた状態・絞り込みなしから始める（並べ替えは残す）
   if(otherActing() && !FREE_ACTIONS.includes(b.dataset.a)){ if(b.dataset.view) render(); return; } // CPUの手番中は操作を受け付けない
   const pl={...b.dataset};
   if(pl.a==='setupRandom'||(pl.a==='setupCpu'&&pl.how==='random')) pl.cost=UI.rcost??''; // おまかせ（ランダム）のコスト指定
