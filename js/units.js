@@ -756,7 +756,7 @@ const DEFAULT_UNITS = [
     "ult":{"name":"約束された勝利の手榴弾","c":"R","eff":[{"k":"dmg","t":"target","v":300,"chance":4},{"k":"selfDmg","t":"self","v":80,"chance":2,"max":true},{"k":"selfDmg","t":"ally_all","v":300,"chance":2}],"ruby":"ホーリー・ハンドグレネード"}
   },
   {
-    "id":"bartholomew", "name":"バーソロミュー・ロバーツ", "cls":"ライダー", "cost":2, "hp":440,
+    "id":"bartholomew", "name":"バーソロミュー・ロバーツ", "cls":"ライダー", "cost":2, "hp":400,
     "traits":["秩序","悪","人","人型","男性"],
     "fit":{"face":{"x":50,"y":0,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":14,"z":105},"cut":{"x":0,"y":3,"z":93},"tile":{"x":50,"y":50,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%d0%a1%bc%a5%bd%a5%ed%a5%df%a5%e5%a1%bc%a1%a6%a5%ed%a5%d0%a1%bc%a5%c4",
@@ -780,11 +780,11 @@ const DEFAULT_UNITS = [
       {"acts":1,"pre":{"c":"G","dmg":30,"np":0,"star":2},"post":{"c":"G","dmg":50,"np":0,"star":2}}
     ],
     "skills":[
-      {"name":"嵐の航海者","eff":[{"k":"npPow","t":"self","v":80,"turns":1},{"k":"atk","t":"self","v":30,"turns":1}],"rank":"A"},
-      {"name":"海賊の誉れ","eff":[{"k":"atk","t":"self","v":20,"turns":3},{"k":"guts","t":"self","v":10,"times":1},{"k":"debuffImmune","t":"self","v":0,"turns":3}],"rank":"B"},
-      {"name":"ブラック・バート","eff":[{"k":"atk","t":"self","v":40,"turns":3}],"rank":"B"}
+      {"name":"嵐の航海者","eff":[{"k":"npPow","t":"ally_all","v":60,"turns":1},{"k":"atk","t":"ally_all","v":20,"turns":1}],"rank":"A"},
+      {"name":"海賊の誉れ","eff":[{"k":"atk","t":"self","v":10,"turns":3},{"k":"guts","t":"self","v":10,"times":1},{"k":"debuffRes","t":"self","v":2,"turns":3}],"rank":"B"},
+      {"name":"ブラック・バート","eff":[{"k":"atk","t":"self","v":30,"turns":3}],"rank":"B"}
     ],
-    "ult":{"name":"最後にして最大なる略奪","c":"R","eff":[{"k":"dmg","t":"target","v":150},{"k":"defDown","t":"target","v":20,"turns":3}],"ruby":"ハウス・オブ・ローズ"}
+    "ult":{"name":"最後にして最大なる略奪","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":140},{"k":"defDown","t":"enemy_all","v":20,"turns":3}],"ruby":"ハウス・オブ・ローズ"}
   },
   {
     "id":"utixorabbit", "name":"ウティホの兎", "cls":"アサシン", "cost":2, "hp":360,
