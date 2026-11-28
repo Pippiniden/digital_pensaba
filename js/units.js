@@ -442,7 +442,7 @@ const DEFAULT_UNITS = [
       {"acts":1,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
       {"acts":2,"pre":{"c":"R","dmg":80,"np":0,"star":0},"post":{"c":"R","dmg":100,"np":0,"star":0}},
       {"acts":1,"pre":{"c":"B","dmg":60,"np":10,"star":0},"post":{"c":"B","dmg":70,"np":15,"star":0}},
-      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"R","dmg":110,"np":0,"star":0,"eff":[{"k":"ignoreDef","t":"self","v":0,"turns":1,"at":"pre"}]}},
+      {"acts":2,"pre":{"c":"ASC"},"post":{"c":"R","dmg":80,"np":0,"star":0,"eff":[{"k":"ignoreDef","t":"self","v":0,"turns":1,"at":"pre"},{"k":"cardUp","t":"self","v":30,"times":3,"turns":0,"color":"R","np":0,"star":1,"at":"pre"},{"k":"cardUp","t":"self","v":30,"turns":3,"color":"B","np":10,"star":2,"at":"pre"}]}},
       {"acts":3,"pre":{"c":"B","dmg":50,"np":15,"star":0},"post":{"c":"B","dmg":60,"np":20,"star":0}},
       {"acts":1,"pre":{"c":"G","dmg":40,"np":0,"star":4},"post":{"c":"G","dmg":50,"np":0,"star":5}}
     ],
@@ -454,7 +454,7 @@ const DEFAULT_UNITS = [
     "ult":{"name":"統一王の覇光","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":330},{"k":"pierce","t":"self","v":0,"turns":1,"at":"pre"},{"k":"ignoreDef","t":"self","v":0,"turns":1,"at":"pre"}],"ruby":"ユナイテッド・キングス・レガリア"}
   },
   {
-    "id":"mnesarete", "name":"ネサレテ", "cls":"アーチャー", "cost":5, "hp":790,
+    "id":"mnesarete", "name":"ネサレテ", "cls":"アーチャー", "cost":5, "hp":750,
     "traits":["混沌","善","天","神性"],
     "fit":{"face":{"x":50,"y":20,"z":100},"card":{"x":93,"y":12,"z":100},"np":{"x":50,"y":12,"z":103},"cut":{"x":0,"y":4,"z":92},"tile":{"x":50,"y":42,"z":115}},
     "link":"https://seesaawiki.jp/kagemiya/d/%a5%cd%a5%b5%a5%ec%a5%c6%a1%a6%a5%a2%a5%d5%a5%ed%a5%c7%a5%a3%a5%c6",
@@ -486,13 +486,13 @@ const DEFAULT_UNITS = [
     ],
     "skills":[
       {"name":"美の顕現","eff":[{"k":"charm","t":"enemy_all","v":0,"turns":1,"chance":2},{"k":"np","t":"enemy_all","v":-10},{"k":"np","t":"self","v":10},{"k":"curse","t":"enemy_all","v":0,"times":3,"chance":1},{"k":"sealSkill","t":"enemy_all","v":0,"turns":1,"chance":1}],"rank":"EX"},
-      {"name":"閨に咲くパンデモス","eff":[{"k":"np","t":"self","v":10},{"k":"debuffUp","t":"self","v":3,"turns":3},{"k":"regenNp","t":"self","v":5,"turns":3},{"k":"regenHp","t":"self","v":40,"turns":3}],"rank":"A"},
+      {"name":"閨に咲くパンデモス","eff":[{"k":"np","t":"self","v":10},{"k":"debuffUp","t":"self","v":2,"turns":3},{"k":"regenNp","t":"self","v":5,"turns":3},{"k":"regenHp","t":"self","v":40,"turns":3}],"rank":"A"},
       {"name":"情欲の迷路","eff":[{"k":"atkDown","t":"enemy_all","v":15,"turns":3},{"k":"defDown","t":"enemy_all","v":15,"turns":3},{"k":"critDown","t":"enemy_all","v":1,"turns":3},{"k":"np","t":"enemy_all","v":-10}]}
     ],
     "ult":{"name":"明星失墜","c":"R","eff":[{"k":"charm","t":"enemy_all","v":0,"turns":1,"chance":3},{"k":"atkVs","t":"enemy_all","v":100,"turns":1,"vs":"charm"},{"k":"dmg","t":"enemy_all","v":300}],"ruby":"イ・プトスィ・トゥ・エロタ"}
   },
   {
-    "id":"hanzo", "name":"服部半蔵", "cls":"ランサー", "cost":4, "hp":670,
+    "id":"hanzo", "name":"服部半蔵", "cls":"ランサー", "cost":4, "hp":650,
     "traits":["男性","秩序","悪","人","人型"],
     "fit":{"face":{"x":50,"y":0,"z":122},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":2,"z":94},"cut":{"x":0,"y":7,"z":95},"tile":{"x":50,"y":50,"z":100}},
     "link":"https://seesaawiki.jp/kagemiya/d/%c9%fe%c9%f4%c8%be%c2%a2%a1%da%c0%b5%c0%ae%a1%db",
@@ -1403,7 +1403,7 @@ const DEFAULT_UNITS = [
       {"acts":1,"pre":{"c":"G","dmg":20,"np":0,"star":1},"post":{"c":"G","dmg":30,"np":0,"star":2}}
     ],
     "skills":[
-      {"name":"動物会話","eff":[{"k":"np","t":"self","v":30},{"k":"actsUp","t":"self","v":1,"times":1}],"rank":"B-"},
+      {"name":"動物会話","eff":[{"k":"np","t":"self","v":30},{"k":"actsUp","t":"self","v":1,"turns":1}],"rank":"B-"},
       {"name":"原初のルーン","eff":[{"k":"atk","t":"picked","v":40,"turns":1,"color":"R"},{"k":"np","t":"picked","v":20}],"rank":"A","pick":"ally"},
       {"name":"高速神言","eff":[{"k":"np","t":"self","v":70}],"rank":"B"}
     ],
@@ -1632,7 +1632,7 @@ const DEFAULT_UNITS = [
     "skills":[
       {"name":"天蓋霊基","eff":[{"k":"atk","t":"ally_all","v":20,"turns":1},{"k":"onAtkStar","t":"ally_all","v":4,"turns":3}],"rank":"A++"},
       {"name":"千里眼(星)","eff":[{"k":"regenStar","t":"ally_all","v":5,"turns":3},{"k":"onAtkStar","t":"self","v":4,"turns":3},{"k":"critRoll","t":"ally_all","v":1,"turns":3}],"rank":"A++"},
-      {"name":"天軍変生","eff":[{"k":"ascend","t":"picked","v":0},{"k":"heal","t":"picked","v":100},{"k":"actsUp","t":"picked","v":1,"times":1},{"k":"star","t":"master","v":10}],"rank":"EX","pick":"ally"}
+      {"name":"天軍変生","eff":[{"k":"ascend","t":"picked","v":0},{"k":"heal","t":"picked","v":100},{"k":"actsUp","t":"picked","v":1,"turns":1},{"k":"star","t":"master","v":10}],"rank":"EX","pick":"ally"}
     ],
     "ult":{"name":"無限の星意物","c":"R","eff":[{"k":"np","t":"ally_other","v":50},{"k":"atk","t":"ally_other","v":40,"turns":2},{"k":"npPow","t":"ally_other","v":60,"turns":2},{"k":"invul","t":"ally_other","v":0,"turns":1,"times":1},{"k":"heal","t":"ally_other","v":100}]}
   },
@@ -2157,7 +2157,7 @@ const DEFAULT_UNITS = [
     "ult":{"name":"雪上加霜・冬至の嵐","c":"B","eff":[{"k":"atkTrait","t":"self","v":50,"turns":1,"trait":"善"},{"k":"dmg","t":"enemy_all","v":280},{"k":"confuse","t":"enemy_all","v":3,"turns":1,"chance":2},{"k":"atkDown","t":"enemy_all","v":20,"turns":3}],"ruby":"ヤルンヴィド・ユールレイエン"}
   },
   {
-    "id":"xiang-yu_other", "name":"項羽【ジアザー】", "cls":"ランサー", "cost":5, "hp":830,
+    "id":"xiang-yu_other", "name":"項羽【ジアザー】", "cls":"ランサー", "cost":5, "hp":800,
     "traits":["男性","中国","混沌","悪","人","人型"],
     "fit":{"face":{"x":50,"y":18,"z":100},"card":{"x":50,"y":12,"z":100},"np":{"x":50,"y":29,"z":89},"cut":{"x":0,"y":0,"z":100},"tile":{"x":50,"y":50,"z":100}},
     "link":"https://wikiwiki.jp/fate-trpg/%E9%A0%85%E7%BE%BD%E3%80%94%E3%82%B8%E3%82%A2%E3%82%B6%E3%83%BC%E3%80%95",
@@ -2185,7 +2185,7 @@ const DEFAULT_UNITS = [
       {"name":"焔の覇王","eff":[{"k":"burn","t":"enemy_all","v":20,"turns":3,"chance":3},{"k":"cardUp","t":"self","v":40,"turns":3,"color":"R","np":0,"star":2}],"rank":"B"},
       {"name":"重瞳","eff":[{"k":"guts","t":"self","v":1,"turns":3,"times":1},{"k":"critRoll","t":"self","v":3,"turns":1},{"k":"evade","t":"self","v":0,"turns":1}],"rank":"A"}
     ],
-    "ult":{"name":"火尖槍・抜山蓋世","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":300},{"k":"actsUp","t":"self","v":1,"turns":0,"times":1},{"k":"defDown","t":"enemy_all","v":30,"turns":3,"color":"R"},{"k":"burn","t":"enemy_all","v":20,"turns":3}],"ruby":"かせんそう・ばつざんがいせい"}
+    "ult":{"name":"火尖槍・抜山蓋世","c":"R","eff":[{"k":"dmg","t":"enemy_all","v":300},{"k":"actsUp","t":"self","v":1,"times":1,"turns":0},{"k":"defDown","t":"enemy_all","v":30,"turns":3,"color":"R"},{"k":"burn","t":"enemy_all","v":20,"turns":3}],"ruby":"かせんそう・ばつざんがいせい"}
   },
   {
     "id":"nagayoshi", "name":"丸目長恵", "cls":"アサシン", "cost":2, "hp":580,
