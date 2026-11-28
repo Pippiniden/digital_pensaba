@@ -135,7 +135,8 @@ const has = (u,k)=>u.fx.some(e=>e.k===k);
 const DISABLE_FX = ['stun','charm','petrify','bind','sleep']; // 行動不能になる弱体
 const disabled = u=>u.fx.some(e=>DISABLE_FX.includes(e.k));  // 行動・スキル・宝具すべて不可
 const canSkill = u=>!u.out&&!disabled(u)&&!has(u,'sealSkill');
-const canUlt = u=>!u.out&&!disabled(u)&&!has(u,'sealUlt')&&(!D(u.def).ult.pick||skillCands(u,D(u.def).ult).length>0); // 対象を選ぶ宝具は、選べる相手がいること
+const canUlt = u=>{ const ul=D(u.def).ult; // マスターは宝具を持たない
+  return !!ul&&!u.out&&!disabled(u)&&!has(u,'sealUlt')&&(!ul.pick||skillCands(u,ul).length>0); }; // 対象を選ぶ宝具は、選べる相手がいること
 const fmt = n=>Number.isInteger(n)?n:Math.round(n*10)/10;
 const dn = u=>esc(D(u.def).name);
 const nm = u=>`<span class="p${u.pid}">${dn(u)}</span>`;

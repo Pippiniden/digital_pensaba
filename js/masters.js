@@ -37,7 +37,7 @@ const DEFAULT_MASTERS = [
       {"label":"破壊工作","eff":[{"k":"defDown","t":"enemy_all","v":10}]}
     ],
     "spells":[
-      {"name":"固有時制御","eff":[{"k":"actsUp","t":"svt","v":3,"turns":1}],"line":["タイムアルター・ダブルアクセル！"]},
+      {"name":"固有時制御","eff":[{"k":"actsUp","t":"svt","v":3,"times":1}],"line":["タイムアルター・ダブルアクセル！"]},
       {"name":"起源弾","eff":[{"k":"buffImmune","t":"enemy_master","v":0,"turns":3,"chance":3},{"k":"pierce","t":"self","v":0,"turns":1},{"k":"atkVs","t":"self","v":100,"turns":1,"vs":"buffImmune"},{"k":"dmg","t":"enemy_master","v":300}]},
       {"name":"令呪：攻撃強化","eff":[{"k":"atk","t":"svt","v":40,"turns":1}],"line":["令呪を以て我が傀儡に命ず！"]}
     ]
@@ -243,7 +243,7 @@ const DEFAULT_MASTERS = [
     "spells":[
       {"name":"瞬間強化","eff":[{"k":"atk","t":"ally_svt","v":40,"turns":1},{"k":"def","t":"ally_svt","v":30,"turns":1}]},
       {"name":"霊子向上・全","eff":[{"k":"atk","t":"svt","v":20,"turns":1,"color":"B"},{"k":"onAtkNp","t":"svt","v":10,"turns":1},{"k":"np","t":"svt","v":10}]},
-      {"name":"A.A.A.","eff":[{"k":"atk","t":"ally_svt","v":68,"turns":1,"color":"B"},{"k":"nullUnder","t":"ally_svt","v":68,"turns":1},{"k":"np","t":"ally_svt","v":68},{"k":"actsUp","t":"ally_svt","v":1,"turns":1}]}
+      {"name":"A.A.A.","eff":[{"k":"atk","t":"ally_svt","v":68,"turns":1,"color":"B"},{"k":"nullUnder","t":"ally_svt","v":68,"turns":1},{"k":"np","t":"ally_svt","v":68},{"k":"actsUp","t":"ally_svt","v":1,"times":1}]}
     ]
   },
   {
@@ -278,7 +278,7 @@ const DEFAULT_MASTERS = [
       {"label":"","eff":[]}
     ],
     "spells":[
-      {"name":"しおさいと銅鑼","eff":[{"k":"actsUp","t":"ally_svt","v":3,"turns":1},{"k":"critRoll","t":"ally_svt","v":2,"turns":1},{"k":"np","t":"ally_svt","v":30}]},
+      {"name":"しおさいと銅鑼","eff":[{"k":"actsUp","t":"ally_svt","v":3,"times":1},{"k":"critRoll","t":"ally_svt","v":2,"turns":1},{"k":"np","t":"ally_svt","v":30}]},
       {"name":"倶利伽羅サーフィス","eff":[{"k":"evade","t":"ally_svt","v":0,"turns":1},{"k":"heal","t":"ally_svt","v":250},{"k":"cleanse","t":"ally_svt","v":0},{"k":"np","t":"ally_svt","v":25}]},
       {"name":"日光条約","eff":[{"k":"sealUlt","t":"enemy_svt","v":0,"turns":1,"chance":4},{"k":"sealSkill","t":"enemy_svt","v":0,"turns":1,"chance":4},{"k":"fear","t":"enemy_svt","v":0,"turns":1,"chance":4},{"k":"stun","t":"svt","v":0,"turns":1,"chance":4}]}
     ]
@@ -361,7 +361,7 @@ const DEFAULT_MASTERS = [
       {"label":"","eff":[{"k":"onAtkNp","t":"ally_svt","v":10}]}
     ],
     "spells":[
-      {"name":"戦魔女の嘶き","eff":[{"k":"actsUp","t":"svt","v":3,"turns":1},{"k":"onAtkStar","t":"svt","v":8,"turns":1},{"k":"defDown","t":"svt","v":20,"turns":1}]},
+      {"name":"戦魔女の嘶き","eff":[{"k":"actsUp","t":"svt","v":3,"times":1},{"k":"onAtkStar","t":"svt","v":8,"turns":1},{"k":"defDown","t":"svt","v":20,"turns":1}]},
       {"name":"秘蔵の宝石","eff":[{"k":"cardUp","t":"ally_svt","v":40,"turns":1,"color":"B","np":10,"star":2},{"k":"np","t":"svt","v":25}]},
       {"name":"大神慟哭・三弦狂騒","eff":[{"k":"stun","t":"enemy_all","v":0,"turns":1,"chance":2},{"k":"charm","t":"enemy_all","v":0,"turns":1,"chance":4},{"k":"defDown","t":"enemy_all","v":20,"turns":1}]}
     ]
@@ -501,7 +501,7 @@ const DEFAULT_MASTERS = [
     ],
     "spells":[
       {"name":"竜の血","eff":[{"k":"heal","t":"ally_svt","v":150},{"k":"np","t":"ally_svt","v":15}]},
-      {"name":"万能触媒","eff":[{"k":"cleanse","t":"ally_svt","v":0},{"k":"actsUp","t":"ally_svt","v":1,"turns":1}]},
+      {"name":"万能触媒","eff":[{"k":"cleanse","t":"ally_svt","v":0},{"k":"actsUp","t":"ally_svt","v":1,"times":1}]},
       {"name":"応急魔力障壁","eff":[{"k":"evade","t":"svt","v":0,"times":1,"turns":0}]}
     ]
   },
@@ -539,7 +539,7 @@ const DEFAULT_MASTERS = [
     "spells":[
       {"name":"霊子譲渡","eff":[{"k":"np","t":"ally_svt","v":30}]},
       {"name":"応急手当","eff":[{"k":"heal","t":"ally_svt","v":200}]},
-      {"name":"たまには本気出す","eff":[{"k":"atk","t":"ally_all","v":20,"turns":1},{"k":"actsUp","t":"ally_all","v":1,"turns":1},{"k":"cleanse","t":"ally_all","v":0}]}
+      {"name":"たまには本気出す","eff":[{"k":"atk","t":"ally_all","v":20,"turns":1},{"k":"actsUp","t":"ally_all","v":1,"times":1},{"k":"cleanse","t":"ally_all","v":0}]}
     ]
   },
   {

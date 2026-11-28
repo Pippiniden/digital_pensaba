@@ -1403,7 +1403,7 @@ const DEFAULT_UNITS = [
       {"acts":1,"pre":{"c":"G","dmg":20,"np":0,"star":1},"post":{"c":"G","dmg":30,"np":0,"star":2}}
     ],
     "skills":[
-      {"name":"動物会話","eff":[{"k":"np","t":"self","v":30},{"k":"actsUp","t":"self","v":1,"turns":1}],"rank":"B-"},
+      {"name":"動物会話","eff":[{"k":"np","t":"self","v":30},{"k":"actsUp","t":"self","v":1,"times":1}],"rank":"B-"},
       {"name":"原初のルーン","eff":[{"k":"atk","t":"picked","v":40,"turns":1,"color":"R"},{"k":"np","t":"picked","v":20}],"rank":"A","pick":"ally"},
       {"name":"高速神言","eff":[{"k":"np","t":"self","v":70}],"rank":"B"}
     ],
@@ -1632,7 +1632,7 @@ const DEFAULT_UNITS = [
     "skills":[
       {"name":"天蓋霊基","eff":[{"k":"atk","t":"ally_all","v":20,"turns":1},{"k":"onAtkStar","t":"ally_all","v":4,"turns":3}],"rank":"A++"},
       {"name":"千里眼(星)","eff":[{"k":"regenStar","t":"ally_all","v":5,"turns":3},{"k":"onAtkStar","t":"self","v":4,"turns":3},{"k":"critRoll","t":"ally_all","v":1,"turns":3}],"rank":"A++"},
-      {"name":"天軍変生","eff":[{"k":"ascend","t":"picked","v":0},{"k":"heal","t":"picked","v":100},{"k":"actsUp","t":"picked","v":1,"turns":1},{"k":"star","t":"master","v":10}],"rank":"EX","pick":"ally"}
+      {"name":"天軍変生","eff":[{"k":"ascend","t":"picked","v":0},{"k":"heal","t":"picked","v":100},{"k":"actsUp","t":"picked","v":1,"times":1},{"k":"star","t":"master","v":10}],"rank":"EX","pick":"ally"}
     ],
     "ult":{"name":"無限の星意物","c":"R","eff":[{"k":"np","t":"ally_other","v":50},{"k":"atk","t":"ally_other","v":40,"turns":2},{"k":"npPow","t":"ally_other","v":60,"turns":2},{"k":"invul","t":"ally_other","v":0,"turns":1,"times":1},{"k":"heal","t":"ally_other","v":100}]}
   },
